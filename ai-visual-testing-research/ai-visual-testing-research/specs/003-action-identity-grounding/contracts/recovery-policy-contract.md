@@ -2,7 +2,13 @@
 
 **Feature**: [../spec.md](../spec.md) | **Data Model**: [../data-model.md](../data-model.md) §8c
 
-对应 FR-031/037，并直接落实 Constitution“恢复与重试门禁”。
+**重新基线说明**：本契约定义的六字段设计本身业务无关，`checklists/domain-
+independence.md` 复核未发现问题，2026-07-22 重新基线**原样保留**全部规则；
+唯一改动是移除"清空购物车"这一具体业务名词（见下方"路由与预算不变量"最后一条），
+改用与 spec.md FR-032 一致的通用措辞，并新增一条关于风险级别路由的跨引用。
+
+对应 FR-031~034（编号随 spec.md 2026-07-22 重新基线调整，规则内容不变），并直接
+落实 Constitution "恢复与重试门禁"。
 
 ## 配置结构
 
@@ -27,7 +33,14 @@ class RecoveryPolicy(BaseModel):
 - `consumes_global_retry_budget=True` 时每次尝试必须原子地消耗一次全局额度；额度耗尽立即停止。
 - `allows_action_path_change=False` 时策略不得换用默认 Tab、额外点击或其它输入路径。
 - 需要强模型或人工确认但条件未满足时必须停止，不得降级成更宽松的自动恢复。
-- 任何策略不得构造自动清空购物车、删除商品或撤销已确认业务结果的动作。
+- 任何策略不得构造任何不在该测试步骤已声明动作范围内、会改变被测应用状态的操作
+  （FR-032；本条 MUST NOT 依赖任何具体业务动作名词——不论被测应用是什么，"是否
+  在已声明动作范围内"这一判断本身即已充分）。
+- `evaluate_target_consistency()`（action-identity-contract.md §3.2）产生的
+  `"ambiguous"`/`"dangerous_drift"` 结果中，凡由 `SemanticAction.risk_level`
+  驱动的额外人工确认/强模型需求，MUST 通过本契约的
+  `requires_human_confirmation`/`requires_strong_model` 字段路由，MUST NOT
+  新增脱离本契约之外的独立风险裁决逻辑（FR-013）。
 
 ## 验证要求
 

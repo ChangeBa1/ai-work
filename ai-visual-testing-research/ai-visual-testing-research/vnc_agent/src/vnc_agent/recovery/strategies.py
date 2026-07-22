@@ -178,6 +178,8 @@ class StrategyContext:
     driver: Any | None = None
     executor: Any | None = None
     extra_wait_ms: int = 1000
+    strong_model_available: bool = False
+    human_confirmation_granted: bool = False
 
 
 async def execute_strategy(

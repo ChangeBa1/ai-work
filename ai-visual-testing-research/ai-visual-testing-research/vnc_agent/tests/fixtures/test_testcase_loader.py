@@ -112,14 +112,18 @@ def test_effect_only_screen_changed_loads(tmp_path: Path):
     assert tc.steps[0].verification_mode == "effect_only"
 
 
-def test_legacy_pos_buy_bag_checkout_loads():
-    """T057: unmodified pos-buy-bag-checkout.yaml still loads (FR-025)."""
+def test_pos_buy_bag_checkout_business_mode():
+    """T036: the formal bag checkout case uses deterministic business mode."""
     path = ROOT / "testcases" / "pos-buy-bag-checkout.yaml"
     if not path.exists():
         pytest.skip("pos-buy-bag-checkout.yaml not present")
     tc = load_test_case(path)
     assert tc.steps
-    assert all(s.verification_mode is None for s in tc.steps)
+    assert all(s.verification_mode == "business" for s in tc.steps)
+    assert all(
+        any(c.type not in {"screen_changed", "region_changed"} for c in s.expected.conditions)
+        for s in tc.steps
+    )
 
 
 def test_legacy_effect_only_warning_load_omitted_mode(tmp_path: Path):

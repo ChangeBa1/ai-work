@@ -3,19 +3,17 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
 
-import cv2
 import numpy as np
 import pytest
 
+from tests.e2e.conftest import FakeVNC, build_runtime
 from vnc_agent.domain.action import SemanticAction, TargetDescription
 from vnc_agent.domain.grounding import GroundingCandidate, GroundingResult
 from vnc_agent.domain.testcase import TestCase, TestStep
 from vnc_agent.domain.verification import VerificationCondition, VerificationSpec
 from vnc_agent.models.mimo_grounder import StubGrounder
 from vnc_agent.models.planner_client import StubPlanner
-from tests.e2e.conftest import FakeVNC, build_runtime
 
 
 def _frames_bag_0_to_1() -> list[np.ndarray]:
@@ -43,7 +41,8 @@ async def test_no_duplicate_add_bag_click(tmp_path: Path, app_config):
             found=True,
             candidates=[
                 GroundingCandidate(
-                    bbox=(100, 80, 200, 120), confidence=0.95, reason="ok"
+                        bbox=(100, 80, 200, 120), confidence=0.95, reason="ok"
+                        , coordinate_space="pixel"
                 )
             ],
             model_name="stub",

@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import asyncio
-import sys
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Optional
 
 import typer
 
 from vnc_agent.config import load_config
-from vnc_agent.domain.testcase import FieldValidationError, load_test_case
+from vnc_agent.domain.run import HumanConfirmedFact
+from vnc_agent.domain.testcase import FieldValidationError, TestCase, load_test_case
 from vnc_agent.logging_setup import configure_logging, get_logger
 from vnc_agent.runtime.exceptions import VNCConnectionError
 
@@ -29,13 +29,58 @@ def _run_async(coro):
     return asyncio.run(coro)
 
 
+def _parse_confirm_precondition(
+    case: TestCase, raw_pairs: list[str], screenshot: Path | None
+) -> list[HumanConfirmedFact]:
+    """Feature 003 (FR-024): parse generic `key=value` pairs and validate each
+    key against the testcase's declared precondition facts before connecting."""
+    declared_keys = {fact.key for fact in (case.precondition.facts if case.precondition else [])}
+    facts: list[HumanConfirmedFact] = []
+    now = datetime.now(UTC)
+    for pair in raw_pairs:
+        if "=" not in pair:
+            typer.echo(
+                f"--confirm-precondition expects key=value, got: {pair!r}", err=True
+            )
+            raise typer.Exit(EXIT_VALIDATION)
+        key, value = pair.split("=", 1)
+        if key not in declared_keys:
+            typer.echo(
+                f"--confirm-precondition key {key!r} is not declared in this "
+                "test case's precondition.facts",
+                err=True,
+            )
+            raise typer.Exit(EXIT_VALIDATION)
+        facts.append(
+            HumanConfirmedFact(
+                key=key,
+                confirmed_value=value,
+                confirmed_at=now,
+                screenshot_ref=str(screenshot) if screenshot else None,
+            )
+        )
+    return facts
+
+
 @app.command("run")
 def run_cmd(
-    test_case_file: Path = typer.Argument(..., exists=False, help="YAML test case path"),
-    target: Optional[str] = typer.Option(None, "--target", help="Override target_id"),
-    config: Path = typer.Option(Path("config"), "--config", help="Config directory"),
+    test_case_file: Path = typer.Argument(  # noqa: B008 - Typer declares CLI metadata here
+        ..., exists=False, help="YAML test case path"
+    ),
+    target: str | None = typer.Option(None, "--target", help="Override target_id"),
+    config: Path = typer.Option(  # noqa: B008 - Typer declares CLI metadata here
+        Path("config"), "--config", help="Config directory"
+    ),
     dry_run: bool = typer.Option(False, "--dry-run", help="Validate only, no VNC"),
     json_only: bool = typer.Option(False, "--json-only", help="Skip HTML report"),
+    confirm_precondition: list[str] = typer.Option(  # noqa: B008
+        [],
+        "--confirm-precondition",
+        help="Human-confirmed key=value for a declared precondition fact (repeatable)",
+    ),
+    confirm_screenshot: Path | None = typer.Option(  # noqa: B008
+        None, "--confirm-screenshot", help="Evidence screenshot for --confirm-precondition"
+    ),
 ) -> None:
     """Load and execute a declarative test case."""
     configure_logging()
@@ -51,16 +96,33 @@ def run_cmd(
     if target:
         case = case.model_copy(update={"target_id": target})
 
+    human_confirmed_facts = _parse_confirm_precondition(
+        case, confirm_precondition, confirm_screenshot
+    )
+
     if dry_run:
         typer.echo(f"OK: test case {case.id!r} with {len(case.steps)} step(s) is valid")
         raise typer.Exit(EXIT_PASSED)
 
     cfg = load_config(config)
-    code = _run_async(_execute(case, cfg, json_only=json_only))
+    code = _run_async(
+        _execute(
+            case,
+            cfg,
+            json_only=json_only,
+            human_confirmed_facts=human_confirmed_facts,
+        )
+    )
     raise typer.Exit(code)
 
 
-async def _execute(case, cfg, *, json_only: bool = False) -> int:
+async def _execute(
+    case,
+    cfg,
+    *,
+    json_only: bool = False,
+    human_confirmed_facts: list[HumanConfirmedFact] | None = None,
+) -> int:
     from vnc_agent.drivers.vncdotool_driver import VNCToolDriver
     from vnc_agent.models.provider import build_grounder, build_planner
     from vnc_agent.perception.pipeline import ObservationPipeline
@@ -120,7 +182,8 @@ async def _execute(case, cfg, *, json_only: bool = False) -> int:
         pixel_diff_threshold=cfg.agent.wait.pixel_diff_threshold,
         security_mask_regions=cfg.agent.security.mask_regions,
     )
-    report_builder = ReportBuilder(store)
+    action_tags = list(cfg.agent.reporting.action_tags) + list(case.action_tags)
+    report_builder = ReportBuilder(store, action_tags=action_tags)
     # T100: pass --json-only through to ReportBuilder formats
     report_formats: tuple[str, ...] = ("json",) if json_only else ("json", "html")
     runtime = AgentRuntime(
@@ -136,7 +199,9 @@ async def _execute(case, cfg, *, json_only: bool = False) -> int:
     )
 
     try:
-        ctx = await runtime.run(case)
+        ctx = await runtime.run(
+            case, human_confirmed_facts=human_confirmed_facts
+        )
     except VNCConnectionError:
         return EXIT_VNC
     finally:
@@ -158,7 +223,7 @@ async def _execute(case, cfg, *, json_only: bool = False) -> int:
 def report_cmd(
     run_id: str = typer.Argument(..., help="Existing run id"),
     format: str = typer.Option("both", "--format", help="json|html|both"),
-    config: Path = typer.Option(Path("config"), "--config"),
+    config: Path = typer.Option(Path("config"), "--config"),  # noqa: B008
 ) -> None:
     """Re-render report from persisted run data (no VNC / no re-execution)."""
     configure_logging()

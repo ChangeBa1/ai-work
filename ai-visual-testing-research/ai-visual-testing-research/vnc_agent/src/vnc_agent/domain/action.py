@@ -40,9 +40,20 @@ class SemanticAction(BaseModel):
     text_value: str | None = None
     text_value_ref: str | None = None
     keys: list[str] = Field(default_factory=list)
-    risk_level: Literal["low"] = "low"
+    # Feature 003: widened from Literal["low"] to the full Constitution
+    # low/medium/high action-safety grading (research.md §4).
+    risk_level: Literal["low", "medium", "high"] = "low"
     # 002: Planner may set; else classify_action_kind() fills (data-model.md §5)
     action_kind: Literal["idempotent", "non_idempotent"] | None = None
+    # Feature 003 (FR-006/012/013): Planner MAY declare a closed, UI-generic
+    # interaction purpose for a target independent of the step's primary
+    # non-idempotent action (e.g. dismissing an overlay, scrolling to reveal
+    # the real target). A declared purpose is how step-intent-consistency is
+    # satisfied for such a micro-action — see execution/target_consistency.py.
+    micro_action_purpose: (
+        Literal["dismiss_overlay", "scroll_reveal", "refocus", "wait", "re_observe"]
+        | None
+    ) = None
 
     @model_validator(mode="before")
     @classmethod

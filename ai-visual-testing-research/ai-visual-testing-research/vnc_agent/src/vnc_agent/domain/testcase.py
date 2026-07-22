@@ -8,6 +8,8 @@ from typing import Any, Literal
 import yaml
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from vnc_agent.domain.reporting_tags import ActionTagRule
+from vnc_agent.domain.run import RunPrecondition
 from vnc_agent.domain.verification import VerificationSpec
 
 # Weak action-effect evidence only (data-model.md §2) — cannot alone satisfy business mode
@@ -33,6 +35,14 @@ class TestCase(BaseModel):
     mode: Literal["explicit"]
     steps: list[TestStep] = Field(min_length=1)
     timeout_seconds: int = Field(default=600, ge=1)
+    # Feature 003 (FR-024): optional declarative run-start precondition.
+    # MUST NOT be a fixed business schema — core only defines the generic
+    # named-fact container; concrete keys/assertions are testcase-supplied.
+    precondition: RunPrecondition | None = None
+    # Feature 003 (FR-027): optional declarative action-audit tags, merged
+    # with AgentConfig.reporting.action_tags at report time (testcase
+    # declarations take priority on a matching tag name).
+    action_tags: list[ActionTagRule] = Field(default_factory=list)
 
     @field_validator("mode")
     @classmethod

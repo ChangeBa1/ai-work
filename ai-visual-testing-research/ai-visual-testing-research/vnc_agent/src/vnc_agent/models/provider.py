@@ -66,6 +66,7 @@ class GroundingRequest(BaseModel):
     image_ref: str
     crop_offset: tuple[int, int] = (0, 0)
     target: dict[str, Any]
+    resolution: tuple[int, int] | None = None
     ocr_candidates: list[dict[str, Any]] = Field(default_factory=list)
     template_candidates: list[dict[str, Any]] = Field(default_factory=list)
 

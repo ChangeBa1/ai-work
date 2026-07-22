@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from pathlib import Path
 
 import cv2
@@ -106,7 +105,22 @@ class FakeVNC:
 @pytest.fixture
 def app_config() -> AppConfig:
     recovery = {
-        ft: RecoveryPolicy(max_retries=2, cooldown_ms=0)
+        ft: RecoveryPolicy(
+            max_retries=2,
+            cooldown_ms=0,
+            consumes_global_retry_budget=True,
+            allows_action_path_change=ft
+            in {
+                "target_not_found",
+                "grounding_low_confidence",
+                "action_no_effect",
+                "focus_error",
+                "input_method_error",
+                "timeout",
+            },
+            requires_strong_model=False,
+            requires_human_confirmation=False,
+        )
         for ft in [
             "vnc_connect_failed",
             "vnc_disconnected",
@@ -175,7 +189,12 @@ async def build_runtime(
         GroundingResult(
             found=True,
             candidates=[
-                GroundingCandidate(bbox=(100, 80, 200, 120), confidence=0.9, reason="ok")
+                GroundingCandidate(
+                    bbox=(100, 80, 200, 120),
+                    coordinate_space="pixel",
+                    confidence=0.9,
+                    reason="ok",
+                )
             ],
             model_name="stub",
         )

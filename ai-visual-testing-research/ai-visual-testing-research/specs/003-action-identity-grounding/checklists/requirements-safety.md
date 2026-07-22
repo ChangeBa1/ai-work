@@ -1,3 +1,11 @@
+> **STALE (2026-07-22)**: spec.md was rewritten end-to-end per Constitution v1.1.0
+> Principle VI to remove normative POS-specific fields and renumber every FR/SC.
+> Every FR/SC/US reference below points at the pre-rebaseline numbering and no
+> longer resolves correctly against the current spec.md. Treat this file as
+> historical record of the prior remediation passes, not as current evidence;
+> re-run `/speckit-checklist` against the rebaselined spec before relying on it
+> again.
+
 # Safety Requirements Checklist: 稳定动作身份与坐标空间定位纠正
 
 **Purpose**: Validate that spec.md completely, clearly, and consistently defines the

@@ -2,21 +2,32 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Iterator
+from collections.abc import Iterator
+from datetime import UTC, datetime
 from uuid import uuid4
 
-from vnc_agent.domain.run import ActionIteration, StepRecord, TestRun
+from vnc_agent.domain.run import (
+    ActionIteration,
+    HumanConfirmedFact,
+    StepRecord,
+    TestRun,
+)
 from vnc_agent.domain.testcase import TestCase, TestStep
 from vnc_agent.runtime.state_machine import AgentState, StateMachine
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class RunContext:
-    def __init__(self, test_case: TestCase, run_id: str | None = None) -> None:
+    def __init__(
+        self,
+        test_case: TestCase,
+        run_id: str | None = None,
+        *,
+        human_confirmed_facts: list[HumanConfirmedFact] | None = None,
+    ) -> None:
         self.test_case = test_case
         self.run_id = run_id or str(uuid4())
         self.state_machine = StateMachine(AgentState.CREATED)
@@ -27,6 +38,7 @@ class RunContext:
             started_at=None,
             ended_at=None,
             steps=[],
+            human_confirmed_facts=human_confirmed_facts or [],
         )
         self._step_queue: list[TestStep] = list(test_case.steps)
         self._step_index = -1
@@ -60,8 +72,7 @@ class RunContext:
 
     def iter_steps(self) -> Iterator[TestStep]:
         """Strict sequential iteration over declared steps."""
-        for step in self._step_queue:
-            yield step
+        yield from self._step_queue
 
     def begin_run(self) -> None:
         self.test_run.started_at = _utcnow()

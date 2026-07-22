@@ -93,8 +93,37 @@ expected:
 See sample `testcases/pos-hover-probe.yaml` and
 `specs/002-action-effect-verification/quickstart.md` for offline regression commands.
 
+## Action identity and grounding safety (feature 003)
+
+Every proposed action is reduced to a `CanonicalActionIdentity` containing `step_id`,
+`action_id`, `action_type`, and `normalized_target`. Authors should give a stable
+`action_id` to retries of the same logical action; rewording the intent or target does not
+create a new action. An action from another step is independent. If an `action_id` is not
+stable, normalized target text is matched with OCR-tolerant comparison and then checked
+against the step intent.
+
+Grounder candidates must declare their `coordinate_space` explicitly:
+
+- `pixel`: `bbox` is already in screenshot pixels and is never scaled.
+- `normalized_1000`: each coordinate is in `[0, 1000]` and is converted exactly once
+  against the observed screenshot resolution.
+
+Missing, unknown, contradictory, or out-of-bounds coordinate declarations are rejected;
+the runtime never guesses between pixel and normalized coordinates. Reports retain the
+declared space, source box, resolved pixel box, and whether conversion occurred.
+
+The target-consistency gate blocks `dangerous_drift` before grounding or input dispatch.
+Examples include changing action type, moving from an interactive control to a result row,
+or moving to another control whose label no longer matches the step intent. Legitimate
+preparatory micro-actions must have an independently recognizable purpose (for example,
+closing a step-requested modal). Ambiguous proposals fail safe and are recorded as
+`ambiguous_fail_safe`; test-case authors should improve `action_id`, `target.role`, target
+text, and step-intent wording instead of relying on retries.
+
 ## Layout
 
 See `specs/001-vnc-core-execution-loop/plan.md` for the full module map.
 Also `specs/002-action-effect-verification/plan.md` for ActionEffect / RepeatGuard /
 focus-path changes.
+Also `specs/003-action-identity-grounding/plan.md` for identity, grounding, and
+dangerous-drift changes.

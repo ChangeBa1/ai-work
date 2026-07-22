@@ -8,22 +8,19 @@ import numpy as np
 import pytest
 import yaml
 
+from tests.e2e.conftest import FakeVNC, build_runtime
 from vnc_agent.domain.action import SemanticAction, TargetDescription
 from vnc_agent.domain.grounding import GroundingCandidate, GroundingResult
 from vnc_agent.domain.testcase import load_test_case
 from vnc_agent.models.mimo_grounder import StubGrounder
 from vnc_agent.models.planner_client import StubPlanner
-from tests.e2e.conftest import FakeVNC, build_runtime
-
-ROOT = Path(__file__).resolve().parents[2]
 
 
 @pytest.mark.asyncio
 async def test_legacy_weak_assertion_uncertain(tmp_path: Path, app_config):
-    path = ROOT / "testcases" / "pos-buy-bag-checkout.yaml"
-    if not path.exists():
-        # Minimal legacy-shaped case if sample missing
-        data = {
+    # The formal POS case migrated to business mode in feature 003. Keep this
+    # regression on a separate legacy-shaped weak-only case.
+    data = {
             "id": "legacy-bag",
             "name": "legacy",
             "target_id": "win10-test-01",
@@ -41,14 +38,9 @@ async def test_legacy_weak_assertion_uncertain(tmp_path: Path, app_config):
                 }
             ],
         }
-        p = tmp_path / "legacy.yaml"
-        p.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
-        case = load_test_case(p)
-    else:
-        case = load_test_case(path)
-        # Run only the first weak-only step to keep offline run short
-        case = case.model_copy(update={"steps": case.steps[:1]})
-        case.steps[0] = case.steps[0].model_copy(update={"max_retries": 0})
+    p = tmp_path / "legacy.yaml"
+    p.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
+    case = load_test_case(p)
 
     step_id = case.steps[0].id
     planner = StubPlanner(
@@ -64,7 +56,12 @@ async def test_legacy_weak_assertion_uncertain(tmp_path: Path, app_config):
         GroundingResult(
             found=True,
             candidates=[
-                GroundingCandidate(bbox=(100, 80, 200, 120), confidence=0.95, reason="ok")
+                    GroundingCandidate(
+                        bbox=(100, 80, 200, 120),
+                        coordinate_space="pixel",
+                        confidence=0.95,
+                        reason="ok",
+                    )
             ],
             model_name="stub",
         )

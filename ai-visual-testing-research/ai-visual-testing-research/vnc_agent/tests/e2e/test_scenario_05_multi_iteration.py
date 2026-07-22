@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.e2e.conftest import build_runtime
 from vnc_agent.domain.action import SemanticAction, TargetDescription
 from vnc_agent.domain.grounding import GroundingCandidate, GroundingResult
 from vnc_agent.domain.recovery import FailureType
@@ -11,7 +12,6 @@ from vnc_agent.domain.testcase import TestCase, TestStep
 from vnc_agent.domain.verification import VerificationCondition, VerificationSpec
 from vnc_agent.models.mimo_grounder import StubGrounder
 from vnc_agent.models.planner_client import StubPlanner
-from tests.e2e.conftest import build_runtime
 
 
 def _failing_case(*, max_retries: int = 2) -> TestCase:
@@ -86,10 +86,10 @@ async def test_second_candidate_upgrade_across_iterations(tmp_path: Path, app_co
     )
     # Top-1 / Top-2 close → grounding_low_confidence / top1_top2_close
     c0 = GroundingCandidate(
-        bbox=(100, 80, 140, 120), confidence=0.90, reason="top1"
+        bbox=(100, 80, 140, 120), coordinate_space="pixel", confidence=0.90, reason="top1"
     )
     c1 = GroundingCandidate(
-        bbox=(160, 80, 200, 120), confidence=0.89, reason="top2"
+        bbox=(160, 80, 200, 120), coordinate_space="pixel", confidence=0.89, reason="top2"
     )
     grounder = StubGrounder(
         GroundingResult(found=True, candidates=[c0, c1], model_name="stub")
@@ -146,7 +146,7 @@ async def test_switch_to_keyboard_upgrade_across_iterations(
     )
     # High confidence single candidate so first resolve executes a mouse click
     cand = GroundingCandidate(
-        bbox=(100, 80, 200, 120), confidence=0.95, reason="ok"
+        bbox=(100, 80, 200, 120), coordinate_space="pixel", confidence=0.95, reason="ok"
     )
     grounder = StubGrounder(
         GroundingResult(found=True, candidates=[cand], model_name="stub")

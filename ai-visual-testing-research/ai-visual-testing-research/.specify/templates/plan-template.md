@@ -42,6 +42,18 @@
 
 [Gates determined based on constitution file]
 
+**Domain-Agnostic Core gate (Principle VI, if the constitution defines it)**:
+
+- [ ] No business-specific fields, keywords, states, action categories, expected
+      values, or flow branches are being added to core modules (domain, runtime,
+      planning, grounding, execution, verification, reporting, recovery, config).
+- [ ] All business/scenario semantics introduced by this feature live only in
+      testcase YAML, example/offline-regression fixtures, or an optional scenario
+      profile registered through a generic interface — never as fixed core fields.
+- [ ] Any capability claimed to be generic/reusable is validated against at least
+      two unrelated scenarios, and a cross-scenario contract test is planned/listed
+      (not just a single-scenario regression fixture).
+
 ## Project Structure
 
 ### Documentation (this feature)

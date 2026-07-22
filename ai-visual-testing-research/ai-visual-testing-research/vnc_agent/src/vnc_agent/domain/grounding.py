@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+from typing import Any, Literal
+
 from pydantic import BaseModel, Field, model_validator
 
 
 class GroundingCandidate(BaseModel):
     bbox: tuple[int, int, int, int]  # x1,y1,x2,y2 in original VNC pixels
+    coordinate_space: Literal["pixel", "normalized_1000"] | None = None
+    raw_bbox: tuple[int, int, int, int] | None = None
     confidence: float = Field(ge=0.0, le=1.0)
     label: str | None = None
     reason: str = ""
@@ -25,6 +29,7 @@ class GroundingResult(BaseModel):
     candidates: list[GroundingCandidate] = Field(default_factory=list, max_length=3)
     model_name: str = ""
     raw_response_ref: str = ""
+    coordinate_space_audit: list[dict[str, Any]] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def found_consistency(self) -> GroundingResult:

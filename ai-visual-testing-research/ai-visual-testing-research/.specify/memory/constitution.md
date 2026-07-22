@@ -1,31 +1,35 @@
 <!--
 Sync Impact Report
-- Version change: (template) → 1.0.0
-- Rationale: Initial ratification. Constitution file previously contained only
-  unfilled template placeholders; this is the first concrete adoption, derived
-  from `overall_design.md` (VNC 黑盒 GUI 自动化测试 Agent 总体设计说明书).
-- Modified principles: N/A (initial fill, no prior named principles existed)
+- Version change: 1.0.0 → 1.1.0
+- Rationale: MINOR bump — new substantive Core Principle added (VI), no
+  existing principle redefined or removed, governance compliance-review text
+  materially expanded to reference it.
+- Modified principles: N/A (V unchanged; new VI added)
 - Added sections:
-  - Core Principles I–V (Deterministic Runtime Control, Planner/Grounder/
-    Executor/Verifier Separation, Keyboard-First Execution Priority,
-    Independent Observe-Act-Verify Loop, Controlled Self-Evolution)
-  - 工程与安全约束 (Engineering & Safety Constraints)
-  - 质量门禁与开发工作流 (Quality Gates & Development Workflow)
-  - Governance
+  - Core Principle VI (业务无关核心与声明式场景隔离 / Domain-Agnostic Core and
+    Declarative Scenario Isolation)
 - Removed sections: none
+- Governance changes:
+  - 合规性审查 paragraph extended to explicitly require checking core code for
+    business-specific fields/keywords under Principle VI.
 - Templates requiring updates:
-  - ✅ .specify/templates/plan-template.md — "Constitution Check" gate is
-    generic ("[Gates determined based on constitution file]"); no edit needed,
-    remains compatible.
+  - ✅ .specify/templates/plan-template.md — Constitution Check section now
+    lists explicit domain-agnostic-core gate items (business-specific
+    fields/keywords in core; business data confined to testcase/fixture/
+    profile; cross-scenario contract test requirement).
+  - ✅ .specify/templates/tasks-template.md — added explicit cross-cutting task
+    category for domain-agnostic-core verification and cross-scenario
+    contract tests.
+  - ✅ .specify/templates/checklist-template.md — no hardcoded principle
+    content (items are generated per-feature by /speckit-checklist); no edit
+    needed, remains compatible. Future checklists MUST include the three
+    Principle VI checks listed in plan-template.md's Constitution Check gate.
   - ✅ .specify/templates/spec-template.md — no hardcoded principle references
     found; no edit needed.
-  - ✅ .specify/templates/tasks-template.md — no hardcoded principle
-    references found; no edit needed.
   - ⚠ No `speckit-*` command/skill files contained project-specific
-    principle text requiring sync; none found needing changes at this time.
-- Follow-up TODOs:
-  - TODO(RATIFICATION_DATE): confirmed as 2026-07-20 (date of first fill from
-    overall_design.md); update if an earlier internal approval date is found.
+    principle text requiring sync; Constitution Check fill logic in
+    speckit-plan/SKILL.md already reads from this file generically.
+- Follow-up TODOs: none.
 -->
 
 # VNC 黑盒 GUI 自动化测试 Agent (vnc-test-agent) Constitution
@@ -71,6 +75,28 @@ Verify 的闭环，验证 MUST 基于操作后重新采集的截图与独立证�
 待审核的候选补丁（`pending` 状态），补丁转为 `approved` 前 MUST NOT 影响正式基线。
 理由：测试基线和生产模型的变更具有高影响面，必须保留人工审核关卡，防止经验数据的噪声
 或模型漂移悄然侵蚀测试的可信度。
+
+### VI. 业务无关核心与声明式场景隔离 (Domain-Agnostic Core and Declarative Scenario Isolation)
+本项目是通用的、业务无关的、基于 GUI 的 AI 规范驱动测试框架。生产核心代码——包括
+domain、runtime、planning、grounding、execution、verification、reporting、recovery、
+config——MUST NOT 包含任何被测应用、行业、页面或测试场景专用的字段、关键词、状态、
+操作类别、期望值或流程分支。
+
+POS、购物车、支付、登录、订单、文件上传等业务语义，只允许存在于：(1) 测试用例 YAML；
+(2) 示例和离线回归 fixture；(3) 通过通用接口注册的可选场景 profile。业务语义 MUST NOT
+成为核心模型的固定字段或默认行为。
+
+运行前置条件、状态事实、动作审计分类、禁止动作和计数规则，MUST 使用用户声明的通用
+key/value、tag、matcher 和 assertion 表达，MUST NOT 为具体业务创建固定字段。
+
+事故场景 MAY 作为回归样本，但规范性需求和公共接口 MUST 从事故中抽象出通用不变量，
+MUST NOT 将事故的业务细节直接固化进核心契约。任何声称为通用框架能力的变更，MUST 至少
+使用两个互不相关的 GUI 场景（例如不同行业或不同页面流程）验证，防止实现只适配单一
+测试用例。
+
+理由：本项目的核心价值是可复用于任意 GUI 被测应用的通用测试能力；一旦核心代码渗入
+特定业务语义，框架就退化为单一场景的脚本集合，丧失可移植性、可维护性以及作为通用
+产品的可信度。
 
 ## 工程与安全约束 (Engineering & Safety Constraints)
 
@@ -144,6 +170,10 @@ PR 描述、issue 或对话记录）说明变更内容与理由，并 MUST 更�
 **合规性审查**：所有涉及 Agent Runtime、Planner/Grounder/Verifier、恢复引擎、自进化/回放
 自愈的 PR 与代码评审 MUST 显式检查是否违反本文件的 Core Principles 与工程安全约束；如需
 偏离（例如临时绕过验证独立性以支持调试），MUST 在实现计划的 Complexity Tracking 中记录
-偏离原因、替代方案评估与移除时间表。
+偏离原因、替代方案评估与移除时间表。涉及 domain、runtime、planning、grounding、
+execution、verification、reporting、recovery、config 的 PR 与代码评审 MUST 另外显式
+检查：核心代码是否出现业务专用字段或关键词（违反 Principle VI）；业务数据是否仅存在于
+testcase/fixture/profile 而非核心模型固定字段；声称通用的框架能力变更是否附带至少两个
+互不相关 GUI 场景的跨场景契约测试。
 
-**Version**: 1.0.0 | **Ratified**: 2026-07-20 | **Last Amended**: 2026-07-20
+**Version**: 1.1.0 | **Ratified**: 2026-07-20 | **Last Amended**: 2026-07-22

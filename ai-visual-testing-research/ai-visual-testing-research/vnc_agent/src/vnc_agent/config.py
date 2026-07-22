@@ -7,13 +7,21 @@ from pathlib import Path
 from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from vnc_agent.domain.reporting_tags import ActionTagRule
 
 
 class RecoveryPolicy(BaseModel):
-    max_retries: int = Field(ge=1, default=2)
-    cooldown_ms: int = Field(ge=0, default=300)
+    """Explicit recovery controls required by the project constitution."""
+
+    max_retries: int = Field(ge=1)
+    cooldown_ms: int = Field(ge=0)
+    consumes_global_retry_budget: bool
+    allows_action_path_change: bool
+    requires_strong_model: bool
+    requires_human_confirmation: bool
 
 
 class StepConfig(BaseModel):
@@ -62,6 +70,26 @@ class ActionConfig(BaseModel):
     default_timeout_seconds: int = 10
 
 
+class PlanningConfig(BaseModel):
+    ocr_sanity_check_ratio: float = Field(gt=0.0, le=1.0)
+    # Feature 003 (safety issue A): spatial-conflict IoU threshold — generic
+    # geometry, not business-specific.
+    target_region_conflict_iou_threshold: float = Field(default=0.10, gt=0.0, le=1.0)
+    # Feature 003 (safety issue B): per-micro-action-category max allowed
+    # risk_level. Keys are the generic UI-interaction purposes declared on
+    # SemanticAction.micro_action_purpose — never business vocabulary.
+    micro_action_risk_thresholds: dict[str, Literal["low", "medium", "high"]] = Field(
+        default_factory=dict
+    )
+
+
+class ReportingConfig(BaseModel):
+    # Feature 003 (FR-027/028): declarative, testcase/profile-supplied action
+    # tags. Core MUST NOT hardcode any fixed business category — default is
+    # an empty list.
+    action_tags: list[ActionTagRule] = Field(default_factory=list)
+
+
 class AgentConfig(BaseModel):
     step: StepConfig = Field(default_factory=StepConfig)
     wait: WaitConfig = Field(default_factory=WaitConfig)
@@ -70,6 +98,20 @@ class AgentConfig(BaseModel):
     security: SecurityConfig = Field(default_factory=SecurityConfig)
     grounding: GroundingConfig = Field(default_factory=GroundingConfig)
     action: ActionConfig = Field(default_factory=ActionConfig)
+    planning: PlanningConfig = Field(
+        default_factory=lambda: PlanningConfig(
+            ocr_sanity_check_ratio=0.10,
+            target_region_conflict_iou_threshold=0.10,
+            micro_action_risk_thresholds={
+                "dismiss_overlay": "medium",
+                "scroll_reveal": "medium",
+                "refocus": "medium",
+                "wait": "high",
+                "re_observe": "high",
+            },
+        )
+    )
+    reporting: ReportingConfig = Field(default_factory=ReportingConfig)
     recovery: dict[str, RecoveryPolicy] = Field(default_factory=dict)
 
 
@@ -169,7 +211,10 @@ class AppConfig(BaseModel):
     config_dir: str
 
     def recovery_for(self, failure_type: str) -> RecoveryPolicy:
-        return self.agent.recovery.get(failure_type, RecoveryPolicy())
+        try:
+            return self.agent.recovery[failure_type]
+        except KeyError as exc:
+            raise KeyError(f"missing explicit recovery policy for {failure_type}") from exc
 
 
 def load_config(config_dir: str | Path = "config") -> AppConfig:

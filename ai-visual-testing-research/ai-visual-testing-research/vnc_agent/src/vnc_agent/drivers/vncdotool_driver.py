@@ -6,7 +6,7 @@ import asyncio
 import io
 from typing import Any
 
-from vnc_agent.drivers.key_mapping import MODIFIERS, normalize_hotkey, normalize_key
+from vnc_agent.drivers.key_mapping import normalize_hotkey, normalize_key
 from vnc_agent.runtime.exceptions import VNCConnectionError, VNCDisconnectedError
 
 
@@ -81,9 +81,10 @@ class VNCToolDriver:
             pass
 
     def _probe_resolution(self) -> tuple[int, int]:
-        from PIL import Image
-        import tempfile
         import os
+        import tempfile
+
+        from PIL import Image
 
         fd, tmp = tempfile.mkstemp(suffix=".png")
         os.close(fd)
@@ -98,7 +99,7 @@ class VNCToolDriver:
             except OSError:
                 pass
 
-    def _sync_disconnect(self) -> None:
+    def _sync_disconnect(self, *, shutdown_reactor: bool = True) -> None:
         if self._client is not None:
             try:
                 self._client.disconnect()
@@ -106,12 +107,12 @@ class VNCToolDriver:
                 pass
         self._client = None
         self._connected = False
-        # vncdotool.api.connect() starts a non-daemon "Twisted Reactor" thread on
-        # first use (module-level singleton) and never stops it on its own;
-        # without shutdown() the interpreter hangs on exit waiting for that
-        # thread to join, even after all async work has completed. Constraints
-        # in plan.md limit this driver to one VNC session at a time, so it is
-        # safe to stop the shared reactor whenever we disconnect.
+        # vncdotool owns one process-global Twisted reactor. It cannot be
+        # restarted after shutdown(), so recovery reconnects must disconnect
+        # only the client and keep the reactor alive. Final CLI cleanup uses
+        # the default True value to stop the reactor before process exit.
+        if not shutdown_reactor:
+            return
         try:
             from vncdotool import api as vnc_api
 
@@ -127,13 +128,11 @@ class VNCToolDriver:
     def _sync_capture(self) -> bytes:
         client = self._ensure()
         try:
-            # Prefer PIL Image path
-            from PIL import Image
-
-            path_or_buf: Any
             # vncdotool captureScreen writes to path; use temp via BytesIO not always supported
-            import tempfile
             import os
+            import tempfile
+
+            from PIL import Image
 
             fd, tmp = tempfile.mkstemp(suffix=".png")
             os.close(fd)
@@ -244,7 +243,7 @@ class VNCToolDriver:
                     asyncio.to_thread(self._sync_connect),
                     timeout=self.connect_timeout_seconds,
                 )
-            except asyncio.TimeoutError as e:
+            except TimeoutError as e:
                 raise VNCConnectionError("VNC connect timed out") from e
 
     async def disconnect(self) -> None:
@@ -253,14 +252,23 @@ class VNCToolDriver:
 
     async def reconnect(self) -> None:
         last_err: Exception | None = None
-        for attempt in range(self.reconnect_attempts):
-            try:
-                await self.disconnect()
-                await self.connect()
-                return
-            except Exception as e:
-                last_err = e
-                await asyncio.sleep(0.5 * (attempt + 1))
+        async with self._lock:
+            for attempt in range(self.reconnect_attempts):
+                try:
+                    # Do not call public disconnect(): it shuts down Twisted's
+                    # process-global reactor, which raises ReactorNotRestartable
+                    # when connect() is attempted again in this process.
+                    await asyncio.to_thread(
+                        self._sync_disconnect, shutdown_reactor=False
+                    )
+                    await asyncio.wait_for(
+                        asyncio.to_thread(self._sync_connect),
+                        timeout=self.connect_timeout_seconds,
+                    )
+                    return
+                except Exception as e:
+                    last_err = e
+                    await asyncio.sleep(0.5 * (attempt + 1))
         raise VNCConnectionError(
             f"reconnect exhausted after {self.reconnect_attempts} attempts: {last_err}"
         )

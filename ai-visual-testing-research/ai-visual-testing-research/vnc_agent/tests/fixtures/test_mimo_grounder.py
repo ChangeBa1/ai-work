@@ -124,6 +124,7 @@ async def test_mimo_grounder_openai_wire_protocol(tmp_path: Path):
         "candidates": [
             {
                 "bbox": [20, 10, 40, 30],
+                "coordinate_space": "pixel",
                 "confidence": 0.93,
                 "label": "btn",
                 "reason": "green patch",
@@ -205,7 +206,13 @@ async def test_mimo_grounder_fenced_json_response(tmp_path: Path):
     inner = {
         "found": True,
         "candidates": [
-            {"bbox": [5, 5, 15, 15], "confidence": 0.7, "label": None, "reason": "ok"}
+                {
+                    "bbox": [5, 5, 15, 15],
+                    "coordinate_space": "pixel",
+                    "confidence": 0.7,
+                    "label": None,
+                    "reason": "ok",
+                }
         ],
     }
     fenced = "```json\n" + json.dumps(inner) + "\n```"
@@ -278,7 +285,8 @@ async def test_mimo_grounder_applies_crop_offset(tmp_path: Path):
                                     "found": True,
                                     "candidates": [
                                         {
-                                            "bbox": [5, 5, 15, 15],
+                                                "bbox": [5, 5, 15, 15],
+                                                "coordinate_space": "pixel",
                                             "confidence": 0.9,
                                             "label": None,
                                             "reason": "local",
@@ -298,6 +306,7 @@ async def test_mimo_grounder_applies_crop_offset(tmp_path: Path):
         GroundingRequest(
             image_ref=str(image_path),
             crop_offset=(100, 50),
+            resolution=(200, 100),
             target={"description": "x"},
         )
     )

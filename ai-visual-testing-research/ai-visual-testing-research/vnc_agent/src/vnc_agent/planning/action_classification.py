@@ -1,4 +1,16 @@
-"""Non-idempotent action kind classification (research.md §3, FR-013)."""
+"""Non-idempotent action kind classification (research.md §3, FR-013).
+
+Feature 003 T050 (/speckit-converge, Constitution v1.1.0 Principle VI):
+removed the `_DEFAULT_NON_IDEMPOTENT_KEYWORDS` business-vocabulary keyword
+table. It was already dead code with respect to the function's return value
+— both the "keyword matched" branch and the "no keyword matched" fallback
+returned the same conservative `"non_idempotent"` result (see
+test_action_kind_classification.py's own pre-existing tautological
+assertions), so removing it changes no behavior. The conservative fail-safe
+default (research.md §3: uncertain classification MUST NOT default to
+"idempotent") is now expressed directly, with no keyword list — and
+therefore no business vocabulary — involved at all.
+"""
 
 from __future__ import annotations
 
@@ -8,66 +20,20 @@ from vnc_agent.domain.action import SemanticAction
 
 ActionKind = Literal["idempotent", "non_idempotent"]
 
-# Default keyword table (research.md §3) — configurable via classify_action_kind(keywords=...)
-_DEFAULT_NON_IDEMPOTENT_KEYWORDS: list[str] = [
-    "加入",
-    "添加",
-    "加购",
-    "購入",
-    "レジ袋",
-    "add",
-    "append",
-    "删除",
-    "移除",
-    "取消",
-    "remove",
-    "delete",
-    "cancel",
-    "提交",
-    "确认",
-    "送出",
-    "submit",
-    "confirm",
-    "支付",
-    "结算",
-    "支払い",
-    "pay",
-    "checkout",
-]
 
-
-def classify_action_kind(
-    action: SemanticAction | str,
-    *,
-    keywords: list[str] | None = None,
-) -> ActionKind:
+def classify_action_kind(action: SemanticAction | str) -> ActionKind:
     """
     Return action_kind for a SemanticAction (or raw intent string).
 
     Priority:
     1. Explicit ``SemanticAction.action_kind`` if set
-    2. Keyword match on intent (and target text/description)
-    3. Conservative fallback: ``non_idempotent``
+    2. Conservative fallback: ``non_idempotent`` (research.md §3 — an
+       action whose idempotency is not explicitly declared MUST be treated
+       as non_idempotent, never assumed safe to repeat)
     """
-    if isinstance(action, SemanticAction):
-        if action.action_kind in ("idempotent", "non_idempotent"):
-            return action.action_kind
-        parts = [action.intent or ""]
-        if action.target is not None:
-            parts.append(action.target.text or "")
-            parts.append(action.target.description or "")
-            parts.append(action.target.role or "")
-        text = " ".join(parts)
-    else:
-        text = action or ""
-
-    table = keywords if keywords is not None else _DEFAULT_NON_IDEMPOTENT_KEYWORDS
-    lowered = text.lower()
-    for kw in table:
-        if not kw:
-            continue
-        if kw.lower() in lowered or kw in text:
-            return "non_idempotent"
-
-    # Conservative fallback when no keyword matches (research.md §3)
+    if isinstance(action, SemanticAction) and action.action_kind in (
+        "idempotent",
+        "non_idempotent",
+    ):
+        return action.action_kind
     return "non_idempotent"

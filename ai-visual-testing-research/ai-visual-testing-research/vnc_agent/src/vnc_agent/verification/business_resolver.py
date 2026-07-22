@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime
 from typing import Literal
 
 from vnc_agent.domain.action_effect import ActionEffect
 from vnc_agent.domain.observation import StructuredScreen
+from vnc_agent.domain.run import FactEvaluation, PreconditionEvaluation, RunPrecondition
 from vnc_agent.domain.verification import (
     VerificationResult,
     VerificationSpec,
@@ -18,6 +20,35 @@ from vnc_agent.verification.engine import VerificationEngine
 
 WEAK_TYPES = frozenset({"screen_changed", "region_changed"})
 Basis = Literal["business_assertion", "action_effect_only", "mixed"]
+
+
+async def evaluate_precondition(
+    precondition: RunPrecondition | None,
+    first_observed_screen: StructuredScreen,
+    engine: VerificationEngine,
+) -> PreconditionEvaluation:
+    """Feature 003 (FR-024/025/026): evaluate a testcase's declared run-start
+    facts against the first independently observed screen. No business-
+    specific extraction — each fact's `spec` is evaluated with the exact same
+    VerificationEngine used for step-level business assertions."""
+    if precondition is None or not precondition.facts:
+        return PreconditionEvaluation(status="not_required", fact_evaluations=[], checked_at=None)
+
+    fact_evaluations: list[FactEvaluation] = []
+    for fact in precondition.facts:
+        result = await engine.verify(fact.spec, first_observed_screen)
+        fact_evaluations.append(FactEvaluation(key=fact.key, result=result))
+
+    status: Literal["passed", "failed"] = (
+        "passed"
+        if all(fe.result.status == "passed" for fe in fact_evaluations)
+        else "failed"
+    )
+    return PreconditionEvaluation(
+        status=status,
+        fact_evaluations=fact_evaluations,
+        checked_at=datetime.now(UTC),
+    )
 
 
 def _has_business_assertion(spec: VerificationSpec) -> bool:

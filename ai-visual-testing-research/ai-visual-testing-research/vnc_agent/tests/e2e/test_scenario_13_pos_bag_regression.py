@@ -2,20 +2,20 @@
 
 from __future__ import annotations
 
+from datetime import UTC
 from pathlib import Path
 
 import numpy as np
 import pytest
 
+from tests.e2e.conftest import FakeVNC, build_runtime
 from vnc_agent.domain.action import SemanticAction, TargetDescription
-from vnc_agent.domain.focus_path import VerifiedFocusNavigationPath
 from vnc_agent.domain.grounding import GroundingCandidate, GroundingResult
 from vnc_agent.domain.testcase import TestCase, TestStep
 from vnc_agent.domain.verification import VerificationCondition, VerificationSpec
 from vnc_agent.models.mimo_grounder import StubGrounder
 from vnc_agent.models.planner_client import StubPlanner
 from vnc_agent.planning.action_policy import ActionPolicy
-from tests.e2e.conftest import FakeVNC, build_runtime
 
 
 @pytest.mark.asyncio
@@ -38,7 +38,10 @@ async def test_pos_bag_full_regression(tmp_path: Path, app_config):
             found=True,
             candidates=[
                 GroundingCandidate(
-                    bbox=(100, 80, 200, 120), confidence=0.95, reason="ok"
+                    bbox=(100, 80, 200, 120),
+                    coordinate_space="pixel",
+                    confidence=0.95,
+                    reason="ok",
                 )
             ],
             model_name="stub",
@@ -106,13 +109,14 @@ async def test_pos_bag_full_regression(tmp_path: Path, app_config):
 
     # Unit-level: prefer_keyboard without path never yields tab
     policy = ActionPolicy()
-    from datetime import datetime, timezone
+    from datetime import datetime
+
     from vnc_agent.domain.observation import StructuredScreen
 
     screen = StructuredScreen(
         frame_id="x",
         resolution=(300, 200),
-        captured_at=datetime.now(timezone.utc),
+        captured_at=datetime.now(UTC),
     )
     pr = policy.resolve(
         action, screen, prefer_keyboard=True, focus_path=None, grounding_result=None

@@ -157,6 +157,12 @@ Examples of foundational tasks (adjust based on your project):
 - [ ] TXXX [P] Additional unit tests (if requested) in tests/unit/
 - [ ] TXXX Security hardening
 - [ ] TXXX Run quickstart.md validation
+- [ ] TXXX If the constitution defines a domain-agnostic-core principle: grep core
+      modules for business-specific fields/keywords introduced by this feature and
+      confirm business data lives only in testcase/fixture/profile
+- [ ] TXXX If this feature claims a generic/reusable capability: add a
+      cross-scenario contract test exercising it against at least two unrelated
+      scenarios in tests/contract/
 
 ---
 

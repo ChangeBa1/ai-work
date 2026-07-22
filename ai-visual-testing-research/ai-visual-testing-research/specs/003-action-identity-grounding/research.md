@@ -1,428 +1,465 @@
-# Phase 0 Research: 稳定动作身份与坐标空间定位纠正
+# Phase 0 Research: 通用动作身份、目标一致性与坐标空间安全
 
 **Feature**: [spec.md](./spec.md) | **Plan**: [plan.md](./plan.md)
 
-本阶段的目标是在进入 Phase 1 设计前，把 spec.md 中隐含的实现层决策显式化。本 feature
-不引入任何新的第三方依赖——001/002 已交付的 `vnc_agent` 包（Python 3.12、Pydantic v2、
-现有 `execution/`、`models/`、`planning/`、`reporting/` 子包）完全够用。每条决策均以
-阅读既有源码（`src/vnc_agent/...`）与真实事故报告
-（`vnc_agent/artifacts/runs/cefe36a9-f5c3-4622-9998-ef06690a5ab6/report.json`）为依据。
+**重新基线说明**：本文件替换 2026-07-21 版本，不是增量补丁。旧版本围绕单一 POS
+购物袋事故设计（`extract_cart_state()`、`ReportingConfig.category_keywords` 固定
+四分类、`result_display_keywords`/`dismissal_keywords` 硬编码日文/中文业务关键词、
+`--confirmed-cart-items` 等 CLI 参数），已被 2026-07-22 的
+`checklists/domain-independence.md` 判定为直接违反 Constitution v1.1.0 Principle VI，
+且其中两处（`action_id_match` 跳过目标安全检查、`action_type` 不同即无条件
+`dangerous_drift`）与 spec.md 修正后的 Safety Issue A/B 直接矛盾。本文件的全部决策
+均以现状代码（`src/vnc_agent/...`，2026-07-22 读取）为依据，明确标注每一条"移除"或
+"替换为通用机制"，不再以单一事故复现作为设计的首要目标。
 
-## 1. 定位现有 RepeatGuard 的具体缺陷（对照真实事故报告逐行核实）
+## 0. 业务泄漏清单与泛化替换计划（对应 FR-040 之前的架构前提、Constitution Principle VI）
 
-- **现状**：`execution/repeat_guard.py::actions_semantically_equivalent()` 当前实现：
+下表是 `checklists/domain-independence.md` 与本次代码复核确认的**当前代码中**全部
+业务专用符号，逐项给出替换方案。这是 Phase 1 设计必须实现的清单，`/speckit-tasks`
+生成任务时 MUST 逐行转换为任务，不得遗漏。
 
-  ```python
-  def actions_semantically_equivalent(a, b):
-      if a.action_type != b.action_type: return False
-      if _target_key(a) and _target_key(a) == _target_key(b): return True
-      if _normalize(a.intent) and _normalize(a.intent) == _normalize(b.intent): return True
-      return False
-  ```
+| 位置 | 现状（业务泄漏） | 替换为（通用机制） |
+|---|---|---|
+| `domain/run.py` | `HumanStartStateConfirmation.confirmed_cart_items/confirmed_cart_amount`、`ObservedStartState.cart_items/cart_amount` | `DeclaredFact`/`RunPrecondition`/`ObservedFactEvaluation`（§12，复用既有 `VerificationSpec`） |
+| `verification/business_resolver.py` | `extract_cart_state()`、`evaluate_start_state_precondition()` 硬编码购物车字段比较 | 删除 `extract_cart_state()`；前置条件评估改为直接调用既有 `VerificationEngine.verify()`（§12），不再有任何业务专用提取函数 |
+| `config.py::ReportingConfig` | `category_keywords: dict[str, list[str]]` 校验器强制要求恰好 `{add_to_bag, subtotal, payment, clear_or_reset}` 四键 | 删除该字段与校验器；由测试用例/场景 profile 声明 `action_tags: list[ActionTagRule]`，核心 `ReportingConfig` 不再持有任何分类默认值（§10/§12b） |
+| `config.py::AgentConfig.reporting` 默认工厂 | `{"add_to_bag": ["レジ袋","购物袋","袋","add bag"], "subtotal": ["小計","subtotal"], "payment": [...], "clear_or_reset": [...]}` | 删除；`ReportingConfig` 默认 `action_tags=[]`（核心零默认业务词表） |
+| `config.py::PlanningConfig` | `result_display_keywords`/`dismissal_keywords: list[str]` 字段及默认工厂中的 `["已添加","商品行","合計","小計"]`/`["关闭","閉じる","キャンセル"]` | 删除两个字段；改为新增 `micro_action_risk_thresholds: dict[str, Literal["low","medium","high"]]`（UI 交互类别→风险阈值，通用、非业务，§7） |
+| `execution/target_consistency.py` | 模块级常量 `_RESULT_DISPLAY_KEYWORDS`（含"合計"/"小計"/"已添加"/"商品行"）、`_DISMISSAL_KEYWORDS`（含"关闭"/"閉じる"/"キャンセル"）；`evaluate_target_consistency()` 用文本关键词匹配推断"是否为合法微动作"；`if previous_action.action_type != proposed_action.action_type: return "dangerous_drift"` 无条件分支 | 整个关键词匹配启发式删除；改为读取 `SemanticAction.micro_action_purpose`（Planner 声明的结构化枚举）与 `SemanticAction.risk_level`，按 FR-013 的 AND 语义判定（§7）；`action_type` 差异不再单独决定结果 |
+| `api/cli.py` | `--confirm-start-state`/`--confirmed-cart-items`/`--confirmed-cart-amount`/`--confirmed-screenshot` 四个固定业务参数 | 替换为通用 `--confirm-precondition key=value`（可重复）+ `--confirm-screenshot <path>`（§12b） |
+| `contracts/real-vnc-audit-contract.md`（文档） | 固定 `add_to_bag/subtotal/payment/clear_or_reset` 四分类要求 | 全文重写为声明式前置条件 + 声明式 tag 审计契约（本次 `/speckit-plan` 输出） |
+| `contracts/action-identity-contract.md`（文档） | `"action_id_match"` 时"MUST NOT 再比较"目标一致性——与 Safety Issue A 直接矛盾 | 全文重写：新增 `has_target_evidence_conflict()` 前置门（§6） |
+| `data-model.md` §2/§9（文档） | `action_type` 不同→无条件 `"dangerous_drift"` | 全文重写为 AND 语义（§7） |
+| `planning/action_classification.py` | `_DEFAULT_NON_IDEMPOTENT_KEYWORDS` 含 `"レジ袋"`/`"購入"`/`"支払い"` | **不在 003 范围内**——spec.md Assumptions 明确"非幂等动作分类沿用既有机制，不在本 feature 中重新定义"；本表仅记录为已知技术债，交由后续独立 feature 处理，不在本次 tasks.md 中安排修复任务 |
 
-  `_target_key()` 是 `role + text + description` 拼接后的规范化字符串**完全相等**比较，
-  **完全没有使用 `SemanticAction.action_id`**。对照真实事故报告 `report.json`：三轮迭代
-  的 `semantic_action.action_id` 全程为 `"act-1"`（Planner 确实保持了稳定 ID），但
-  `target.description`/`intent` 逐轮改写，导致 `_target_key`/`intent` 均不相等 →
-  `actions_semantically_equivalent()` 返回 `False` → `RepeatGuard.check()` 归类为
-  `"different_action"` → `allowed=True` → 第二、三轮各执行了一次本不该发生的鼠标点击。
-  这是本 feature 需要修复的第一个、也是最直接的根因，且证实"Planner 其实提供了可用的
-  强信号（`action_id`），只是现有代码没有使用它"。
-- **Decision**：不新增 RepeatGuard 的调用位置——`runtime/agent_runtime.py::run_action_iteration()`
-  中 `guard = self.repeat_guard.check(sa, previous_iteration)` 已经发生在
-  `RESOLVING_ACTION`（ActionPolicy/Grounding）与 `EXECUTING`（Executor）**之前**（紧跟
-  PLANNING 阶段之后），这正是 spec 计划要点 #2"RepeatGuard 在 Grounding 和 Executor 之前
-  完成判断"的现状——**该约束已经满足，无需改动调用时机**，只需要重写 `RepeatGuard` 内部
-  的身份匹配算法本身（见 §2）。
-- **Rationale**：把"发现问题"与"给出修复"分开记录，避免 Phase 1 设计误以为需要移动
-  `RepeatGuard.check()` 的调用点——真正需要动的只是它如何判断"是否为同一动作"。
+**架构前提（对应用户本次 10 条要求）**：
 
-## 2. CanonicalActionIdentity 的数据模型与计算位置
+1. 公共模型只包含通用 `named facts`（`DeclaredFact`/`VerificationSpec`，复用既有类型）、
+   `assertions`（同一 `VerificationSpec`/`VerificationCondition`）、`tags`
+   （`ActionTagRule`）、`matchers`（`ActionTagRule.matcher`/`micro_action_purpose` 枚举）、
+   `policies`（`RecoveryPolicy` 六字段，保留）、`action records`
+   （`ActionIteration`/`ExecutableAction`/`ExecutionResult`，保留）、`evidence`
+   （`coordinate_space_audit`/`fact_evaluations`/`declared_tag_counts`）。
+2. 核心模型（`domain/`、`config.py`、`reporting/`）不再出现 `cart`/`bag`/`subtotal`/
+   `payment`/`clear_or_reset` 等固定业务字段——见上表逐项删除。
+3. 报告 `declared_tag_counts` 完全由测试用例/场景 profile 声明的 `action_tags`
+   驱动，核心不再硬编码四分类（§10）。
+4. `target_consistency` 不再依赖任何关键词列表——改为读取 Planner 声明的
+   `micro_action_purpose` 结构化字段（§7）。
+5. `action_id_match` 新增 `has_target_evidence_conflict()` 前置门，不能绕过目标
+   安全验证（§6，Safety Issue A）。
+6. 坐标空间（`GroundingCandidate.coordinate_space`/`raw_bbox`/
+   `resolve_pixel_bbox()`）与 `RecoveryPolicy` 六字段契约已经是通用设计，本次
+   **原样保留**，仅做编辑性调整（示例标签去业务化，§8/§9）。
+7. POS 提取与断言（`pos-buy-bag-checkout.yaml` 的具体业务断言文本）只存在于该
+   testcase 文件本身，不再有任何核心函数（如 `extract_cart_state()`）专门为它
+   服务。
+8. 见上表。
+9. 见 §13（三个通用离线场景 + POS 作为第四个回归 fixture 的契约测试设计）。
+10. 真实/在线环境验证继续不进入自动化测试（§14，延续 001/002/旧 003 已确立的
+    约束，未发现需要修改之处）。
 
-- **Decision**：新增 `domain/action_identity.py`：
+## 1. 定位现有 RepeatGuard 与 target_consistency 的具体缺陷（业务泄漏 + 安全问题 A/B）
 
-  ```python
-  class CanonicalActionIdentity(BaseModel):
-      step_id: str
-      action_type: ActionType
-      action_id: str | None          # 本轮/上一轮各自携带的 action_id（可为空）
-      normalized_target: str          # 优先取 target.text（OCR 容忍归一化），
-                                       # 缺失时退化为 normalized(intent)
-  ```
+- **现状（已核实源码）**：`execution/target_consistency.py::evaluate_target_consistency()`
+  第 85-86 行：`if previous_action.action_type != proposed_action.action_type: return
+  "dangerous_drift"`——无条件分支，直接违反 spec.md 安全问题 B 的修正（FR-012/013：
+  `action_type` 变化只能是风险信号，不能无条件等于 `dangerous_drift`）。同一文件
+  第 17-27 行的 `_DISMISSAL_KEYWORDS`/`_RESULT_DISPLAY_KEYWORDS` 模块级常量包含
+  `"合計"`/`"小計"`/`"已添加"`/`"商品行"`/`"閉じる"`/`"キャンセル"` 等业务/语言专用
+  词汇，作为默认参数值硬编码在核心 `execution/` 模块中，直接违反 Constitution
+  Principle VI。`contracts/action-identity-contract.md` 现有文本明确写"`action_id`
+  相同...MUST NOT 再比较"，即 `identity_match()` 返回 `"action_id_match"` 时目标
+  一致性检查被完全跳过——直接违反 spec.md 安全问题 A 的修正（FR-003/004）。
+- **Decision**：三处修复合并为一次重写（不再分阶段打补丁）：
+  1. `evaluate_target_consistency()` 删除关键词匹配与 `action_type` 无条件分支，
+     改为读取 `SemanticAction.micro_action_purpose`/`risk_level` 的 AND 语义
+     判定（§7）。
+  2. `RepeatGuard.check()`/`identity_match()` 组合逻辑新增
+     `has_target_evidence_conflict()` 前置门（§6）。
+  3. `action-identity-contract.md`、`data-model.md`、`real-vnc-audit-contract.md`
+     三份设计文档全文替换，不保留任何仍然描述旧行为的段落作为"权威设计"。
+- **Rationale**：`checklists/domain-independence.md` 已经证明"分阶段增量修补"会
+  让契约文档长期与 spec.md 矛盾（CHK003/CHK010 的两处直接冲突正是历史增量修补的
+  产物）；本次要求"重新基线，不是增量补丁"，因此三处一次性替换。
 
-  新增 `execution/action_identity.py::compute_identity(step_id, action) ->
-  CanonicalActionIdentity` 纯函数；新增
-  `execution/action_identity.py::identity_match(prev, curr) -> Literal["action_id_match",
-  "normalized_target_match", "no_action_id_ambiguous"]`（`"different_step"` 另计，
-  见 §3）——**做三件事**：(a) 当 `prev.action_id` 与 `curr.action_id` 均非空、相等，
-  **且 `prev.action_type == curr.action_type`** 时返回 `"action_id_match"`（FR-002/007，
-  决定性强证据，不比较 `normalized_target`/自由文本；`action_type` 不同则不命中本分支，
-  见下方 FR-007 修正）；(b) `action_type` 相同但 `action_id` 缺失/不相等时，若
-  `normalized_target` 经 OCR 容忍比较判定为同一目标，返回 `"normalized_target_match"`
-  （FR-005，见下方修正）；(c) 否则返回 `"no_action_id_ambiguous"`，交给 §4 的步骤意图
-  一致性检查处理（FR-003/004）。
+## 2. CanonicalActionIdentity 的数据模型与计算位置（保留，无变化）
 
-  **修正（源自 `/speckit-analyze` 发现的 CRITICAL/HIGH 缺口，2026-07-21 补充）**：
-  初版设计中 `identity_match()` 只比较 `action_id`，完全没有校验 `action_type`——
-  这意味着如果 Planner 出现 bug、把同一个 `action_id` 复用在两个不同 `action_type`
-  的动作上（例如先 `click` 后 `type_text`），系统会错误地把它们判定为
-  `"action_id_match"` 并按"同一动作"处理，直接违反 FR-007"MUST NOT 过度宽松地将
-  两个真正不同的业务动作错误合并"。现已修正为 `action_type` 相等是
-  `"action_id_match"` 的必要前提，`action_type` 不同时下沉到
-  `evaluate_target_consistency()`（§4），该函数新增一条前置规则：`action_type`
-  不同时无条件判定为 `"dangerous_drift"`。
-  同时，初版设计从未真正落实 FR-005（OCR 噪声容忍的规范化目标识别，如"レジ袋"被
-  识别为"ジ袋"仍应视为同一目标）——`normalized_target` 字段虽然被计算，但没有
-  任何函数实际比较过它。现已新增 `"normalized_target_match"` 作为
-  `identity_match()` 的第三种返回值，在 `action_id` 缺失/不相等但
-  `action_type`/`normalized_target` 均判定一致时命中，证据强度弱于
-  `"action_id_match"` 但仍按同一套 no_effect-only 重试许可规则处理（`reason` 加
-  `_normalized_target` 后缀以区分审计记录，见 §5 修正）。
-- **Rationale**：把"计算身份"（纯数据转换）与"判断是否允许执行"（`RepeatGuard.check()`
-  的编排职责）拆成两个文件，`CanonicalActionIdentity` 作为可独立单测、可写入报告
-  （FR-025）的值对象；`identity_match()` 只表达 FR-001/002 两条规则本身，不涉及
-  fail-safe 或漂移判断，保持每个函数职责单一、可独立测试。
+- **Decision**：`domain/action_identity.py::CanonicalActionIdentity`
+  （`step_id`/`action_type`/`action_id`/`normalized_target`）与
+  `execution/action_identity.py::compute_identity()`/`identity_match()` 的现有实现
+  已经是业务无关的通用设计（不含任何固定业务字段），**保留不变**。
+  `identity_match()` 返回值集合（`"different_step"`/`"action_id_match"`/
+  `"normalized_target_match"`/`"no_action_id_ambiguous"`）与判定规则不变。
+- **Rationale**：该模块的现状已经满足 Constitution Principle VI 与 FR-001/002/005/
+  007/009/011，`checklists/domain-independence.md` 未在此模块发现业务泄漏，唯一
+  需要修正的是"`identity_match()` 的结果如何被 `RepeatGuard.check()` 消费"（见
+  §6），而不是 `identity_match()` 本身。
+
+## 3. 步骤边界隔离（保留，无变化）
+
+- **Decision**：`CanonicalActionIdentity.step_id` 与既有的"不同 `StepRecord` 之间
+  `previous_iteration` 永不跨越步骤边界"这一运行时不变量**保留不变**——现状已经
+  正确实现 FR-001，且不含任何业务专用逻辑。
+- **Rationale**：同 002/旧 003 research.md 的既有结论，本次复核未发现需要改动之处。
+
+## 4. `SemanticAction` 新增结构化字段：`micro_action_purpose` 与 `risk_level` 扩展
+
+- **Decision**：
+  1. `domain/action.py::SemanticAction.risk_level` 从当前的 `Literal["low"] = "low"`
+     扩展为 `Literal["low", "medium", "high"] = "low"`——直接复用 Constitution
+     "动作安全分级 low/medium/high 三级"这一既有的、业务无关的通用概念，不新增
+     概念。
+  2. 新增 `micro_action_purpose: Literal["dismiss_overlay", "scroll_reveal",
+     "refocus", "wait", "re_observe"] | None = None` 字段——这是一个**封闭的、
+     UI 交互通用枚举**（关闭遮挡元素/滚动显现/重新聚焦/等待/重新观察），描述的是
+     GUI 交互的结构性类别，不是任何具体业务的词汇表；Planner 在提出一个非主要
+     非幂等动作的新目标时，MAY 显式声明该字段以表明其独立的交互目的。
+- **Rationale**：这是本次重新基线相对旧版本**最关键的架构决策**——旧代码用
+  "文本关键词匹配"（`dismissal_keywords`/`result_display_keywords`）去**推断**
+  Planner 的意图，这既是业务语言泄漏的直接来源，也不符合 spec.md FR-006/012/013
+  反复使用的"**声明的**交互目的"（声明式，而非推断式）这一措辞。让 Planner 直接
+  **声明**一个封闭枚举值，而不是让核心代码去猜测自由文本里有没有出现某个业务
+  关键词，从根本上消除了关键词列表这一泄漏面，同时比文本匹配更确定性（枚举比较
+  vs 子串匹配），更符合 Constitution"确定性手段优先"原则。
 - **Alternatives considered**：
-  - 把身份计算内联在 `RepeatGuard.check()` 里，不单独建模——`CanonicalActionIdentity`
-    需要出现在报告审计字段（FR-025）里，必须是一个可序列化的独立值对象，不能只是
-    `RepeatGuard` 内部的临时变量，拒绝内联。
-  - 用一个哈希值代替结构化对象作为"身份"——哈希值无法在报告里展示"到底因为什么匹配/
-    不匹配"（FR-025 要求判定理由可审计），拒绝。
+  - 保留关键词匹配，但把关键词列表从"硬编码默认值"改为"测试用例/场景 profile
+    可选声明，核心默认空列表"——这确实能满足"核心不含固定业务字段"的字面要求，
+    但仍然是"用词表猜测意图"这一本质上脆弱且与"声明的"措辞不符的设计，拒绝；
+    结构化枚举声明是更彻底、更简单的修复。
+  - 用自由文本字段承载"purpose"（如 `purpose: str | None`）而非封闭枚举——自由
+    文本仍然需要某种匹配/解析逻辑才能被 FR-013 的 AND 语义消费，重新引入"要不要
+    关键词匹配"的问题，拒绝；封闭枚举可以直接做等值比较。
 
-## 3. 步骤边界隔离：确认 FR-001 无需新代码即可满足
+## 5. 目标证据冲突检测：`has_target_evidence_conflict()`（新增，落实安全问题 A）
 
-- **现状核实**：`runtime/agent_runtime.py::run()` 每次 `ctx.advance_step()` 后都会
-  开始一个新的 `StepController`/`ctx.current_step_record`；`run_action_iteration()` 中
-  `previous_iteration = ctx.current_step_record.iterations[-2]` 永远只从**当前**步骤的
-  `StepRecord.iterations` 取值，`RepeatGuard` 本身也是无状态的（不持有跨步骤的成员
-  变量）。也就是说，**两个不同测试步骤之间永远不会有一个 `previous_iteration` 跨越
-  步骤边界传给 `RepeatGuard.check()`**——spec 计划要点 #4"真正不同步骤的动作不被错误
-  阻止"在现有架构下已经成立。
-- **Decision**：`CanonicalActionIdentity.step_id` 字段与 §2 `identity_match()` 中的
-  步骤边界判断仍然保留（不因"现状已经安全"就省略）——一是作为显式的防御性正确性保证，
-  避免未来任何重构（如引入并行步骤调度）意外破坏这一假设；二是 FR-025 要求报告能审计
-  "所属测试步骤"，必须有一个显式字段承载这一信息，不能仅依赖调用时机的隐式保证。
-- **Rationale**：区分"现状已经正确的部分"和"需要新增代码的部分"，避免过度设计；同时
-  不因为"现在恰好安全"就删除本应显式声明的不变量。
-
-## 4. 步骤意图一致性验证与危险目标漂移检测
-
-- **Decision**：新增 `execution/target_consistency.py`：
-
-  ```python
-  ConsistencyOutcome = Literal[
-      "legitimate_micro_action",   # 独立目的、符合 step intent 的合法新目标（FR-003）
-      "dangerous_drift",           # 危险漂移（FR-008，两种方向）
-      "ambiguous",                 # 无法可靠判断（触发 FR-004 fail-safe）
-  ]
-
-  def evaluate_target_consistency(
-      step_intent: str,
-      previous_action: SemanticAction | None,
-      proposed_action: SemanticAction,
-  ) -> ConsistencyOutcome: ...
-  ```
-
-  判定规则（仅在 §2 `identity_match()` 返回 `"no_action_id_ambiguous"` 时被调用）：
-  1. 若 `previous_action is None` → `"legitimate_micro_action"`（步骤内第一轮，不存在
-     "漂移自谁"的问题）。
-  2. **若 `previous_action.action_type != proposed_action.action_type` → 无条件
-     `"dangerous_drift"`**（FR-007 修正，见 §2 同步说明），优先于以下角色/关键词
-     判断——`action_type` 不同本身就是决定性的危险信号，不需要再看角色/关键词。
-  3. 判断 `previous_action.target` 的角色类别（可交互控件 vs 非交互结果展示元素，
-     依据 `target.role` 字段与 `target.text`/`description` 中的常见结果展示关键词，
-     如"行/row/列表/list/已添加/合計"等，作为启发式信号，见 Assumptions）与
-     `proposed_action.target` 的角色类别：
-     - 若 `previous_action` 指向可交互控件、`proposed_action` 指向非交互结果展示
-       元素 → `"dangerous_drift"`（FR-008 第一种方向）。
-     - 若两者都指向可交互控件，但 `proposed_action` 的目标文字/描述与 `step_intent`
-       的核心关键词重合度明显低于 `previous_action` 与 `step_intent` 的重合度（简单
-       关键词重叠度量，非 NLP 模型）→ `"dangerous_drift"`（FR-008 第二种方向：控件→
-       另一个不符合 intent 的控件）。
-     - 若 `proposed_action` 与 `step_intent` 重合、且与 `previous_action` 指向不同的
-       独立交互目的（如"关闭弹窗"类关键词）→ `"legitimate_micro_action"`（FR-003 的
-       合法前置微动作分支）。
-     - 以上均不满足（信号不足以分类）→ `"ambiguous"`。
-- **Rationale**：直接落实 FR-003/FR-008；采用关键词重叠这一确定性、可测试的启发式
-  而非引入 NLP/向量相似度模型，符合宪法"确定性手段优先"的资源约束，且 spec Assumptions
-  已明确"具体判别规则由实现阶段结合真实场景数据给出，不在规格中固化算法细节"，把关键词
-  信号列表设计为可配置项（`config/agent.yaml` 新增
-  `planning.result_display_keywords`/`planning.dismissal_keywords`），方便后续依据更多
-  真实场景调整，不需要改代码。
+- **Decision**：新增 `execution/target_consistency.py::has_target_evidence_conflict(
+  previous_action: SemanticAction, proposed_action: SemanticAction, *,
+  previous_resolved_region: Region | None = None, proposed_resolved_region: Region
+  | None = None) -> bool`：
+  1. **角色冲突**：`previous_action.target.role` 与 `proposed_action.target.role`
+     经归一化（大小写/首尾空白）后不相等时视为角色冲突。
+  2. **交互性质冲突**：两者的角色分别映射到"可交互"/"非交互"两类（复用 §7 中
+     `evaluate_target_consistency()` 已有的角色分类判断，不重复实现）时，若分类
+     结果不同视为交互性质冲突。
+  3. **空间证据冲突**：若两者均提供了已解析的目标区域（`previous_resolved_region`/
+     `proposed_resolved_region`，来自各自轮次 Grounding 结果的 §8 换算后
+     `bbox`），且两个区域交并比（IoU）低于一个可配置阈值
+     （`config.agent.planning.target_region_conflict_iou_threshold`，默认
+     `0.10`）视为空间证据冲突；任一区域缺失时空间证据项不参与判断（不产生误判）。
+  4. 以上三项**任一为真**即返回 `True`（存在冲突）。
+  该函数 MUST NOT 依赖任何关键词列表或业务词汇，只依赖结构化字段（`role`、
+  分类结果、`Region` 数值）比较。
+- **Rationale**：直接落实 spec.md 安全问题 A（"如果 role、target、交互性质或
+  空间证据与前一轮发生实质冲突，仍必须运行目标一致性检查"）；三个信号维度逐字
+  对应 spec.md 的措辞（"角色"、"交互性质"、"空间证据"），确保契约与规格可逐条
+  对照，不遗漏。
 - **Alternatives considered**：
-  - 调用视觉模型判断"这是不是同一类控件"——违反宪法"确定性手段优先"路由原则，且
-    `evaluate_target_consistency()` 处于 RepeatGuard 决策链路中，一旦引入模型调用，
-    RepeatGuard 就不再是"是否允许执行"的纯确定性快速判断，拒绝。
-  - 把该逻辑放进 `planning/action_classification.py`（002 已有的 `action_kind` 分类
-    模块）——`action_classification.py` 职责是"这个动作是否幂等"，与"这个目标是否漂移"
-    是两个不同维度的判断，混合会让该模块承担过多职责，拒绝合并。
+  - 只比较角色，不比较空间证据——真实场景中角色标签本身可能不可靠（spec.md
+    Assumptions 已经指出这一风险），只用角色一个信号会让"角色标签错误"的场景
+    完全绕过冲突检测；加入空间证据作为独立、不依赖角色标签正确性的第二信号，
+    降低单一信号失效的风险，拒绝只用角色。
+  - 把这个函数做成 `evaluate_target_consistency()` 的内部私有逻辑，不对外暴露——
+    FR-003/004 要求"无论 `action_id` 是否匹配都要能触发"，必须是一个可以在
+    `RepeatGuard.check()` 组合逻辑中独立调用、独立单测的函数，拒绝内联。
 
-## 5. RepeatGuard.check() 的组合逻辑重写
+## 6. `RepeatGuard.check()` 的组合逻辑重写（落实安全问题 A）
 
-- **Decision**：`RepeatGuard.check()` 重写为：
+- **Decision**：`execution/repeat_guard.py::RepeatGuard.check()` 重写为：
 
   ```text
-  1. curr_id = compute_identity(step_id, proposed_action)
-  2. if previous_iteration is None: return allowed=True, reason="first_attempt"
+  1. if previous_iteration is None: return allowed=True, reason="first_attempt"
+  2. if classify_action_kind(proposed_action) == "idempotent":
+       return allowed=True, reason="idempotent_action"
   3. prev_id = compute_identity(step_id, previous_iteration.semantic_action)
-  4. kind = classify_action_kind(proposed_action)
-  5. if kind == "idempotent": return allowed=True, reason="idempotent_action"
-  6. match = identity_match(prev_id, curr_id)
-  7. if match == "action_id_match":
-       同一逻辑动作 → 走 FR-006 的 no_effect-only 重试许可规则（复用 002 既有分支）
-  8. elif match == "normalized_target_match":
-       同一逻辑动作（OCR 容忍匹配，FR-005）→ 走同一套 no_effect-only 重试许可规则，
-       但 reason 取对应的 "*_normalized_target" 后缀变体，与上一分支的证据来源区分
-  9. else (no_action_id_ambiguous):
+     curr_id  = compute_identity(step_id, proposed_action)
+     match = identity_match(prev_id, curr_id)
+  4. if match == "different_step":  # 结构上不会发生，见 §3
+       return allowed=True, reason="first_attempt"
+  5. conflict = has_target_evidence_conflict(
+       previous_iteration.semantic_action, proposed_action,
+       previous_resolved_region=..., proposed_resolved_region=...)
+  6. if match in ("action_id_match", "normalized_target_match") and not conflict:
+       # 安全问题 A 的核心分支：仅当无冲突时，identity 匹配才单独决定"是否为
+       # 同一逻辑动作"，走既有 no_effect-only 重试许可规则（reason 视 match 取
+       # 对应的 "*_normalized_target" 后缀变体）
+       走既有 FR-006/010 规则（002 既有分支，此处不再重复展开）
+  7. else:
+       # match == "no_action_id_ambiguous"，或者 match 已匹配但 conflict=True
+       # ——无论哪种情形，安全问题 A 都要求必须运行一致性检查，不能因为
+       # identity 匹配或前一轮 no_effect 就跳过
        outcome = evaluate_target_consistency(step.intent, previous_iteration.semantic_action, proposed_action)
-       if outcome == "dangerous_drift": return allowed=False, reason="dangerous_drift"
-       if outcome == "legitimate_micro_action": return allowed=True, reason="legitimate_micro_action"
-       if outcome == "ambiguous": 走 FR-004 fail-safe（等同于"视为同一逻辑动作"分支）
+       if outcome == "dangerous_drift":
+           return allowed=False, reason="dangerous_drift"
+       if outcome == "legitimate_micro_action":
+           return allowed=True, reason="legitimate_micro_action"
+       # outcome == "ambiguous"
+       if 前一轮 ActionEffect 已被可靠判定为 no_effect 且步骤预算仍有剩余:
+           return allowed=True, reason="no_effect_confirmed"
+       return allowed=False, reason="ambiguous_fail_safe"
   ```
 
-  `RepeatGuardDecision.reason` 的取值集合从 002 的
-  `["first_attempt","different_action","idempotent_action","no_effect_confirmed",
-  "blocked_effect_pending","blocked_uncertain"]` 扩展为新增
-  `"dangerous_drift"`、`"legitimate_micro_action"`、`"ambiguous_fail_safe"`，以及
-  `"no_effect_confirmed_normalized_target"`、
-  `"blocked_effect_pending_normalized_target"`、
-  `"blocked_uncertain_normalized_target"` 三个后缀变体（对应第 8 步的
-  `"normalized_target_match"` 分支，FR-005 修正），
-  **移除** `"different_action"` 这一在 002 中被证明会掩盖真实事故的宽松归类（不再有
-  任何路径仅因文本不完全相等就返回该原因）。
-- **Rationale**：直接落实 spec 计划要点 #3（相同 action_id 加措辞改写、目标漂移的
-  处理规则）；`RepeatGuardDecision.reason` 移除 `"different_action"` 是刻意的——003
-  的整个动机就是"文本不同不能再单独作为放行理由"，保留这个取值会让审计报告里出现
-  "这次是因为文本不同才放行"这种误导性归因，必须替换为更精确的原因分类。
+  关键变化（相对旧版本）：第 5-7 步是全新增加的"无论 identity 是否匹配、无论
+  前一轮是否 `no_effect`，只要存在目标证据冲突就必须运行一致性检查"这一门禁；
+  旧版本第 6 步（原 `action_id_match` 分支）直接跳到 no_effect-only 规则，不检查
+  冲突，这正是安全问题 A 描述的缺陷。
+- **Rationale**：直接落实 spec.md FR-003/004 与 2026-07-22 `/speckit-clarify`
+  会话中安全问题 A 的最终决议；`conflict` 检测独立于 `match` 结果计算，保证"即使
+  `action_id` 相同、即使前一轮是 `no_effect`，只要证据冲突就必须检查"这一不变量
+  无法被绕过。
 - **Alternatives considered**：
-  - 保留 `"different_action"` 作为 `"ambiguous"` 分支判定后确实合法通过时的取值——
-    与 `"legitimate_micro_action"` 语义重复且不如后者精确，拒绝保留旧名。
+  - 只在 `match == "no_action_id_ambiguous"` 时调用一致性检查（旧设计）——正是
+    安全问题 A 要修复的缺陷，拒绝保留。
+  - 让 `identity_match()` 自己内部调用 `has_target_evidence_conflict()` 并直接
+    返回一个新的枚举值（如 `"action_id_match_conflicting"`）——会让 `identity_match()`
+    从"纯粹的身份匹配判断"变成同时承担"安全判断"，职责混合，拒绝；保持
+    `identity_match()` 单一职责（只判断身份），冲突检测与组合决策放在
+    `RepeatGuard.check()` 编排层。
 
-## 6. GroundingCandidate 的 coordinate_space 数据模型与一次性转换架构
+## 7. 危险目标漂移判定重写：AND 语义 + 风险级别路由（落实安全问题 B）
 
-- **现状**：`domain/grounding.py::GroundingCandidate.bbox` 目前是裸
-  `tuple[int,int,int,int]`，注释写"in original VNC pixels"但没有任何字段或校验强制
-  这一假设；`models/mimo_grounder.py` 的系统提示词硬编码"bbox 为图片内的像素坐标"，
-  完全没有给模型声明 `normalized_1000` 的选项；`_apply_crop_and_cap()` 只做
-  `crop_offset` 平移，不做任何坐标空间换算。对照真实事故报告，第二轮候选坐标
-  `bbox=[251,402,405,459]`（分辨率 1024×1568）与第一轮实际点击位置 `y≈678` 相差
-  极大，若将该 bbox 当作 0–1000 归一化坐标换算（`y: 402/1000*1568≈630`~
-  `459/1000*1568≈720`），换算后的 y 区间恰好落在第一轮点击的 `y≈678` 附近——这是
-  "模型可能返回了归一化坐标、系统却当像素坐标直接使用"这一假说的有力佐证，但由于
-  历史响应本身没有留存 `coordinate_space` 字段，无法 100% 确证，故 spec 与本计划均
-  将其列为"很可能的根因"而非已证实的唯一原因（见 spec.md User Story 3 "Why this
-  priority"）。
-- **Decision**：
-  1. `domain/grounding.py::GroundingCandidate` 新增两个字段：
-     `coordinate_space: Literal["pixel","normalized_1000"] | None = None`（候选声明的
-     坐标空间，缺省 `None` 表示历史响应未声明）、
-     `raw_bbox: tuple[int,int,int,int] | None = None`（换算前的原始候选坐标，仅用于
-     报告审计，FR-026/036；`bbox` 字段本身**换算后**永远是原始 VNC 像素坐标，保持对
-     下游 `ActionPolicy`/`Executor` 完全透明——它们不需要知道坐标空间概念）。
-  2. 新增 `models/coordinate_space.py::resolve_pixel_bbox(raw_bbox, declared_space,
-     resolution, *, siblings=()) -> tuple[int,int,int,int] | None`：纯函数，实现
-     FR-013/014/015/017 的换算、边界与推断规则；返回 `None` 表示"拒绝该候选"。
-  3. 该函数**只在一个调用点**被调用——`models/mimo_grounder.py::MimoGrounderClient.ground()`
-     内，紧跟在 `_apply_crop_and_cap()`（现有的 crop_offset 平移）之后、`GroundingResult`
-     返回给调用方之前；`StubGrounder`（离线测试用双）在构造固定 `GroundingResult` 时
-     同样通过该函数产出 `bbox`，保证测试路径与生产路径共用同一个换算实现，不是各自
-     重新实现一遍换算逻辑。这就是 FR-014"转换有且仅发生一次"的架构落地——不是靠一个
-     运行时标志位去"检测是否已经换算过"，而是**从设计上只留一个换算调用点**，下游
-     （`ActionPolicy`、`Executor`、`RepeatGuard`）自始至终只看到已经是像素坐标的
-     `bbox`，物理上没有第二次换算的机会。
-  4. `_GROUNDING_SYSTEM_PROMPT` 更新，要求模型为每个候选显式输出
-     `"coordinate_space": "pixel" | "normalized_1000"` 字段，并说明两种坐标空间的
-     含义（X/Y 轴独立归一化）。
-  5. `models/response_parser.py::parse_grounding_response()` 不需要改动——
-     `coordinate_space` 作为 `GroundingCandidate` 的可选字段，Pydantic 校验会自动
-     从候选字典中提取该字段（若模型未提供则保持 `None`），现有的 `**c` 透传逻辑已经
-     兼容。
-- **Rationale**：直接落实 FR-012～017/031；把换算收敛到 Grounder 边界内的单一调用点，
-  是让"只换算一次"从"文档承诺"变成"架构上不可能违反"的具体做法，比在多处加运行时
-  断言更可靠；`raw_bbox`/`coordinate_space` 保留在 `GroundingCandidate` 上（而不是
-  换算后丢弃）是为了满足 FR-026/036 的报告审计要求。
-- **Alternatives considered**：
-  - 在 `ActionPolicy`/`Executor` 侧做换算，让 `GroundingCandidate.bbox` 保持"原始、
-    未换算"状态——意味着每一个消费 `GroundingCandidate` 的下游代码都必须记得先换算，
-    任何一处遗漏都会重新引入本次事故的 bug 模式，拒绝——换算必须在生产者（Grounder）
-    一侧一次性完成，消费者不应该、也不需要知道坐标空间这个概念。
-  - 给 `GroundingCandidate` 加一个 `converted: bool` 运行时标志位，在多处调用换算函数
-    前先检查该标志——这是用运行时状态模拟"只换算一次"，比"物理上只有一个调用点"更
-    脆弱（标志位本身可能被遗忘设置/重置），拒绝。
-
-## 7. 归一化坐标推断规则的实现（历史响应兼容）
-
-- **Decision**：`resolve_pixel_bbox()` 内部按 spec FR-015 (a)(b) 两个条件实现：
+- **Decision**：`evaluate_target_consistency()` 重写为：
 
   ```text
-  candidates_to_try = [declared_space] if declared_space is not None else ["pixel", "normalized_1000"]
-  for space in candidates_to_try:
-      pixel_bbox = _convert(raw_bbox, space, resolution)
-      valid = _bbox_fully_in_bounds(pixel_bbox, resolution)  # 闭区间 [0,1000] 已在 _convert 内处理
-      consistent = _consistent_with_siblings(pixel_bbox, siblings)  # 与同响应内其它已声明候选/已知目标区域不矛盾
-      record (space, valid and consistent)
-  if declared_space is not None:
-      return pixel_bbox if valid_and_consistent else None
-  # declared_space is None（历史响应）：要求 pixel/normalized_1000 两种解释中恰好一个 valid_and_consistent
-  passing = [r for r in results if r.ok]
-  return passing[0].pixel_bbox if len(passing) == 1 else None
+  def evaluate_target_consistency(step_intent, previous_action, proposed_action) -> ConsistencyOutcome:
+      if previous_action is None:
+          return "legitimate_micro_action"
+      purpose = proposed_action.micro_action_purpose
+      risk = proposed_action.risk_level
+      is_legit_purpose = purpose is not None  # 属于封闭枚举即视为声明了合法微动作类别
+      passes_intent_check = _step_intent_consistency(step_intent, proposed_action)  # 见下方，不再用关键词，改用规范化目标与
+                                                                                      # step_intent 的结构化重合判断（保留旧版本
+                                                                                      # 已有的、不含业务词汇的重合度量算法本身）
+      if is_legit_purpose and passes_intent_check:
+          threshold = config.planning.micro_action_risk_thresholds[purpose]
+          if not _risk_exceeds(risk, threshold):
+              return "legitimate_micro_action"
+      # 以上 AND 条件任一不满足：
+      previous_interactive = _is_interactive(previous_action)
+      proposed_interactive = _is_interactive(proposed_action)
+      if previous_interactive and not proposed_interactive:
+          return "dangerous_drift"
+      if previous_interactive and proposed_interactive and not passes_intent_check:
+          return "dangerous_drift"
+      return "ambiguous"
   ```
 
-- **Rationale**：直接落实 spec FR-015 的 (a)(b) 两个条件，是一个纯粹、无副作用、
-  完全离线可单测的函数，不依赖真实 Grounder 调用即可覆盖全部分支。
+  与旧版本的关键差异：**删除** `if previous_action.action_type !=
+  proposed_action.action_type: return "dangerous_drift"` 这一无条件分支；
+  `action_type` 差异现在只是促成"没有声明合法微动作目的"这一状态的自然结果（因为
+  `action_type` 变了但没配合声明 `micro_action_purpose`，会走到 AND 条件不满足的
+  分支），不再有任何代码路径**直接**因为 `action_type` 不同就返回
+  `"dangerous_drift"`——是否判定为漂移最终由"是否声明了合法目的 AND 通过 intent
+  一致性 AND 风险级别不超阈值"这一组合结果决定，与 2026-07-22 `/speckit-clarify`
+  安全问题 B 的最终决议逐字对应。
+  `_step_intent_consistency()`（原"关键词重合度量"逻辑）保留其"规范化目标文本与
+  step_intent 的重合度比较"这一算法结构本身（不含固定业务词表，纯字符串处理），
+  只是不再用它去判断"是否为合法微动作"（那已改由 `micro_action_purpose` 声明
+  承担），只用它判断"新目标是否仍符合步骤 intent"这一独立问题。
+- **Rationale**：直接落实 FR-012/013 与 2026-07-22 clarify 会话的 AND 语义决议；
+  风险级别超阈值时不落入"legitimate_micro_action"，而是继续走后续的
+  interactive/non-interactive 漂移判断或 `"ambiguous"`——`"ambiguous"` 结果会被
+  §6 的 `RepeatGuard.check()` 路由到 FR-034 六字段恢复策略契约（例如触发
+  `requires_human_confirmation=True` 的恢复策略），而不是本函数自己发明一个新的
+  "风险裁决"分支，避免开辟脱离既有恢复契约的独立通道（FR-013 明确禁止）。
 - **Alternatives considered**：
-  - 用一个数值启发式阈值（如"数值都小于等于 1568 就默认按像素处理"）代替严格的
-    双解释验证——会重新引入本次事故的问题模式（一个数值在两种空间下都"看似合理"时
-    被随意采信），拒绝。
+  - 把风险阈值判断做成硬编码常量而非可配置项——`ocr_sanity_check_ratio` 已经
+    确立"这类阈值应可配置"的先例，且不同被测应用对"滚动/关闭弹窗"这类微动作的
+    风险容忍度可能不同，拒绝硬编码。
 
-## 8. 执行前合理性校验（OCR / 分辨率 / 目标区域）
+## 8. GroundingCandidate 的 coordinate_space 数据模型与一次性转换架构（保留，仅示例去业务化）
 
-- **Decision**：`resolve_pixel_bbox()` 换算成功后，`ActionPolicy._from_grounding()`
-  /`_executable_from_candidate()`（`planning/action_policy.py`）新增一层轻量交叉核对：
-  若该轮 `SemanticAction.target.text` 非空且 `StructuredScreen.ocr_items` 中存在与之
-  匹配的 OCR 锚点，换算后的候选中心点若与该 OCR 锚点中心相距过远（超出一个可配置的
-  像素容差，默认取截图较短边的 10%），则视为"换算结果与已有 OCR 证据不一致"，按
-  FR-016 拒绝该候选并转入恢复/重新定位，而不是直接点击一个与已知锚点明显不符的位置；
-  该核对仅在存在唯一 OCR 锚点时触发，OCR 证据本身缺失或有歧义时不阻塞（避免过度
-  拒绝合法但 OCR 未命中的候选）。
-- **Rationale**：落实 spec 计划要点 #7（"使用 OCR、截图分辨率和目标区域进行执行前
-  合理性验证；证据不充分时停止，不猜测"）；分辨率与目标区域的合理性校验已经由 §6/§7
-  的换算与越界拒绝规则覆盖，本条只补充 OCR 交叉核对这一额外证据来源，且明确"证据
-  不充分时不阻塞"（不产生新的误杀），只在"有明确矛盾证据"时才拒绝。
-- **Alternatives considered**：
-  - 把该核对做成强制项（OCR 锚点缺失也拒绝）——会让大量本来正常的候选（目标本就不是
-    文字锚点，如纯图标按钮）被误杀，与 spec"不依赖固定 ROI、适应当前画面实际内容"的
-    精神冲突，拒绝。
+- **Decision**：`domain/grounding.py::GroundingCandidate`（`coordinate_space`/
+  `raw_bbox` 字段）、`models/coordinate_space.py::resolve_pixel_bbox()`（唯一换算
+  点）、`models/mimo_grounder.py::MimoGrounderClient.ground()` 的现状实现**原样
+  保留**——`checklists/domain-independence.md` 未在此模块发现任何业务字段泄漏，
+  这正是 spec.md 要求"坐标空间和 RecoveryPolicy 中已经通用的设计应保留"的对象
+  之一。唯一改动：`contracts/coordinate-space-contract.md` 中 wire 格式示例的
+  `"label": "レジ袋"` 替换为业务无关的占位符（如 `"label": "toolbar_icon_3"`），
+  避免核心契约文档的示例携带业务语言痕迹，纯编辑性修改，不改变任何字段定义或
+  校验规则。
+- **Rationale**：坐标空间协议是纯几何/协议层面的设计，与被测业务完全无关，
+  `checklists/domain-independence.md` 也确认该模块通过检查（CHK008 类比）；本次
+  唯一动作是清理契约文档里一个非规范性示例标签，避免读者误以为坐标空间协议本身
+  与 POS 场景绑定。
 
-## 9. pos-buy-bag-checkout.yaml 的业务断言设计（依据真实事故报告的 OCR 证据）
+## 9. RecoveryPolicy 六字段契约（保留，仅措辞去业务化）
 
-- **现状**：真实事故报告第一轮 `action_effect.evidence.ocr_added` 包含
-  `["1", "1点", "5月", "二1-", "内税10%", "单！", "商品登錄行<", "抿取消", "袋"]`——
-  可见真实 OCR 引擎对该 POS 应用界面的识别噪声较大（"レジ袋"被识别为"袋"或丢字，
-  "5円"很可能被误识别为"5月"，"取消"被识别为"抿取消"/"遥捉取消"）。
-- **Decision**：`pos-buy-bag-checkout.yaml` 的"加入购物袋"步骤改为
-  `verification_mode: business`，`expected.conditions` 使用 002/001 已支持的确定性
-  断言类型组合（`operator: all`）：
-  1. `text_appears, value: "1"` —— 件数数字，真实 OCR 已证明能稳定识别出裸数字"1"
-     （比"1点"整体匹配更抗 OCR 噪声，`ocr_verifier` 的包含匹配足以覆盖）；
-  2. `text_appears, value: "5"` —— 金额数字（同理，不强绑定"円"/"月"这类易被 OCR
-     混淆的单位字符）；
-  3. `text_appears, value: "袋"` —— レジ袋本身的稳定可识别子串（真实 OCR 输出中"袋"
-     独立出现，比要求"レジ袋"整体匹配更鲁棒）；
-  4. 保留一条 `screen_changed` 作为动作效果辅助证据（不单独构成通过依据，002
-     FR-006 既有规则）。
-  "小計"步骤同样升级为 `verification_mode: business`，`expected` 使用
-  `text_appears`（依据小計确认画面的稳定文字，如"小計"/"合計"本身或确认按钮文字）
-  断言进入了小計确认状态；`visual_question` 类型本次不使用——确定性文本断言已经
-  足以覆盖 spec FR-019/020 的要求，符合宪法"语义验证仅作为最后手段"与 spec 计划
-  要点 #8"只有确定性断言不足时才使用 visual_question"。
-- **Rationale**：直接落实 FR-018～022；断言文本选择依据真实 OCR 输出而非理想化的
-  完整日文字符串，是为了让新增的可信业务断言在真实环境下真正稳定可靠，而不是看起来
-  严谨、实际因 OCR 噪声而永远无法匹配——这正是 002 事故里"看似合理的断言在真实环境
-  下失效"这一类问题的直接前车之鉴。
-- **Alternatives considered**：
-  - 直接要求完整字符串"1点"/"5円"/"レジ袋"精确匹配——真实 report.json 已经证明这些
-    完整字符串在 OCR 输出中并不总是完整出现，拒绝，改用已被真实证据验证过的稳定子串。
-  - 使用 `visual_question` 断言"购物车是否显示 1 件商品、5 円"——违反宪法确定性
-    手段优先原则，且现有确定性断言已经足够，拒绝在本次默认启用视觉模型验证。
+- **Decision**：`config.py::RecoveryPolicy`（`max_retries`/`cooldown_ms`/
+  `consumes_global_retry_budget`/`allows_action_path_change`/
+  `requires_strong_model`/`requires_human_confirmation`）**原样保留**，这正是
+  spec.md 明确要求保留的通用设计。唯一改动：
+  `contracts/recovery-policy-contract.md` 中"任何策略不得构造自动清空购物车、
+  删除商品或撤销已确认业务结果的动作"改写为"任何策略不得构造任何不在该测试步骤
+  已声明动作范围内、会改变被测应用状态的操作"，与 spec.md FR-032 现有措辞对齐，
+  移除"购物车"这一具体业务名词，不改变约束的实质范围。新增一条：风险级别驱动的
+  `dangerous_drift`/`ambiguous` 结果（§7）MUST 通过本契约的
+  `requires_human_confirmation`/`requires_strong_model` 字段路由，不得新增独立
+  裁决逻辑（呼应 2026-07-22 clarify 会话对 FR-013 的决议）。
+- **Rationale**：同 §8，本模块设计本身已经业务无关，只需清理措辞与补充一条
+  跨引用说明。
 
-## 10. 报告审计字段扩展的实现位置
+## 10. 声明式动作 Tag 审计（替换固定四分类，落实 FR-027/028）
 
-- **Decision**：`reporting/json_report.py::build_report_dict()` 的每轮迭代记录新增
-  `canonical_action_identity`（`CanonicalActionIdentity.model_dump()`，含
-  `step_id`/`action_type`/`action_id`/`normalized_target`）与
-  `coordinate_space_audit`（列表，每个被评估过的候选各一条：声明的坐标空间、
-  `raw_bbox`、换算后 `bbox`、是否被采纳）两个字段；`RepeatGuardDecision.reason` 的
-  新增取值（`dangerous_drift`/`legitimate_micro_action`/`ambiguous_fail_safe`）无需
-  额外的报告改动——既有 `repeat_guard_decision` 字段已经会序列化新取值。
-  `reporting/html_report.py` 的 Jinja2 模板新增一个可折叠的"Action Identity /
-  Coordinate Space"证据区块，复用已有的 `<details>` 折叠展示模式（不新增 CSS 类，
-  保持与 002 已交付的 `warn-weak`/`label-effect-only`/`label-trusted` 视觉语言一致）。
-- **Rationale**：落实 spec 计划要点 #9 与 FR-025/026/036；沿用 002 已确立的
-  "`build_report_dict()` 是 JSON/HTML 唯一数据源"的既有架构（`html_report.py` 复用
-  `build_report_dict()` 输出，不重复实现字段提取逻辑）。
-- **Alternatives considered**：
-  - 只在 HTML 报告里展示、不写入 JSON 报告——JSON 报告是复核与未来自动化审计的
-    机器可读来源，FR-025/026 的措辞（"报告记录 MUST 包含"）不区分 JSON/HTML，拒绝
-    只做单一格式。
-
-## 11. 离线回归测试的构造方式（延续 002 既有模式）
-
-- **Decision**：延续 002 `research.md §9` 已建立的模式——不提交二进制截图资产，新增
-  测试全部通过 `numpy`/`cv2`/直接构造 Pydantic 模型（`SemanticAction`、
-  `TargetDescription`、`GroundingCandidate`）程序化构造固定场景；真实事故报告
-  `report.json` 中的三轮 `semantic_action`/`grounding_candidates` 原始数据作为其中
-  一组回归测试的**输入字面量**直接固化进测试代码（而非引用外部文件路径），使"用
-  本次真实事故的原始数据重放，验证不再重复点击/不再误判坐标"这一回归测试不依赖任何
-  运行时才能取得的外部产物。
-- **Rationale**：与 002 既有测试基础设施保持一致；把真实事故的 `action_id`/目标描述/
-  候选坐标字面量直接写进测试断言，使回归测试具备"如果这段特定历史数据重新出现，必须
-  产生正确结果"这一最强的可信度，不依赖对该数据的抽象重述。
-- **Alternatives considered**：
-  - 引用 `report.json` 文件路径，测试运行时读取——引入对仓库外部产物目录
-    （`artifacts/runs/...`，通常不提交或会被后续运行覆盖）的运行时依赖，脆弱，拒绝；
-    改为把所需的具体字段值复制为测试代码内的字面量。
-
-## 12. FR-036/FR-038/SC-012/SC-013 起始状态门禁与动作审计的实现方式
-
-- **背景（源自 `/speckit-analyze` 发现的 HIGH 缺口，2026-07-21 补充）**：初版
-  plan.md/tasks.md 完全没有为 FR-036（真实 VNC 报告 MUST 额外包含人工前置确认记录、
-  确认时间戳、前置截图引用、程序实际观察到的起始画面结果、按类别分类的动作执行次数
-  统计）与 SC-012（这些统计必须可直接从报告读出）安排任何实现任务——初版报告任务
-  只覆盖了 FR-025/026 的 `canonical_action_identity`/`coordinate_space_audit`，
-  初版人工真实 VNC 验收任务只是**使用**这些字段做核对，从未有任务
-  真正**构建**它们，导致该任务实际执行时会发现报告里根本没有这些字段可核对。
 - **Decision**：
-  1. `vnc-agent run` 新增 `--confirm-start-state`/`--confirmed-cart-items`/
-     `--confirmed-cart-amount`/`--confirmed-screenshot` 四个参数（`api/cli.py`）。CLI
-     校验参数组后，将 `HumanStartStateConfirmation` 直接写入
-     `RunContext.test_run.human_start_state_confirmation`；不把只存在于 `RunContext`
-     的临时属性交给只接收 `TestRun` 的报告构建器，避免数据流断裂。
-  2. 新增 `verification/business_resolver.py::extract_cart_state(screen) ->
-     ObservedStartState`，复用 FR-019 的确定性 OCR 匹配。真实 VNC 验收运行完成首次
-     Observe/Understand 后、进入第一个 PLANNING/RESOLVING_ACTION 前，运行时把结果写入
-     `TestRun.observed_start_state`，并与人工确认自动比较。任一值为 `None`、不相等或
-     证据冲突均写入 `StartStatePrecondition(status="failed")`，将运行置为 failed 并
-     直接进入报告记录；不得生成 `ExecutableAction`。两项完全一致才写入 `passed` 并继续。
-  3. 新增 typed `ReportingConfig.category_keywords` 并挂入 `AgentConfig.reporting`；
-     `config/agent.yaml` 提供 `add_to_bag`/`subtotal`/`payment`/`clear_or_reset` 四类默认值。
-     配置模型与 YAML 必须同时更新，禁止仅写 YAML 后被 Pydantic 忽略。
-  4. `build_report_dict()` 从 `TestRun` 直接读取人工确认、观察结果和前置判定；遍历全部
-     `ActionIteration` 时，仅将 `execution_result is not None and execution_result.success`
-     （001 定义为“输入事件已发送”）的迭代加入 `executed_action_log` 与
-     `action_category_counts`。被 RepeatGuard/ActionPolicy 拦截的提案继续保留在逐轮
-     `semantic_action`/`repeat_guard_decision` 中，但不得增加任何执行计数。
-  5. 新增运行级字段的完整定义与来源见 data-model.md §8b；JSON/HTML 继续共用同一份
-     `build_report_dict()` 数据。
-- **Rationale**：与 §10 已确立的"`canonical_action_identity`/`coordinate_space_audit`
-  是逐轮字段"不同，FR-036 明确要求的是"完整动作执行清单与按类别分类的执行次数
-  统计"——这是**跨轮次的运行级聚合**，必须单独设计聚合口径（类别关键词表、优先级
-  规则），不能简单复用逐轮字段的序列化方式；人工确认记录必须通过 CLI 参数在运行
-  开始前显式传入，不能从截图或运行日志里事后反推，否则"人工确认"这一步就形同虚设；
-  `TestRun` 是运行与报告之间的稳定数据边界，人工确认和首帧观察都落在该对象上，避免
-  `RunContext` 临时状态无法传入 `build_report_dict(TestRun)`。执行统计必须以
-  `ExecutionResult.success` 为门槛，否则被安全组件拦截的危险提案会被误计为真实点击。
-- **Alternatives considered**：
-  - 让人工在验收记录里手写这些统计数字，不新增代码——违反 SC-012"均可直接从
-    报告的分类统计字段读出，无需复核原始日志或重新运行"的明确措辞，拒绝。
-  - 复用 `--dry-run`/交互式终端输入采集人工确认，而非显式 CLI 参数——交互式输入
-    在自动化/脚本化的验收流程中不可复现、难以留痕，显式参数更符合"该次确认的
-    时间戳"必须被记录这一 FR-036 要求（参数传入的时刻即确认发生的时刻，无需额外
-    的交互式采集环节），拒绝交互式方案。
+  1. 新增 `domain/reporting_tags.py::ActionMatcher`（结构化谓词，非文本关键词
+     搜索）：
 
-## 13. FR-037 恢复策略显式配置与 Constitution 门禁
+     ```python
+     class ActionMatcher(BaseModel):
+         action_type: ActionType | None = None
+         target_role: str | None = None
+         target_text_contains: str | None = None
+         intent_contains: str | None = None
+     ```
 
-- **Decision**：扩展 `config.py::RecoveryPolicy`，保留 `max_retries`、`cooldown_ms` 并
-  移除其模型默认值，新增四个同样**无默认值**的必填布尔字段：`consumes_global_retry_budget`、
-  `allows_action_path_change`、`requires_strong_model`、`requires_human_confirmation`。
-  六个字段全部为无默认值的必填项；`config/agent.yaml` 的每个恢复策略必须逐项填写；缺任一字段时配置加载失败，
-  不允许 Pydantic 默认值掩盖遗漏。`dangerous_drift`、`ambiguous_fail_safe` 与坐标空间拒绝
-  继续映射到既有失败分类，但所选策略必须通过同一 typed contract 和共享预算门禁。
-- **Rationale**：Constitution 的恢复与重试门禁要求“每个恢复策略”显式配置这六个维度。
-  仅声明“复用既有框架”不足以证明合规，而当前两字段模型无法表达其余四项。把字段设为
-  必填可在启动时 fail closed，并通过固定配置测试证明不存在隐式无限重试或预算旁路。
+     四个字段均为可选，声明的字段之间为 AND 关系；`target_text_contains`/
+     `intent_contains` 为大小写不敏感的子串匹配（由测试用例/场景 profile 提供
+     具体业务子串，如 `"购物袋"`，核心代码本身不包含任何具体子串）。
+  2. 新增 `ActionTagRule(BaseModel)`：`tag: str`、`matcher: ActionMatcher`。
+  3. `config.py::ReportingConfig` 删除 `category_keywords` 字段与其校验器，替换为
+     `action_tags: list[ActionTagRule] = Field(default_factory=list)`——**核心
+     默认空列表，不含任何业务分类**；测试用例/场景 profile 可在 `expected`/顶层
+     声明覆盖或追加规则（具体声明位置由 `domain/testcase.py` 的
+     testcase-level schema 决定，见 data-model.md §8b）。
+  4. `reporting/json_report.py::build_report_dict()` 对 `executed_action_log`
+     中每条记录，依次匹配全部声明的 `ActionTagRule`（一个动作可同时匹配 0 个、
+     1 个或多个 tag，不再是互斥的四选一分类），聚合为
+     `declared_tag_counts: dict[str, int]`；未匹配任何规则的已发送动作仍保留在
+     `executed_action_log` 中，但不计入任何 tag 计数（不再有"unclassified"
+     兜底分类，因为 tag 匹配本身就是"零到多"的开放集合，不需要兜底桶）。
+- **Rationale**：直接落实 FR-027/028 与用户要求 3"报告 action counters 必须由
+  testcase/profile 声明，不得固定四分类"；`ActionMatcher` 是结构化字段谓词
+  （非文本关键词表），核心模块本身不包含任何具体业务子串，全部业务子串由声明方
+  （testcase/profile）提供，从架构上不可能出现"核心代码硬编码业务词汇"这一问题。
 - **Alternatives considered**：
-  - 给任一字段提供默认值——这仍不是“显式配置”，且新增策略可能在评审时遗漏关键
-    风险选择，拒绝。
-  - 只为 003 新失败类型新增旁路配置——会形成脱离共享预算的第二套恢复通道，违反 FR-031，
-    拒绝。
+  - 保留 `category_keywords` 字段但去掉校验器的"必须恰好四类"约束，允许任意
+    键——仍然是"文本关键词列表"这一设计，且默认工厂里如果不清空就仍然残留
+    业务默认值；`ActionMatcher` 结构化谓词是更彻底的修复，拒绝只放松校验器。
+
+## 11. 声明式运行前置条件（替换固定购物车字段，落实 FR-024/025/026 与 2026-07-22 clarify 决议）
+
+- **Decision**：完全复用既有的 `domain/verification.py::VerificationSpec`/
+  `VerificationCondition`/`VerificationResult` 与 `verification/engine.py::
+  VerificationEngine.verify()`——这正是 2026-07-22 `/speckit-clarify` 会话对
+  "facts/assertions 职责边界"问题的最终决议（"二者 MUST 是同一底层 fact/
+  assertion 声明机制...仅触发时机不同"）在实现层面的具体落地：
+  1. 新增 `domain/run.py::DeclaredFact(BaseModel)`：`key: str`、
+     `spec: VerificationSpec`——**不新增任何断言语法**，直接复用步骤级业务
+     断言已经在用的类型。
+  2. 新增 `RunPrecondition(BaseModel)`：`facts: list[DeclaredFact] =
+     Field(default_factory=list)`，由测试用例/场景 profile 在顶层可选声明
+     （`domain/testcase.py` 新增 `TestCase.precondition: RunPrecondition |
+     None = None`）。
+  3. 新增 `FactEvaluation(BaseModel)`：`key: str`、`result: VerificationResult`
+     （直接复用既有类型，不新增字段）。
+  4. `TestRun` 新增 `precondition_evaluation: PreconditionEvaluation`，
+     `PreconditionEvaluation(BaseModel)`：`status: Literal["not_required",
+     "passed","failed"]`、`fact_evaluations: list[FactEvaluation]`、
+     `checked_at: datetime | None`。
+  5. Runtime：完成首次独立 Observe/Understand 后、任何 `PLANNING`/
+     `RESOLVING_ACTION` 或 `ExecutableAction` 生成前，若
+     `TestCase.precondition` 非 `None`，对每个 `DeclaredFact` 调用既有
+     `VerificationEngine.verify(fact.spec, first_observed_screen)`；全部
+     `VerificationResult.status == "passed"` 时整体 `status="passed"`，否则
+     `status="failed"`（任一 `failed`/`uncertain` 即视为不满足，与既有
+     `aggregate_conditions` 的"all"语义天然一致，不新增聚合规则）。`failed`
+     时运行 MUST 停止，保存 `fact_evaluations` 证据，MUST NOT 生成任何
+     `ExecutableAction`。未声明 `precondition` 的测试用例（含全部旧格式用例）
+     `status="not_required"`，行为与 001/002 完全一致（向后兼容零改动）。
+  6. **删除** `verification/business_resolver.py::extract_cart_state()` 与
+     `evaluate_start_state_precondition()`——不再需要任何业务专用提取函数，
+     因为"从截图中判断某个具名 fact 是否成立"这件事本身就是 `VerificationSpec`
+     的既有职责（如 `text_appears`/`template_appears`），不需要为每个业务场景
+     单独写一个 `extract_xxx_state()` 函数。
+- **Rationale**：这是本次重新基线中**消除业务泄漏最彻底**的一步——旧设计为
+  "购物车状态"单独建了 `ObservedStartState`/`extract_cart_state()`，本质上是
+  把"业务状态提取"当成了框架需要内置的能力；而实际上 001/002 已经有一个完全
+  通用的"从截图判断一组命名断言是否成立"的机制（`VerificationSpec`/
+  `VerificationEngine`），前置条件只是把这个既有机制在"运行开始前"这个新的
+  触发时机上再调用一次，不需要任何新概念、新校验器或新的业务提取逻辑。
+- **Alternatives considered**：
+  - 保留 `ObservedStartState` 式的"专用提取函数 + 专用比较函数"模式，只是把
+    `cart_items`/`cart_amount` 泛化成 `dict[str, int | str]`——仍然需要一个
+    "如何从截图提取任意命名字段"的通用提取器，而这正是 `VerificationSpec` 已经
+    解决的问题，重新发明会造成两套并行的"从截图判断某事是否成立"机制，违反
+    2026-07-22 clarify 决议"不新增第二套并行的断言语法"，拒绝。
+
+## 12. CLI 与人工确认（替换固定业务参数）
+
+- **Decision**：`api/cli.py::run` 命令删除 `--confirm-start-state`/
+  `--confirmed-cart-items`/`--confirmed-cart-amount`/`--confirmed-screenshot`
+  四个固定参数，替换为：
+  - `--confirm-precondition key=value`（可重复，`typer.Option(...,
+    "--confirm-precondition")`，类型 `list[str]`，运行时按 `=` 切分并聚合为
+    `dict[str, str]`）——人工在真实/在线环境验收前，对**任意**声明的 fact
+    key 提供人工独立确认值（不限定为购物车相关字段）。
+  - `--confirm-screenshot <path>`（可选，配合上一参数使用；单独提供
+    `--confirm-precondition` 而不提供本参数时使用默认前置截图策略，不强制
+    二者绑定，除非 `TestCase.precondition` 非空且要求截图引用）。
+  - CLI 校验：提供任一 `--confirm-precondition` 时，其 `key` MUST 能在
+    `TestCase.precondition.facts` 中找到匹配的 `DeclaredFact.key`，否则在连接
+    目标环境前以非零退出码失败（防止人工确认了一个测试用例根本没有声明的
+    字段，产生虚假的"已确认"记录）。
+  - 人工确认值本身 MUST NOT 参与自动前置条件判定的通过/失败决策（决策仍然
+    完全基于 `VerificationEngine.verify()` 对声明 `spec` 的评估结果，见 §11）；
+    人工确认值只作为独立的第二来源证据，与 `fact_evaluations` 一并写入报告，
+    供人工复核"我确认的值"与"程序独立评估的结果"是否一致，不一致时报告中
+    需要能看出差异（具体呈现方式见 data-model.md §8b、real-vnc-audit-contract.md）。
+- **Rationale**：延续"人工独立确认 + 程序独立观察"这一双重来源的安全模式（旧
+  设计已经确立，值得保留），但把字段从"购物车件数/金额"这两个固定字段泛化为
+  任意声明 key/value，架构上不再对任何具体业务字段有依赖；`--confirm-precondition`
+  是否提供与自动前置条件判定(§11) 是否通过完全解耦——即便不提供人工确认，
+  `VerificationEngine.verify()` 的自动判定依然独立生效，人工确认是可选的**额外**
+  交叉校验，不是自动判定的前提条件（这与 spec.md FR-025"系统…MUST 将声明的
+  前置条件与独立观察到的证据自动比较"的措辞一致——比较的是"声明的前置条件"与
+  "观察到的证据"，不要求人工确认值参与该比较本身）。
+
+## 13. 三个通用离线场景 + POS 附加回归 fixture 的契约测试设计（落实 FR-040、用户要求 9）
+
+- **Decision**：新增三个业务无关的离线契约测试场景，与既有 POS fixture 共同构成
+  四个回归场景，任意两个通用场景即可证明每项通用能力：
+
+  1. **表单填写并提交**（`tests/fixtures/test_scenario_form_submit.py`）：一个
+     通用"设置表单"场景，`action_type="click"`、`action_id="submit-1"` 固定，
+     Planner 在同一"提交"步骤重试中改写 `intent`/`target.description`（如"点击
+     保存按钮"→"点击确认保存设置的按钮"），验证 `identity_match()` 判定为
+     `"action_id_match"`、`has_target_evidence_conflict()` 为 `False`（角色/
+     空间证据未变）、`RepeatGuard.check()` 拦截重复提交。
+  2. **无文字图标打开菜单**（`tests/fixtures/test_scenario_icon_menu.py`）：
+     一个仅有图标（`target.text=None`，`target.role="icon_button"`）的工具栏
+     按钮场景，`GroundingCandidate` 声明 `coordinate_space="normalized_1000"`，
+     画面分辨率为非正方形（复用原真实事故的 1024×1568 数值作为**示例分辨率**，
+     不代表业务绑定，纯几何测试目的），验证坐标空间换算与视觉目标身份识别在
+     缺乏文字锚点时仍然正确。
+  3. **弹窗关闭或滚动后再操作目标**（`tests/fixtures/test_scenario_popup_scroll.py`）：
+     构造 `proposed_action.micro_action_purpose="dismiss_overlay"`（关闭弹窗）
+     与 `="scroll_reveal"`（滚动显现）两组场景，`risk_level="low"`，验证
+     `evaluate_target_consistency()` 返回 `"legitimate_micro_action"`
+     而非 `"dangerous_drift"`，且该微动作不被用于重新执行原非幂等动作。
+  4. **POS 购物袋结算**（既有 `tests/e2e/test_scenario_15_pos_bag_business_
+     acceptance.py`，复用 `testcases/pos-buy-bag-checkout.yaml`）：保留作为
+     **第四个**回归 fixture，验证同样的通用机制（§2/§6/§7/§8/§11）在该具体
+     业务场景下同样成立；测试断言与报告 MUST NOT 引用任何仅为该场景存在的
+     核心代码分支（因为经过本次重新基线，已经没有这样的分支）。
+
+  每一项声称通用的能力（`identity_match`/`has_target_evidence_conflict`/
+  `evaluate_target_consistency`/`resolve_pixel_bbox`/前置条件评估/tag 审计），
+  其契约测试套件 MUST 同时覆盖至少两个互不相关的场景（1/2/3 中的任意两个），
+  POS 场景（4）作为附加验证，不单独满足 FR-040 的验收要求。
+- **Rationale**：直接落实 spec.md FR-040/SC-012 与 Constitution Principle VI
+  "任何声称为通用框架能力的变更，MUST 至少使用两个互不相关的 GUI 场景验证"；
+  三个新场景分别覆盖动作身份/坐标空间/微动作判定三条主线，加上 POS 场景验证
+  这三条主线在具体业务下同样成立，形成"通用性证明 + 具体场景回归"两层证据。
+- **Alternatives considered**：
+  - 只新增一个"通用"场景 + 保留 POS 场景——不满足"至少两个互不相关场景"的
+    Constitution 硬性要求，拒绝。
+
+## 14. 真实/在线环境验证边界（保留，无变化）
+
+- **Decision**：延续 001/002/旧 003 已确立的约束——常规自动化测试
+  （`pytest` 全量运行）MUST NOT 连接或操作真实/在线 VNC 目标；真实环境验证
+  作为独立于自动化测试流水线之外、需最终人工批准后单次执行的环节。本次复核
+  未发现任何新增测试违反该约束，`tests/unit/test_no_real_vnc_in_offline_tests.py`
+  （静态扫描）继续覆盖新增的三个通用场景测试文件。
+- **Rationale**：spec.md FR-039/041 与用户要求 10 完全对应现状约束，无需变更。

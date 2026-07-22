@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from vnc_agent.domain.reporting_tags import ActionTagRule
 from vnc_agent.domain.run import TestRun
 from vnc_agent.reporting.html_report import write_html_report
 from vnc_agent.reporting.json_report import write_json_report
@@ -11,8 +12,14 @@ from vnc_agent.storage.artifact_store import ArtifactStore
 
 
 class ReportBuilder:
-    def __init__(self, artifact_store: ArtifactStore) -> None:
+    def __init__(
+        self,
+        artifact_store: ArtifactStore,
+        *,
+        action_tags: list[ActionTagRule] | None = None,
+    ) -> None:
         self.store = artifact_store
+        self.action_tags = action_tags
 
     def build(
         self,
@@ -41,8 +48,12 @@ class ReportBuilder:
 
         if "json" in formats or "both" in formats:
             jp = run_dir / "report.json"
-            run.report_json_path = write_json_report(run, jp)
+            run.report_json_path = write_json_report(
+                run, jp, action_tags=self.action_tags
+            )
         if "html" in formats or "both" in formats:
             hp = run_dir / "report.html"
-            run.report_html_path = write_html_report(run, hp)
+            run.report_html_path = write_html_report(
+                run, hp, action_tags=self.action_tags
+            )
         return run

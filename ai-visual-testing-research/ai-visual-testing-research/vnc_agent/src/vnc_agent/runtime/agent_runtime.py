@@ -8,12 +8,13 @@ from typing import TYPE_CHECKING
 from vnc_agent.domain.action import SemanticAction
 from vnc_agent.domain.action_effect import ActionEffect, ActionEffectEvidence
 from vnc_agent.domain.grounding import GroundingResult
-from vnc_agent.domain.observation import StructuredScreen
+from vnc_agent.domain.observation import Region, StructuredScreen
 from vnc_agent.domain.recovery import FailureType
-from vnc_agent.domain.run import ActionIteration
+from vnc_agent.domain.run import ActionIteration, HumanConfirmedFact
 from vnc_agent.domain.testcase import TestCase, TestStep
 from vnc_agent.domain.verification import VerificationResult
 from vnc_agent.evolution.experience_collector import ExperienceCollector
+from vnc_agent.execution.action_identity import compute_identity
 from vnc_agent.execution.repeat_guard import RepeatGuard
 from vnc_agent.execution.router import ExecutionRouter
 from vnc_agent.logging_setup import get_logger
@@ -39,7 +40,10 @@ from vnc_agent.runtime.exceptions import (
 from vnc_agent.runtime.run_context import RunContext
 from vnc_agent.runtime.state_machine import AgentState
 from vnc_agent.runtime.step_controller import StepController
-from vnc_agent.verification.business_resolver import resolve_step_result
+from vnc_agent.verification.business_resolver import (
+    evaluate_precondition,
+    resolve_step_result,
+)
 from vnc_agent.verification.engine import VerificationEngine
 
 if TYPE_CHECKING:
@@ -49,6 +53,20 @@ if TYPE_CHECKING:
     from vnc_agent.storage.repositories import RunRepository
 
 log = get_logger("agent_runtime")
+
+
+def _resolved_region_from_iteration(iteration: ActionIteration | None) -> Region | None:
+    """Feature 003: top-ranked resolved Grounding candidate's bbox, if any
+    grounding happened for that iteration (used as target-evidence-conflict
+    spatial input; see execution/target_consistency.py::
+    has_target_evidence_conflict)."""
+    if iteration is None or iteration.grounding_result is None:
+        return None
+    candidates = iteration.grounding_result.candidates
+    if not candidates:
+        return None
+    x1, y1, x2, y2 = candidates[0].bbox
+    return Region(x1=x1, y1=y1, x2=x2, y2=y2)
 
 
 def _semantic_target_label(sa: SemanticAction) -> str:
@@ -88,6 +106,7 @@ class AgentRuntime:
         self.policy = ActionPolicy(
             overall_confidence_threshold=config.agent.grounding.overall_confidence_threshold,
             top1_top2_min_gap=config.agent.grounding.top1_top2_min_gap,
+            ocr_sanity_check_ratio=config.agent.planning.ocr_sanity_check_ratio,
         )
         self.executor = ExecutionRouter(
             driver,
@@ -95,15 +114,28 @@ class AgentRuntime:
         )
         self.verifier = VerificationEngine(planner)
         self.recovery = RecoveryEngine(config)
-        self.repeat_guard = RepeatGuard()
+        self.repeat_guard = RepeatGuard(
+            micro_action_risk_thresholds=config.agent.planning.micro_action_risk_thresholds,
+            target_region_conflict_iou_threshold=(
+                config.agent.planning.target_region_conflict_iou_threshold
+            ),
+        )
         self.repo = repo
         self.report_builder = report_builder
         self.experience = experience or ExperienceCollector(repo)
         self.report_formats = report_formats
         self.planner = planner
 
-    async def run(self, test_case: TestCase) -> RunContext:
-        ctx = RunContext(test_case)
+    async def run(
+        self,
+        test_case: TestCase,
+        *,
+        human_confirmed_facts: list[HumanConfirmedFact] | None = None,
+    ) -> RunContext:
+        ctx = RunContext(
+            test_case,
+            human_confirmed_facts=human_confirmed_facts,
+        )
         ctx.begin_run()
         ctx.state_machine.transition(AgentState.CONNECTING, "start")
 
@@ -212,7 +244,7 @@ class AgentRuntime:
                     break
 
                 # failed / uncertain
-                if controller.remaining_budget() <= 0:
+                if not controller.can_start_iteration():
                     step_failed = True
                     failure_reason = vr.reason or vr.status
                     break
@@ -274,6 +306,30 @@ class AgentRuntime:
 
         # UNDERSTANDING (already partly in pipeline)
         ctx.state_machine.force(AgentState.UNDERSTANDING, "observed")
+
+        if (
+            ctx.test_case.precondition is not None
+            and ctx.test_run.precondition_evaluation.checked_at is None
+        ):
+            precondition_eval = await evaluate_precondition(
+                ctx.test_case.precondition, screen, self.verifier
+            )
+            ctx.test_run.precondition_evaluation = precondition_eval
+            if precondition_eval.status == "failed":
+                controller.mark_exhausted()
+                evidence_refs = [
+                    ref
+                    for fe in precondition_eval.fact_evaluations
+                    for ref in fe.result.evidence_refs
+                ]
+                result = VerificationResult(
+                    status="failed",
+                    reason="precondition_failed",
+                    evidence_refs=evidence_refs,
+                )
+                iteration.verification_result = result
+                ctx.state_machine.force(AgentState.RECORDING, "precondition_failed")
+                return result
         ctx.state_machine.force(AgentState.PLANNING, "plan")
 
         # PLANNING
@@ -302,16 +358,43 @@ class AgentRuntime:
         if sa.action_kind is None:
             sa = sa.model_copy(update={"action_kind": classify_action_kind(sa)})
         iteration.semantic_action = sa
+        iteration.canonical_identity = compute_identity(step.id, sa)
         mark("planning", t0)
 
         # RepeatGuard before RESOLVING_ACTION (contracts §5)
         previous_iteration: ActionIteration | None = None
         if ctx.current_step_record and len(ctx.current_step_record.iterations) > 1:
             previous_iteration = ctx.current_step_record.iterations[-2]
-        guard = self.repeat_guard.check(sa, previous_iteration)
+        # Feature 003 (safety issue A): the previous round's resolved target
+        # region, if grounding already happened for it. The proposed round's
+        # region is always None here — grounding for it has not run yet at
+        # this point in the pipeline (RepeatGuard runs before RESOLVING_
+        # ACTION/GROUNDING) — has_target_evidence_conflict() treats a missing
+        # region as "this dimension does not participate," it never
+        # manufactures a conflict out of unavailable evidence.
+        previous_resolved_region = _resolved_region_from_iteration(previous_iteration)
+        guard = self.repeat_guard.check(
+            step.id,
+            step.intent,
+            sa,
+            previous_iteration,
+            previous_resolved_region=previous_resolved_region,
+            proposed_resolved_region=None,
+        )
         iteration.repeat_guard_decision = guard
 
         if not guard.allowed:
+            if guard.reason in {"dangerous_drift", "ambiguous_fail_safe"}:
+                attempt = await self.recovery.handle(
+                    Classification(
+                        failure_type=FailureType.TARGET_NOT_FOUND,
+                        detail=guard.reason,
+                    ),
+                    step_controller=controller,
+                    ctx=StrategyContext(driver=self.driver),
+                    action_timeout=self.config.agent.action.default_timeout_seconds,
+                )
+                iteration.recovery_attempts.append(attempt)
             # Strengthen verification without re-executing the non-idempotent action
             ctx.state_machine.force(AgentState.VERIFYING, "repeat_guard_block")
             t0 = time.monotonic()
@@ -391,6 +474,7 @@ class AgentRuntime:
                 GroundingRequest(
                     image_ref=screen.path_for_model(),
                     crop_offset=screen.crop_offset,
+                    resolution=screen.resolution,
                     target=target,
                     ocr_candidates=[i.model_dump() for i in screen.ocr_items],
                     template_candidates=[m.model_dump() for m in screen.template_matches],

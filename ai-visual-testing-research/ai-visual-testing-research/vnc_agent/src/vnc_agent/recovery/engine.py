@@ -175,6 +175,29 @@ class RecoveryEngine:
         # Progress through preferred → fallback across the whole TestStep
         step_idx = self._step_strategy_index.get(ft.value, 0)
         strategy = strategies[min(step_idx, len(strategies) - 1)]
+        path_changing = strategy in {"second_candidate", "re_ground", "switch_to_keyboard"}
+        prerequisites_met = (
+            (not policy.requires_strong_model or ctx.strong_model_available)
+            and (
+                not policy.requires_human_confirmation
+                or ctx.human_confirmation_granted
+            )
+            and (policy.allows_action_path_change or not path_changing)
+        )
+        budget_available = True
+        if policy.consumes_global_retry_budget and step_controller is not None:
+            budget_available = step_controller.consume_global_retry_budget()
+        if not prerequisites_met or not budget_available:
+            attempt = RecoveryAttempt(
+                failure_type=ft,
+                sub_reason=classification.sub_reason,
+                strategy=strategy,
+                attempt_index=used,
+                max_retries=policy.max_retries,
+                resolved=False,
+            )
+            self.attempts.append(attempt)
+            return attempt
         if policy.cooldown_ms > 0 and used > 0:
             await asyncio.sleep(policy.cooldown_ms / 1000.0)
 

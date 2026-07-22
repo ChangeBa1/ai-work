@@ -75,6 +75,11 @@ class RunRepository:
                     if it.repeat_guard_decision is not None
                     else None
                 )
+                payload["canonical_identity_json"] = (
+                    it.canonical_identity.model_dump(mode="json")
+                    if it.canonical_identity is not None
+                    else None
+                )
                 session.add(
                     ActionIterationRow(
                         run_id=run_id,

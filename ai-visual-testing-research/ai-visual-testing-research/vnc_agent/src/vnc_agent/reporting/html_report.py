@@ -6,6 +6,7 @@ from pathlib import Path
 
 from jinja2 import Template
 
+from vnc_agent.domain.reporting_tags import ActionTagRule
 from vnc_agent.domain.run import TestRun
 from vnc_agent.reporting.json_report import build_report_dict
 
@@ -37,6 +38,13 @@ details{margin-top:6px} code{font-size:0.85em}
 <p>Case: <code>{{ report.test_case_id }}</code></p>
 <p>Status: <span class="status {{ report.status }}">{{ report.status }}</span></p>
 <p>Started: {{ report.started_at }} · Ended: {{ report.ended_at }}</p>
+<details open>
+  <summary>Precondition / Executed Action Audit</summary>
+  <p>Human confirmed facts: <code>{{ report.human_confirmed_facts }}</code></p>
+  <p>Precondition evaluation: <code>{{ report.precondition_evaluation }}</code></p>
+  <p>Declared tag counts: <code>{{ report.declared_tag_counts }}</code></p>
+  <p>Executed actions: <code>{{ report.executed_action_log }}</code></p>
+</details>
 {% for step in report.steps %}
 <div class="step">
   <h2>Step {{ step.step_id }} —
@@ -67,6 +75,11 @@ details{margin-top:6px} code{font-size:0.85em}
     · action_effect: <code>{{ it.action_effect.status }}</code>
     {% endif %}
     <details>
+      <summary>Action Identity / Coordinate Space</summary>
+      <p>Canonical identity: <code>{{ it.canonical_action_identity }}</code></p>
+      <p>Coordinate audit: <code>{{ it.coordinate_space_audit }}</code></p>
+    </details>
+    <details>
       <summary>Evidence</summary>
       <p>Before: <code>{{ it.before_frame_path }}</code></p>
       <p>After: <code>{{ it.after_frame_path }}</code></p>
@@ -86,10 +99,15 @@ details{margin-top:6px} code{font-size:0.85em}
 """
 
 
-def write_html_report(run: TestRun, path: str | Path) -> str:
+def write_html_report(
+    run: TestRun,
+    path: str | Path,
+    *,
+    action_tags: list[ActionTagRule] | None = None,
+) -> str:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    report = build_report_dict(run)
+    report = build_report_dict(run, action_tags=action_tags)
     html = Template(_TEMPLATE).render(report=report)
     path.write_text(html, encoding="utf-8")
     return str(path)

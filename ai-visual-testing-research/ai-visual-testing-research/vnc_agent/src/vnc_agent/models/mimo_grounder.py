@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
+import cv2
 import httpx
 
 from vnc_agent.config import GrounderModelConfig
 from vnc_agent.domain.grounding import GroundingCandidate, GroundingResult
-from vnc_agent.models.provider import GroundingRequest
+from vnc_agent.models.coordinate_space import resolve_pixel_bbox
 from vnc_agent.models.planner_client import _image_url_content_part
+from vnc_agent.models.provider import GroundingRequest
 from vnc_agent.models.response_parser import parse_grounding_response
 from vnc_agent.runtime.exceptions import GroundingError, PlanValidationError
 
@@ -19,10 +20,64 @@ _GROUNDING_SYSTEM_PROMPT = (
     "你是一个 GUI 元素定位助手。根据截图和目标描述，只输出一个 JSON 对象"
     "（不要 markdown 代码块、不要任何多余文字），格式为："
     '{"found": bool, "candidates": [{"bbox": [x1,y1,x2,y2], '
+    '"coordinate_space": "pixel" 或 "normalized_1000", '
     '"confidence": 0~1 之间的数, "label": string 或 null, "reason": string}]}。'
-    "bbox 为图片内的像素坐标；candidates 最多 3 个，按置信度降序；"
+    "pixel 表示原始像素坐标；normalized_1000 表示 X/Y 分别按宽/高映射到 0~1000；"
+    "每个候选必须独立声明 coordinate_space；candidates 最多 3 个，按置信度降序；"
     '无法可靠判断时返回 {"found": false, "candidates": []}，不得编造坐标。'
 )
+
+
+def _request_resolution(request: GroundingRequest) -> tuple[int, int] | None:
+    if request.resolution is not None:
+        return request.resolution
+    image = cv2.imread(request.image_ref)
+    if image is None:
+        return None
+    height, width = image.shape[:2]
+    return (width, height)
+
+
+def _resolve_coordinate_spaces(
+    result: GroundingResult,
+    request: GroundingRequest,
+) -> GroundingResult:
+    resolution = _request_resolution(request)
+    candidates: list[GroundingCandidate] = []
+    audit: list[dict[str, Any]] = []
+    for index, candidate in enumerate(result.candidates):
+        raw_bbox = candidate.raw_bbox or candidate.bbox
+        siblings = [item for offset, item in enumerate(result.candidates) if offset != index]
+        resolved = (
+            resolve_pixel_bbox(
+                raw_bbox,
+                candidate.coordinate_space,
+                resolution,
+                siblings=siblings,
+            )
+            if resolution is not None
+            else (raw_bbox if candidate.coordinate_space in (None, "pixel") else None)
+        )
+        accepted = resolved is not None
+        audit.append(
+            {
+                "coordinate_space": candidate.coordinate_space,
+                "raw_bbox": raw_bbox,
+                "resolved_bbox": resolved,
+                "accepted": accepted,
+            }
+        )
+        if accepted:
+            candidates.append(
+                candidate.model_copy(update={"bbox": resolved, "raw_bbox": raw_bbox})
+            )
+    return result.model_copy(
+        update={
+            "found": result.found and bool(candidates),
+            "candidates": candidates,
+            "coordinate_space_audit": audit,
+        }
+    )
 
 
 def _target_text(target: dict[str, Any]) -> str:
@@ -163,7 +218,8 @@ class MimoGrounderClient:
                 model_name=self.cfg.model,
             )
 
-        return self._apply_crop_and_cap(result, request)
+        cropped = self._apply_crop_and_cap(result, request)
+        return _resolve_coordinate_spaces(cropped, request)
 
 
 class StubGrounder:
@@ -183,16 +239,14 @@ class StubGrounder:
             for c in self.result.candidates:
                 x1, y1, x2, y2 = c.bbox
                 restored.append(
-                    GroundingCandidate(
-                        bbox=(x1 + ox, y1 + oy, x2 + ox, y2 + oy),
-                        confidence=c.confidence,
-                        label=c.label,
-                        reason=c.reason,
+                    c.model_copy(
+                        update={"bbox": (x1 + ox, y1 + oy, x2 + ox, y2 + oy)}
                     )
                 )
-            return GroundingResult(
+            cropped = GroundingResult(
                 found=self.result.found and bool(restored),
                 candidates=restored,
                 model_name=self.result.model_name,
             )
-        return self.result
+            return _resolve_coordinate_spaces(cropped, request)
+        return _resolve_coordinate_spaces(self.result, request)

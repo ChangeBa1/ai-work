@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Literal
 
@@ -50,10 +51,12 @@ class ActionPolicy:
         *,
         overall_confidence_threshold: float = 0.55,
         top1_top2_min_gap: float = 0.08,
+        ocr_sanity_check_ratio: float = 0.10,
         known_hotkeys: dict[str, list[str]] | None = None,
     ) -> None:
         self.overall_confidence_threshold = overall_confidence_threshold
         self.top1_top2_min_gap = top1_top2_min_gap
+        self.ocr_sanity_check_ratio = ocr_sanity_check_ratio
         self.known_hotkeys = known_hotkeys or {}
 
     def resolve(
@@ -224,6 +227,11 @@ class ActionPolicy:
     ) -> PolicyResult:
         w, h = screen.resolution
         in_bounds = filter_in_bounds(result.candidates, w, h)
+        in_bounds = [
+            candidate
+            for candidate in in_bounds
+            if self._consistent_with_unique_ocr(action, screen, candidate)
+        ]
         filtered = GroundingResult(
             found=result.found and bool(in_bounds),
             candidates=in_bounds,
@@ -267,6 +275,30 @@ class ActionPolicy:
         return self._executable_from_candidate(
             action, in_bounds, candidate_index, filtered
         )
+
+    def _consistent_with_unique_ocr(
+        self,
+        action: SemanticAction,
+        screen: StructuredScreen,
+        candidate: GroundingCandidate,
+    ) -> bool:
+        target_text = (action.target.text if action.target else "") or ""
+        needle = target_text.strip().lower()
+        if not needle:
+            return True
+        hits = [
+            item
+            for item in screen.ocr_items
+            if needle in item.normalized_text or needle in item.text.lower()
+        ]
+        if len(hits) != 1:
+            return True
+        anchor = hits[0].bbox
+        anchor_center = ((anchor[0] + anchor[2]) // 2, (anchor[1] + anchor[3]) // 2)
+        candidate_center = candidate.center()
+        distance = math.dist(anchor_center, candidate_center)
+        tolerance = self.ocr_sanity_check_ratio * min(screen.resolution)
+        return distance <= tolerance
 
     def _executable_from_candidate(
         self,

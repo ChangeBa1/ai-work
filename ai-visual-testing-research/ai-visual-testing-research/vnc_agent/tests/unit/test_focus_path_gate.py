@@ -1,6 +1,6 @@
 """US5 T044/T045 + T069: focus path gate via ActionPolicy and RecoveryEngine."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -25,7 +25,7 @@ def _screen_with_unique_ocr(text: str = "レジ袋") -> StructuredScreen:
     return StructuredScreen(
         frame_id="f",
         resolution=(300, 200),
-        captured_at=datetime.now(timezone.utc),
+        captured_at=datetime.now(UTC),
         ocr_items=[
             OCRItem(text=text, bbox=(100, 80, 160, 110), confidence=0.95),
         ],
@@ -37,7 +37,7 @@ def _screen_ordered_anchors() -> StructuredScreen:
     return StructuredScreen(
         frame_id="ordered",
         resolution=(400, 300),
-        captured_at=datetime.now(timezone.utc),
+        captured_at=datetime.now(UTC),
         ocr_items=[
             OCRItem(text="search", bbox=(10, 10, 80, 30), confidence=0.95),
             OCRItem(text="qty", bbox=(10, 50, 60, 70), confidence=0.95),
@@ -57,8 +57,22 @@ def _click_action(text: str = "レジ袋") -> SemanticAction:
 
 def _app_config() -> AppConfig:
     recovery = {
-        "action_no_effect": RecoveryPolicy(max_retries=3, cooldown_ms=0),
-        "focus_error": RecoveryPolicy(max_retries=3, cooldown_ms=0),
+        "action_no_effect": RecoveryPolicy(
+            max_retries=3,
+            cooldown_ms=0,
+            consumes_global_retry_budget=True,
+            allows_action_path_change=True,
+            requires_strong_model=False,
+            requires_human_confirmation=False,
+        ),
+        "focus_error": RecoveryPolicy(
+            max_retries=3,
+            cooldown_ms=0,
+            consumes_global_retry_budget=True,
+            allows_action_path_change=True,
+            requires_strong_model=False,
+            requires_human_confirmation=False,
+        ),
     }
     return AppConfig(
         agent=AgentConfig(recovery=recovery),

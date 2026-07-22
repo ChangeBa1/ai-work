@@ -9,10 +9,11 @@ from pydantic import BaseModel, Field
 
 from vnc_agent.domain.action import ExecutableAction, ExecutionResult, SemanticAction
 from vnc_agent.domain.action_effect import ActionEffect
+from vnc_agent.domain.action_identity import CanonicalActionIdentity
 from vnc_agent.domain.grounding import GroundingResult
 from vnc_agent.domain.recovery import RecoveryAttempt
 from vnc_agent.domain.repeat_guard import RepeatGuardDecision
-from vnc_agent.domain.verification import VerificationResult, WaitResult
+from vnc_agent.domain.verification import VerificationResult, VerificationSpec, WaitResult
 
 
 class ActionIteration(BaseModel):
@@ -29,6 +30,44 @@ class ActionIteration(BaseModel):
     # 002: independent ActionEffect + RepeatGuard records (data-model.md §6)
     action_effect: ActionEffect | None = None
     repeat_guard_decision: RepeatGuardDecision | None = None
+    canonical_identity: CanonicalActionIdentity | None = None
+
+
+class DeclaredFact(BaseModel):
+    """Feature 003 (FR-024): a testcase/scenario-profile-declared named
+    precondition fact. Reuses VerificationSpec directly — the same
+    fact/assertion mechanism used for step-level business assertions,
+    differing only in trigger timing (run-start vs. post-step)."""
+
+    key: str
+    spec: VerificationSpec
+
+
+class RunPrecondition(BaseModel):
+    facts: list[DeclaredFact] = Field(default_factory=list)
+
+
+class FactEvaluation(BaseModel):
+    key: str
+    result: VerificationResult
+
+
+class PreconditionEvaluation(BaseModel):
+    status: Literal["not_required", "passed", "failed"] = "not_required"
+    fact_evaluations: list[FactEvaluation] = Field(default_factory=list)
+    checked_at: datetime | None = None
+
+
+class HumanConfirmedFact(BaseModel):
+    """Feature 003 (FR-024, real/online-environment runs): an independent
+    human-confirmed value for a declared fact key. MUST NOT participate in
+    PreconditionEvaluation's automatic pass/fail decision — it is written to
+    the report purely as cross-checkable evidence."""
+
+    key: str
+    confirmed_value: str
+    confirmed_at: datetime
+    screenshot_ref: str | None = None
 
 
 class StepRecord(BaseModel):
@@ -51,6 +90,10 @@ class TestRun(BaseModel):
     steps: list[StepRecord] = Field(default_factory=list)
     report_json_path: str | None = None
     report_html_path: str | None = None
+    precondition_evaluation: PreconditionEvaluation = Field(
+        default_factory=PreconditionEvaluation
+    )
+    human_confirmed_facts: list[HumanConfirmedFact] = Field(default_factory=list)
 
 
 class VisualExperience(BaseModel):

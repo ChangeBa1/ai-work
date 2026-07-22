@@ -24,6 +24,7 @@ class StepController:
         self.remaining = max_retries
         self.iteration_index = 0
         self._exhausted = False
+        self._reserved_recovery_iterations = 0
 
     @property
     def exhausted(self) -> bool:
@@ -33,7 +34,9 @@ class StepController:
         """True if another ActionIteration may begin (including the first)."""
         if self.iteration_index == 0 and not self._exhausted:
             return True
-        return self.remaining > 0 and not self._exhausted
+        return (
+            self.remaining > 0 or self._reserved_recovery_iterations > 0
+        ) and not self._exhausted
 
     def start_iteration(self) -> int:
         """
@@ -43,6 +46,11 @@ class StepController:
         if self.iteration_index == 0 and not self._exhausted:
             idx = 0
             self.iteration_index = 1  # next will be 1
+            return idx
+        if self._reserved_recovery_iterations > 0 and not self._exhausted:
+            self._reserved_recovery_iterations -= 1
+            idx = self.iteration_index
+            self.iteration_index += 1
             return idx
         if self.remaining <= 0:
             self._exhausted = True
@@ -69,6 +77,17 @@ class StepController:
     def remaining_budget(self) -> int:
         return max(0, self.remaining)
 
+    def consume_global_retry_budget(self) -> bool:
+        """Atomically consume one shared recovery/retry unit when available."""
+        if self.remaining <= 0 or self._exhausted:
+            self._exhausted = True
+            self.remaining = 0
+            return False
+        self.remaining -= 1
+        self._reserved_recovery_iterations += 1
+        return True
+
     def mark_exhausted(self) -> None:
         self._exhausted = True
         self.remaining = 0
+        self._reserved_recovery_iterations = 0

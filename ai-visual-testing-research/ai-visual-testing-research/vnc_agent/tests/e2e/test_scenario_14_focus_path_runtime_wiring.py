@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 
+from tests.e2e.conftest import FakeVNC, build_runtime
 from vnc_agent.domain.action import SemanticAction, TargetDescription
 from vnc_agent.domain.grounding import GroundingCandidate, GroundingResult
 from vnc_agent.domain.observation import OCRItem, StructuredScreen
@@ -23,7 +24,6 @@ from vnc_agent.models.provider import (
     VisionUnderstandingRequest,
     VisionUnderstandingResponse,
 )
-from tests.e2e.conftest import FakeVNC, build_runtime
 
 
 def _screen(
@@ -45,7 +45,7 @@ def _screen(
     return StructuredScreen(
         frame_id=frame_id,
         resolution=(400, 300),
-        captured_at=datetime.now(timezone.utc),
+        captured_at=datetime.now(UTC),
         ocr_items=items,
         image_path="",  # no real files — ActionEffect uses OCR diff only
         changed_since_last=False,
@@ -62,14 +62,14 @@ class SequencePlanner:
             action_id="focus-search",
             intent="click search field",
             action_type="click",
-            target=TargetDescription(text="search"),
+            target=TargetDescription(role="button", text="search"),
             action_kind="idempotent",
         )
         self.bag = SemanticAction(
             action_id="click-bag",
             intent="click レジ袋",
             action_type="click",
-            target=TargetDescription(text="レジ袋"),
+            target=TargetDescription(role="button", text="レジ袋"),
             action_kind="non_idempotent",
         )
 
@@ -161,7 +161,10 @@ async def test_runtime_switch_to_keyboard_sends_derived_tab_sequence(
             found=True,
             candidates=[
                 GroundingCandidate(
-                    bbox=(10, 90, 100, 120), confidence=0.95, reason="bag"
+                    bbox=(10, 90, 100, 120),
+                    coordinate_space="pixel",
+                    confidence=0.95,
+                    reason="bag",
                 )
             ],
             model_name="stub",
@@ -218,12 +221,6 @@ async def test_runtime_switch_to_keyboard_sends_derived_tab_sequence(
 
     # At least one keyboard executable with a multi-tab derived sequence
     # (search index 0 → レジ袋 index 2 ⇒ ["tab","tab"])
-    focus_keys = [
-        list(e.keys)
-        for e in execute_log
-        if e.method == "keyboard" and e.keys and e.keys != ["tab"]
-        or (e.method == "keyboard" and e.keys == ["tab", "tab"])
-    ]
     # Prefer exact derived sequence
     derived = [k for k in (list(e.keys) for e in execute_log if e.method == "keyboard") if k]
     assert ["tab", "tab"] in derived, (

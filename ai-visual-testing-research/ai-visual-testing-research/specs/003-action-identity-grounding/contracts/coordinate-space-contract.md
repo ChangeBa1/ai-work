@@ -2,7 +2,13 @@
 
 **Feature**: [../spec.md](../spec.md) | **Data Model**: [../data-model.md](../data-model.md)
 
-对应 FR-012~017。本契约定义 Grounder 响应中 `coordinate_space` 字段的取值约定、
+**重新基线说明**：本契约定义的坐标空间协议本身业务无关，`checklists/domain-
+independence.md` 复核未发现问题，2026-07-22 重新基线**原样保留**全部规则；
+唯一改动是下方 §1 wire 格式示例的候选标签由业务专用文字替换为通用占位符，
+纯编辑性修改，不改变任何字段定义或校验规则。
+
+对应 FR-018~023（编号随 spec.md 2026-07-22 重新基线调整，规则内容不变）。本契约
+定义 Grounder 响应中 `coordinate_space` 字段的取值约定、
 `models/coordinate_space.py::resolve_pixel_bbox()` 的换算/拒绝规则，以及
 `models/mimo_grounder.py::MimoGrounderClient.ground()` 的行为变更。
 
@@ -18,7 +24,7 @@
       "bbox": [251, 402, 405, 459],
       "coordinate_space": "normalized_1000",
       "confidence": 0.95,
-      "label": "レジ袋",
+      "label": "toolbar_icon_3",
       "reason": "..."
     }
   ]
@@ -79,7 +85,7 @@ async def ground(self, request: GroundingRequest) -> GroundingResult: ...
   为空列表（与 001 `found_consistency` 校验器已有的不变量一致，不需要新增校验）。
 - 返回的 `GroundingCandidate.bbox` MUST 是 §2 换算后的原始像素坐标；
   `GroundingCandidate.coordinate_space`/`raw_bbox` MUST 分别保留该候选**声明**的
-  坐标空间与**换算前**的原始数值，供报告审计（FR-026/036），MUST NOT 被换算结果
+  坐标空间与**换算前**的原始数值，供报告审计（FR-036），MUST NOT 被换算结果
   覆盖或丢弃。
 - 下游消费方（`planning/action_policy.py::ActionPolicy`、`execution/router.py::
   ExecutionRouter`）MUST 将 `GroundingCandidate.bbox` 视为已经是可信原始像素坐标，
@@ -103,9 +109,9 @@ async def ground(self, request: GroundingRequest) -> GroundingResult: ...
 
 1. **单一换算点**：`resolve_pixel_bbox()` 只在 `mimo_grounder.py` 内被调用一次；
    `GroundingCandidate.bbox` 一旦离开 `models/` 边界，永远是最终原始像素坐标
-   （FR-014）。
+   （FR-020）。
 2. **越界/矛盾即拒绝，不猜测**：任何未通过 §2/§4 校验的候选 MUST 被剔除或阻止执行，
-   MUST NOT 被裁剪、夹紧或忽略校验后仍然使用（FR-013/016）。
+   MUST NOT 被裁剪、夹紧或忽略校验后仍然使用（FR-022/023）。
 3. **声明与推断分离**：`coordinate_space` 显式声明时 MUST 直接采信（不做双重验证
    猜测）；仅缺失声明（历史响应）时才进入 §2 的双解释推断分支，且推断标准与显式声明
-   路径一致严格（FR-015）。
+   路径一致严格（FR-021）。

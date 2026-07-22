@@ -1,4 +1,11 @@
-"""US8 T064: static scan — feature tests must not instantiate real VNCDriver."""
+"""US8 T064 / Feature 003 T003: static scan — offline tests must not instantiate
+real VNCDriver.
+
+Feature 003 (2026-07-22): generalized from a hardcoded per-file list to a glob
+scan over the three offline test roots (fixtures/, unit/, e2e/), so newly added
+scenario test files (e.g. test_scenario_form_submit.py) are automatically
+covered without needing this file to be updated per addition.
+"""
 
 from __future__ import annotations
 
@@ -6,22 +13,9 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]  # vnc_agent/tests
+THIS_FILE = Path(__file__).resolve()
 
-# Feature 002 offline test roots (plan.md three-tier taxonomy)
-SCAN_GLOBS = [
-    "fixtures/test_action_effect.py",
-    "fixtures/test_repeat_guard.py",
-    "fixtures/test_error_popup_classification.py",
-    "fixtures/test_business_resolver.py",
-    "fixtures/test_testcase_loader.py",
-    "fixtures/test_report_builder.py",
-    "unit/test_action_kind_classification.py",
-    "unit/test_focus_path_gate.py",
-    "e2e/test_scenario_10_no_duplicate_action.py",
-    "e2e/test_scenario_11_error_popup_not_passed.py",
-    "e2e/test_scenario_12_legacy_weak_assertion.py",
-    "e2e/test_scenario_13_pos_bag_regression.py",
-]
+SCAN_DIRS = ["fixtures", "unit", "e2e"]
 
 _FORBIDDEN_CALL = re.compile(r"(?<!Mock)(?<!Fake)\bVNCDriver\s*\(")
 _FORBIDDEN_IMPORT = re.compile(
@@ -29,12 +23,22 @@ _FORBIDDEN_IMPORT = re.compile(
 )
 
 
+def _iter_offline_test_files() -> list[Path]:
+    files: list[Path] = []
+    for dir_name in SCAN_DIRS:
+        dir_path = ROOT / dir_name
+        if not dir_path.is_dir():
+            continue
+        files.extend(sorted(dir_path.glob("test_*.py")))
+    return files
+
+
 def test_no_real_vnc_driver_in_feature_tests():
     violations: list[str] = []
-    for rel in SCAN_GLOBS:
-        path = ROOT / rel
-        if not path.exists():
+    for path in _iter_offline_test_files():
+        if path.resolve() == THIS_FILE:
             continue
+        rel = path.relative_to(ROOT).as_posix()
         text = path.read_text(encoding="utf-8")
         for i, line in enumerate(text.splitlines(), 1):
             stripped = line.strip()
