@@ -1,34 +1,37 @@
 <!--
 Sync Impact Report
-- Version change: 1.0.0 → 1.1.0
-- Rationale: MINOR bump — new substantive Core Principle added (VI), no
-  existing principle redefined or removed, governance compliance-review text
-  materially expanded to reference it.
-- Modified principles: N/A (V unchanged; new VI added)
-- Added sections:
-  - Core Principle VI (业务无关核心与声明式场景隔离 / Domain-Agnostic Core and
-    Declarative Scenario Isolation)
-- Removed sections: none
+- Version change: 1.1.0 → 1.2.0
+- Rationale: MINOR bump — engineering and privacy constraints now define
+  content-addressed screenshot persistence, logical-capture audit records, and
+  explicit no-private-persistence behavior for sensitive-input steps. No Core
+  Principle was removed or weakened.
+- Modified principles: none.
+- Modified constraints:
+  - 资源约束（弱配置电脑）— a successfully captured image MUST be durably
+    represented immediately, but an exact duplicate MAY reuse an already
+    persisted physical image when a new immutable logical record is written.
+  - 凭据与隐私 — steps that prohibit post-input screenshot persistence MUST
+    also prohibit private/unmasked physical artifacts; in-memory use remains
+    subject to the declared policy and must be released promptly.
+  - 制品与可观测性 — complete trace explicitly separates logical capture
+    records from content-addressed physical image files.
+- Added sections: none.
+- Removed sections: none.
 - Governance changes:
-  - 合规性审查 paragraph extended to explicitly require checking core code for
-    business-specific fields/keywords under Principle VI.
+  - 合规性审查 now requires screenshot-storage changes to verify logical trace
+    completeness, physical deduplication references, and sensitive-step
+    persistence policy.
 - Templates requiring updates:
-  - ✅ .specify/templates/plan-template.md — Constitution Check section now
-    lists explicit domain-agnostic-core gate items (business-specific
-    fields/keywords in core; business data confined to testcase/fixture/
-    profile; cross-scenario contract test requirement).
-  - ✅ .specify/templates/tasks-template.md — added explicit cross-cutting task
-    category for domain-agnostic-core verification and cross-scenario
-    contract tests.
-  - ✅ .specify/templates/checklist-template.md — no hardcoded principle
-    content (items are generated per-feature by /speckit-checklist); no edit
-    needed, remains compatible. Future checklists MUST include the three
-    Principle VI checks listed in plan-template.md's Constitution Check gate.
-  - ✅ .specify/templates/spec-template.md — no hardcoded principle references
-    found; no edit needed.
-  - ⚠ No `speckit-*` command/skill files contained project-specific
-    principle text requiring sync; Constitution Check fill logic in
-    speckit-plan/SKILL.md already reads from this file generically.
+  - ✅ .specify/templates/plan-template.md — generic Constitution Check already
+    derives project-specific gates from this file; no edit required.
+  - ✅ .specify/templates/spec-template.md — no hardcoded persistence rule; no
+    edit required.
+  - ✅ .specify/templates/tasks-template.md — existing security, observability,
+    and cross-cutting task categories remain compatible; no edit required.
+  - ✅ .specify/templates/checklist-template.md — no hardcoded persistence rule;
+    no edit required.
+  - ✅ `.agents/skills/speckit-*/SKILL.md` — commands read the Constitution
+    generically; no project-specific wording required synchronization.
 - Follow-up TODOs: none.
 -->
 
@@ -109,7 +112,10 @@ LangGraph、Temporal、Kafka、Kubernetes、分布式数据库或本地大型视
 Python Protocol 与内部注册表解耦，理由是高频截图与键鼠调用不适合承受远程协议开销。
 
 **资源约束（弱配置电脑）**：系统 MUST 同时只处理一个 VNC 会话、及时释放截图内存、仅保留
-最近 3～5 帧于内存、原始截图立即写盘、按需加载 OCR 模型、不同时加载多个本地模型；页面
+最近 3～5 帧于内存。每次成功截图 MUST 立即形成不可变逻辑采集记录；首次出现的唯一像素内容
+MUST 立即持久化为物理图片，严格相同且符合复用边界的后续截图 MAY 通过内容寻址引用已持久化
+图片而不重复写入，但 MUST 保留独立时间戳、步骤关联、内容身份与复用来源。系统 MUST 按需加载
+OCR 模型、不同时加载多个本地模型；页面
 稳定时 MUST NOT 保持高频截图（默认间隔 500ms）；MUST NOT 进行实时视频分析或运行本地大型
 视觉模型。模型调用 MUST 遵循“能用确定性手段解决就不升级到模型”的路由原则：页面未变化不
 重复调用 Planner，历史经验命中时不立即调用 MiMo，OCR 能唯一定位时不调用 Grounder，回放
@@ -126,8 +132,10 @@ MUST NOT 尝试绕过。
 
 **凭据与隐私**：VNC 密码 MUST NOT 以明文写入 YAML；模型 API Key MUST 通过环境变量或操作
 系统凭据存储管理；测试数据中的密码 MUST 通过引用传入，MUST NOT 直接写入测试用例正文；
-日志 MUST 自动过滤敏感字段；截图 MUST 支持敏感区域打码，密码输入步骤默认 MUST NOT 保存
-输入后的局部截图。
+日志 MUST 自动过滤敏感字段；截图 MUST 支持敏感区域打码。密码输入或其他声明禁止持久化的
+步骤默认 MUST NOT 保存输入后的未遮罩局部截图，也 MUST NOT 创建 private/unmasked 物理制品；
+若策略允许模型使用该画面，只能在内存中短暂使用并及时释放，报告和公开制品仍只能引用安全
+遮罩证据。
 
 ## 质量门禁与开发工作流 (Quality Gates & Development Workflow)
 
@@ -148,9 +156,10 @@ MUST NOT 尝试绕过。
 Grounder 已分离；每个正式步骤均能独立验证；回放失败后仅生成待审核的自愈候选补丁而非自动
 应用。
 
-**制品与可观测性**：每次运行 MUST 保存完整运行轨迹（状态迁移、截图、模型请求/响应、验证
-证据），并 MUST 能生成 HTML 与 JSON 报告；日志 MUST 采用结构化 JSON Lines 格式，至少包含
-run_id、step_id、state、event、耗时等字段。
+**制品与可观测性**：每次运行 MUST 保存完整运行轨迹（状态迁移、每次截图的逻辑采集记录、
+内容寻址物理图片引用、模型请求/响应、验证证据），并 MUST 能生成 HTML 与 JSON 报告。多个
+逻辑采集记录 MAY 引用同一份已认证物理图片，但 MUST NOT 合并、删除或隐去任一次采集；日志
+MUST 采用结构化 JSON Lines 格式，至少包含 run_id、step_id、state、event、耗时等字段。
 
 ## Governance
 
@@ -174,6 +183,8 @@ PR 描述、issue 或对话记录）说明变更内容与理由，并 MUST 更�
 execution、verification、reporting、recovery、config 的 PR 与代码评审 MUST 另外显式
 检查：核心代码是否出现业务专用字段或关键词（违反 Principle VI）；业务数据是否仅存在于
 testcase/fixture/profile 而非核心模型固定字段；声称通用的框架能力变更是否附带至少两个
-互不相关 GUI 场景的跨场景契约测试。
+互不相关 GUI 场景的跨场景契约测试。涉及截图存储的变更还 MUST 检查：每次成功采集是否有
+独立逻辑记录；重复物理图片是否有可追溯来源；禁止 private 持久化的敏感步骤是否未产生未遮罩
+物理制品。
 
-**Version**: 1.1.0 | **Ratified**: 2026-07-20 | **Last Amended**: 2026-07-22
+**Version**: 1.2.0 | **Ratified**: 2026-07-20 | **Last Amended**: 2026-07-22
