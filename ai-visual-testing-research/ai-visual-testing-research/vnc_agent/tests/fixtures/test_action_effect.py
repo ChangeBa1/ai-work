@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import cv2
 import numpy as np
-import pytest
 
 from vnc_agent.domain.observation import (
     OCRItem,
@@ -43,7 +42,7 @@ def _screen(
     return StructuredScreen(
         frame_id=path.stem,
         resolution=(W, H),
-        captured_at=datetime.now(timezone.utc),
+        captured_at=datetime.now(UTC),
         ocr_items=ocr or [],
         template_matches=templates or [],
         local_blobs=local_blobs or [],
@@ -152,6 +151,47 @@ def test_no_change_and_ocr_only_change(tmp_path: Path):
     assert "1点" in result_ocr.evidence.ocr_added or any(
         "1" in t for t in result_ocr.evidence.ocr_added
     )
+
+
+def test_deduplicated_cache_hit_frames_still_yield_no_effect_not_auto_passed(tmp_path: Path):
+    """Feature 004 (T031) regression: a post-action frame that is a strict
+    pixel duplicate of `before` — and whose OCR/template came from an
+    analysis-cache hit — must still classify as `no_effect` via ordinary
+    evidence comparison. `deduplicated=True` / `analysis_source_refs` must
+    never themselves short-circuit the verdict to something that reads as
+    an automatic pass; ActionEffect has no `passed` status at all — the
+    real "no auto pass" guarantee is enforced one layer up by
+    `resolve_step_result`/VerificationEngine, which this proves is fed
+    honest `no_effect` evidence rather than being bypassed."""
+    img = _blank()
+    pb = _save(tmp_path, "dedup_b.png", img)
+    pa = _save(tmp_path, "dedup_a.png", img.copy())
+    same_ocr = [OCRItem(text="同一文本", bbox=(10, 10, 50, 30), confidence=0.9)]
+
+    before = StructuredScreen(
+        frame_id="frame-before",
+        resolution=(W, H),
+        captured_at=datetime.now(UTC),
+        ocr_items=same_ocr,
+        image_path=str(pb),
+        content_hash="c" * 64,
+        deduplicated=False,
+    )
+    after = StructuredScreen(
+        frame_id="frame-after",
+        resolution=(W, H),
+        captured_at=datetime.now(UTC),
+        ocr_items=same_ocr,  # cache-hit reused OCR items, byte-identical
+        image_path=str(pa),
+        content_hash="c" * 64,
+        deduplicated=True,
+        duplicate_of_frame_id="frame-before",
+        analysis_source_refs={"ocr": "frame-before"},
+    )
+    result = classify_action_effect(before, after, intent="click noop button")
+    assert result.status == "no_effect"
+    assert result.evidence.ocr_added == []
+    assert result.evidence.ocr_removed == []
 
 
 def test_noise_region_excluded(tmp_path: Path):

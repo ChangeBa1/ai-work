@@ -4,20 +4,39 @@ Feature 004: consumes ScreenFrames from the shared `FrameCaptureService`
 recorder — no more per-call `capture_full_screen`, no more double
 `assemble_structured_screen` for the masked case (the decoded pixel array is
 already in memory once; masking only matters for the persisted safe file,
-never for perception).
+never for perception). OCR/template/diff reuse is delegated to
+`structured_screen.py`; `vision_describe` (a cacheable content component,
+distinct from the Planner/Verifier context-sensitive roles) is cached here
+since it is issued through `planner.describe_screen(mode="describe")`.
 """
 
 from __future__ import annotations
 
+import hashlib
+import json
+import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from vnc_agent.domain.observation import Region, StructuredScreen, VisionUnderstanding
+from vnc_agent.domain.observation import (
+    Region,
+    ScreenFrame,
+    StructuredScreen,
+    VisionUnderstanding,
+    scope_identity,
+)
 from vnc_agent.models.provider import PlannerProvider, VisionUnderstandingRequest
+from vnc_agent.perception.cache import AnalysisCacheKey, AnalysisResultCache
 from vnc_agent.perception.structured_screen import assemble_structured_screen_from_pixels
 
 if TYPE_CHECKING:
     from vnc_agent.perception.screenshot import FrameCaptureService
+
+
+def _config_fingerprint(payload: dict) -> str:
+    return hashlib.sha256(
+        json.dumps(payload, ensure_ascii=False, sort_keys=True, default=str).encode("utf-8")
+    ).hexdigest()
 
 
 class ObservationPipeline:
@@ -31,6 +50,9 @@ class ObservationPipeline:
         template_enabled: bool = True,
         vision_fallback: bool = True,
         diff_threshold: float = 0.02,
+        cache: AnalysisResultCache | None = None,
+        vision_provider_name: str = "planner-provider",
+        vision_model: str = "default",
     ) -> None:
         self.capture_service = capture_service
         self.templates_dir = templates_dir
@@ -39,6 +61,17 @@ class ObservationPipeline:
         self.template_enabled = template_enabled
         self.vision_fallback = vision_fallback
         self.diff_threshold = diff_threshold
+        self.cache = cache
+        self.vision_provider_name = vision_provider_name
+        self.vision_model = vision_model
+        self.perception_config_fingerprint = _config_fingerprint(
+            {
+                "ocr_enabled": ocr_enabled,
+                "template_enabled": template_enabled,
+                "vision_fallback": vision_fallback,
+                "diff_threshold": diff_threshold,
+            }
+        )
 
     async def observe(
         self,
@@ -57,36 +90,88 @@ class ObservationPipeline:
             frame,
             decoded.pixels,
             previous_pixels=outcome.previous_decoded.pixels if outcome.previous_decoded else None,
+            cache=self.cache,
             ocr_enabled=self.ocr_enabled,
             template_enabled=self.template_enabled,
             templates_dir=self.templates_dir,
             diff_threshold=self.diff_threshold,
+            perception_config_fingerprint=self.perception_config_fingerprint,
         )
 
         if self.vision_fallback and self._needs_vision(screen) and self.planner:
-            try:
-                resp = await self.planner.describe_screen(
-                    VisionUnderstandingRequest(
-                        mode="describe",
-                        # FR-049: model API MUST receive unmasked image
-                        image_ref=frame.path_for_model(),
-                        structured_screen_hint=screen.to_hint_dict(),
-                        question=None,
-                    )
-                )
-                screen = screen.model_copy(
-                    update={
-                        "vision_understanding": VisionUnderstanding(
-                            description=resp.description or "",
-                            confidence=resp.confidence,
-                            model_name=resp.model_name,
-                        )
-                    }
-                )
-            except Exception:
-                pass  # vision is best-effort supplement
+            vision = await self._vision_describe_or_cache(frame, screen)
+            if vision is not None:
+                screen = screen.model_copy(update={"vision_understanding": vision})
 
         return screen
+
+    async def _vision_describe_or_cache(
+        self, frame: ScreenFrame, screen: StructuredScreen
+    ) -> VisionUnderstanding | None:
+        """`vision_describe` is a cacheable content component (perception-
+        cache-contract.md) — distinct from the Planner/Verifier
+        context-sensitive roles, which are never cached."""
+        component_identity = {
+            "provider": self.vision_provider_name,
+            "requested_model": self.vision_model,
+            "mode": "describe",
+            "prompt_revision": "vision-v1",
+            "schema_revision": "vision-v1",
+        }
+        key: AnalysisCacheKey | None = None
+        if self.cache is not None and frame.content_hash is not None:
+            key = AnalysisCacheKey(
+                component="vision_describe",
+                algorithm_revision="vision-v1",
+                content_hash=frame.content_hash,
+                scope_identity=scope_identity(frame.scope),
+                pixel_format=frame.scope.pixel_format,
+                mask_identity=frame.scope.mask_identity,
+                perception_config_fingerprint=self.perception_config_fingerprint,
+                component_identity=component_identity,
+            )
+            try:
+                entry = self.cache.lookup(
+                    key,
+                    frame_deduplicated=frame.deduplicated,
+                    duplicate_of_frame_id=frame.duplicate_of_frame_id,
+                    current_sequence=frame.capture_sequence,
+                )
+            except Exception:
+                entry = None
+            if entry is not None:
+                return entry.result
+
+        try:
+            resp = await self.planner.describe_screen(  # type: ignore[union-attr]
+                VisionUnderstandingRequest(
+                    mode="describe",
+                    # FR-049: model API MUST receive unmasked image
+                    image_ref=frame.path_for_model(),
+                    structured_screen_hint=screen.to_hint_dict(),
+                    question=None,
+                )
+            )
+        except Exception:
+            return None  # vision is best-effort supplement
+
+        result = VisionUnderstanding(
+            description=resp.description or "",
+            confidence=resp.confidence,
+            model_name=resp.model_name,
+        )
+        if self.cache is not None and key is not None:
+            try:
+                self.cache.store(
+                    key,
+                    result,
+                    source_frame_id=frame.id,
+                    sequence=frame.capture_sequence,
+                    invocation_id=str(uuid.uuid4()),
+                )
+            except Exception:
+                pass
+        return result
 
     def _needs_vision(self, screen: StructuredScreen) -> bool:
         """True when hash/OCR/template insufficient to understand the page."""

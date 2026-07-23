@@ -127,6 +127,7 @@ async def _execute(
 
     from vnc_agent.drivers.vncdotool_driver import VNCToolDriver
     from vnc_agent.models.provider import build_grounder, build_planner
+    from vnc_agent.perception.cache import AnalysisResultCache
     from vnc_agent.perception.pipeline import ObservationPipeline
     from vnc_agent.perception.screenshot import FrameCaptureService
     from vnc_agent.perception.stability import StabilityEngine
@@ -179,6 +180,7 @@ async def _execute(
         mask_regions=cfg.agent.security.mask_regions,
         private_persistence_allowed=True,
     )
+    analysis_cache = AnalysisResultCache(max_frames=cfg.agent.perception.cache_max_frames)
     pipeline = ObservationPipeline(
         capture_service,
         templates_dir="templates",
@@ -187,6 +189,7 @@ async def _execute(
         template_enabled=cfg.agent.perception.template_enabled,
         vision_fallback=cfg.agent.perception.vision_fallback_enabled,
         diff_threshold=cfg.agent.wait.pixel_diff_threshold,
+        cache=analysis_cache,
     )
     stability = StabilityEngine(
         capture_service,

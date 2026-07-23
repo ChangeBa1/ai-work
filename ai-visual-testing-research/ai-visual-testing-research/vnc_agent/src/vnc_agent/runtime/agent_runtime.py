@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import time
 import uuid
-from typing import TYPE_CHECKING
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any
 
 from vnc_agent.domain.action import SemanticAction
 from vnc_agent.domain.action_effect import ActionEffect, ActionEffectEvidence
@@ -32,6 +33,12 @@ from vnc_agent.recovery.classifier import (
 )
 from vnc_agent.recovery.engine import RecoveryEngine
 from vnc_agent.recovery.strategies import StrategyContext
+from vnc_agent.runtime.context_identity import (
+    MissingIdentityFieldError,
+    grounder_identity,
+    planner_identity,
+    verifier_identity,
+)
 from vnc_agent.runtime.exceptions import (
     PlanValidationError,
     StepBudgetExhaustedError,
@@ -70,6 +77,16 @@ def _resolved_region_from_iteration(iteration: ActionIteration | None) -> Region
         return None
     x1, y1, x2, y2 = candidates[0].bbox
     return Region(x1=x1, y1=y1, x2=x2, y2=y2)
+
+
+def _provider_identity_snapshot(provider: Any) -> dict[str, Any]:
+    """Requested-model identity for a context-sensitive audit — never the
+    response's `model_name`, always the request-side config (perception-
+    cache-contract.md "Configuration/model invalidation")."""
+    cfg = getattr(provider, "cfg", None)
+    if cfg is not None:
+        return {"provider": type(provider).__name__, "model": getattr(cfg, "model", None)}
+    return {"provider": type(provider).__name__}
 
 
 def _semantic_target_label(sa: SemanticAction) -> str:
@@ -301,15 +318,70 @@ class AgentRuntime:
     def _rotate_capture_session(self, ctx: RunContext) -> None:
         """New VNC session id, clear `previous`, reconcile orphan bundles left
         by a mid-run disconnect (frame-capture-contract.md "Logical/physical
-        invariants" + "startup/reconnect recovery")."""
+        invariants" + "startup/reconnect recovery"). Also clears the bounded
+        analysis cache — perception-cache-contract.md "Capacity and
+        lifecycle" requires session reset to drop every entry."""
         self.capture_service.vnc_session_id = str(uuid.uuid4())
         self.capture_service.clear()
+        cache = getattr(self.pipeline, "cache", None)
+        if cache is not None:
+            cache.clear()
         referenced: set[str] = set()
         for f in ctx.test_run.frames:
             referenced.add(f.safe_image.artifact_bundle_id)
             if f.model_image is not None:
                 referenced.add(f.model_image.artifact_bundle_id)
         self.artifact_store.recover_orphans(ctx.run_id, referenced)
+
+    def _record_model_call_audit(
+        self,
+        ctx: RunContext,
+        *,
+        step_id: str | None,
+        frame_id: str | None,
+        iteration_index: int | None,
+        model_role: str,
+        request_identity: str,
+        context_identity: str,
+        sanitized_request: dict[str, Any],
+        sanitized_response: dict[str, Any],
+    ) -> None:
+        """Every actual Planner/Grounder/Verifier call gets a sanitized audit
+        record + a `model_call` counter event — these roles are never served
+        from the pixel-content cache (context_identity.py has no
+        content_hash/pixels parameter at all), so every applicable call here
+        is outcome="actual" (perception-cache-contract.md "Explicit
+        exclusions"; data-model.md §6A)."""
+        from vnc_agent.runtime.telemetry import CounterEvent, ModelCallAudit
+
+        invocation_id = str(uuid.uuid4())
+        audit = ModelCallAudit(
+            audit_id=str(uuid.uuid4()),
+            run_id=ctx.run_id,
+            step_id=step_id,
+            frame_id=frame_id,
+            iteration_index=iteration_index,
+            model_role=model_role,  # type: ignore[arg-type]
+            request_identity=request_identity,
+            context_identity=context_identity,
+            sanitized_request=sanitized_request,
+            sanitized_response=sanitized_response,
+            outcome="actual",
+            source_ref=None,
+            reason=None,
+        )
+        ctx.test_run.model_call_audits.append(audit)
+        ctx.test_run.counter_events.append(
+            CounterEvent(
+                kind="model_call",
+                occurred_at=datetime.now(UTC),
+                payload={
+                    "model_role": model_role,
+                    "invocation_id": invocation_id,
+                    "status": "completed",
+                },
+            )
+        )
 
     async def run_action_iteration(
         self,
@@ -392,6 +464,49 @@ class AgentRuntime:
         iteration.semantic_action = sa
         iteration.canonical_identity = compute_identity(step.id, sa)
         mark("planning", t0)
+
+        # Feature 004 (T039): Planner is context-sensitive — never served
+        # from the pixel-content cache; every actual call gets a sanitized
+        # audit record with its full canonical request/context identity.
+        try:
+            planner_req_id = planner_identity(
+                request_semantics={
+                    "intent": step.intent,
+                    "conditions": [c.type for c in step.expected.conditions],
+                },
+                step_intent=step.intent,
+                action_history_state=(
+                    f"iterations={len(ctx.current_step_record.iterations)}"
+                    if ctx.current_step_record
+                    else "iterations=0"
+                ),
+                retry_iteration_state={
+                    "iteration_index": iteration.iteration_index,
+                    "remaining_budget": controller.remaining_budget(),
+                },
+                structured_screen_identity=screen.content_hash or screen.frame_id,
+                requested_model_config=_provider_identity_snapshot(self.planner),
+                route_state=str(ctx.state_machine.state),
+            )
+            self._record_model_call_audit(
+                ctx,
+                step_id=step.id,
+                frame_id=screen.frame_id,
+                iteration_index=iteration.iteration_index,
+                model_role="planner",
+                request_identity=planner_req_id,
+                context_identity=planner_req_id,
+                sanitized_request={
+                    "step_intent": step.intent,
+                    "iteration_index": iteration.iteration_index,
+                },
+                sanitized_response={
+                    "action_type": sa.action_type,
+                    "task_completed_hint": plan.task_completed_hint,
+                },
+            )
+        except MissingIdentityFieldError:
+            pass
 
         # RepeatGuard before RESOLVING_ACTION (contracts §5)
         previous_iteration: ActionIteration | None = None
@@ -513,6 +628,40 @@ class AgentRuntime:
                 )
             )
             iteration.grounding_result = grounding
+            try:
+                grounder_req_id = grounder_identity(
+                    target_semantics=target,
+                    candidate_set_identity={
+                        "ocr_count": len(screen.ocr_items),
+                        "template_count": len(screen.template_matches),
+                        "screen": screen.content_hash or screen.frame_id,
+                    },
+                    coordinate_transform_identity={
+                        "crop_offset": screen.crop_offset,
+                        "resolution": screen.resolution,
+                    },
+                    requested_model_config=_provider_identity_snapshot(self.grounder),
+                    retry_grounding_state={
+                        "iteration_index": iteration.iteration_index,
+                        "candidate_index": self.recovery.candidate_index,
+                    },
+                )
+                self._record_model_call_audit(
+                    ctx,
+                    step_id=step.id,
+                    frame_id=screen.frame_id,
+                    iteration_index=iteration.iteration_index,
+                    model_role="grounder",
+                    request_identity=grounder_req_id,
+                    context_identity=grounder_req_id,
+                    sanitized_request={"target": target},
+                    sanitized_response={
+                        "found": grounding.found,
+                        "candidate_count": len(grounding.candidates),
+                    },
+                )
+            except MissingIdentityFieldError:
+                pass
             policy_result = self.policy.resolve(
                 sa,
                 screen,
@@ -608,6 +757,40 @@ class AgentRuntime:
             escalate=True,
         )
         mark("verifying", t0)
+
+        # Feature 004 (T039): every post-action Verifier execution is
+        # audited — it always runs on fresh, independently captured evidence
+        # and is never skipped or served from the pixel-content cache
+        # (Constitution Principle IV; perception-cache-contract.md "Explicit
+        # exclusions").
+        try:
+            verifier_req_id = verifier_identity(
+                visual_question_or_assertion={
+                    "operator": step.expected.operator,
+                    "conditions": [c.type for c in step.expected.conditions],
+                },
+                before_frame_identity=screen.content_hash or screen.frame_id,
+                after_frame_identity=after.content_hash or after.frame_id,
+                action_audit_context={
+                    "status": action_effect.status,
+                    "error_popup_signal": action_effect.evidence.error_popup_signal,
+                },
+                retry_iteration_state=iteration.iteration_index,
+                requested_model_config=_provider_identity_snapshot(self.planner),
+            )
+            self._record_model_call_audit(
+                ctx,
+                step_id=step.id,
+                frame_id=after.frame_id,
+                iteration_index=iteration.iteration_index,
+                model_role="verification",
+                request_identity=verifier_req_id,
+                context_identity=verifier_req_id,
+                sanitized_request={"operator": step.expected.operator},
+                sanitized_response={"status": vr.status},
+            )
+        except MissingIdentityFieldError:
+            pass
 
         # T070 (a): when the action is confirmed to have landed, remember the
         # operated element as the current keyboard focus for later structural

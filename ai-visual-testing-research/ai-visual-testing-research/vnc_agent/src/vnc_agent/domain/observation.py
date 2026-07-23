@@ -187,6 +187,14 @@ class StructuredScreen(BaseModel):
     global_diff_ratio: float = 0.0
     vision_understanding: VisionUnderstanding | None = None
     image_path: str = ""  # local / evidence (masked when configured)
+    # Feature 004 (data-model.md §7): mirrors the owning ScreenFrame's dedup
+    # identity; analysis_source_refs maps component -> source frame id only
+    # for components actually served from the analysis cache (a hit).
+    content_hash: str | None = None
+    deduplicated: bool = False
+    duplicate_of_frame_id: str | None = None
+    comparison_available: bool = True
+    analysis_source_refs: dict[str, str] = Field(default_factory=dict)
     crop_offset: tuple[int, int] = (0, 0)
     model_image_path: str = ""  # unmasked for model API (FR-049)
 
