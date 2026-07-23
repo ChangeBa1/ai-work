@@ -81,6 +81,12 @@ class ArtifactStore:
         d.mkdir(parents=True, exist_ok=True)
         return d
 
+    def bundles_dir(self, run_id: str) -> Path:
+        """Public accessor: the run's safe-evidence root — only `REFERENCED`
+        bundles live directly under here (staging/quarantine are siblings,
+        never nested inside)."""
+        return self._bundles_dir(run_id)
+
     def _staging_root(self, run_id: str) -> Path:
         d = self.run_dir(run_id) / ".staging"
         d.mkdir(parents=True, exist_ok=True)

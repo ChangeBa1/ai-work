@@ -132,6 +132,7 @@ class ObservationPipeline:
             test_run=test_run,
             clock=self.clock,
         )
+        frame.analysis_source_refs = dict(screen.analysis_source_refs)
 
         if self.vision_fallback and self._needs_vision(screen) and self.planner:
             vision = await self._vision_describe_or_cache(frame, screen)

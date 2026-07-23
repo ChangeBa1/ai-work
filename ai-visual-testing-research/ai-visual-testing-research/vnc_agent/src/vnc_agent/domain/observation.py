@@ -106,6 +106,11 @@ class ScreenFrame(BaseModel):
     safe_image: PhysicalImageRef
     model_image: PhysicalImageRef | None = None
     optimization_errors: list[OptimizationError] = Field(default_factory=list)
+    # Feature 004 (report-contract.md `frames[]`): mirrors the StructuredScreen
+    # built for this frame's component cache hits — component -> source
+    # frame id. Set after the fact by the pipeline once analysis completes
+    # (empty at capture time, when no analysis has happened yet).
+    analysis_source_refs: dict[str, str] = Field(default_factory=dict)
     width: int = 0
     height: int = 0
     crop_offset: tuple[int, int] = (0, 0)

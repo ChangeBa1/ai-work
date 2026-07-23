@@ -133,7 +133,9 @@ def test_weak_assertion_warning_report_markers(tmp_path: Path):
     html_path = write_html_report(run, tmp_path / "w.html")
     htext = Path(html_path).read_text(encoding="utf-8")
     assert "weak_assertion_warning" in htext
-    assert "Weak assertion" in htext or "weak assertion" in htext
+    # Feature 004: HTML is fully localized to zh-CN — the machine data
+    # marker stays stable, but the visible label is now Chinese.
+    assert "弱断言警告" in htext
 
 
 _PRIMARY_TAG_RULES = [
@@ -240,7 +242,10 @@ def test_action_identity_and_coordinate_audit(tmp_path: Path) -> None:
 
     html_path = write_html_report(run, tmp_path / "audit.html")
     html = Path(html_path).read_text(encoding="utf-8")
-    assert "Action Identity / Coordinate Space" in html
+    # Feature 004: localized to zh-CN — assert the Chinese section labels
+    # instead of the old English heading.
+    assert "规范动作身份" in html
+    assert "坐标空间审计" in html
 
 
 def test_run_level_precondition_and_tag_audit() -> None:

@@ -200,7 +200,9 @@ async def _execute(
         pixel_diff_threshold=cfg.agent.wait.pixel_diff_threshold,
     )
     action_tags = list(cfg.agent.reporting.action_tags) + list(case.action_tags)
-    report_builder = ReportBuilder(store, action_tags=action_tags)
+    report_builder = ReportBuilder(
+        store, action_tags=action_tags, locale=cfg.agent.reporting.locale
+    )
     # T100: pass --json-only through to ReportBuilder formats
     report_formats: tuple[str, ...] = ("json",) if json_only else ("json", "html")
     runtime = AgentRuntime(
@@ -267,7 +269,7 @@ async def _report(run_id: str, fmt: str, config: Path) -> int:
     store = ArtifactStore(
         cfg.agent.artifacts.root_dir, mask_regions=cfg.agent.security.mask_regions
     )
-    builder = ReportBuilder(store)
+    builder = ReportBuilder(store, locale=cfg.agent.reporting.locale)
     formats = ("json", "html") if fmt == "both" else (fmt,)
     builder.build(run, formats=formats)
     await repo.save_run(run)
