@@ -25,7 +25,7 @@ reporting:
 ## 2. Unit gates
 
 ```powershell
-uv run pytest -q tests/unit/test_frame_pixel_identity.py tests/unit/test_analysis_cache.py tests/unit/test_performance_metrics.py tests/unit/test_reporting_resources.py
+uv run pytest -q tests/unit/test_frame_pixel_identity.py tests/unit/test_analysis_cache_keys.py tests/unit/test_analysis_cache_window.py tests/unit/test_analysis_cache_fallback.py tests/unit/test_context_sensitive_cache_guards.py tests/unit/test_performance_metrics.py tests/unit/test_reporting_resources.py
 ```
 
 Expected:

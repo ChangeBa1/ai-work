@@ -120,6 +120,116 @@ closing a step-requested modal). Ambiguous proposals fail safe and are recorded 
 `ambiguous_fail_safe`; test-case authors should improve `action_id`, `target.role`, target
 text, and step-intent wording instead of relying on retries.
 
+## Screenshot dedup, analysis reuse, performance telemetry, zh-CN reports (feature 004)
+
+### Logical frames vs. physical images
+
+Every capture (observation, stability wait, retry, recovery, or post-action verification)
+creates exactly one **logical `ScreenFrame`** — a new id, timestamp, and entry in
+`TestRun.frames`, always. Whether it also writes a **new physical PNG** is a separate
+decision: `FrameCaptureService` compares the current capture against the immediately
+preceding logical frame in the same run/VNC session and only treats it as a duplicate when
+*all* of these match exactly:
+
+- run id and VNC session id
+- capture kind (`full_screen`/`roi`), coordinates, resolution, pixel format
+- security mask identity and `private_persistence_allowed`
+- a SHA-256 over the normalized, unmasked pixel bytes (`content_hash`)
+- `np.array_equal` on the decoded arrays (the hash only filters candidates — pixel equality
+  is the final verdict, so a hash collision can never cause a false dedup)
+
+A duplicate frame reuses the prior frame's safe (and, if applicable, private) physical
+file — no new write, no new analysis, no new model call. Physical images are written
+through a `FrameArtifactBundle`: safe/private files + a manifest are staged, fsynced, and
+published via one same-filesystem directory rename — never a partial multi-file publish.
+Startup/reconnect reconciles staging leftovers and quarantines any published-but-
+unreferenced bundle (an orphan), which never counts as a successful physical write or
+becomes report evidence.
+
+### Analysis cache safety
+
+`perception/cache.py`'s `AnalysisResultCache` reuses OCR/template/vision-describe pure
+results **only** when the current frame is `deduplicated=true` — i.e. proven pixel-identical
+to its immediate predecessor. The cache key also includes scope, pixel format, mask
+identity, and a component-specific identity (OCR backend/version, template-set content
+fingerprint, vision requested-model/prompt/schema), so a duplicate frame under changed
+analysis configuration still misses. `A → B → A` never hits: the third capture isn't
+adjacent to the first. The cache window is bounded by `perception.cache_max_frames`
+(default 5, only 3-5 accepted) and never holds raw pixels, evidence paths, or a full
+`StructuredScreen` — only pure per-component results, released on eviction or session
+reset. Planner/Grounder/Verifier decisions are **never** in this cache —
+`runtime/context_identity.py` builds their canonical request/context identity purely for
+audit trail (`ModelCallAudit`), and every post-action Verifier execution always runs on
+fresh, independently captured evidence.
+
+### Performance summary
+
+`runtime/telemetry.py::derive_performance_summary()` computes `total_capture_count`,
+`unique_frame_count`, `duplicate_frame_count`, `physical_image_count`,
+`avoided_write_count`/`avoided_write_bytes`, cache hit/analysis/model-call counts, and
+`completeness` purely from `TestRun.frames` + `TestRun.counter_events` — never hand-patched.
+A `physical_image_written` event for a frame that isn't in `TestRun.frames` (a
+staging/quarantined/orphan artifact) is flagged in `consistency_errors` and excluded, never
+silently counted. The same event objects that land in `TestRun` are mirrored into
+structured JSON Lines logs (`stage_measurement`, `frame_dedup_decision`,
+`analysis_cache_event`, `model_call_event`, `physical_image_event`,
+`artifact_bundle_recovery`, `performance_summary`) — one event source, multiple outputs,
+never independently recomputed per output. `report_build` times safe-evidence resolution +
+machine-dict/HTML-draft assembly only; the final JSON/HTML encode + atomic write is the
+separate `report_output` stage.
+
+### zh-CN reports and zero-copy evidence
+
+`reporting/localization.py` is the single zh-CN resource registry (`reporting.locale:
+zh-CN` by default in `config/agent.yaml`; an unregistered locale fails config load, never a
+silent fallback). HTML output is fully localized with autoescape on; the only English
+allowed in visible text is raw error codes/details, explicit machine enum/data-marker
+values, model/provider identifiers, and diagnostic file/path fragments. JSON keeps every
+feature 001-003 field byte-for-byte unchanged (see
+`specs/001-vnc-core-execution-loop/contracts/report-schema.md`'s feature 004 addendum) and
+only *additively* appends `frames`, `stage_measurements`, `performance_summary`,
+`display_status`, `localized_message`.
+
+`reporting/safe_evidence.py` resolves each frame's safe image to a validated,
+already-published path — purpose, run-root bounds, manifest, byte size, SHA-256, and
+decodability are all checked — and returns "unavailable" (never a private path, never a
+guess) on any mismatch. No report entry point (normal execution, offline `report`
+re-render, partial-failure report, or the compat CLI path) ever copies, hardlinks, or
+symlinks evidence; duplicate logical frames referencing the same physical file resolve to
+the exact same path in both JSON and HTML.
+
+### Offline acceptance commands
+
+```bash
+# Regenerate the deterministic fixture set (idempotent — must show no diff twice in a row)
+uv run python tests/fixtures/images/frame_dedup/generate_fixtures.py --check
+
+# Full offline regression (performance-marked tests excluded by default)
+uv run pytest -q
+
+# Fixed-workload performance gate (100 identical captures -> 1 write, 1 analysis each)
+uv run pytest -q -m performance tests/performance/test_frame_dedup_performance.py
+
+# Two structurally unrelated GUI scenarios sharing the same capture->observe->act->verify->report contract
+uv run pytest -q tests/e2e/test_frame_dedup_cross_scenario.py
+
+# Static core business-agnosticism scan (now also covers perception/ and storage/)
+uv run pytest -q tests/unit/test_no_business_keywords_in_core.py
+
+# Static lint
+uv run ruff check src tests
+```
+
+### Safety fallbacks
+
+Decode/mask-encode failures abort the capture outright — no `ScreenFrame`, no downstream
+analysis or verification, and (when masking is required) never a raw-bytes write to the
+safe path. Hash/pixel-compare/cache-get/cache-put failures degrade to "treat as unique" /
+"full analysis" without raising and without fabricating a dedup/cache-hit/avoided/skipped
+event. `private_persistence_allowed=false` means the unmasked pixels only exist in memory
+for the current analysis and are never written or reused as a physical file — `model_image`
+stays `null` for that frame; the safe evidence path is unaffected.
+
 ## Layout
 
 See `specs/001-vnc-core-execution-loop/plan.md` for the full module map.
@@ -127,3 +237,5 @@ Also `specs/002-action-effect-verification/plan.md` for ActionEffect / RepeatGua
 focus-path changes.
 Also `specs/003-action-identity-grounding/plan.md` for identity, grounding, and
 dangerous-drift changes.
+Also `specs/004-frame-dedup-observability/plan.md` for screenshot dedup, analysis-cache
+reuse, performance telemetry, and zh-CN report changes.
