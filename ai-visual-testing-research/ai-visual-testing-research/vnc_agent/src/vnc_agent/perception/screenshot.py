@@ -7,7 +7,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -207,6 +207,7 @@ class FrameCaptureService:
         artifact_store: ArtifactStore,
         mask_regions: Sequence[Sequence[int]] = (),
         private_persistence_allowed: bool = True,
+        clock: Any = None,
     ) -> None:
         self.driver = driver
         self.run_id = run_id
@@ -215,6 +216,7 @@ class FrameCaptureService:
         self.artifact_store = artifact_store
         self.mask_regions = list(mask_regions)
         self.private_persistence_allowed = private_persistence_allowed
+        self.clock = clock
         self._mask_identity = compute_mask_identity(self.mask_regions)
         self._sequence = 0
         self._attempt_sequence: dict[str, int] = {}
@@ -226,6 +228,17 @@ class FrameCaptureService:
         self._last = None
         self._sequence = 0
         self._attempt_sequence.clear()
+
+    def _measure(self, stage: str, **kwargs: Any):
+        from contextlib import nullcontext
+
+        from vnc_agent.runtime.telemetry import measure_stage
+
+        if self.test_run is None:
+            return nullcontext()
+        return measure_stage(
+            self.test_run, stage=stage, run_id=self.run_id, clock=self.clock, **kwargs
+        )
 
     async def capture(
         self,
@@ -240,18 +253,20 @@ class FrameCaptureService:
         self._attempt_sequence[capture_source] = self._attempt_sequence.get(capture_source, 0) + 1
         attempt_sequence = self._attempt_sequence[capture_source]
 
-        if roi is not None:
-            capture_kind: str = "roi"
-            x, y = roi.x1, roi.y1
-            w, h = roi.x2 - roi.x1, roi.y2 - roi.y1
-            raw = await self.driver.capture_region(x, y, w, h)
-        else:
-            capture_kind = "full_screen"
-            x, y = 0, 0
-            raw = await self.driver.capture_screen()
+        with self._measure("capture", step_id=step_id):
+            if roi is not None:
+                capture_kind: str = "roi"
+                x, y = roi.x1, roi.y1
+                w, h = roi.x2 - roi.x1, roi.y2 - roi.y1
+                raw = await self.driver.capture_region(x, y, w, h)
+            else:
+                capture_kind = "full_screen"
+                x, y = 0, 0
+                raw = await self.driver.capture_screen()
 
         try:
-            decoded = decode_capture(raw)
+            with self._measure("pixel_hash", step_id=step_id):
+                decoded = decode_capture(raw)
         except CaptureDecodeError as exc:
             self._record_capture_failure(
                 step_id=step_id,
@@ -338,13 +353,14 @@ class FrameCaptureService:
                 raise FrameCaptureFailedError(f"mask encode failed: {exc}", cause=exc) from exc
 
             try:
-                bundle = self.artifact_store.stage_and_publish_bundle(
-                    run_id=self.run_id,
-                    owner_frame_id=frame_id,
-                    mask_identity=self._mask_identity,
-                    content_hash=decoded.content_hash,
-                    files=bundle_files,
-                )
+                with self._measure("persistence", step_id=step_id, frame_id=frame_id):
+                    bundle = self.artifact_store.stage_and_publish_bundle(
+                        run_id=self.run_id,
+                        owner_frame_id=frame_id,
+                        mask_identity=self._mask_identity,
+                        content_hash=decoded.content_hash,
+                        files=bundle_files,
+                    )
             except ArtifactPersistenceError as exc:
                 self._record_capture_failure(
                     step_id=step_id,
@@ -399,8 +415,52 @@ class FrameCaptureService:
 
         previous_decoded = self._last[1] if self._last is not None else None
         self.test_run.frames.append(frame)
+        self._emit_capture_counters(frame, dedup_ok)
         self._last = (frame, decoded)
         return CaptureOutcome(frame=frame, decoded=decoded, previous_decoded=previous_decoded)
+
+    def _emit_capture_counters(self, frame: ScreenFrame, dedup_ok: bool) -> None:
+        """Same TestRun update as the successful logical frame commit
+        (telemetry-contract.md "Counter definitions";
+        frame-capture-contract.md "Capture response")."""
+        from vnc_agent.runtime.telemetry import CounterEvent, log_event
+
+        now = datetime.now(UTC)
+        dedup_payload = {
+            "frame_id": frame.id,
+            "eligible": self._last is not None,
+            "deduplicated": dedup_ok,
+            "reason": "exact_pixel_duplicate" if dedup_ok else "unique",
+        }
+        self.test_run.counter_events.append(
+            CounterEvent(kind="frame_dedup_decision", occurred_at=now, payload=dedup_payload)
+        )
+        log_event("frame_dedup_decision", **dedup_payload)
+        if dedup_ok:
+            for ref in (frame.safe_image, frame.model_image):
+                if ref is None:
+                    continue
+                payload = self.artifact_store.avoided_write_descriptor(ref) | {
+                    "frame_id": frame.id
+                }
+                self.test_run.counter_events.append(
+                    CounterEvent(kind="physical_write_avoided", occurred_at=now, payload=payload)
+                )
+                log_event("physical_image_event", action="avoided", **payload)
+        else:
+            for ref in (frame.safe_image, frame.model_image):
+                if ref is None:
+                    continue
+                payload = {
+                    "physical_image_id": ref.physical_image_id,
+                    "purpose": ref.purpose,
+                    "byte_size": ref.byte_size,
+                    "frame_id": frame.id,
+                }
+                self.test_run.counter_events.append(
+                    CounterEvent(kind="physical_image_written", occurred_at=now, payload=payload)
+                )
+                log_event("physical_image_event", action="written", **payload)
 
     def _is_exact_duplicate(self, scope, decoded: DecodedCapture, scope_identity_fn) -> bool:
         if self._last is None:
@@ -425,23 +485,23 @@ class FrameCaptureService:
     def _record_capture_failure(
         self, *, step_id: str | None, capture_source: str, attempt_sequence: int, error_type: str
     ) -> None:
-        from vnc_agent.runtime.telemetry import CounterEvent
+        from vnc_agent.runtime.telemetry import CounterEvent, log_event
 
         measurement_id = str(uuid.uuid4())
+        payload = {
+            "run_id": self.run_id,
+            "step_id": step_id,
+            "capture_source": capture_source,
+            "attempt_sequence": attempt_sequence,
+            "error_type": error_type,
+            "measurement_id": measurement_id,
+        }
         self.test_run.counter_events.append(
             CounterEvent(
-                kind="capture_attempt_failed",
-                occurred_at=datetime.now(UTC),
-                payload={
-                    "run_id": self.run_id,
-                    "step_id": step_id,
-                    "capture_source": capture_source,
-                    "attempt_sequence": attempt_sequence,
-                    "error_type": error_type,
-                    "measurement_id": measurement_id,
-                },
+                kind="capture_attempt_failed", occurred_at=datetime.now(UTC), payload=payload
             )
         )
+        log_event("capture_attempt_failed", **payload)
 
 
 async def capture_full_screen(

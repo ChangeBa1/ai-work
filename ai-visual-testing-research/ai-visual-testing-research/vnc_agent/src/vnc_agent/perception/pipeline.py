@@ -8,6 +8,8 @@ never for perception). OCR/template/diff reuse is delegated to
 `structured_screen.py`; `vision_describe` (a cacheable content component,
 distinct from the Planner/Verifier context-sensitive roles) is cached here
 since it is issued through `planner.describe_screen(mode="describe")`.
+Every hit/miss also lands as a `CounterEvent`/`StageMeasurement` on the
+shared `TestRun` (telemetry-contract.md).
 """
 
 from __future__ import annotations
@@ -15,8 +17,9 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from vnc_agent.domain.observation import (
     Region,
@@ -28,6 +31,7 @@ from vnc_agent.domain.observation import (
 from vnc_agent.models.provider import PlannerProvider, VisionUnderstandingRequest
 from vnc_agent.perception.cache import AnalysisCacheKey, AnalysisResultCache
 from vnc_agent.perception.structured_screen import assemble_structured_screen_from_pixels
+from vnc_agent.runtime.telemetry import CounterEvent, log_event, measure_stage
 
 if TYPE_CHECKING:
     from vnc_agent.perception.screenshot import FrameCaptureService
@@ -53,6 +57,7 @@ class ObservationPipeline:
         cache: AnalysisResultCache | None = None,
         vision_provider_name: str = "planner-provider",
         vision_model: str = "default",
+        clock: Any = None,
     ) -> None:
         self.capture_service = capture_service
         self.templates_dir = templates_dir
@@ -64,6 +69,7 @@ class ObservationPipeline:
         self.cache = cache
         self.vision_provider_name = vision_provider_name
         self.vision_model = vision_model
+        self.clock = clock
         self.perception_config_fingerprint = _config_fingerprint(
             {
                 "ocr_enabled": ocr_enabled,
@@ -85,6 +91,32 @@ class ObservationPipeline:
         )
         frame = outcome.frame
         decoded = outcome.decoded
+        test_run = self.capture_service.test_run
+
+        def _record_event(event: dict[str, Any]) -> None:
+            if test_run is None or event["component"] == "diff":
+                return  # diff has no canonical stage/analysis_invocation counter
+            now = datetime.now(UTC)
+            if event["outcome"] == "hit":
+                payload = {
+                    "component": event["component"],
+                    "frame_id": frame.id,
+                    "source_ref": event.get("source_ref"),
+                }
+                test_run.counter_events.append(
+                    CounterEvent(kind="analysis_cache_hit", occurred_at=now, payload=payload)
+                )
+                log_event("analysis_cache_event", hit=True, **payload)
+            else:
+                payload = {
+                    "component": event["component"],
+                    "invocation_id": event.get("invocation_id", ""),
+                    "status": "completed",
+                }
+                test_run.counter_events.append(
+                    CounterEvent(kind="analysis_invocation", occurred_at=now, payload=payload)
+                )
+                log_event("analysis_cache_event", hit=False, **payload)
 
         screen = assemble_structured_screen_from_pixels(
             frame,
@@ -96,6 +128,9 @@ class ObservationPipeline:
             templates_dir=self.templates_dir,
             diff_threshold=self.diff_threshold,
             perception_config_fingerprint=self.perception_config_fingerprint,
+            on_analysis_event=_record_event,
+            test_run=test_run,
+            clock=self.clock,
         )
 
         if self.vision_fallback and self._needs_vision(screen) and self.planner:
@@ -111,6 +146,7 @@ class ObservationPipeline:
         """`vision_describe` is a cacheable content component (perception-
         cache-contract.md) — distinct from the Planner/Verifier
         context-sensitive roles, which are never cached."""
+        test_run = self.capture_service.test_run
         component_identity = {
             "provider": self.vision_provider_name,
             "requested_model": self.vision_model,
@@ -140,18 +176,63 @@ class ObservationPipeline:
             except Exception:
                 entry = None
             if entry is not None:
+                if test_run is not None:
+                    with measure_stage(
+                        test_run, stage="vision", run_id=frame.run_id, step_id=frame.step_id,
+                        frame_id=frame.id, clock=self.clock, actual_call=False, cache_hit=True,
+                        source_ref=entry.source_frame_id,
+                    ):
+                        pass
+                    vision_hit_payload = {
+                        "component": "vision_describe",
+                        "frame_id": frame.id,
+                        "source_ref": entry.source_frame_id,
+                    }
+                    test_run.counter_events.append(
+                        CounterEvent(
+                            kind="analysis_cache_hit",
+                            occurred_at=datetime.now(UTC),
+                            payload=vision_hit_payload,
+                        )
+                    )
+                    log_event("analysis_cache_event", hit=True, **vision_hit_payload)
                 return entry.result
 
         try:
-            resp = await self.planner.describe_screen(  # type: ignore[union-attr]
-                VisionUnderstandingRequest(
-                    mode="describe",
-                    # FR-049: model API MUST receive unmasked image
-                    image_ref=frame.path_for_model(),
-                    structured_screen_hint=screen.to_hint_dict(),
-                    question=None,
+            if test_run is not None:
+                with measure_stage(
+                    test_run, stage="vision", run_id=frame.run_id, step_id=frame.step_id,
+                    frame_id=frame.id, clock=self.clock,
+                ):
+                    resp = await self.planner.describe_screen(  # type: ignore[union-attr]
+                        VisionUnderstandingRequest(
+                            mode="describe",
+                            # FR-049: model API MUST receive unmasked image
+                            image_ref=frame.path_for_model(),
+                            structured_screen_hint=screen.to_hint_dict(),
+                            question=None,
+                        )
+                    )
+                model_call_payload = {
+                    "model_role": "vision",
+                    "invocation_id": str(uuid.uuid4()),
+                    "status": "completed",
+                }
+                test_run.counter_events.append(
+                    CounterEvent(
+                        kind="model_call", occurred_at=datetime.now(UTC), payload=model_call_payload
+                    )
                 )
-            )
+                log_event("model_call_event", **model_call_payload)
+            else:
+                resp = await self.planner.describe_screen(  # type: ignore[union-attr]
+                    VisionUnderstandingRequest(
+                        mode="describe",
+                        image_ref=frame.path_for_model(),
+                        structured_screen_hint=screen.to_hint_dict(),
+                        question=None,
+                    )
+                )
         except Exception:
             return None  # vision is best-effort supplement
 

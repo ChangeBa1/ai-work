@@ -202,7 +202,10 @@ class ArtifactStore:
         "startup/reconnect recovery"): remove leftover staging directories
         and quarantine any published bundle with no `TestRun.frames`
         reference. Returns the quarantined bundle ids."""
+        from vnc_agent.runtime.telemetry import log_event
+
         staging_root = self._staging_root(run_id)
+        removed_staging = [child.name for child in staging_root.iterdir()]
         for child in list(staging_root.iterdir()):
             shutil.rmtree(child, ignore_errors=True)
 
@@ -215,6 +218,15 @@ class ArtifactStore:
                 dest = self._quarantine_dir(run_id) / child.name
                 shutil.move(str(child), str(dest))
                 quarantined.append(child.name)
+
+        if removed_staging or quarantined:
+            log_event(
+                "artifact_bundle_recovery",
+                run_id=run_id,
+                removed_staging_bundle_ids=removed_staging,
+                quarantined_bundle_ids=quarantined,
+                status="completed",
+            )
         return quarantined
 
     def save_bytes(self, run_id: str, relative: str, data: bytes) -> str:

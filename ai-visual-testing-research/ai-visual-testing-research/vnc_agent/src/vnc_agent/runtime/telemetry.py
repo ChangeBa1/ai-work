@@ -9,8 +9,12 @@ by the same event object — never recomputed independently per output.
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Any, Literal
+import time
+import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
+from datetime import UTC, datetime
+from typing import Any, Literal, Protocol
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -207,3 +211,235 @@ class PerformanceSummary(BaseModel):
                 f"{self.total_capture_count}"
             )
         return errors
+
+
+def derive_performance_summary(test_run: Any) -> PerformanceSummary:
+    """Derive the run-level summary purely from `TestRun.frames` +
+    `TestRun.counter_events`/`stage_measurements` — never hand-patched
+    (telemetry-contract.md "Conservation checks"; data-model.md §11).
+
+    `physical_image_count`/`avoided_write_count` only trust events whose
+    `frame_id` is actually present in `TestRun.frames` — an event for a
+    frame that never successfully committed (a staging/quarantined/orphan
+    bundle's ghost event) is flagged in `consistency_errors` and excluded,
+    never silently counted.
+    """
+    frame_ids = {f.id for f in test_run.frames}
+    unique_count = sum(1 for f in test_run.frames if not f.deduplicated)
+    duplicate_count = sum(1 for f in test_run.frames if f.deduplicated)
+    total = len(test_run.frames)
+
+    consistency_errors: list[str] = []
+    physical_by_purpose: dict[str, int] = {}
+    avoided_count = 0
+    avoided_bytes = 0
+    cache_hits: dict[str, int] = {}
+    analysis_invocations: dict[str, int] = {}
+    model_calls: dict[str, int] = {}
+    skipped_model_call_count = 0
+
+    for event in test_run.counter_events:
+        if event.kind == "physical_image_written":
+            ref_frame_id = event.payload.get("frame_id")
+            if ref_frame_id not in frame_ids:
+                consistency_errors.append(
+                    f"physical_image_written event for untracked frame_id={ref_frame_id!r} "
+                    "(staging/quarantined/orphan bundle must never count as a physical image)"
+                )
+                continue
+            purpose = event.payload.get("purpose", "unknown")
+            physical_by_purpose[purpose] = physical_by_purpose.get(purpose, 0) + 1
+        elif event.kind == "physical_write_avoided":
+            ref_frame_id = event.payload.get("frame_id")
+            if ref_frame_id not in frame_ids:
+                consistency_errors.append(
+                    f"physical_write_avoided event for untracked frame_id={ref_frame_id!r}"
+                )
+                continue
+            avoided_count += 1
+            avoided_bytes += int(event.payload.get("byte_basis", 0))
+        elif event.kind == "analysis_cache_hit":
+            component = event.payload.get("component", "unknown")
+            cache_hits[component] = cache_hits.get(component, 0) + 1
+        elif event.kind == "analysis_invocation":
+            component = event.payload.get("component", "unknown")
+            analysis_invocations[component] = analysis_invocations.get(component, 0) + 1
+        elif event.kind == "model_call":
+            role = event.payload.get("model_role", "unknown")
+            model_calls[role] = model_calls.get(role, 0) + 1
+        elif event.kind == "model_call_skipped":
+            skipped_model_call_count += 1
+
+    physical_image_count = sum(physical_by_purpose.values())
+    for required in ("ocr", "template", "vision"):
+        cache_hits.setdefault(required, 0)
+
+    stage_totals: dict[str, float | None] = {}
+    for m in test_run.stage_measurements:
+        if m.duration_ms is None:
+            continue
+        stage_totals[m.stage] = (stage_totals.get(m.stage) or 0.0) + m.duration_ms
+
+    incomplete_stage = any(
+        m.status in ("failed", "unavailable") for m in test_run.stage_measurements
+    )
+    completeness = "partial" if (consistency_errors or incomplete_stage) else "complete"
+
+    summary = PerformanceSummary(
+        total_capture_count=total,
+        unique_frame_count=unique_count,
+        duplicate_frame_count=duplicate_count,
+        dedup_ratio=(duplicate_count / total) if total else None,
+        physical_image_count=physical_image_count,
+        physical_images_by_purpose=physical_by_purpose,
+        avoided_write_count=avoided_count,
+        avoided_write_bytes=avoided_bytes,
+        cache_hits=cache_hits,
+        analysis_invocations=analysis_invocations,
+        model_calls=model_calls,
+        actual_model_call_count=sum(model_calls.values()),
+        skipped_model_call_count=skipped_model_call_count,
+        stage_totals_ms=stage_totals,
+        completeness=completeness,  # type: ignore[arg-type]
+        consistency_errors=consistency_errors,
+    )
+    return summary
+
+
+def log_event(event_name: str, **fields: Any) -> None:
+    """Emit the same event fields appended to `TestRun` as a canonical
+    stable JSON Lines entry (telemetry-contract.md "Stable structured-log
+    events") — the log and the report always derive from one event object,
+    never a separately recomputed summary. Sensitive-field redaction is
+    applied by `logging_setup.configure_logging`'s processor chain.
+
+    Best-effort: a logging sink failure (e.g. a closed stream) must never
+    break the capture/analysis/verification flow that is being observed.
+    """
+    from vnc_agent.logging_setup import get_logger
+
+    try:
+        get_logger("telemetry").info(event_name, **fields)
+    except Exception:
+        pass
+
+
+class Clock(Protocol):
+    def perf_counter_ns(self) -> int: ...
+    def utc_now(self) -> datetime: ...
+
+
+class _RealClock:
+    def perf_counter_ns(self) -> int:
+        return time.perf_counter_ns()
+
+    def utc_now(self) -> datetime:
+        return datetime.now(UTC)
+
+
+_REAL_CLOCK = _RealClock()
+
+
+def _sanitize_error_message(message: str) -> str:
+    # Stage failures never carry image bytes/credentials/full unmasked
+    # paths — keep only a bounded, generic description.
+    return message[:200]
+
+
+@contextmanager
+def measure_stage(
+    test_run: Any,
+    *,
+    stage: str,
+    run_id: str,
+    step_id: str | None = None,
+    frame_id: str | None = None,
+    iteration_index: int | None = None,
+    actual_call: bool = True,
+    cache_hit: bool = False,
+    source_ref: str | None = None,
+    clock: Clock | None = None,
+) -> Iterator[None]:
+    """Append one `StageMeasurement` for the wrapped block — completed on
+    success, failed (with the real observed duration) on exception, which is
+    always re-raised (telemetry-contract.md "Measurement semantics")."""
+    active_clock = clock or _REAL_CLOCK
+    started_ns = active_clock.perf_counter_ns()
+    started_at = active_clock.utc_now()
+    status: Literal["completed", "failed"] = "completed"
+    error_type: str | None = None
+    error_message: str | None = None
+    try:
+        yield
+    except Exception as exc:
+        status = "failed"
+        error_type = type(exc).__name__
+        error_message = _sanitize_error_message(str(exc))
+        raise
+    finally:
+        duration_ms = (active_clock.perf_counter_ns() - started_ns) / 1_000_000
+        measurement = StageMeasurement(
+            measurement_id=str(uuid.uuid4()),
+            run_id=run_id,
+            step_id=step_id,
+            frame_id=frame_id,
+            iteration_index=iteration_index,
+            stage=stage,
+            started_at=started_at,
+            duration_ms=duration_ms,
+            status=status,
+            actual_call=actual_call,
+            cache_hit=cache_hit,
+            source_ref=source_ref,
+            error_type=error_type,
+            error_message=error_message,
+        )
+        test_run.stage_measurements.append(measurement)
+        log_event(
+            "stage_measurement",
+            run_id=run_id,
+            step_id=step_id,
+            frame_id=frame_id,
+            iteration_index=iteration_index,
+            stage=stage,
+            status=status,
+            duration_ms=duration_ms,
+        )
+
+
+def record_unavailable_stage(
+    test_run: Any,
+    *,
+    stage: str,
+    run_id: str,
+    step_id: str | None = None,
+    frame_id: str | None = None,
+    iteration_index: int | None = None,
+) -> None:
+    """A stage that was never started — `duration_ms` stays null, never a
+    fabricated zero (telemetry-contract.md "Measurement semantics")."""
+    test_run.stage_measurements.append(
+        StageMeasurement(
+            measurement_id=str(uuid.uuid4()),
+            run_id=run_id,
+            step_id=step_id,
+            frame_id=frame_id,
+            iteration_index=iteration_index,
+            stage=stage,
+            started_at=datetime.now(UTC),
+            duration_ms=None,
+            status="unavailable",
+            actual_call=False,
+            cache_hit=False,
+        )
+    )
+    log_event(
+        "stage_measurement",
+        run_id=run_id,
+        step_id=step_id,
+        frame_id=frame_id,
+        iteration_index=iteration_index,
+        stage=stage,
+        status="unavailable",
+        duration_ms=None,
+    )

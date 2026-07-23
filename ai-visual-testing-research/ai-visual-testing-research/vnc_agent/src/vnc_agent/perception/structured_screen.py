@@ -48,6 +48,8 @@ _DEFAULT_OCR_IDENTITY = {
     "preprocess": "none",
 }
 
+_COMPONENT_STAGE = {"ocr": "OCR", "template": "template", "vision_describe": "vision"}
+
 
 def _lookup_or_compute(
     *,
@@ -60,11 +62,28 @@ def _lookup_or_compute(
     component_identity: dict[str, Any],
     compute_fn: Callable[[], Any],
     on_event: AnalysisEventFn | None,
+    test_run: Any = None,
+    clock: Any = None,
 ) -> tuple[Any, str | None]:
     """Returns ``(result, source_frame_id)``; ``source_frame_id`` is None on
     a miss/uncached path — only set when a cache hit actually reused it."""
+    from vnc_agent.runtime.telemetry import measure_stage
+
+    stage = _COMPONENT_STAGE.get(component, component)
+
+    def _measure(**kwargs: Any):
+        from contextlib import nullcontext
+
+        if test_run is None:
+            return nullcontext()
+        return measure_stage(
+            test_run, stage=stage, run_id=frame.run_id, step_id=frame.step_id,
+            frame_id=frame.id, clock=clock, **kwargs,
+        )
+
     if cache is None or frame.content_hash is None:
-        result = compute_fn()
+        with _measure(actual_call=True, cache_hit=False):
+            result = compute_fn()
         if on_event:
             on_event(
                 {"component": component, "outcome": "miss", "invocation_id": str(uuid.uuid4())}
@@ -96,6 +115,8 @@ def _lookup_or_compute(
         entry = None
 
     if entry is not None:
+        with _measure(actual_call=False, cache_hit=True, source_ref=entry.source_frame_id):
+            pass
         if on_event:
             on_event(
                 {
@@ -106,7 +127,8 @@ def _lookup_or_compute(
             )
         return entry.result, entry.source_frame_id
 
-    result = compute_fn()
+    with _measure(actual_call=True, cache_hit=False):
+        result = compute_fn()
     invocation_id = str(uuid.uuid4())
     try:
         cache.store(
@@ -138,6 +160,8 @@ def assemble_structured_screen_from_pixels(
     ocr_identity: dict[str, Any] | None = None,
     template_threshold: float = 0.8,
     on_analysis_event: AnalysisEventFn | None = None,
+    test_run: Any = None,
+    clock: Any = None,
 ) -> StructuredScreen:
     scope_id = scope_identity(frame.scope)
     analysis_source_refs: dict[str, str] = {}
@@ -154,6 +178,8 @@ def assemble_structured_screen_from_pixels(
             component_identity=identity,
             compute_fn=lambda: run_ocr_array(pixels),
             on_event=on_analysis_event,
+            test_run=test_run,
+            clock=clock,
         )
         if source:
             analysis_source_refs["ocr"] = source
@@ -179,6 +205,8 @@ def assemble_structured_screen_from_pixels(
                 pixels, templates_dir, threshold=template_threshold
             ),
             on_event=on_analysis_event,
+            test_run=test_run,
+            clock=clock,
         )
         if source:
             analysis_source_refs["template"] = source

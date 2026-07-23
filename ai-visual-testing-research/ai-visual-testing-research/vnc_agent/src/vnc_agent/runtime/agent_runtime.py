@@ -48,6 +48,7 @@ from vnc_agent.runtime.exceptions import (
 from vnc_agent.runtime.run_context import RunContext
 from vnc_agent.runtime.state_machine import AgentState
 from vnc_agent.runtime.step_controller import StepController
+from vnc_agent.runtime.telemetry import measure_stage
 from vnc_agent.verification.business_resolver import (
     evaluate_precondition,
     resolve_step_result,
@@ -118,6 +119,7 @@ class AgentRuntime:
         report_builder: ReportBuilder | None = None,
         experience: ExperienceCollector | None = None,
         report_formats: tuple[str, ...] = ("json", "html"),
+        clock: Any = None,
     ) -> None:
         self.config = config
         self.driver = driver
@@ -129,6 +131,7 @@ class AgentRuntime:
         # `pipeline`/`stability` already reference this same instance.
         self.capture_service = capture_service
         self.artifact_store = artifact_store
+        self.clock = clock
         self.policy = ActionPolicy(
             overall_confidence_threshold=config.agent.grounding.overall_confidence_threshold,
             top1_top2_min_gap=config.agent.grounding.top1_top2_min_gap,
@@ -352,7 +355,7 @@ class AgentRuntime:
         content_hash/pixels parameter at all), so every applicable call here
         is outcome="actual" (perception-cache-contract.md "Explicit
         exclusions"; data-model.md §6A)."""
-        from vnc_agent.runtime.telemetry import CounterEvent, ModelCallAudit
+        from vnc_agent.runtime.telemetry import CounterEvent, ModelCallAudit, log_event
 
         invocation_id = str(uuid.uuid4())
         audit = ModelCallAudit(
@@ -371,16 +374,29 @@ class AgentRuntime:
             reason=None,
         )
         ctx.test_run.model_call_audits.append(audit)
+        model_call_payload = {
+            "model_role": model_role,
+            "invocation_id": invocation_id,
+            "status": "completed",
+        }
         ctx.test_run.counter_events.append(
             CounterEvent(
-                kind="model_call",
-                occurred_at=datetime.now(UTC),
-                payload={
-                    "model_role": model_role,
-                    "invocation_id": invocation_id,
-                    "status": "completed",
-                },
+                kind="model_call", occurred_at=datetime.now(UTC), payload=model_call_payload
             )
+        )
+        log_event("model_call_event", **model_call_payload)
+        log_event(
+            "model_call_audit",
+            run_id=ctx.run_id,
+            step_id=step_id,
+            frame_id=frame_id,
+            iteration_index=iteration_index,
+            model_role=model_role,
+            request_identity=request_identity,
+            context_identity=context_identity,
+            sanitized_request=sanitized_request,
+            sanitized_response=sanitized_response,
+            outcome="actual",
         )
 
     async def run_action_iteration(
@@ -443,13 +459,18 @@ class AgentRuntime:
             prev = ctx.current_step_record.iterations[-2]
             prev_vr = prev.verification_result
         try:
-            plan = await self.planner_orch.plan(
-                step,
-                screen,
-                iteration_index=iteration.iteration_index,
-                remaining_budget=controller.remaining_budget(),
-                previous_verification=prev_vr,
-            )
+            with measure_stage(
+                ctx.test_run, stage="planner", run_id=ctx.run_id, step_id=step.id,
+                frame_id=screen.frame_id, iteration_index=iteration.iteration_index,
+                clock=self.clock,
+            ):
+                plan = await self.planner_orch.plan(
+                    step,
+                    screen,
+                    iteration_index=iteration.iteration_index,
+                    remaining_budget=controller.remaining_budget(),
+                    previous_verification=prev_vr,
+                )
         except PlanValidationError as e:
             iteration.verification_result = VerificationResult(
                 status="failed", reason=f"plan validation: {e}"
@@ -617,16 +638,21 @@ class AgentRuntime:
                 else {"description": sa.intent}
             )
             # FR-049: model API receives unmasked image (model_image_path)
-            grounding = await self.grounder.ground(
-                GroundingRequest(
-                    image_ref=screen.path_for_model(),
-                    crop_offset=screen.crop_offset,
-                    resolution=screen.resolution,
-                    target=target,
-                    ocr_candidates=[i.model_dump() for i in screen.ocr_items],
-                    template_candidates=[m.model_dump() for m in screen.template_matches],
+            with measure_stage(
+                ctx.test_run, stage="grounder", run_id=ctx.run_id, step_id=step.id,
+                frame_id=screen.frame_id, iteration_index=iteration.iteration_index,
+                clock=self.clock,
+            ):
+                grounding = await self.grounder.ground(
+                    GroundingRequest(
+                        image_ref=screen.path_for_model(),
+                        crop_offset=screen.crop_offset,
+                        resolution=screen.resolution,
+                        target=target,
+                        ocr_candidates=[i.model_dump() for i in screen.ocr_items],
+                        template_candidates=[m.model_dump() for m in screen.template_matches],
+                    )
                 )
-            )
             iteration.grounding_result = grounding
             try:
                 grounder_req_id = grounder_identity(
@@ -746,16 +772,21 @@ class AgentRuntime:
                 step_id=step.id, capture_source="post_action_verification"
             )
 
-        vr = await resolve_step_result(
-            step.expected,
-            step.verification_mode,
-            action_effect,
-            after,
-            planner=self.planner,
-            reobserve=_reobserve_after,
-            engine=self.verifier,
-            escalate=True,
-        )
+        with measure_stage(
+            ctx.test_run, stage="verification", run_id=ctx.run_id, step_id=step.id,
+            frame_id=after.frame_id, iteration_index=iteration.iteration_index,
+            clock=self.clock,
+        ):
+            vr = await resolve_step_result(
+                step.expected,
+                step.verification_mode,
+                action_effect,
+                after,
+                planner=self.planner,
+                reobserve=_reobserve_after,
+                engine=self.verifier,
+                escalate=True,
+            )
         mark("verifying", t0)
 
         # Feature 004 (T039): every post-action Verifier execution is
