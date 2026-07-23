@@ -109,14 +109,16 @@ class ScriptedPipeline:
         self.screens = screens
         self.i = 0
 
-    async def observe(self, *, run_id: str, step_id: str | None = None) -> StructuredScreen:
+    async def observe(
+        self, *, step_id: str | None = None, capture_source: str = "observation", roi=None
+    ) -> StructuredScreen:
         s = self.screens[min(self.i, len(self.screens) - 1)]
         self.i += 1
         return s
 
 
 class InstantStability:
-    async def wait_stable(self, *, run_id: str, step_id: str | None = None):
+    async def wait_stable(self, *, step_id: str | None = None, roi=None, early_exit=None):
         return WaitResult(waited_ms=1, stable=True, end_reason="stable")
 
 

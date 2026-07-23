@@ -1,11 +1,12 @@
-"""Observation / screen models (data-model.md §3)."""
+"""Observation / screen models (data-model.md §3, extended by feature 004 §1-4,8)."""
 
 from __future__ import annotations
 
+import hashlib
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 
 class Region(BaseModel):
@@ -30,20 +31,121 @@ class Region(BaseModel):
         return ((self.x1 + self.x2) // 2, (self.y1 + self.y2) // 2)
 
 
+class CaptureScope(BaseModel):
+    """Strict spatial + safety boundary for one capture (data-model.md §1)."""
+
+    capture_kind: Literal["full_screen", "roi"]
+    x: int
+    y: int
+    width: int = Field(gt=0)
+    height: int = Field(gt=0)
+    resolution: tuple[int, int]
+    pixel_format: str
+    mask_identity: str
+    private_persistence_allowed: bool
+
+
+def scope_identity(scope: CaptureScope) -> str:
+    """Stable canonical hash of `scope` fields only — no step id/timestamp."""
+    parts = [
+        scope.capture_kind,
+        str(scope.x),
+        str(scope.y),
+        str(scope.width),
+        str(scope.height),
+        f"{scope.resolution[0]}x{scope.resolution[1]}",
+        scope.pixel_format,
+        scope.mask_identity,
+        str(scope.private_persistence_allowed),
+    ]
+    preimage = "scope-identity-v1|" + "|".join(parts)
+    return hashlib.sha256(preimage.encode("utf-8")).hexdigest()
+
+
+class PhysicalImageRef(BaseModel):
+    """One actually-persisted screenshot file (data-model.md §3)."""
+
+    physical_image_id: str
+    owner_frame_id: str
+    artifact_bundle_id: str
+    purpose: Literal["safe_evidence", "private_model", "report_copy"]
+    path: str
+    byte_size: int = Field(ge=0)
+    artifact_sha256: str
+    content_hash: str | None
+    mask_identity: str
+    created_at: datetime
+
+
+class OptimizationError(BaseModel):
+    """A non-fatal optimization-path failure (data-model.md §8)."""
+
+    stage: Literal["decode", "pixel_hash", "pixel_compare", "cache_get", "cache_put"]
+    error_type: str
+    message: str
+    occurred_at: datetime
+    fallback: Literal["unique_full_analysis", "cache_miss_full_analysis", "capture_failed"]
+
+
 class ScreenFrame(BaseModel):
     id: str
     run_id: str
+    vnc_session_id: str
     step_id: str | None = None
-    image_path: str  # local persistence path (masked when mask_regions configured)
-    width: int
-    height: int
+    capture_sequence: int
+    capture_source: Literal[
+        "observation", "stability_wait", "retry", "recovery", "post_action_verification"
+    ]
     timestamp: datetime
+    scope: CaptureScope
+    content_hash: str | None
+    deduplicated: bool
+    duplicate_of_frame_id: str | None
+    comparison_available: bool
+    changed_since_last: bool | None
+    safe_image: PhysicalImageRef
+    model_image: PhysicalImageRef | None = None
+    optimization_errors: list[OptimizationError] = Field(default_factory=list)
+    width: int = 0
+    height: int = 0
     crop_offset: tuple[int, int] = (0, 0)
-    # Unmasked path for Planner/Grounder only (FR-049); empty → same as image_path
-    model_image_path: str = ""
+
+    @model_validator(mode="after")
+    def _dedup_invariants(self) -> ScreenFrame:
+        if self.deduplicated:
+            if self.duplicate_of_frame_id is None:
+                raise ValueError("deduplicated=true requires duplicate_of_frame_id")
+            if self.content_hash is None:
+                raise ValueError("deduplicated=true requires a non-null content_hash")
+            if self.changed_since_last is not False:
+                raise ValueError("deduplicated=true requires changed_since_last=false")
+        else:
+            if self.duplicate_of_frame_id is not None:
+                raise ValueError("deduplicated=false requires duplicate_of_frame_id=null")
+        if self.safe_image.purpose != "safe_evidence":
+            raise ValueError("safe_image.purpose must always be safe_evidence")
+        if self.model_image is not None:
+            if self.model_image.purpose not in ("safe_evidence", "private_model"):
+                raise ValueError("model_image.purpose must be safe_evidence or private_model")
+            if (
+                self.model_image.purpose == "private_model"
+                and not self.scope.private_persistence_allowed
+            ):
+                raise ValueError(
+                    "scope.private_persistence_allowed=false forbids a private_model model_image"
+                )
+        return self
+
+    @property
+    def image_path(self) -> str:
+        return self.safe_image.path
+
+    @property
+    def model_image_path(self) -> str:
+        return self.model_image.path if self.model_image is not None else self.safe_image.path
 
     def path_for_model(self) -> str:
-        return self.model_image_path or self.image_path
+        return self.model_image_path
 
 
 class OCRItem(BaseModel):

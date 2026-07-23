@@ -11,9 +11,16 @@ from vnc_agent.domain.action import ExecutableAction, ExecutionResult, SemanticA
 from vnc_agent.domain.action_effect import ActionEffect
 from vnc_agent.domain.action_identity import CanonicalActionIdentity
 from vnc_agent.domain.grounding import GroundingResult
+from vnc_agent.domain.observation import ScreenFrame
 from vnc_agent.domain.recovery import RecoveryAttempt
 from vnc_agent.domain.repeat_guard import RepeatGuardDecision
 from vnc_agent.domain.verification import VerificationResult, VerificationSpec, WaitResult
+from vnc_agent.runtime.telemetry import (
+    CounterEvent,
+    ModelCallAudit,
+    PerformanceSummary,
+    StageMeasurement,
+)
 
 
 class ActionIteration(BaseModel):
@@ -94,6 +101,12 @@ class TestRun(BaseModel):
         default_factory=PreconditionEvaluation
     )
     human_confirmed_facts: list[HumanConfirmedFact] = Field(default_factory=list)
+    # Feature 004: logical frame trace + append-only telemetry (data-model.md §12)
+    frames: list[ScreenFrame] = Field(default_factory=list)
+    stage_measurements: list[StageMeasurement] = Field(default_factory=list)
+    counter_events: list[CounterEvent] = Field(default_factory=list)
+    model_call_audits: list[ModelCallAudit] = Field(default_factory=list)
+    performance_summary: PerformanceSummary | None = None
 
 
 class VisualExperience(BaseModel):

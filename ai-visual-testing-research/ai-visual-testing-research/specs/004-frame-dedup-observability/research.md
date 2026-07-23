@@ -6,7 +6,7 @@
 
 ## R1. 捕获后只解码一次，并在写盘前哈希
 
-**Decision**: VNC PNG bytes 只执行一次 `cv2.imdecode(..., IMREAD_UNCHANGED)`，规范化为只读、C-contiguous 像素数组并派生稳定 `pixel_format`。使用 SHA-256 对带域分隔的尺寸/格式元数据与遮罩前像素 bytes 计算 `content_hash`，再做去重决定。相同数组直接传给遮罩、OCR、模板与 diff 的内存入口。
+**Decision**: VNC PNG bytes 只执行一次 `cv2.imdecode(..., IMREAD_UNCHANGED)`，规范化为只读、C-contiguous 像素数组并派生稳定 `pixel_format`。`content_hash` 的唯一版本化前像是 `frame-pixels-v1 || width || height || canonical pixel_format || C-contiguous unmasked normalized pixel bytes`，其中整数使用固定宽度编码、字符串使用长度前缀；本文把整个前像统一称为“规范化像素载荷”。完整 CaptureScope identity 保持为去重/缓存键的独立维度；除载荷中的 width/height/pixel format 外，capture kind、坐标、resolution、mask identity 与 private policy 不混入该 hash。相同数组直接传给严格判等、遮罩、OCR、模板与 diff 的内存入口，hash 只作候选过滤，不能替代 `np.array_equal`。
 
 **Rationale**: 当前 `screenshot.py` 先写盘，遮罩又解码/编码；OCR、模板和 diff 随后按路径多次读取。`pipeline.py` 在启用遮罩时还会调用两次 `assemble_structured_screen`。一次解码同时解决写盘前无法去重和重复分析问题。
 
@@ -42,7 +42,7 @@
 
 ## R4. 原始像素判等，安全/私有制品成对管理
 
-**Decision**: `content_hash` 基于遮罩前像素，去重身份另含规范化全局 mask identity 与 `private_persistence_allowed`。唯一帧先在内存完成安全遮罩编码，再由 `ArtifactStore` 原子持久化安全证据和策略允许时的私有模型图片；禁止 private 持久化时不创建或复用未遮罩文件，模型只短暂使用内存像素。重复帧只复用当前策略允许的物理引用。遮罩或安全编码失败时 fail closed。
+**Decision**: `content_hash` 基于遮罩前像素，去重身份另含规范化全局 mask identity 与 `private_persistence_allowed`。每个最终编码文件另计算 `artifact_sha256`，并和 purpose/byte size 一起写入 bundle manifest。唯一帧先在内存完成安全遮罩编码，再把全部策略要求的 safe/private 文件写入同一 run 根下 staging bundle；文件与目录同步成功后以一次同文件系统目录 rename 原子发布，随后才提交逻辑帧。发布前失败清理 staging；发布后逻辑提交失败整体隔离，启动/恢复时以 manifest 与 TestRun 引用对账并记录 recovery audit。禁止 private 持久化时 bundle 不包含未遮罩文件，模型只短暂使用内存像素。重复帧只复用当前策略允许且 manifest/ref 有效的物理引用。遮罩或安全编码失败时 fail closed。
 
 **Rationale**: 基于遮罩后像素会忽略遮罩区域内影响模型分析的真实变化。当前遮罩失败会返回原始 bytes，且两类文件不是原子提交，存在把未遮罩图片写入安全位置或留下部分制品的风险。
 
@@ -66,7 +66,7 @@
 
 ## R6. 分组件缓存，每帧重新组装 StructuredScreen
 
-**Decision**: OCR、template、diff、vision describe 分别缓存纯结果；只有当前帧已被严格相邻判等标记为 `deduplicated=true` 且 source 是直接上一逻辑帧时才允许 lookup，A→B→A 必须 miss。缓存值不含 frame id、captured_at、路径或完整 `StructuredScreen`。键包含组件/算法 revision、content hash、scope、pixel format、mask identity、感知配置 fingerprint，并按组件加入 OCR backend、模板集合内容 fingerprint、前后帧 identity、requested model/version、mode、prompt/schema 与 structured hint fingerprint。Planner、Grounder、Verifier 和带验证语义的回答不进入图片缓存；确定性路由以请求语义和完整上下文身份决定实际调用或 skip，操作后 Verifier 始终执行。
+**Decision**: OCR、template、diff、vision describe 分别缓存纯结果；只有当前帧已被严格相邻判等标记为 `deduplicated=true` 且 source 是直接上一逻辑帧时才允许 lookup，A→B→A 必须 miss。缓存值不含 frame id、captured_at、路径或完整 `StructuredScreen`。键包含组件/算法 revision、content hash、scope、pixel format、mask identity、感知配置 fingerprint，并按组件加入 OCR backend、模板集合内容 fingerprint、前后帧 identity、requested model/version、mode、prompt/schema 与 structured hint fingerprint。Planner、Grounder、Verifier 和带验证语义的回答不进入图片缓存；它们分别使用角色专属 request/context identity（Planner：请求语义、步骤意图、动作/历史、重试/迭代、StructuredScreen、模型/配置、路由状态；Grounder：目标语义、候选/StructuredScreen、scope/坐标变换、模型/配置、定位状态；Verifier：问题/断言、前后帧、动作审计/ActionEffect、重试/迭代、模型/配置）。缺失或变化禁止复用/同一身份 skip；确定性路由仍决定角色是否适用，操作后 Verifier 始终实际执行。
 
 **Rationale**: 当前 `StructuredScreen` 同时包含内容结果与当前逻辑帧字段。整体复用会带入旧时间和路径；只用 content hash 又会跨 ROI、配置和模型版本误命中。
 
@@ -102,7 +102,7 @@
 
 ## R9. 优化错误降级，安全持久化错误中止
 
-**Decision**: hash、候选比较、cache get/put 异常记录 optimization failure，并按 unique/cache miss 进行安全持久化和完整分析，不增加命中、跳过或避免写入计数。有遮罩时 decode/遮罩编码失败以及任一必需物理写入失败均不返回成功帧，清理临时文件并进入既有确定性错误流程。vision best-effort 可降级，但必须记录失败测量。
+**Decision**: decode/规范化失败意味着没有可信像素、shape 或 pixel format，无论是否启用遮罩都不返回成功帧、不执行下游图片分析或验证，并进入既有确定性错误流程；有遮罩时必须 fail closed。只有规范化像素已成功获得后，hash、候选比较、cache get/put 异常才记录 optimization failure，并按 unique/cache miss 进行安全持久化和完整分析，不增加命中、跳过或避免写入计数。遮罩编码失败以及任一必需物理写入失败同样不返回成功帧并清理临时文件。vision best-effort 可降级，但必须记录失败测量。
 
 **Rationale**: 优化故障不应扩大为运行失败；证据缺失或隐私失败则不能继续验证。现有 vision 异常被静默吞掉，无法诊断真实耗时和调用。
 
@@ -126,7 +126,7 @@
 
 ## R11. 报告零副本与明确 report_build 边界
 
-**Decision**: ReportBuilder 验证显式 safe artifact purpose、run 安全根、文件存在和 mask identity 后直接引用，不修改 TestRun、不创建常规 `report_frames`。`report_build` 先测安全证据解析、基础 machine dict 与本地化 view-model 草稿组装；停止计时并追加 measurement 后，再执行无业务计算的 measurement 注入与不可变冻结。JSON/HTML 共用该唯一冻结视图；最终编码写盘另记可选 `report_output`。
+**Decision**: ReportBuilder 验证显式 safe artifact purpose、run 安全根、文件存在、mask identity、实际 byte size、文件 bytes 的 `artifact_sha256` 与图片可解码性后才直接引用；`content_hash` 不承担遮罩后文件完整性验证。任一缺失、截断、损坏、hash mismatch 或解码失败都生成本地化不可用状态且不链接。除追加契约要求的 `report_build` measurement 外，不改写既有 TestRun 业务/frame/iteration 事实，也不创建 `report_frames`。正常执行、离线重建、部分失败和兼容入口均使用同一零副本 resolver。只有 execute/runtime 装配 `FrameCaptureService`；其余报告入口只装配 locale、已有 telemetry/frozen report view、safe evidence resolver 与 renderer/output，禁止连接 VNC、创建 capture service 或生成新的逻辑帧。旧 JSON `before_frame_path`/`after_frame_path` 在 renderer view 中指向相应 safe physical file：基础 schema 只规定其为前/后证据路径，未保证 `report_frames` 目录、固定文件名或独立副本，因此以 safe purpose、可读取性、前后关联及 physical identity 等价作为兼容判据。`report_build` 先测安全证据解析、基础 machine dict 与本地化 view-model 草稿组装；停止计时并追加 measurement 后，再执行无业务计算的 measurement 注入与不可变冻结。JSON/HTML 共用该唯一冻结视图；最终编码写盘另记可选 `report_output`，失败时保留真实 duration/failed 且不伪造成功输出或回退复制证据。
 
 **Rationale**: 当前 ReportBuilder 逐 iteration 复制并改写路径，且依赖目录名猜测安全性；JSON/HTML 分别调用 report dict 构建。将最终文件写入包含在自身报告的 report_build 会产生计时自引用。
 

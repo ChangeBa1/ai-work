@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+
 from vnc_agent.domain.observation import OCRItem, Region
 
 _engine: Any = None
@@ -38,17 +40,18 @@ def set_engine(engine: Any) -> None:
     _engine = engine
 
 
-def run_ocr(
-    image_path: str | Path,
+def run_ocr_array(
+    pixels: np.ndarray,
     *,
     roi: Region | None = None,
 ) -> list[OCRItem]:
-    """Run OCR, optionally limited to ROI; bbox coordinates are in full-image space."""
-    import cv2
+    """Run OCR directly on an already-decoded array — never re-reads a file.
 
-    img = cv2.imread(str(image_path), cv2.IMREAD_COLOR)
-    if img is None:
-        return []
+    Feature 004 (perception-cache-contract.md): the analysis-component
+    boundary consumed by the analysis cache; ``run_ocr`` below is the
+    offline-compatible path wrapper over this.
+    """
+    img = pixels
 
     offset_x, offset_y = 0, 0
     if roi is not None:
@@ -84,3 +87,17 @@ def run_ocr(
         except Exception:
             continue
     return items
+
+
+def run_ocr(
+    image_path: str | Path,
+    *,
+    roi: Region | None = None,
+) -> list[OCRItem]:
+    """Offline-compatible path wrapper — see :func:`run_ocr_array`."""
+    import cv2
+
+    img = cv2.imread(str(image_path), cv2.IMREAD_COLOR)
+    if img is None:
+        return []
+    return run_ocr_array(img, roi=roi)

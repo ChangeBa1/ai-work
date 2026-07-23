@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from pathlib import Path
 
 import cv2
@@ -23,6 +24,7 @@ from vnc_agent.domain.verification import VerificationCondition, VerificationSpe
 from vnc_agent.models.mimo_grounder import StubGrounder
 from vnc_agent.models.planner_client import StubPlanner
 from vnc_agent.perception.pipeline import ObservationPipeline
+from vnc_agent.perception.screenshot import FrameCaptureService
 from vnc_agent.perception.stability import StabilityEngine
 from vnc_agent.reporting.report_builder import ReportBuilder
 from vnc_agent.runtime.agent_runtime import AgentRuntime
@@ -203,17 +205,22 @@ async def build_runtime(
     await init_db(engine)
     repo = RunRepository(make_session_factory(engine))
     store = ArtifactStore(tmp_path / "artifacts")
-    pipeline = ObservationPipeline(
+    capture_service = FrameCaptureService(
         drv,
-        artifacts_dir=tmp_path / "artifacts",
+        run_id=str(uuid.uuid4()),
+        vnc_session_id=str(uuid.uuid4()),
+        test_run=None,
+        artifact_store=store,
+    )
+    pipeline = ObservationPipeline(
+        capture_service,
         planner=pl,
         ocr_enabled=False,
         template_enabled=False,
         vision_fallback=False,
     )
     stability = StabilityEngine(
-        drv,
-        artifacts_dir=tmp_path / "artifacts",
+        capture_service,
         min_delay_ms=5,
         max_delay_ms=50,
         capture_interval_ms=5,
@@ -228,6 +235,8 @@ async def build_runtime(
         grounder=gr,
         pipeline=pipeline,
         stability=stability,
+        capture_service=capture_service,
+        artifact_store=store,
         repo=repo,
         report_builder=ReportBuilder(store),
     )

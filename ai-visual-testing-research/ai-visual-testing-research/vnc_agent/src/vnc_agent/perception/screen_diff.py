@@ -11,36 +11,29 @@ from vnc_agent.domain.observation import Region
 from vnc_agent.perception.screenshot import load_image_array
 
 
-def compute_diff(
-    prev_path: str | Path | None,
-    curr_path: str | Path,
+def compute_diff_arrays(
+    prev: np.ndarray | None,
+    curr: np.ndarray,
     *,
     threshold: float = 0.02,
     mask_regions: list[Region] | None = None,
     min_blob_pixels: int = 16,
 ) -> tuple[bool, list[Region], float, list[Region]]:
-    """
-    Compare two frames.
+    """Array-native diff (feature 004: no re-decode from disk; the pipeline
+    passes the already-decoded pixels it holds in memory). Path-based
+    ``compute_diff`` below is a compatibility wrapper over this.
 
     Returns (changed_since_last, changed_regions, diff_ratio, local_blobs).
-
-    - ``changed_since_last`` / ``changed_regions``: gated by global ``threshold``
-      (weak evidence for screen_changed).
-    - ``local_blobs``: always extracted from connected components (subject only to
-      ``min_blob_pixels`` and ``mask_regions``), independent of the global threshold
-      (research.md §1 — root-cause fix for the 0.424% incident).
     """
-    curr = load_image_array(curr_path)
-    if prev_path is None:
+    if prev is None:
         return True, [], 1.0, []
 
-    prev = load_image_array(prev_path)
     if prev.shape != curr.shape:
         full = Region(x1=0, y1=0, x2=curr.shape[1], y2=curr.shape[0])
         return True, [full], 1.0, [full]
 
-    gray_prev = cv2.cvtColor(prev, cv2.COLOR_BGR2GRAY)
-    gray_curr = cv2.cvtColor(curr, cv2.COLOR_BGR2GRAY)
+    gray_prev = cv2.cvtColor(prev, cv2.COLOR_BGR2GRAY) if prev.ndim == 3 else prev
+    gray_curr = cv2.cvtColor(curr, cv2.COLOR_BGR2GRAY) if curr.ndim == 3 else curr
     diff = cv2.absdiff(gray_prev, gray_curr)
     _, thresh = cv2.threshold(diff, 25, 255, cv2.THRESH_BINARY)
 
@@ -67,3 +60,21 @@ def compute_diff(
     regions: list[Region] = list(local_blobs) if changed else []
 
     return changed, regions, ratio, local_blobs
+
+
+def compute_diff(
+    prev_path: str | Path | None,
+    curr_path: str | Path,
+    *,
+    threshold: float = 0.02,
+    mask_regions: list[Region] | None = None,
+    min_blob_pixels: int = 16,
+) -> tuple[bool, list[Region], float, list[Region]]:
+    """Compatibility wrapper: reads both frames from disk, then delegates to
+    :func:`compute_diff_arrays`. New capture-path code should prefer the
+    array-native form to avoid re-decoding an already-decoded frame."""
+    curr = load_image_array(curr_path)
+    prev = load_image_array(prev_path) if prev_path is not None else None
+    return compute_diff_arrays(
+        prev, curr, threshold=threshold, mask_regions=mask_regions, min_blob_pixels=min_blob_pixels
+    )

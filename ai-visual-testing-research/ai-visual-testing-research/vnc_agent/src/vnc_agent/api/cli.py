@@ -123,9 +123,12 @@ async def _execute(
     json_only: bool = False,
     human_confirmed_facts: list[HumanConfirmedFact] | None = None,
 ) -> int:
+    import uuid
+
     from vnc_agent.drivers.vncdotool_driver import VNCToolDriver
     from vnc_agent.models.provider import build_grounder, build_planner
     from vnc_agent.perception.pipeline import ObservationPipeline
+    from vnc_agent.perception.screenshot import FrameCaptureService
     from vnc_agent.perception.stability import StabilityEngine
     from vnc_agent.reporting.report_builder import ReportBuilder
     from vnc_agent.runtime.agent_runtime import AgentRuntime
@@ -161,26 +164,37 @@ async def _execute(
     engine = make_engine(cfg.agent.artifacts.db_path)
     await init_db(engine)
     repo = RunRepository(make_session_factory(engine))
-    pipeline = ObservationPipeline(
+
+    # Feature 004: exactly one FrameCaptureService for the whole execute
+    # path, shared by ObservationPipeline and StabilityEngine — the single
+    # recorder for TestRun.frames. `test_run` is attached once AgentRuntime
+    # creates its RunContext (run_id is generated here so both share it).
+    run_id = str(uuid.uuid4())
+    capture_service = FrameCaptureService(
         driver,
-        artifacts_dir=artifacts_root,
+        run_id=run_id,
+        vnc_session_id=str(uuid.uuid4()),
+        test_run=None,
+        artifact_store=store,
+        mask_regions=cfg.agent.security.mask_regions,
+        private_persistence_allowed=True,
+    )
+    pipeline = ObservationPipeline(
+        capture_service,
         templates_dir="templates",
         planner=planner,
         ocr_enabled=cfg.agent.perception.ocr_enabled,
         template_enabled=cfg.agent.perception.template_enabled,
         vision_fallback=cfg.agent.perception.vision_fallback_enabled,
         diff_threshold=cfg.agent.wait.pixel_diff_threshold,
-        mask_regions=cfg.agent.security.mask_regions,
     )
     stability = StabilityEngine(
-        driver,
-        artifacts_dir=artifacts_root,
+        capture_service,
         min_delay_ms=cfg.agent.wait.min_delay_ms,
         max_delay_ms=cfg.agent.wait.max_delay_ms,
         capture_interval_ms=cfg.agent.wait.capture_interval_ms,
         stable_frame_count=cfg.agent.wait.stable_frame_count,
         pixel_diff_threshold=cfg.agent.wait.pixel_diff_threshold,
-        security_mask_regions=cfg.agent.security.mask_regions,
     )
     action_tags = list(cfg.agent.reporting.action_tags) + list(case.action_tags)
     report_builder = ReportBuilder(store, action_tags=action_tags)
@@ -193,6 +207,8 @@ async def _execute(
         grounder=grounder,
         pipeline=pipeline,
         stability=stability,
+        capture_service=capture_service,
+        artifact_store=store,
         repo=repo,
         report_builder=report_builder,
         report_formats=report_formats,

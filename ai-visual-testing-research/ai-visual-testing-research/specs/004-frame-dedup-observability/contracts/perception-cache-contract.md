@@ -24,6 +24,16 @@
 
 这些结果始终走确定性上下文路由。任一请求语义或相关上下文变化时必须产生所需独立请求；全部相同且当前阶段无需新计划时记录 Planner skip。每个操作后的 Verifier 始终基于独立采集证据执行。
 
+### Role-specific request/context identity
+
+| Role | Required canonical identity |
+|---|---|
+| Planner | request semantics、step intent、action/history state、retry/iteration state、current StructuredScreen identity、requested model/version/config、deterministic route state |
+| Grounder | target semantics、candidate set/current StructuredScreen identity、scope/coordinate transform、requested model/version/config、retry/grounding state |
+| Verifier | visual question/assertion、before/after frame identities、action audit/ActionEffect context、retry/iteration state、requested model/version/config |
+
+任一必需字段缺失、不可规范化或变化都必须判定 `same_context=false`，禁止结果复用或基于同一身份 skip；若确定性路由判定该角色在当前阶段适用，则执行实际调用。上下文变化不使原本不适用的角色变为必调，但操作后的 Verifier 始终适用，必须用独立新捕获证据实际执行。
+
 ## Lookup contract
 
 1. 当前 frame 不是 `deduplicated=true`，或 `duplicate_of_frame_id` 不是直接上一逻辑 frame ⇒ miss；A→B→A 不具备 lookup 资格。

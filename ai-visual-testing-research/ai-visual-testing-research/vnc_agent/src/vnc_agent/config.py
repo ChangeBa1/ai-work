@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from vnc_agent.domain.reporting_tags import ActionTagRule
@@ -46,6 +46,9 @@ class PerceptionConfig(BaseModel):
         default_factory=lambda: ["错误", "エラー", "Error", "失败", "失敗", "Failed"]
     )
     local_blob_min_ratio: float = 0.0005
+    # Feature 004: bounded analysis-cache window, most-recent-frame references
+    # only (perception-cache-contract.md "Capacity and lifecycle")
+    cache_max_frames: int = Field(default=5, ge=3, le=5)
 
 
 class ArtifactsConfig(BaseModel):
@@ -83,11 +86,30 @@ class PlanningConfig(BaseModel):
     )
 
 
+# Feature 004: locale resource-registry membership (report-contract.md
+# "Locale configuration") — single source of truth shared with
+# reporting/localization.py to avoid a circular import.
+KNOWN_LOCALES: frozenset[str] = frozenset({"zh-CN"})
+
+
 class ReportingConfig(BaseModel):
     # Feature 003 (FR-027/028): declarative, testcase/profile-supplied action
     # tags. Core MUST NOT hardcode any fixed business category — default is
     # an empty list.
     action_tags: list[ActionTagRule] = Field(default_factory=list)
+    # Feature 004: zh-CN is the default and only required resource bundle;
+    # an unregistered locale fails at config-load time, never silently falls
+    # back (report-contract.md "Locale configuration").
+    locale: str = "zh-CN"
+
+    @field_validator("locale")
+    @classmethod
+    def _locale_must_be_registered(cls, value: str) -> str:
+        if value not in KNOWN_LOCALES:
+            raise ValueError(
+                f"unregistered reporting.locale {value!r}; known locales: {sorted(KNOWN_LOCALES)}"
+            )
+        return value
 
 
 class AgentConfig(BaseModel):

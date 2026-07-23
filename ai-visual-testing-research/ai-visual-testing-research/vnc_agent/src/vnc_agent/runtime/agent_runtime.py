@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+import uuid
 from typing import TYPE_CHECKING
 
 from vnc_agent.domain.action import SemanticAction
@@ -49,7 +50,9 @@ from vnc_agent.verification.engine import VerificationEngine
 if TYPE_CHECKING:
     from vnc_agent.config import AppConfig
     from vnc_agent.drivers.base import VNCDriver
+    from vnc_agent.perception.screenshot import FrameCaptureService
     from vnc_agent.reporting.report_builder import ReportBuilder
+    from vnc_agent.storage.artifact_store import ArtifactStore
     from vnc_agent.storage.repositories import RunRepository
 
 log = get_logger("agent_runtime")
@@ -92,6 +95,8 @@ class AgentRuntime:
         grounder: GrounderProvider,
         pipeline: ObservationPipeline,
         stability: StabilityEngine,
+        capture_service: FrameCaptureService,
+        artifact_store: ArtifactStore,
         repo: RunRepository | None = None,
         report_builder: ReportBuilder | None = None,
         experience: ExperienceCollector | None = None,
@@ -103,6 +108,10 @@ class AgentRuntime:
         self.grounder = grounder
         self.pipeline = pipeline
         self.stability = stability
+        # Feature 004: the one shared run/session-scoped capture service —
+        # `pipeline`/`stability` already reference this same instance.
+        self.capture_service = capture_service
+        self.artifact_store = artifact_store
         self.policy = ActionPolicy(
             overall_confidence_threshold=config.agent.grounding.overall_confidence_threshold,
             top1_top2_min_gap=config.agent.grounding.top1_top2_min_gap,
@@ -134,6 +143,7 @@ class AgentRuntime:
     ) -> RunContext:
         ctx = RunContext(
             test_case,
+            run_id=self.capture_service.run_id,
             human_confirmed_facts=human_confirmed_facts,
         )
         ctx.begin_run()
@@ -152,6 +162,12 @@ class AgentRuntime:
         w, h = self.driver.resolution
         log.info("vnc_connected", run_id=ctx.run_id, width=w, height=h)
         ctx.state_machine.transition(AgentState.PREPARING, "connected")
+
+        # Feature 004: bind the shared capture service to this run's TestRun
+        # and reconcile any leftover staging/orphan bundles before the first
+        # capture (frame-capture-contract.md "startup/reconnect recovery").
+        self.capture_service.test_run = ctx.test_run
+        self.artifact_store.recover_orphans(ctx.run_id, referenced_bundle_ids=set())
 
         while ctx.has_next_step():
             if ctx.cancelled:
@@ -221,6 +237,9 @@ class AgentRuntime:
                         step_failed = True
                         failure_reason = "vnc reconnect failed"
                         break
+                    # Feature 004: successful reconnect rotates the capture
+                    # session and clears `previous` (frame-capture-contract.md)
+                    self._rotate_capture_session(ctx)
                     # restart from OBSERVING — continue loop (budget already consumed)
                     continue
                 except Exception as e:
@@ -279,6 +298,19 @@ class AgentRuntime:
                 await self.repo.save_run(ctx.test_run)
         return ctx
 
+    def _rotate_capture_session(self, ctx: RunContext) -> None:
+        """New VNC session id, clear `previous`, reconcile orphan bundles left
+        by a mid-run disconnect (frame-capture-contract.md "Logical/physical
+        invariants" + "startup/reconnect recovery")."""
+        self.capture_service.vnc_session_id = str(uuid.uuid4())
+        self.capture_service.clear()
+        referenced: set[str] = set()
+        for f in ctx.test_run.frames:
+            referenced.add(f.safe_image.artifact_bundle_id)
+            if f.model_image is not None:
+                referenced.add(f.model_image.artifact_bundle_id)
+        self.artifact_store.recover_orphans(ctx.run_id, referenced)
+
     async def run_action_iteration(
         self,
         ctx: RunContext,
@@ -298,7 +330,7 @@ class AgentRuntime:
 
         # OBSERVING
         t0 = time.monotonic()
-        screen = await self.pipeline.observe(run_id=ctx.run_id, step_id=step.id)
+        screen = await self.pipeline.observe(step_id=step.id, capture_source="observation")
         iteration.before_frame_id = screen.image_path
         mark("observing", t0)
         if ctx.cancelled:
@@ -410,7 +442,7 @@ class AgentRuntime:
             iteration.action_effect = prev_ae
 
             async def _reobserve() -> StructuredScreen:
-                return await self.pipeline.observe(run_id=ctx.run_id, step_id=step.id)
+                return await self.pipeline.observe(step_id=step.id, capture_source="retry")
 
             vr = await resolve_step_result(
                 step.expected,
@@ -536,9 +568,7 @@ class AgentRuntime:
         # WAITING
         ctx.state_machine.force(AgentState.WAITING, "wait")
         t0 = time.monotonic()
-        wait_result = await self.stability.wait_stable(
-            run_id=ctx.run_id, step_id=step.id
-        )
+        wait_result = await self.stability.wait_stable(step_id=step.id)
         iteration.wait_result = wait_result
         mark("waiting", t0)
         if wait_result.end_reason == "vnc_error":
@@ -547,7 +577,9 @@ class AgentRuntime:
         # VERIFYING — independent post-action observation + ActionEffect
         ctx.state_machine.force(AgentState.VERIFYING, "verify")
         t0 = time.monotonic()
-        after = await self.pipeline.observe(run_id=ctx.run_id, step_id=step.id)
+        after = await self.pipeline.observe(
+            step_id=step.id, capture_source="post_action_verification"
+        )
         iteration.after_frame_id = after.image_path
 
         perc = self.config.agent.perception
@@ -561,7 +593,9 @@ class AgentRuntime:
         iteration.action_effect = action_effect
 
         async def _reobserve_after() -> StructuredScreen:
-            return await self.pipeline.observe(run_id=ctx.run_id, step_id=step.id)
+            return await self.pipeline.observe(
+                step_id=step.id, capture_source="post_action_verification"
+            )
 
         vr = await resolve_step_result(
             step.expected,
