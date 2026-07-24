@@ -52,3 +52,9 @@ def normalize_key(name: str) -> str:
 
 def normalize_hotkey(keys: list[str]) -> list[str]:
     return [normalize_key(k) for k in keys]
+
+
+def is_batch_repeatable_key(name: str) -> bool:
+    """True if `name` is a recognized, non-modifier single key (Feature 005 FR-005)."""
+    key = normalize_key(name)
+    return key in KEY_MAP.values() and key not in MODIFIERS

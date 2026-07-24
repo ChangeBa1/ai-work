@@ -4,13 +4,33 @@ from __future__ import annotations
 
 from typing import Any, Literal, Protocol, runtime_checkable
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from vnc_agent.domain.action import SemanticAction
 from vnc_agent.domain.grounding import GroundingResult
 from vnc_agent.domain.observation import StructuredScreen
 from vnc_agent.domain.verification import VerificationResult, VerificationSpec
 from vnc_agent.runtime.exceptions import ProviderContractError
+
+# Models sometimes emit near-synonyms; coerce before Literal validation.
+_VISION_ANSWER_ALIASES: dict[str, Literal["passed", "failed", "uncertain"]] = {
+    "passed": "passed",
+    "pass": "passed",
+    "true": "passed",
+    "yes": "passed",
+    "ok": "passed",
+    "failed": "failed",
+    "fail": "failed",
+    "false": "failed",
+    "no": "failed",
+    "ng": "failed",
+    "not_passed": "failed",
+    "not-passed": "failed",
+    "notpassed": "failed",
+    "uncertain": "uncertain",
+    "unknown": "uncertain",
+    "unsure": "uncertain",
+}
 
 
 class PlannerRequest(BaseModel):
@@ -52,6 +72,19 @@ class VisionUnderstandingResponse(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0, default=0.0)
     reason: str = ""
     model_name: str = ""
+
+    @field_validator("answer", mode="before")
+    @classmethod
+    def coerce_answer_aliases(cls, value: Any) -> Any:
+        if value is None or not isinstance(value, str):
+            return value
+        key = value.strip().lower().replace(" ", "_")
+        if key in _VISION_ANSWER_ALIASES:
+            return _VISION_ANSWER_ALIASES[key]
+        # Unknown free-text from models → fail-safe uncertain (do not crash the run).
+        if key:
+            return "uncertain"
+        return value
 
     @model_validator(mode="after")
     def mode_fields(self) -> VisionUnderstandingResponse:

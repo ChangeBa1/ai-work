@@ -56,6 +56,18 @@ def test_html_round_trip_preserves_every_codepoint(tmp_path: Path):
     assert "�" not in decoded
 
 
+def test_report_json_and_html_are_written_without_a_bom(tmp_path: Path):
+    """FR-036: report artifacts MUST be UTF-8 without a BOM (or an
+    explicitly-supported BOM) — plain ``encoding="utf-8"`` writes never emit
+    one, but nothing previously asserted that on the actual on-disk bytes."""
+    store = ArtifactStore(tmp_path)
+    run = _run_with_failure(_RAW_DETAIL_WITH_SPECIAL_CHARS)
+    ReportBuilder(store).build(run, formats=("json", "html"))
+    bom = b"\xef\xbb\xbf"
+    assert not Path(run.report_json_path).read_bytes().startswith(bom)
+    assert not Path(run.report_html_path).read_bytes().startswith(bom)
+
+
 def test_html_special_characters_are_correctly_escaped_not_double_escaped(tmp_path: Path):
     store = ArtifactStore(tmp_path)
     run = _run_with_failure(_RAW_DETAIL_WITH_SPECIAL_CHARS)

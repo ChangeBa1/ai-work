@@ -291,3 +291,11 @@ T050～T054 可并行；本地化、JSON 投影和安全证据解析在接口冻
 - duplicate 是新的逻辑采样，不是复用旧 ScreenFrame；不得从缓存带入旧时间戳、路径身份或验证结论。
 - private model image 永远不能成为报告证据；优化失败可降级，遮罩/必需持久化失败必须 fail closed。
 - 核心模块只处理通用像素、配置、事件、断言和报告契约；两个场景的词汇只存在于 fixture。
+
+---
+
+## Phase 8: Convergence
+
+**Purpose**: `/speckit-converge` 复核 spec/plan/tasks 与代码现状后追加的剩余工作。
+
+- [X] T069 在 `vnc_agent/tests/fixtures/test_report_utf8_errors.py` 新增断言：`ReportBuilder` 写出的 `report.json`/`report.html`（及 `logging_setup.py` 产生的 JSON Lines 日志文件，如可离线获取其落盘路径）实际字节不以 UTF-8 BOM（`EF BB BF`）开头，覆盖 FR-036 "MUST 以无 BOM 或明确受支持 BOM 的 UTF-8 读写" 中此前未被任何测试断言覆盖的 BOM 缺失要求（当前实现经 `encoding="utf-8"` 写入已天然满足该约束，但无回归测试防止未来引入 BOM 或切换到 `utf-8-sig`）（per FR-036, partial）

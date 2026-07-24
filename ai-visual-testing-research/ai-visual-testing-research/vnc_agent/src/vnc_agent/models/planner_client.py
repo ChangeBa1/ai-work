@@ -21,7 +21,6 @@ from vnc_agent.models.provider import (
 from vnc_agent.models.response_parser import parse_planner_response
 from vnc_agent.runtime.exceptions import PlanValidationError
 
-
 _PLANNER_SYSTEM_PROMPT = (
     "你是一个 GUI 测试的语义动作规划器（Planner）。你会收到当前测试步骤的意图"
     "（step_intent）、预期结果（expected）和当前屏幕的结构化观察（structured_screen，"
@@ -153,7 +152,9 @@ class HttpPlannerClient:
                         "answer the question about it. Return JSON matching "
                         "VisionUnderstandingResponse "
                         '({"mode","description","answer","confidence","reason",'
-                        '"model_name"}).'
+                        '"model_name"}). For answer_question mode, answer MUST be '
+                        'exactly one of: "passed", "failed", "uncertain" '
+                        "(never not_passed / pass / fail / yes / no)."
                     ),
                 },
                 {"role": "user", "content": user_content},

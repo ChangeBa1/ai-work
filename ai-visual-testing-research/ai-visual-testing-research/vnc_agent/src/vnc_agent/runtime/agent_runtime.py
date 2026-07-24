@@ -18,7 +18,7 @@ from vnc_agent.domain.verification import VerificationResult
 from vnc_agent.evolution.experience_collector import ExperienceCollector
 from vnc_agent.execution.action_identity import compute_identity
 from vnc_agent.execution.repeat_guard import RepeatGuard
-from vnc_agent.execution.router import ExecutionRouter
+from vnc_agent.execution.router import ExecutionRouter, compute_batch_repeat_timeout_seconds
 from vnc_agent.logging_setup import get_logger
 from vnc_agent.models.provider import GrounderProvider, GroundingRequest, PlannerProvider
 from vnc_agent.perception.action_effect import classify_action_effect
@@ -454,80 +454,105 @@ class AgentRuntime:
 
         # PLANNING
         t0 = time.monotonic()
-        prev_vr = None
-        if ctx.current_step_record and len(ctx.current_step_record.iterations) > 1:
-            prev = ctx.current_step_record.iterations[-2]
-            prev_vr = prev.verification_result
-        try:
-            with measure_stage(
-                ctx.test_run, stage="planner", run_id=ctx.run_id, step_id=step.id,
-                frame_id=screen.frame_id, iteration_index=iteration.iteration_index,
-                clock=self.clock,
-            ):
-                plan = await self.planner_orch.plan(
-                    step,
-                    screen,
-                    iteration_index=iteration.iteration_index,
-                    remaining_budget=controller.remaining_budget(),
-                    previous_verification=prev_vr,
-                )
-        except PlanValidationError as e:
-            iteration.verification_result = VerificationResult(
-                status="failed", reason=f"plan validation: {e}"
+        if step.batch_repeat_key is not None:
+            # Feature 005: author-declared batch repeat key — deterministic,
+            # code-constructed SemanticAction; the Planner is not called at
+            # all for this step (FR-002/FR-003/FR-014). Falls through into
+            # the same RepeatGuard/ActionPolicy/Executor/wait/verify
+            # sequence below as any Planner-produced action.
+            sa = SemanticAction(
+                action_id=f"{step.id}-batch-repeat",
+                intent=step.intent,
+                action_type="press_key_repeat",
+                keys=[step.batch_repeat_key.key],
+                repeat_count=step.batch_repeat_key.count,
+                repeat_interval_ms=step.batch_repeat_key.interval_ms,
+                risk_level="low",
             )
             mark("planning", t0)
-            return iteration.verification_result
-        # task_completed_hint is advisory only — still verify
-        # Annotate action_kind when Planner left it unset (FR-013)
-        sa = plan.semantic_action
+        else:
+            prev_vr = None
+            if ctx.current_step_record and len(ctx.current_step_record.iterations) > 1:
+                prev = ctx.current_step_record.iterations[-2]
+                prev_vr = prev.verification_result
+            try:
+                with measure_stage(
+                    ctx.test_run, stage="planner", run_id=ctx.run_id, step_id=step.id,
+                    frame_id=screen.frame_id, iteration_index=iteration.iteration_index,
+                    clock=self.clock,
+                ):
+                    plan = await self.planner_orch.plan(
+                        step,
+                        screen,
+                        iteration_index=iteration.iteration_index,
+                        remaining_budget=controller.remaining_budget(),
+                        previous_verification=prev_vr,
+                    )
+            except PlanValidationError as e:
+                iteration.verification_result = VerificationResult(
+                    status="failed", reason=f"plan validation: {e}"
+                )
+                mark("planning", t0)
+                return iteration.verification_result
+            # task_completed_hint is advisory only — still verify
+            sa = plan.semantic_action
+            mark("planning", t0)
+
+            # Feature 004 (T039): Planner is context-sensitive — never
+            # served from the pixel-content cache; every actual call gets a
+            # sanitized audit record with its full canonical
+            # request/context identity.
+            try:
+                planner_req_id = planner_identity(
+                    request_semantics={
+                        "intent": step.intent,
+                        "conditions": [c.type for c in step.expected.conditions],
+                    },
+                    step_intent=step.intent,
+                    action_history_state=(
+                        f"iterations={len(ctx.current_step_record.iterations)}"
+                        if ctx.current_step_record
+                        else "iterations=0"
+                    ),
+                    retry_iteration_state={
+                        "iteration_index": iteration.iteration_index,
+                        "remaining_budget": controller.remaining_budget(),
+                    },
+                    structured_screen_identity=screen.content_hash or screen.frame_id,
+                    requested_model_config=_provider_identity_snapshot(self.planner),
+                    route_state=str(ctx.state_machine.state),
+                )
+                self._record_model_call_audit(
+                    ctx,
+                    step_id=step.id,
+                    frame_id=screen.frame_id,
+                    iteration_index=iteration.iteration_index,
+                    model_role="planner",
+                    request_identity=planner_req_id,
+                    context_identity=planner_req_id,
+                    sanitized_request={
+                        "step_intent": step.intent,
+                        "iteration_index": iteration.iteration_index,
+                    },
+                    sanitized_response={
+                        "action_type": sa.action_type,
+                        "task_completed_hint": plan.task_completed_hint,
+                    },
+                )
+            except MissingIdentityFieldError:
+                pass
+
+        # Annotate action_kind when left unset (FR-013). Feature 005:
+        # deliberately applies to the batch-repeat bypass path too (`sa`
+        # from either branch above never sets action_kind itself), so a
+        # declared batch is classified by the same conservative
+        # non_idempotent default as any other undeclared action — RepeatGuard
+        # below is never weakened for a batch of a non-idempotent key (e.g.
+        # "enter") on step retry. See research.md / analysis finding D1.
         if sa.action_kind is None:
             sa = sa.model_copy(update={"action_kind": classify_action_kind(sa)})
         iteration.semantic_action = sa
         iteration.canonical_identity = compute_identity(step.id, sa)
-        mark("planning", t0)
-
-        # Feature 004 (T039): Planner is context-sensitive — never served
-        # from the pixel-content cache; every actual call gets a sanitized
-        # audit record with its full canonical request/context identity.
-        try:
-            planner_req_id = planner_identity(
-                request_semantics={
-                    "intent": step.intent,
-                    "conditions": [c.type for c in step.expected.conditions],
-                },
-                step_intent=step.intent,
-                action_history_state=(
-                    f"iterations={len(ctx.current_step_record.iterations)}"
-                    if ctx.current_step_record
-                    else "iterations=0"
-                ),
-                retry_iteration_state={
-                    "iteration_index": iteration.iteration_index,
-                    "remaining_budget": controller.remaining_budget(),
-                },
-                structured_screen_identity=screen.content_hash or screen.frame_id,
-                requested_model_config=_provider_identity_snapshot(self.planner),
-                route_state=str(ctx.state_machine.state),
-            )
-            self._record_model_call_audit(
-                ctx,
-                step_id=step.id,
-                frame_id=screen.frame_id,
-                iteration_index=iteration.iteration_index,
-                model_role="planner",
-                request_identity=planner_req_id,
-                context_identity=planner_req_id,
-                sanitized_request={
-                    "step_intent": step.intent,
-                    "iteration_index": iteration.iteration_index,
-                },
-                sanitized_response={
-                    "action_type": sa.action_type,
-                    "task_completed_hint": plan.task_completed_hint,
-                },
-            )
-        except MissingIdentityFieldError:
-            pass
 
         # RepeatGuard before RESOLVING_ACTION (contracts §5)
         previous_iteration: ActionIteration | None = None
@@ -729,7 +754,26 @@ class AgentRuntime:
         ctx.state_machine.force(AgentState.EXECUTING, "execute")
         t0 = time.monotonic()
         try:
-            exec_result = await self.executor.execute(executable)
+            if executable.operation == "press_key_repeat":
+                # Feature 005 remediation (analysis finding F1): size the
+                # timeout for a press_key_repeat action from its own
+                # count/interval so a spec-legal worst-case batch doesn't
+                # silently hit the router's static default and lose
+                # requested_count/completed_count.
+                exec_result = await self.executor.execute(
+                    executable,
+                    timeout_seconds=compute_batch_repeat_timeout_seconds(
+                        executable.repeat_count,
+                        executable.repeat_interval_ms,
+                        self.executor.default_timeout_seconds,
+                    ),
+                )
+            else:
+                # Every other operation: call site byte-for-byte unchanged
+                # (no timeout_seconds kwarg at all) — preserves compatibility
+                # with any test/tooling that replaces `self.executor.execute`
+                # with a narrower single-argument callable (FR-011/FR-012).
+                exec_result = await self.executor.execute(executable)
         except VNCDisconnectedError:
             raise
         except Exception as e:

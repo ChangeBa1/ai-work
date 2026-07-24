@@ -30,6 +30,62 @@ def test_hotkey_preferred_over_grounding():
     assert result.needs_grounding is False
     assert result.executable is not None
     assert result.executable.method == "keyboard"
+    # Feature 005 (T008 regression guard): unchanged shape after the new
+    # press_key_repeat branch was added.
+    assert result.executable.operation == "hotkey"
+    assert result.executable.keys == ["ctrl", "s"]
+
+
+def test_press_key_still_resolves_unchanged():
+    policy = ActionPolicy()
+    action = SemanticAction(
+        action_id="a",
+        intent="escape",
+        action_type="press_key",
+        keys=["escape"],
+    )
+    result = policy.resolve(action, _screen())
+    assert result.outcome == "keyboard"
+    assert result.needs_grounding is False
+    assert result.executable is not None
+    assert result.executable.method == "keyboard"
+    assert result.executable.operation == "press_key"
+    assert result.executable.keys == ["escape"]
+
+
+def test_press_key_repeat_resolves_to_keyboard_with_carried_fields():
+    policy = ActionPolicy()
+    action = SemanticAction(
+        action_id="a",
+        intent="clear barcode",
+        action_type="press_key_repeat",
+        keys=["backspace"],
+        repeat_count=20,
+        repeat_interval_ms=None,
+    )
+    result = policy.resolve(action, _screen())
+    assert result.outcome == "keyboard"
+    assert result.needs_grounding is False
+    assert result.executable is not None
+    assert result.executable.method == "keyboard"
+    assert result.executable.operation == "press_key_repeat"
+    assert result.executable.keys == ["backspace"]
+    assert result.executable.repeat_count == 20
+    assert result.executable.repeat_interval_ms == 50  # default substituted
+
+
+def test_press_key_repeat_carries_explicit_interval():
+    policy = ActionPolicy()
+    action = SemanticAction(
+        action_id="a",
+        intent="clear barcode",
+        action_type="press_key_repeat",
+        keys=["backspace"],
+        repeat_count=10,
+        repeat_interval_ms=100,
+    )
+    result = policy.resolve(action, _screen())
+    assert result.executable.repeat_interval_ms == 100
 
 
 def test_unique_ocr_path():

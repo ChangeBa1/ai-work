@@ -8,6 +8,14 @@ from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 
 from vnc_agent.domain.observation import Region
+from vnc_agent.drivers.key_mapping import is_batch_repeatable_key
+
+# Feature 005 (FR-006/FR-007): batch repeat count/interval legal ranges.
+BATCH_REPEAT_COUNT_MIN = 1
+BATCH_REPEAT_COUNT_MAX = 50
+BATCH_REPEAT_INTERVAL_MS_MIN = 0
+BATCH_REPEAT_INTERVAL_MS_MAX = 500
+BATCH_REPEAT_INTERVAL_MS_DEFAULT = 50
 
 ActionType = Literal[
     "click",
@@ -20,6 +28,7 @@ ActionType = Literal[
     "drag",
     "wait",
     "finish",
+    "press_key_repeat",
 ]
 
 
@@ -54,6 +63,11 @@ class SemanticAction(BaseModel):
         Literal["dismiss_overlay", "scroll_reveal", "refocus", "wait", "re_observe"]
         | None
     ) = None
+    # Feature 005 (FR-001/005/006/007): batch repeat declaration — only
+    # meaningful when action_type == "press_key_repeat"; MUST stay None for
+    # every other action type (FR-011).
+    repeat_count: int | None = None
+    repeat_interval_ms: int | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -67,6 +81,44 @@ class SemanticAction(BaseModel):
                 )
         return data
 
+    @model_validator(mode="after")
+    def validate_batch_repeat(self) -> SemanticAction:
+        if self.action_type == "press_key_repeat":
+            if len(self.keys) != 1:
+                raise ValueError(
+                    "press_key_repeat requires exactly one key in `keys` (FR-015)"
+                )
+            if not is_batch_repeatable_key(self.keys[0]):
+                raise ValueError(
+                    f"press_key_repeat key {self.keys[0]!r} is not a recognized "
+                    "non-modifier key (FR-005)"
+                )
+            if (
+                self.repeat_count is None
+                or not (BATCH_REPEAT_COUNT_MIN <= self.repeat_count <= BATCH_REPEAT_COUNT_MAX)
+            ):
+                raise ValueError(
+                    f"press_key_repeat repeat_count must be between "
+                    f"{BATCH_REPEAT_COUNT_MIN} and {BATCH_REPEAT_COUNT_MAX} (FR-006), "
+                    f"got {self.repeat_count!r}"
+                )
+            if self.repeat_interval_ms is not None and not (
+                BATCH_REPEAT_INTERVAL_MS_MIN
+                <= self.repeat_interval_ms
+                <= BATCH_REPEAT_INTERVAL_MS_MAX
+            ):
+                raise ValueError(
+                    f"press_key_repeat repeat_interval_ms must be between "
+                    f"{BATCH_REPEAT_INTERVAL_MS_MIN} and {BATCH_REPEAT_INTERVAL_MS_MAX} "
+                    f"(FR-007), got {self.repeat_interval_ms!r}"
+                )
+        elif self.repeat_count is not None or self.repeat_interval_ms is not None:
+            raise ValueError(
+                "repeat_count/repeat_interval_ms MUST be None for action_type "
+                f"{self.action_type!r} (FR-011)"
+            )
+        return self
+
 
 class ExecutableAction(BaseModel):
     method: Literal["keyboard", "mouse"]
@@ -75,6 +127,10 @@ class ExecutableAction(BaseModel):
     keys: list[str] = Field(default_factory=list)
     text: str | None = None
     target_region: Region | None = None
+    # Feature 005: carried through from SemanticAction for operation ==
+    # "press_key_repeat"; None for every other operation.
+    repeat_count: int | None = None
+    repeat_interval_ms: int | None = None
 
 
 class ExecutionResult(BaseModel):
@@ -86,3 +142,7 @@ class ExecutionResult(BaseModel):
     actual_click_point: tuple[int, int] | None = None
     error_code: str | None = None
     error_message: str | None = None
+    # Feature 005: populated only when operation == "press_key_repeat"; None
+    # for every other operation (FR-011/FR-012).
+    requested_count: int | None = None
+    completed_count: int | None = None

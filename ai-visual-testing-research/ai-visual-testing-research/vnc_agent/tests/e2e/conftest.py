@@ -44,6 +44,11 @@ class FakeVNC:
         self.keys: list[str] = []
         self.hotkeys: list[list[str]] = []
         self.texts: list[str] = []
+        # Feature 005 (T009): a single shared ordered log of capture/send
+        # calls, used to prove no capture happens *between* individual key
+        # sends within a batch (FR-003/SC-002) without depending on any
+        # particular total call count (see StabilityEngine's own polling).
+        self.call_log: list[str] = []
         self._w, self._h = self.frames[0].shape[1], self.frames[0].shape[0]
 
     @property
@@ -64,6 +69,7 @@ class FakeVNC:
         self._connected = True
 
     async def capture_screen(self) -> bytes:
+        self.call_log.append("capture")
         f = self.frames[min(self.i, len(self.frames) - 1)]
         if self.i < len(self.frames) - 1:
             self.i += 1
@@ -74,6 +80,7 @@ class FakeVNC:
         return await self.capture_screen()
 
     async def send_key(self, key: str):
+        self.call_log.append(f"key:{key}")
         self.keys.append(key)
 
     async def send_hotkey(self, keys: list[str]):

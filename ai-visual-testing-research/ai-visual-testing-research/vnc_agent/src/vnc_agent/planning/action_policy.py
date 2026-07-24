@@ -6,7 +6,12 @@ import math
 from dataclasses import dataclass
 from typing import Literal
 
-from vnc_agent.domain.action import ExecutableAction, SemanticAction, TargetDescription
+from vnc_agent.domain.action import (
+    BATCH_REPEAT_INTERVAL_MS_DEFAULT,
+    ExecutableAction,
+    SemanticAction,
+    TargetDescription,
+)
 from vnc_agent.domain.focus_path import VerifiedFocusNavigationPath
 from vnc_agent.domain.grounding import (
     GroundingCandidate,
@@ -69,6 +74,23 @@ class ActionPolicy:
         focus_path: VerifiedFocusNavigationPath | None = None,
         candidate_index: int = 0,
     ) -> PolicyResult:
+        # 0) Batch repeat key (Feature 005) — always author-declared and
+        # already validated (SemanticAction.validate_batch_repeat); resolves
+        # unconditionally, never falls through to focus/OCR/Grounding.
+        if action.action_type == "press_key_repeat":
+            return PolicyResult(
+                outcome="keyboard",
+                executable=ExecutableAction(
+                    method="keyboard",
+                    operation="press_key_repeat",
+                    keys=list(action.keys),
+                    repeat_count=action.repeat_count,
+                    repeat_interval_ms=(
+                        action.repeat_interval_ms or BATCH_REPEAT_INTERVAL_MS_DEFAULT
+                    ),
+                ),
+            )
+
         # 1) Explicit keys / hotkey on the semantic action
         if action.action_type in ("press_key", "hotkey") and action.keys:
             return PolicyResult(

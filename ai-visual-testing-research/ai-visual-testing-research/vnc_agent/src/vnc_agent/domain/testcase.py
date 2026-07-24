@@ -8,12 +8,50 @@ from typing import Any, Literal
 import yaml
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from vnc_agent.domain.action import (
+    BATCH_REPEAT_COUNT_MAX,
+    BATCH_REPEAT_COUNT_MIN,
+    BATCH_REPEAT_INTERVAL_MS_MAX,
+    BATCH_REPEAT_INTERVAL_MS_MIN,
+)
 from vnc_agent.domain.reporting_tags import ActionTagRule
 from vnc_agent.domain.run import RunPrecondition
 from vnc_agent.domain.verification import VerificationSpec
+from vnc_agent.drivers.key_mapping import is_batch_repeatable_key
 
 # Weak action-effect evidence only (data-model.md §2) — cannot alone satisfy business mode
 _WEAK_CONDITION_TYPES = frozenset({"screen_changed", "region_changed"})
+
+
+class BatchRepeatKeyDeclaration(BaseModel):
+    """Feature 005 (FR-001/005/006/007): author-declared batch repeat key
+    press — the test-case-authoring surface for TestStep.batch_repeat_key."""
+
+    key: str
+    count: int
+    interval_ms: int | None = None
+
+    @model_validator(mode="after")
+    def validate_bounds(self) -> BatchRepeatKeyDeclaration:
+        if not is_batch_repeatable_key(self.key):
+            raise ValueError(
+                f"batch_repeat_key.key {self.key!r} is not a recognized non-modifier "
+                "key (FR-005)"
+            )
+        if not (BATCH_REPEAT_COUNT_MIN <= self.count <= BATCH_REPEAT_COUNT_MAX):
+            raise ValueError(
+                f"batch_repeat_key.count must be between {BATCH_REPEAT_COUNT_MIN} and "
+                f"{BATCH_REPEAT_COUNT_MAX} (FR-006), got {self.count!r}"
+            )
+        if self.interval_ms is not None and not (
+            BATCH_REPEAT_INTERVAL_MS_MIN <= self.interval_ms <= BATCH_REPEAT_INTERVAL_MS_MAX
+        ):
+            raise ValueError(
+                f"batch_repeat_key.interval_ms must be between "
+                f"{BATCH_REPEAT_INTERVAL_MS_MIN} and {BATCH_REPEAT_INTERVAL_MS_MAX} "
+                f"(FR-007), got {self.interval_ms!r}"
+            )
+        return self
 
 
 class TestStep(BaseModel):
@@ -26,6 +64,10 @@ class TestStep(BaseModel):
     status: Literal["pending", "running", "passed", "failed", "cancelled"] = "pending"
     # 002: omitted → load accepts; runtime weak-assertion cap (FR-025/026)
     verification_mode: Literal["business", "effect_only"] | None = None
+    # Feature 005: optional declarative batch repeat key press. When set,
+    # the runtime bypasses the Planner for this step and constructs the
+    # action deterministically from this declaration (FR-001/FR-014).
+    batch_repeat_key: BatchRepeatKeyDeclaration | None = None
 
 
 class TestCase(BaseModel):

@@ -1,0 +1,79 @@
+id: pos-recover-idle-001
+name: 将POS从半截支付/对话框恢复到空车待机
+mode: explicit
+target_id: win10-test-01
+timeout_seconds: 180
+
+# Best-effort cleanup before mixed/cash cases. No strict empty-cart precondition.
+precondition:
+  facts: []
+
+action_tags:
+  - tag: dismiss_dialog
+    matcher:
+      action_type: click
+      target_text_contains: "戻"
+  - tag: abort_tx
+    matcher:
+      action_type: click
+      target_text_contains: "中止"
+
+steps:
+  - id: dismiss-operation-dialog
+    name: 关闭遮挡提示框
+    intent: >-
+      画面中央若有半透明白底红框提示（文案可能是「現在の操作を行うには…」或
+      「現在この操作は行えません。もう一度、操作をやり直して下さい。」等），
+      则只 click 提示框内底部的粉色横条按钮「戻る」一次。
+      【戻る 精确定位】
+      - 在提示文字正下方、提示框内部底边上方；
+      - 粉色/洋红色长条，中央写「戻る」；
+      - 大约在画面水平中线附近（不要点到右侧菜单的「取引中止」「担当」）。
+      禁止 Escape。不要点「中止」（除非确认框明确写取引中止确认）。
+      若完全没有提示框与「戻る」，则 wait。
+    max_retries: 4
+    verification_mode: business
+    expected:
+      operator: all
+      conditions:
+        - type: visual_question
+          value: >-
+            画面中央是否已经完全没有半透明红框/白底提示对话框，
+            并且看不到粉色「戻る」按钮？
+            仅当所有这类遮挡提示都消失时回答 passed。
+            若仍能看到任何「戻る」或「現在この操作」「現在の操作を行う」提示，不要回答 passed。
+
+  - id: abort-open-transaction
+    name: 点击取引中止
+    intent: >-
+      看左侧合計：若绿色数量不是 0 個，或明细非空，则 click 右侧菜单列「取引中止」
+      （红色文字，通常在 JAN 上方）。
+      本步只点取引中止一次；确认框留给下一步。
+      若合計已是 0 個，则 wait。禁止 Escape。
+    max_retries: 2
+    verification_mode: business
+    expected:
+      operator: all
+      conditions:
+        - type: visual_question
+          value: >-
+            左侧合計是否已为 0 個，或者已经出现「この取引を中止します。よろしいですか？」确认框？
+            两种之一成立即可 passed。
+
+  - id: confirm-abort-if-needed
+    name: 确认中止对话框
+    intent: >-
+      若画面有确认框「この取引を中止します。よろしいですか？」则 click 框内的「中止」
+      （确认中止，不要点「戻る」）。
+      若无该确认框且合計已 0 個，则 wait。禁止 Escape。
+    max_retries: 3
+    verification_mode: business
+    expected:
+      operator: all
+      conditions:
+        - type: visual_question
+          value: >-
+            画面左侧「合計」绿色数量是否明确为 0 個，
+            且没有「現在の操作を行うには」遮挡提示、也没有中止确认框、也没有现金入金对话框？
+            仅当空车待机（0 個）且无遮挡时回答 passed。
+            若仍有商品、仍有提示框或确认框，不要回答 passed。

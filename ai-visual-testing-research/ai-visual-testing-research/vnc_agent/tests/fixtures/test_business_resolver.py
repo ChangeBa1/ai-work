@@ -217,6 +217,29 @@ async def test_expected_error_assertion_still_evaluated():
 
 
 @pytest.mark.asyncio
+async def test_no_effect_blocks_business_pass_on_unchanged_screen():
+    """no_effect must not let pre-existing text_appears auto-pass business steps."""
+    spec = VerificationSpec(
+        operator="all",
+        conditions=[
+            VerificationCondition(type="text_appears", value="1"),
+            VerificationCondition(type="text_appears", value="5"),
+            VerificationCondition(type="text_appears", value="袋"),
+        ],
+    )
+    result = await resolve_step_result(
+        spec,
+        "business",
+        _ae("no_effect"),
+        _screen(texts=["1", "5", "レジ袋"], changed=False),
+        escalate=False,
+    )
+    assert result.status == "failed"
+    assert "no_effect" in result.failed_conditions
+    assert result.basis == "mixed"
+
+
+@pytest.mark.asyncio
 async def test_effect_only_pass():
     """T050: effect_only + expected_effect → passed, basis=action_effect_only."""
     spec = VerificationSpec(

@@ -95,10 +95,11 @@ async def test_pos_bag_business_acceptance_and_low_ratio_expected_effect(
     tmp_path: Path, app_config
 ) -> None:
     before, bag, subtotal, cash, fixed = _write_frames(tmp_path)
+    bag_texts = ["レジ袋", "5", "点数", "1", "内税10%", "1個"]
     screens = [
         _screen(before, ["0"], False),
-        _screen(bag, ["1", "5", "袋"], True),
-        _screen(bag, ["1", "5", "袋"], False),
+        _screen(bag, bag_texts, True),
+        _screen(bag, bag_texts, False),
         _screen(subtotal, ["不足額"], True),
         _screen(subtotal, ["不足額"], False),
         _screen(cash, ["預り金", "10,000", "お釣り", "9,995", "確定"], True),

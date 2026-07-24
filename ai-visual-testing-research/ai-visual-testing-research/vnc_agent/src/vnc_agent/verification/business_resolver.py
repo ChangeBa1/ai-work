@@ -253,6 +253,31 @@ async def resolve_step_result(
                     update={"status": conflict2}
                 )
 
+        # Feature 004 FR-021 / regression guard: when the action produced no
+        # pixel change, text/visual matches against the *unchanged* screen are
+        # not trusted as evidence that the action achieved the business result
+        # (empty POS chrome commonly contains digits like "1"/"5" and button
+        # labels like "袋"). Reject so Tier-1 retry / action_no_effect recovery
+        # can run. unexpected_effect still follows FR-021 (feature 002) and is
+        # not blanket-rejected here.
+        if ae_status == "no_effect" and engine_result.status == "passed":
+            failed = list(engine_result.failed_conditions)
+            if "no_effect" not in failed:
+                failed.append("no_effect")
+            return VerificationResult(
+                status="failed",
+                evidence_refs=engine_result.evidence_refs,
+                matched_conditions=engine_result.matched_conditions,
+                failed_conditions=failed,
+                uncertain_conditions=[],
+                reason=(
+                    "action produced no screen change (no_effect); "
+                    "business assertions matching the unchanged screen are not trusted"
+                ),
+                weak_assertion_warning=False,
+                basis="mixed",
+            )
+
         status = engine_result.status
         # If only weak parts "passed" but business failed → failed already from engine
         basis: Basis = (

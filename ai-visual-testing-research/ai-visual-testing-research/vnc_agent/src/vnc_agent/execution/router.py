@@ -9,10 +9,27 @@ from typing import TYPE_CHECKING
 from vnc_agent.domain.action import ExecutableAction, ExecutionResult
 from vnc_agent.execution.keyboard_executor import KeyboardExecutor
 from vnc_agent.execution.mouse_executor import MouseExecutor
-from vnc_agent.runtime.exceptions import ActionTimeoutError
+from vnc_agent.runtime.exceptions import ActionTimeoutError, KeyRepeatSendError
 
 if TYPE_CHECKING:
     from vnc_agent.drivers.base import VNCDriver
+
+# Feature 005 remediation (analysis finding F1): a spec-legal worst-case
+# batch (repeat_count=50, repeat_interval_ms=500 -> 24.5s) can exceed the
+# configured default per-action timeout (10s), which would otherwise drop
+# requested_count/completed_count via the generic timeout path below.
+BATCH_REPEAT_TIMEOUT_MARGIN_SECONDS = 5.0
+
+
+def compute_batch_repeat_timeout_seconds(
+    repeat_count: int, repeat_interval_ms: int, default_timeout_seconds: float
+) -> float:
+    """Timeout large enough for a whole press_key_repeat batch; never below
+    `default_timeout_seconds`."""
+    batch_duration_seconds = (repeat_count - 1) * (repeat_interval_ms / 1000.0)
+    return max(
+        default_timeout_seconds, batch_duration_seconds + BATCH_REPEAT_TIMEOUT_MARGIN_SECONDS
+    )
 
 
 def _utcnow() -> datetime:
@@ -41,10 +58,15 @@ class ExecutionRouter:
         started = _utcnow()
         click_point = None
         try:
-            await asyncio.wait_for(self._dispatch(action), timeout=timeout)
+            dispatch_result = await asyncio.wait_for(self._dispatch(action), timeout=timeout)
             ended = _utcnow()
             if action.coordinates:
                 click_point = action.coordinates
+            requested_count = None
+            completed_count = None
+            if action.operation == "press_key_repeat":
+                requested_count = action.repeat_count
+                completed_count = dispatch_result
             return ExecutionResult(
                 success=True,
                 started_at=started,
@@ -52,6 +74,8 @@ class ExecutionRouter:
                 timed_out=False,
                 target_region=action.target_region,
                 actual_click_point=click_point,
+                requested_count=requested_count,
+                completed_count=completed_count,
             )
         except asyncio.TimeoutError:
             await self._safe_release()
@@ -64,6 +88,20 @@ class ExecutionRouter:
                 actual_click_point=action.coordinates,
                 error_code="timeout",
                 error_message=f"action timed out after {timeout}s",
+            )
+        except KeyRepeatSendError as e:
+            await self._safe_release()
+            return ExecutionResult(
+                success=False,
+                started_at=started,
+                ended_at=_utcnow(),
+                timed_out=False,
+                target_region=action.target_region,
+                actual_click_point=action.coordinates,
+                error_code="key_repeat_partial",
+                error_message=str(e),
+                requested_count=e.requested_count,
+                completed_count=e.completed_count,
             )
         except Exception as e:
             await self._safe_release()
@@ -78,20 +116,24 @@ class ExecutionRouter:
                 error_message=str(e),
             )
 
-    async def _dispatch(self, action: ExecutableAction) -> None:
+    async def _dispatch(self, action: ExecutableAction) -> int | None:
         if action.operation == "wait" or action.operation == "finish":
-            return
+            return None
         if action.method == "keyboard":
             if action.operation == "type_text":
                 await self.keyboard.type_text(action.text or "")
             elif action.operation == "hotkey":
                 await self.keyboard.hotkey(action.keys)
+            elif action.operation == "press_key_repeat":
+                return await self.keyboard.press_key_repeat(
+                    action.keys[0], action.repeat_count, action.repeat_interval_ms
+                )
             else:
                 if len(action.keys) > 1:
                     await self.keyboard.hotkey(action.keys)
                 elif action.keys:
                     await self.keyboard.press_key(action.keys[0])
-            return
+            return None
 
         # mouse
         if action.coordinates is None:

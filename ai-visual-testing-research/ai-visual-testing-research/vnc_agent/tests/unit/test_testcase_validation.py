@@ -47,3 +47,70 @@ def test_valid_testcase():
     )
     assert tc.mode == "explicit"
     assert len(tc.steps) == 1
+
+
+# --- Feature 005 (T014): batch_repeat_key declaration --------------------
+
+
+def test_batch_repeat_key_valid_declaration():
+    step = TestStep(
+        id="s",
+        name="s",
+        intent="clear field",
+        expected=_spec(),
+        batch_repeat_key={"key": "backspace", "count": 20},
+    )
+    assert step.batch_repeat_key is not None
+    assert step.batch_repeat_key.count == 20
+    assert step.batch_repeat_key.interval_ms is None
+
+
+def test_batch_repeat_key_modifier_rejected():
+    with pytest.raises(ValidationError):
+        TestStep(
+            id="s",
+            name="s",
+            intent="x",
+            expected=_spec(),
+            batch_repeat_key={"key": "shift", "count": 5},
+        )
+
+
+def test_batch_repeat_key_unknown_key_rejected():
+    with pytest.raises(ValidationError):
+        TestStep(
+            id="s",
+            name="s",
+            intent="x",
+            expected=_spec(),
+            batch_repeat_key={"key": "nope", "count": 5},
+        )
+
+
+@pytest.mark.parametrize("count", [0, 51])
+def test_batch_repeat_key_out_of_range_count_rejected(count):
+    with pytest.raises(ValidationError):
+        TestStep(
+            id="s",
+            name="s",
+            intent="x",
+            expected=_spec(),
+            batch_repeat_key={"key": "backspace", "count": count},
+        )
+
+
+@pytest.mark.parametrize("interval_ms", [-1, 501])
+def test_batch_repeat_key_out_of_range_interval_rejected(interval_ms):
+    with pytest.raises(ValidationError):
+        TestStep(
+            id="s",
+            name="s",
+            intent="x",
+            expected=_spec(),
+            batch_repeat_key={"key": "backspace", "count": 5, "interval_ms": interval_ms},
+        )
+
+
+def test_batch_repeat_key_omitted_defaults_to_none():
+    step = TestStep(id="s", name="s", intent="i", expected=_spec())
+    assert step.batch_repeat_key is None

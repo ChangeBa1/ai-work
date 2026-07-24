@@ -1,0 +1,178 @@
+id: pos-buy-bag-mixed-kinken-cash-001
+name: 购买一个购物袋并以金券+现金混合支付完成结账
+mode: explicit
+target_id: win10-test-01
+timeout_seconds: 360
+
+# Cart must start empty (same pattern as pos-buy-bag-checkout).
+precondition:
+  facts:
+    - key: cart_item_count
+      spec:
+        operator: all
+        conditions:
+          - type: visual_question
+            value: >-
+              画面左侧“合計”区域中，绿色商品数量是否明确为 0 個？
+              仅当画面明确显示 0 個时回答 passed；数量非 0 或无法确认时不要回答 passed。
+
+action_tags:
+  - tag: add_to_bag
+    matcher:
+      action_type: click
+      target_text_contains: "袋"
+  - tag: subtotal
+    matcher:
+      action_type: click
+      target_text_contains: "小計"
+  # Live evidence: type_text rarely fires; successful amount entry was keypad "4".
+  - tag: amount_type
+    matcher:
+      action_type: click
+      target_text_contains: "4"
+  - tag: voucher_pay
+    matcher:
+      action_type: click
+      target_text_contains: "金券"
+  - tag: cash_start
+    matcher:
+      action_type: click
+      target_text_contains: "預/現計"
+  - tag: cash_finalize
+    matcher:
+      action_type: click
+      target_text_contains: "確定"
+
+steps:
+  - id: add-shopping-bag
+    name: 加入购物袋商品
+    intent: 点击"レジ袋"（购物袋）按钮，将一个购物袋商品加入购物车
+    max_retries: 2
+    verification_mode: business
+    expected:
+      operator: all
+      conditions:
+        # Avoid bare "1"/"5"/"袋" (keypad / button false positives).
+        # Avoid "単価" (RapidOCR often emits 单/单！ without 価).
+        - type: text_appears
+          value: "点数"
+        - type: text_appears
+          value: "内税"
+        - type: visual_question
+          value: >-
+            画面左側の商品明細または合計領域に、レジ袋商品が 1 点登録され、
+            合計の緑色数量が 1 個、合計金額が 5 であることは明確に確認できますか？
+            商品がカートに入り数量・金額が 1/5 と明確な場合のみ passed と答えてください。
+            合計が 0 個のまま、明細が空、または確認できない場合は passed と答えないでください。
+
+  - id: calc-subtotal
+    name: 计算合计金额
+    intent: 点击"小計"（小计）按钮，进入支付画面并计算本次购买的合计金额
+    max_retries: 2
+    verification_mode: business
+    expected:
+      operator: all
+      conditions:
+        - type: text_appears
+          value: "不足"
+        - type: visual_question
+          value: >-
+            POS 主画面是否已进入支付状态：左侧显示不足額（或お預かり金額），
+            合计金额为 5，并且右侧可见「金券」「預/現計」等支付相关按钮？
+            仅当已进入支付画面且合计为 5 时回答 passed。
+
+  # Amount entry: on-screen keypad "4" (proven on live). NEVER Escape — it opens
+  # a blocking dialog ("現在の操作を行うには…") that hides 金券 → TARGET_NOT_FOUND.
+  - id: enter-kinken-amount
+    name: 点小键盘输入金券金额4
+    intent: >-
+      本步骤唯一动作：click 画面右侧数字小键盘上的「4」键一次，使右上角青色金额框显示 4。
+      【「4」键精确定位】
+      - 小键盘在粉色「クリア」右侧；「4」在数字区中间行最左侧；
+      - 正上方是「7」，正右方是「5」，正下方是「1」，右下方是「2」。
+      - 不要点「クリア」「5」「7」「1」「2」「8」「9」「0」「00」。
+      【严禁】
+      - 禁止 press_key / hotkey / Escape / Enter（Escape 会弹出挡住支付按钮的确认对话框）；
+      - 禁止 click「戻る」「キャンセル」「金券」「ビール券」「預/現計」「小計解除」「取引中止」；
+      - 不要先点「クリア」（金额框当前为空时清空无意义，且易误点到邻键）；
+      - 不要 type_text（本机支付画面焦点不可靠）。
+      成功判据：右上角青色金额显示框（電子マネー/金券按钮下方、小键盘上方的大数字框）显示单独的 4。
+    max_retries: 3
+    verification_mode: business
+    expected:
+      operator: all
+      conditions:
+        - type: visual_question
+          value: >-
+            请只看支付区中间的青色/灰青色大号金额显示框
+            （位于「電子マネー」「金券」等支付按钮下方、数字小键盘上方，框内通常只有一个大数字）：
+            框内是否明确显示单独的数字「4」（不是 5、不是空白、不是 45、不是小键盘上的 4 键本身）？
+            仅当该金额显示框内为 4 时回答 passed。
+            若框内空白、为 0、5、2、其它数字、看不清，或你只是看到小键盘按键上印着 4，
+            则不要回答 passed。不要根据合計/不足額 5 判断。
+
+  - id: apply-kinken
+    name: 点击金券登记部分支付
+    intent: >-
+      右上角/支付区金额框已显示 4。现在只 click 一次支付方式按钮「金券」，将金券 4 登记到上方支付明细表。
+      【若画面中央出现半透明提示「現在の操作を行うには、一度、操作を確定またはキャンセルしてください」】
+      则本步骤改为只 click 粉色「戻る」一次以关闭提示，不要点金券（下一步重试再点金券）。
+      【金券按钮精确定位 — 无提示框时必须全部满足】
+      1) 颜色：浅蓝色/青蓝色扁平按钮（不是黄色）。
+      2) 文字：按钮上明确写着「金券」两字（OCR 可能为金券）。
+      3) 位置：画面右侧支付区，黄色「電子マネー」正下方、浅蓝色「ビール券」正左方。
+      4) 禁止：黄色「電子マネー」「ポイント」、右侧「ビール券」「次ページ」、
+         粉色「クリア」「戻る」、数字键、万券、JAN、預/現計、メニュー、取引中止、Escape。
+      不要再输入数字；无提示框时只 click「金券」一次。
+    max_retries: 2
+    verification_mode: business
+    expected:
+      operator: all
+      conditions:
+        - type: text_appears
+          value: "金券"
+        - type: visual_question
+          value: >-
+            支付明细区域（画面上方表格，含 名称/金額 等列）是否已经登记了一笔「金券」支付，
+            且金券金额为 4，同时不足額已减少为 1（合计 5 中金券支付 4 后剩余 1）？
+            仅当金券支付行明确可见、金额与剩余不足額均正确时回答 passed；
+            若仍无金券行、金额不对或无法确认，则不要回答 passed。
+
+  - id: start-cash-for-remainder
+    name: 对其余不足额启动现金支付并等待自动入金
+    intent: >-
+      点击 POS 主画面的"預/現計"按钮，对剩余不足額 1 启动现金支付。
+      找零机模拟器会自动投入现金，不要点击或操作模拟器画面；
+      等待 POS 的现金入金对话框显示自动入金结果。
+    max_retries: 2
+    verification_mode: business
+    expected:
+      operator: all
+      conditions:
+        # Case keeps comma form; OCR may emit 10.000 / 9.999 — engine amount-key match.
+        - type: text_appears
+          value: "10,000"
+        - type: text_appears
+          value: "9,999"
+        - type: visual_question
+          value: >-
+            POS 主画面的现金入金对话框是否已经显示自动入金结果：預り金为 10,000，
+            お釣り为 9,999（剩余应付 1），并且对话框中的“確定”按钮可点击？
+            仅当以上三项都明确成立时回答 passed；不要检查或操作找零机模拟器窗口。
+
+  - id: finalize-mixed-payment
+    name: 在 POS 对话框确认并完成混合支付交易
+    intent: >-
+      点击 POS 主画面现金入金对话框中的"確定"按钮，完成金券+现金混合结账；
+      不要点击或操作找零机模拟器画面，也不要点「閉じる」。
+    max_retries: 2
+    verification_mode: business
+    expected:
+      operator: all
+      conditions:
+        - type: visual_question
+          value: >-
+            POS 主画面的商品明细或交易区域是否已经出现醒目的大号红色“済”完成标记，
+            表示本次金券与现金混合支付交易已经固定并完成？
+            仅当“済”标记明确可见时回答 passed；
+            如果仍显示现金入金对话框、尚未完成或无法确认，则不要回答 passed。
