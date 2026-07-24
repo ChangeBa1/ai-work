@@ -192,7 +192,7 @@ class VNCToolDriver:
             elif ch == "\t":
                 client.keyPress("tab")
             else:
-                client.type(ch)
+                client.keyPress(ch)
 
     def _sync_move(self, x: int, y: int) -> None:
         self._ensure().mouseMove(x, y)
