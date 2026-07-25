@@ -21,6 +21,7 @@ from vnc_agent.runtime.telemetry import (
     PerformanceSummary,
     StageMeasurement,
 )
+from vnc_agent.ui_index.audit import IndexUsageAuditRecord
 
 
 class ActionIteration(BaseModel):
@@ -38,6 +39,10 @@ class ActionIteration(BaseModel):
     action_effect: ActionEffect | None = None
     repeat_guard_decision: RepeatGuardDecision | None = None
     canonical_identity: CanonicalActionIdentity | None = None
+    # Feature 007 (FR-013): index-usage audit for this iteration; None when
+    # no bundle is configured is never the case — build_hints() always
+    # returns a record (outcome="not_configured" in that case).
+    ui_index_audit: IndexUsageAuditRecord | None = None
 
 
 class DeclaredFact(BaseModel):

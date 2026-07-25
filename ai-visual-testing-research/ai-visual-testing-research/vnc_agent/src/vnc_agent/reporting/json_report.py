@@ -136,6 +136,13 @@ def build_report_dict(
                     "recovery_attempts": [
                         r.model_dump(mode="json") for r in it.recovery_attempts
                     ],
+                    # Feature 007 (FR-013 / SC-006): explicit null when absent —
+                    # same optional-field convention as action_effect / etc.
+                    "ui_index_audit": (
+                        it.ui_index_audit.model_dump(mode="json")
+                        if it.ui_index_audit
+                        else None
+                    ),
                 }
             )
             if it.execution_result is not None and it.execution_result.success is True:

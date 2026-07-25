@@ -35,6 +35,8 @@ SCAN_TARGETS = [
     "runtime",
     "perception",
     "storage",
+    "ui_index",
+    "models/provider.py",
 ]
 
 FORBIDDEN_TOKENS = [

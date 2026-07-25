@@ -13,8 +13,11 @@ from vnc_agent.domain.run import HumanConfirmedFact
 from vnc_agent.domain.testcase import FieldValidationError, TestCase, load_test_case
 from vnc_agent.logging_setup import configure_logging, get_logger
 from vnc_agent.runtime.exceptions import VNCConnectionError
+from vnc_agent.ui_index.cli import ui_index_app
+from vnc_agent.ui_index.repository import UiIndexValidationError
 
 app = typer.Typer(name="vnc-agent", help="VNC black-box GUI automation agent", no_args_is_help=True)
+app.add_typer(ui_index_app, name="ui-index")
 log = get_logger("cli")
 
 # Exit codes (cli-contract.md)
@@ -225,6 +228,18 @@ async def _execute(
         )
     except VNCConnectionError:
         return EXIT_VNC
+    except UiIndexValidationError as e:
+        # FR-012: an explicitly configured but invalid ui_index bundle fails
+        # the run before any test step executes (Planner/Grounder/Executor
+        # are never invoked).
+        typer.echo(f"UI index validation failed: {e.report.bundle_dir}", err=True)
+        for issue in e.report.issues:
+            typer.echo(
+                f"  [{issue.error_code.value}] file={issue.file} line={issue.line}: "
+                f"{issue.message}",
+                err=True,
+            )
+        return EXIT_VALIDATION
     finally:
         try:
             await driver.disconnect()

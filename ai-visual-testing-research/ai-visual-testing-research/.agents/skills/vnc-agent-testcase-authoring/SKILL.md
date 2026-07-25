@@ -287,3 +287,28 @@ steps:
 ```
 
 按第 9 节清单自检后再交给 live run。
+
+---
+
+## UI 索引查询（如已配置）
+
+当运行配置或本地环境提供了 `ui_index.bundle_dir`（外部 `ui-analysis-bundle-v1` 目录）时，
+编写 testcase **可按需**查询结构化控件知识，帮助写准 `intent` / 可见文字 / role。
+
+规则：
+
+1. **MUST NOT** 把整份 bundle 内容贴进对话上下文——只查询当前正在编写的画面/元素相关片段。
+2. 索引只提供可见语义提示，**不能**当作最终点击坐标或操作后断言的替代。
+3. 查询前可用 validate 确认 bundle 可用。
+
+示例：
+
+```bash
+cd vnc_agent
+uv run vnc-agent ui-index validate <bundle_dir>
+uv run vnc-agent ui-index query --bundle-dir <bundle_dir> --screen screen.form_edit --json
+uv run vnc-agent ui-index query --bundle-dir <bundle_dir> --text "Submit" --json
+uv run vnc-agent ui-index query --bundle-dir <bundle_dir> --role button --json
+```
+
+未配置索引时，忽略本节，继续按既有 OCR/截图编写流程即可。

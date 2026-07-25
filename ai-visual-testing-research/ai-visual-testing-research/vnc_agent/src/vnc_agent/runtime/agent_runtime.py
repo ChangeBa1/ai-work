@@ -154,6 +154,20 @@ class AgentRuntime:
         self.experience = experience or ExperienceCollector(repo)
         self.report_formats = report_formats
         self.planner = planner
+        self._ui_index_bundle = None
+
+    def _load_ui_index_preflight(self) -> None:
+        """FR-012: fail before first step when an explicit invalid bundle is configured."""
+        ui_cfg = self.config.agent.ui_index
+        if not ui_cfg.bundle_dir:
+            self._ui_index_bundle = None
+            return
+        from vnc_agent.ui_index.repository import UiIndexBundle, UiIndexValidationError
+
+        try:
+            self._ui_index_bundle = UiIndexBundle.load(ui_cfg.bundle_dir, ui_cfg)
+        except UiIndexValidationError:
+            raise
 
     async def run(
         self,
@@ -161,6 +175,9 @@ class AgentRuntime:
         *,
         human_confirmed_facts: list[HumanConfirmedFact] | None = None,
     ) -> RunContext:
+        # Preflight UI index before any step (and before VNC connect for fail-fast).
+        self._load_ui_index_preflight()
+
         ctx = RunContext(
             test_case,
             run_id=self.capture_service.run_id,
@@ -487,6 +504,9 @@ class AgentRuntime:
                         iteration_index=iteration.iteration_index,
                         remaining_budget=controller.remaining_budget(),
                         previous_verification=prev_vr,
+                        ui_index_bundle=self._ui_index_bundle,
+                        ui_index_config=self.config.agent.ui_index,
+                        ui_index_audit_sink=iteration,
                     )
             except PlanValidationError as e:
                 iteration.verification_result = VerificationResult(
@@ -668,6 +688,13 @@ class AgentRuntime:
                 frame_id=screen.frame_id, iteration_index=iteration.iteration_index,
                 clock=self.clock,
             ):
+                from vnc_agent.ui_index.runtime_adapter import build_hints
+
+                _hints, ui_index_candidates, _audit = build_hints(
+                    self._ui_index_bundle,
+                    screen,
+                    self.config.agent.ui_index,
+                )
                 grounding = await self.grounder.ground(
                     GroundingRequest(
                         image_ref=screen.path_for_model(),
@@ -676,6 +703,7 @@ class AgentRuntime:
                         target=target,
                         ocr_candidates=[i.model_dump() for i in screen.ocr_items],
                         template_candidates=[m.model_dump() for m in screen.template_matches],
+                        ui_index_candidates=ui_index_candidates,
                     )
                 )
             iteration.grounding_result = grounding

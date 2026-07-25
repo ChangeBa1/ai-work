@@ -112,6 +112,17 @@ class ReportingConfig(BaseModel):
         return value
 
 
+class UiIndexConfig(BaseModel):
+    """Optional external UI-analysis bundle consumption (feature 007)."""
+
+    bundle_dir: str | None = None
+    screen_match_min_score: float = 0.6
+    screen_inconsistency_max_missing_ratio: float = 0.7
+    max_content_file_bytes: int = 50_000_000
+    max_content_file_records: int = 200_000
+    max_bundle_total_bytes: int = 200_000_000
+
+
 class AgentConfig(BaseModel):
     step: StepConfig = Field(default_factory=StepConfig)
     wait: WaitConfig = Field(default_factory=WaitConfig)
@@ -135,6 +146,7 @@ class AgentConfig(BaseModel):
     )
     reporting: ReportingConfig = Field(default_factory=ReportingConfig)
     recovery: dict[str, RecoveryPolicy] = Field(default_factory=dict)
+    ui_index: UiIndexConfig = Field(default_factory=UiIndexConfig)
 
 
 class PlannerModelConfig(BaseModel):

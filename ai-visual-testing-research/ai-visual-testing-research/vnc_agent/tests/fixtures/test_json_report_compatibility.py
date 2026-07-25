@@ -40,7 +40,7 @@ _LEGACY_ITERATION_KEYS = {
     "grounding_candidates", "selected_candidate", "executable_action",
     "execution_result", "wait_result", "verification_result", "action_effect",
     "repeat_guard_decision", "canonical_action_identity", "coordinate_space_audit",
-    "recovery_attempts",
+    "recovery_attempts", "ui_index_audit",
 }
 _LEGACY_STEP_KEYS = {
     "step_id", "status", "iterations", "model_names", "raw_model_response_refs",

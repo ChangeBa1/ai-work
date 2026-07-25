@@ -80,6 +80,58 @@ def _resolve_coordinate_spaces(
     )
 
 
+def _ui_index_candidates_to_grounding(
+    ui_index_candidates: list[dict[str, Any]],
+) -> list[GroundingCandidate]:
+    """Feature 007 (FR-009): convert `GroundingRequest.ui_index_candidates`
+    (derived from `Element.normalized_bounds`) into `GroundingCandidate`
+    objects tagged with a `"ui_index:"` reason prefix so the final
+    `GroundingResult.candidates` always makes its ocr/template/ui_index
+    provenance traceable (contracts/ui-index-consumer-interfaces.md §9).
+    These candidates are never used as final coordinates directly — they
+    are merged in *before* `_resolve_coordinate_spaces()` and go through
+    the exact same `resolve_pixel_bbox()` conversion/rejection path as
+    every model-produced candidate."""
+    converted: list[GroundingCandidate] = []
+    for item in ui_index_candidates or []:
+        bbox = item.get("bbox")
+        if not bbox or len(bbox) != 4:
+            continue
+        try:
+            bbox_t = (int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3]))
+        except (TypeError, ValueError):
+            continue
+        label = item.get("label")
+        reason = item.get("reason") or label or ""
+        try:
+            confidence = float(item.get("confidence", 0.5))
+        except (TypeError, ValueError):
+            confidence = 0.5
+        confidence = min(max(confidence, 0.0), 1.0)
+        converted.append(
+            GroundingCandidate(
+                bbox=bbox_t,
+                coordinate_space=item.get("coordinate_space", "normalized_1000"),
+                raw_bbox=bbox_t,
+                confidence=confidence,
+                label=label,
+                reason=f"ui_index:{reason}" if reason else "ui_index",
+            )
+        )
+    return converted
+
+
+def _merge_ui_index_candidates(
+    result: GroundingResult,
+    request: GroundingRequest,
+) -> GroundingResult:
+    extra = _ui_index_candidates_to_grounding(request.ui_index_candidates)
+    if not extra:
+        return result
+    merged = sorted([*result.candidates, *extra], key=lambda c: c.confidence, reverse=True)[:3]
+    return result.model_copy(update={"candidates": merged, "found": bool(merged)})
+
+
 def _target_text(target: dict[str, Any]) -> str:
     role = target.get("role")
     text = target.get("text")
@@ -94,6 +146,7 @@ def _target_text(target: dict[str, Any]) -> str:
 def _candidates_summary(
     ocr_candidates: list[dict[str, Any]],
     template_candidates: list[dict[str, Any]],
+    ui_index_candidates: list[dict[str, Any]] | None = None,
 ) -> str:
     ocr_bits = []
     for item in (ocr_candidates or [])[:5]:
@@ -105,9 +158,15 @@ def _candidates_summary(
         tid = item.get("template_id") or ""
         if tid:
             tmpl_bits.append(str(tid))
+    ui_bits = []
+    for item in (ui_index_candidates or [])[:5]:
+        label = item.get("label") or item.get("reason") or ""
+        if label:
+            ui_bits.append(str(label))
     return (
         f"已知 OCR 候选（供参考）：{ocr_bits or '[]'}；"
-        f"模板候选：{tmpl_bits or '[]'}"
+        f"模板候选：{tmpl_bits or '[]'}；"
+        f"UI 索引候选：{ui_bits or '[]'}"
     )
 
 
@@ -142,7 +201,11 @@ class MimoGrounderClient:
         # cannot read our filesystem).
         user_text = (
             f"{_target_text(request.target)}。"
-            f"{_candidates_summary(request.ocr_candidates, request.template_candidates)}"
+            f"{_candidates_summary(
+                request.ocr_candidates,
+                request.template_candidates,
+                request.ui_index_candidates,
+            )}"
         )
         return {
             "model": self.cfg.model,
@@ -219,7 +282,8 @@ class MimoGrounderClient:
             )
 
         cropped = self._apply_crop_and_cap(result, request)
-        return _resolve_coordinate_spaces(cropped, request)
+        merged = _merge_ui_index_candidates(cropped, request)
+        return _resolve_coordinate_spaces(merged, request)
 
 
 class StubGrounder:
@@ -248,5 +312,7 @@ class StubGrounder:
                 candidates=restored,
                 model_name=self.result.model_name,
             )
-            return _resolve_coordinate_spaces(cropped, request)
-        return _resolve_coordinate_spaces(self.result, request)
+            merged = _merge_ui_index_candidates(cropped, request)
+            return _resolve_coordinate_spaces(merged, request)
+        merged = _merge_ui_index_candidates(self.result, request)
+        return _resolve_coordinate_spaces(merged, request)

@@ -11,6 +11,7 @@ from vnc_agent.domain.grounding import GroundingResult
 from vnc_agent.domain.observation import StructuredScreen
 from vnc_agent.domain.verification import VerificationResult, VerificationSpec
 from vnc_agent.runtime.exceptions import ProviderContractError
+from vnc_agent.ui_index.sanitizer import VisibleElementHint
 
 # Models sometimes emit near-synonyms; coerce before Literal validation.
 _VISION_ANSWER_ALIASES: dict[str, Literal["passed", "failed", "uncertain"]] = {
@@ -42,6 +43,11 @@ class PlannerRequest(BaseModel):
     previous_verification_result: VerificationResult | dict[str, Any] | None = None
     recent_step_summaries: list[str] = Field(default_factory=list)
     risk_policy: dict[str, Any] = Field(default_factory=lambda: {"max_risk_level": "low"})
+    # Feature 007: optional external UI-analysis-index hints (FR-007). Always
+    # an empty list when no bundle is configured or the current screen did
+    # not match any indexed screen — existing Planner logic never needs a
+    # branch for "no hints".
+    ui_index_hints: list[VisibleElementHint] = Field(default_factory=list)
 
 
 class PlannerResponse(BaseModel):
@@ -102,6 +108,10 @@ class GroundingRequest(BaseModel):
     resolution: tuple[int, int] | None = None
     ocr_candidates: list[dict[str, Any]] = Field(default_factory=list)
     template_candidates: list[dict[str, Any]] = Field(default_factory=list)
+    # Feature 007 (FR-007/009): candidates derived from Element.normalized_bounds,
+    # participating in the existing OCR/template candidate-fusion path — never a
+    # separate "index candidates bypass Grounder" channel.
+    ui_index_candidates: list[dict[str, Any]] = Field(default_factory=list)
 
 
 @runtime_checkable
