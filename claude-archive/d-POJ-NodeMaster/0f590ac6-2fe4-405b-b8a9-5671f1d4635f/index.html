@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code transcript - Index</title>
+    <style>
+:root { --bg-color: #f5f5f5; --card-bg: #ffffff; --user-bg: #e3f2fd; --user-border: #1976d2; --assistant-bg: #f5f5f5; --assistant-border: #9e9e9e; --thinking-bg: #fff8e1; --thinking-border: #ffc107; --thinking-text: #666; --tool-bg: #f3e5f5; --tool-border: #9c27b0; --tool-result-bg: #e8f5e9; --tool-error-bg: #ffebee; --text-color: #212121; --text-muted: #757575; --code-bg: #263238; --code-text: #aed581; }
+* { box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 16px; line-height: 1.6; }
+.container { max-width: 800px; margin: 0 auto; }
+h1 { font-size: 1.5rem; margin-bottom: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--user-border); }
+.header-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 2px solid var(--user-border); padding-bottom: 8px; margin-bottom: 24px; }
+.header-row h1 { border-bottom: none; padding-bottom: 0; margin-bottom: 0; flex: 1; min-width: 200px; }
+.message { margin-bottom: 16px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.message.user { background: var(--user-bg); border-left: 4px solid var(--user-border); }
+.message.assistant { background: var(--card-bg); border-left: 4px solid var(--assistant-border); }
+.message.tool-reply { background: #fff8e1; border-left: 4px solid #ff9800; }
+.tool-reply .role-label { color: #e65100; }
+.tool-reply .tool-result { background: transparent; padding: 0; margin: 0; }
+.tool-reply .tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff8e1); }
+.message-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: rgba(0,0,0,0.03); font-size: 0.85rem; }
+.role-label { font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.user .role-label { color: var(--user-border); }
+time { color: var(--text-muted); font-size: 0.8rem; }
+.timestamp-link { color: inherit; text-decoration: none; }
+.timestamp-link:hover { text-decoration: underline; }
+.message:target { animation: highlight 2s ease-out; }
+@keyframes highlight { 0% { background-color: rgba(25, 118, 210, 0.2); } 100% { background-color: transparent; } }
+.message-content { padding: 16px; }
+.message-content p { margin: 0 0 12px 0; }
+.message-content p:last-child { margin-bottom: 0; }
+.thinking { background: var(--thinking-bg); border: 1px solid var(--thinking-border); border-radius: 8px; padding: 12px; margin: 12px 0; font-size: 0.9rem; color: var(--thinking-text); }
+.thinking-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #f57c00; margin-bottom: 8px; }
+.thinking p { margin: 8px 0; }
+.assistant-text { margin: 8px 0; }
+.tool-use { background: var(--tool-bg); border: 1px solid var(--tool-border); border-radius: 8px; padding: 12px; margin: 12px 0; }
+.tool-header { font-weight: 600; color: var(--tool-border); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.tool-icon { font-size: 1.1rem; }
+.tool-description { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 8px; font-style: italic; }
+.tool-result { background: var(--tool-result-bg); border-radius: 8px; padding: 12px; margin: 12px 0; }
+.tool-result.tool-error { background: var(--tool-error-bg); }
+.file-tool { border-radius: 8px; padding: 12px; margin: 12px 0; }
+.write-tool { background: linear-gradient(135deg, #e3f2fd 0%, #e8f5e9 100%); border: 1px solid #4caf50; }
+.edit-tool { background: linear-gradient(135deg, #fff3e0 0%, #fce4ec 100%); border: 1px solid #ff9800; }
+.file-tool-header { font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.write-header { color: #2e7d32; }
+.edit-header { color: #e65100; }
+.file-tool-icon { font-size: 1rem; }
+.file-tool-path { font-family: monospace; background: rgba(0,0,0,0.08); padding: 2px 8px; border-radius: 4px; }
+.file-tool-fullpath { font-family: monospace; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px; word-break: break-all; }
+.file-content { margin: 0; }
+.edit-section { display: flex; margin: 4px 0; border-radius: 4px; overflow: hidden; }
+.edit-label { padding: 8px 12px; font-weight: bold; font-family: monospace; display: flex; align-items: flex-start; }
+.edit-old { background: #fce4ec; }
+.edit-old .edit-label { color: #b71c1c; background: #f8bbd9; }
+.edit-old .edit-content { color: #880e4f; }
+.edit-new { background: #e8f5e9; }
+.edit-new .edit-label { color: #1b5e20; background: #a5d6a7; }
+.edit-new .edit-content { color: #1b5e20; }
+.edit-content { margin: 0; flex: 1; background: transparent; font-size: 0.85rem; }
+.edit-replace-all { font-size: 0.75rem; font-weight: normal; color: var(--text-muted); }
+.write-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #e6f4ea); }
+.edit-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff0e5); }
+.todo-list { background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); border: 1px solid #81c784; border-radius: 8px; padding: 12px; margin: 12px 0; }
+.todo-header { font-weight: 600; color: #2e7d32; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.todo-items { list-style: none; margin: 0; padding: 0; }
+.todo-item { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.06); font-size: 0.9rem; }
+.todo-item:last-child { border-bottom: none; }
+.todo-icon { flex-shrink: 0; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 50%; }
+.todo-completed .todo-icon { color: #2e7d32; background: rgba(46, 125, 50, 0.15); }
+.todo-completed .todo-content { color: #558b2f; text-decoration: line-through; }
+.todo-in-progress .todo-icon { color: #f57c00; background: rgba(245, 124, 0, 0.15); }
+.todo-in-progress .todo-content { color: #e65100; font-weight: 500; }
+.todo-pending .todo-icon { color: #757575; background: rgba(0,0,0,0.05); }
+.todo-pending .todo-content { color: #616161; }
+pre { background: var(--code-bg); color: var(--code-text); padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; line-height: 1.5; margin: 8px 0; white-space: pre-wrap; word-wrap: break-word; }
+pre.json { color: #e0e0e0; }
+code { background: rgba(0,0,0,0.08); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+pre code { background: none; padding: 0; }
+.user-content { margin: 0; }
+.truncatable { position: relative; }
+.truncatable.truncated .truncatable-content { max-height: 200px; overflow: hidden; }
+.truncatable.truncated::after { content: ''; position: absolute; bottom: 32px; left: 0; right: 0; height: 60px; background: linear-gradient(to bottom, transparent, var(--card-bg)); pointer-events: none; }
+.message.user .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--user-bg)); }
+.message.tool-reply .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff8e1); }
+.tool-use .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-bg)); }
+.tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-result-bg)); }
+.expand-btn { display: none; width: 100%; padding: 8px 16px; margin-top: 4px; background: rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; cursor: pointer; font-size: 0.85rem; color: var(--text-muted); }
+.expand-btn:hover { background: rgba(0,0,0,0.1); }
+.truncatable.truncated .expand-btn, .truncatable.expanded .expand-btn { display: block; }
+.pagination { display: flex; justify-content: center; gap: 8px; margin: 24px 0; flex-wrap: wrap; }
+.pagination a, .pagination span { padding: 5px 10px; border-radius: 6px; text-decoration: none; font-size: 0.85rem; }
+.pagination a { background: var(--card-bg); color: var(--user-border); border: 1px solid var(--user-border); }
+.pagination a:hover { background: var(--user-bg); }
+.pagination .current { background: var(--user-border); color: white; }
+.pagination .disabled { color: var(--text-muted); border: 1px solid #ddd; }
+.pagination .index-link { background: var(--user-border); color: white; }
+details.continuation { margin-bottom: 16px; }
+details.continuation summary { cursor: pointer; padding: 12px 16px; background: var(--user-bg); border-left: 4px solid var(--user-border); border-radius: 12px; font-weight: 500; color: var(--text-muted); }
+details.continuation summary:hover { background: rgba(25, 118, 210, 0.15); }
+details.continuation[open] summary { border-radius: 12px 12px 0 0; margin-bottom: 0; }
+.index-item { margin-bottom: 16px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); background: var(--user-bg); border-left: 4px solid var(--user-border); }
+.index-item a { display: block; text-decoration: none; color: inherit; }
+.index-item a:hover { background: rgba(25, 118, 210, 0.1); }
+.index-item-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: rgba(0,0,0,0.03); font-size: 0.85rem; }
+.index-item-number { font-weight: 600; color: var(--user-border); }
+.index-item-content { padding: 16px; }
+.index-item-stats { padding: 8px 16px 12px 32px; font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid rgba(0,0,0,0.06); }
+.index-item-commit { margin-top: 6px; padding: 4px 8px; background: #fff3e0; border-radius: 4px; font-size: 0.85rem; color: #e65100; }
+.index-item-commit code { background: rgba(0,0,0,0.08); padding: 1px 4px; border-radius: 3px; font-size: 0.8rem; margin-right: 6px; }
+.commit-card { margin: 8px 0; padding: 10px 14px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 6px; }
+.commit-card a { text-decoration: none; color: #5d4037; display: block; }
+.commit-card a:hover { color: #e65100; }
+.commit-card-hash { font-family: monospace; color: #e65100; font-weight: 600; margin-right: 8px; }
+.index-commit { margin-bottom: 12px; padding: 10px 16px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+.index-commit a { display: block; text-decoration: none; color: inherit; }
+.index-commit a:hover { background: rgba(255, 152, 0, 0.1); margin: -10px -16px; padding: 10px 16px; border-radius: 8px; }
+.index-commit-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; margin-bottom: 4px; }
+.index-commit-hash { font-family: monospace; color: #e65100; font-weight: 600; }
+.index-commit-msg { color: #5d4037; }
+.index-item-long-text { margin-top: 8px; padding: 12px; background: var(--card-bg); border-radius: 8px; border-left: 3px solid var(--assistant-border); }
+.index-item-long-text .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--card-bg)); }
+.index-item-long-text-content { color: var(--text-color); }
+#search-box { display: none; align-items: center; gap: 8px; }
+#search-box input { padding: 6px 12px; border: 1px solid var(--assistant-border); border-radius: 6px; font-size: 16px; width: 180px; }
+#search-box button, #modal-search-btn, #modal-close-btn { background: var(--user-border); color: white; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+#search-box button:hover, #modal-search-btn:hover { background: #1565c0; }
+#modal-close-btn { background: var(--text-muted); margin-left: 8px; }
+#modal-close-btn:hover { background: #616161; }
+#search-modal[open] { border: none; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.2); padding: 0; width: 90vw; max-width: 900px; height: 80vh; max-height: 80vh; display: flex; flex-direction: column; }
+#search-modal::backdrop { background: rgba(0,0,0,0.5); }
+.search-modal-header { display: flex; align-items: center; gap: 8px; padding: 16px; border-bottom: 1px solid var(--assistant-border); background: var(--bg-color); border-radius: 12px 12px 0 0; }
+.search-modal-header input { flex: 1; padding: 8px 12px; border: 1px solid var(--assistant-border); border-radius: 6px; font-size: 16px; }
+#search-status { padding: 8px 16px; font-size: 0.85rem; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); }
+#search-results { flex: 1; overflow-y: auto; padding: 16px; }
+.search-result { margin-bottom: 16px; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.search-result a { display: block; text-decoration: none; color: inherit; }
+.search-result a:hover { background: rgba(25, 118, 210, 0.05); }
+.search-result-page { padding: 6px 12px; background: rgba(0,0,0,0.03); font-size: 0.8rem; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); }
+.search-result-content { padding: 12px; }
+.search-result mark { background: #fff59d; padding: 1px 2px; border-radius: 2px; }
+@media (max-width: 600px) { body { padding: 8px; } .message, .index-item { border-radius: 8px; } .message-content, .index-item-content { padding: 12px; } pre { font-size: 0.8rem; padding: 8px; } #search-box input { width: 120px; } #search-modal[open] { width: 95vw; height: 90vh; } }
+</style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-row">
+            <h1>Claude Code transcript</h1>
+            <div id="search-box">
+                <input type="text" id="search-input" placeholder="Search..." aria-label="Search transcripts">
+                <button id="search-btn" type="button" aria-label="Search">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+                </button>
+            </div>
+        </div>
+        
+
+<div class="pagination">
+<span class="current">Index</span>
+<span class="disabled">&larr; Prev</span>
+<a href="page-001.html">1</a>
+<a href="page-001.html">Next &rarr;</a>
+</div>
+
+        <p style="color: var(--text-muted); margin-bottom: 24px;">3 prompts · 3 messages · 0 tool calls · 0 commits · 1 pages</p>
+        
+<div class="index-item"><a href="page-001.html#msg-2026-07-07T00-28-27-714Z"><div class="index-item-header"><span class="index-item-number">#1</span><time datetime="2026-07-07T00:28:27.714Z" data-timestamp="2026-07-07T00:28:27.714Z">2026-07-07T00:28:27.714Z</time></div><div class="index-item-content"><p><command-message>code-investigation</command-message>
+<command-name>/code-investigation</command-name></p></div></a></div>
+<div class="index-item"><a href="page-001.html#msg-2026-07-07T00-28-27-714Z"><div class="index-item-header"><span class="index-item-number">#2</span><time datetime="2026-07-07T00:28:27.714Z" data-timestamp="2026-07-07T00:28:27.714Z">2026-07-07T00:28:27.714Z</time></div><div class="index-item-content"><p>Base directory for this skill: d:\POJ\NodeMaster.claude\skills\code-investigation</p>
+<h1>代码调查规则</h1>
+<p>本项目（<code>D:/POJ/NodeMaster</code>）是一个大型 C# POS 系统，已经用 codebase-memory-mcp 构建了知识图谱：<strong>13 万+ 节点、32 万+ 边</strong>。图谱里已经编码好了函数定义、调用关系（CALLS）、数据流（DATA_FLOWS）、类继承、跨服务 HTTP/异步调用等结构信息——这些正是调查代码时最常需要的东西。</p>
+<h2>为什么优先用图谱，而不是 grep / 逐文件读</h2>
+<p>这个仓库太大。grep 一个常见名字会返回成百上千条噪音命中（注释、字符串、同名变量），逐文件 Read 会迅速吃掉上下文还看不到整体关系。图谱工具是针对"定位 + 关系"专门优化过的：一次查询就拿到去重后的函数、它的调用方/被调用方、参数数据流，比手工翻文件快几个数量级而且更准。所以调查代码的默认入口是图谱，不是 grep。</p>
+<h2>工具选择：按目的选工具</h2>
+<table>
+<thead>
+<tr>
+<th>你的目的</th>
+<th>用这个工具</th>
+<th>为什么用它而不是 grep/读文件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>定位函数 / 类 / 变量定义</td>
+<td><code>search_graph</code></td>
+<td>BM25 + 语义检索 + 结构加权，命中真正的定义而不是注释或字符串里的同名词</td>
+</tr>
+<tr>
+<td>理解调用关系（谁调用了 X / X 调用了谁）</td>
+<td><code>trace_path</code></td>
+<td>直接沿 CALLS 边遍历，一次拿到多跳调用链，不用手动逐个追</td>
+</tr>
+<tr>
+<td>追踪数据如何流动</td>
+<td><code>trace_path</code>（mode=data_flow）</td>
+<td>沿 DATA_FLOWS 边传播，看参数在不同函数之间怎么传</td>
+</tr>
+<tr>
+<td>评估一次改动的波及范围</td>
+<td><code>detect_changes</code></td>
+<td>基于 diff 算出受影响的下游节点</td>
+</tr>
+<tr>
+<td>复杂 / 多跳关系查询</td>
+<td><code>query_graph</code>（Cypher）</td>
+<td>任意图模式，例如"找所有调用 A 且被 B 调用的函数"</td>
+</tr>
+<tr>
+<td>看整体架构、模块边界</td>
+<td><code>get_architecture</code></td>
+<td>高层包/服务/依赖 + Leiden 社区聚类，一眼看清真实的模块划分</td>
+</tr>
+<tr>
+<td>看某段函数的具体源码</td>
+<td><code>get_code_snippet</code></td>
+<td>已经定位到具体符号后，再读它的实现细节</td>
+</tr>
+</tbody>
+</table>
+<h2>调查流程</h2>
+<ol>
+<li><strong>确认索引</strong>：先 <code>list_projects</code>，确认 <code>D-POJ-NodeMaster</code> 已索引。如果没索引，提醒用户先 <code>index_repository</code>，不要在没图谱的情况下退回 grep。</li>
+<li><strong>不确定图里有什么时</strong>：<code>get_graph_schema</code> 看节点标签和边类型，避免写出查不到东西的查询。</li>
+<li><strong>定位目标</strong>：<code>search_graph</code> 找到具体的函数/类，拿到 <code>qualified_name</code>。</li>
+<li><strong>展开关系</strong>：用拿到的 <code>qualified_name</code> 调 <code>trace_path</code> 追踪调用链 / 数据流。</li>
+<li><strong>需要源码细节时</strong>：才用 <code>get_code_snippet</code> 读具体实现。</li>
+</ol>
+<blockquote>
+<p>分工原则：<strong>图谱负责"定位 + 关系"，源码负责"细节"</strong>。不要用图谱去看一段函数怎么写的，也不要用读文件去找一个函数在哪定义。</p>
+</blockquote>
+<h2>什么时候读文件 / 用 grep 是合理的</h2>
+<p>读源码本身是必要的，关键是<strong>顺序</strong>：先用图谱定位，再按需读细节。以下情况直接读文件没问题：</p>
+<ul>
+<li><code>get_code_snippet</code> 已告诉你函数在哪个文件，但你需要看它的完整上下文（周围的字段定义、相邻方法、整个类的结构）。</li>
+<li>改动<strong>非代码</strong>文件：配置、<code>.bat</code>、<code>.xml</code>、<code>.txt</code>、文档——图谱只索引代码，这些必须直接读。</li>
+<li>确认某个非常局部、不涉及调用关系的事实（比如一个常量的具体值、一行配置）。</li>
+</ul>
+<p><strong>要避免的模式</strong>：在还没查图谱的情况下，凭直觉 <code>Glob</code> / <code>Grep</code> 一堆文件、然后逐个 <code>Read</code> 去回答"X 在哪定义"或"谁调用了 X"——这正是图谱已经替你做完的事，手工做既慢又容易漏。</p>
+<h2>一个示例</h2>
+<p>用户问："<code>BuildOrderSortTool</code> 这个工具是谁在调用？我想知道改它会影响哪里。"</p>
+<p>❌ 错误做法：<code>grep BuildOrderSortTool</code> → 几十个文件命中 → 逐个 Read 排查调用点。</p>
+<p>✅ 正确做法：
+1. <code>search_graph</code>（query="BuildOrderSortTool"）→ 拿到该工具节点和 <code>qualified_name</code>。
+2. <code>trace_path</code>（function_name=..., direction=inbound）→ 拿到全部调用方。
+3. 评估改动影响：<code>detect_changes</code>。
+4. 只在需要确认某处调用的具体写法时，才 <code>get_code_snippet</code> 读那一段。</p></div></a><div class="index-item-stats">
+<div class="index-item-long-text"><div class="truncatable"><div class="truncatable-content"><div class="index-item-long-text-content"><p>Base directory for this skill: d:\POJ\NodeMaster.claude\skills\code-investigation</p>
+<h1>代码调查规则</h1>
+<p>本项目（<code>D:/POJ/NodeMaster</code>）是一个大型 C# POS 系统，已经用 codebase-memory-mcp 构建了知识图谱：<strong>13 万+ 节点、32 万+ 边</strong>。图谱里已经编码好了函数定义、调用关系（CALLS）、数据流（DATA_FLOWS）、类继承、跨服务 HTTP/异步调用等结构信息——这些正是调查代码时最常需要的东西。</p>
+<h2>为什么优先用图谱，而不是 grep / 逐文件读</h2>
+<p>这个仓库太大。grep 一个常见名字会返回成百上千条噪音命中（注释、字符串、同名变量），逐文件 Read 会迅速吃掉上下文还看不到整体关系。图谱工具是针对"定位 + 关系"专门优化过的：一次查询就拿到去重后的函数、它的调用方/被调用方、参数数据流，比手工翻文件快几个数量级而且更准。所以调查代码的默认入口是图谱，不是 grep。</p>
+<h2>工具选择：按目的选工具</h2>
+<table>
+<thead>
+<tr>
+<th>你的目的</th>
+<th>用这个工具</th>
+<th>为什么用它而不是 grep/读文件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>定位函数 / 类 / 变量定义</td>
+<td><code>search_graph</code></td>
+<td>BM25 + 语义检索 + 结构加权，命中真正的定义而不是注释或字符串里的同名词</td>
+</tr>
+<tr>
+<td>理解调用关系（谁调用了 X / X 调用了谁）</td>
+<td><code>trace_path</code></td>
+<td>直接沿 CALLS 边遍历，一次拿到多跳调用链，不用手动逐个追</td>
+</tr>
+<tr>
+<td>追踪数据如何流动</td>
+<td><code>trace_path</code>（mode=data_flow）</td>
+<td>沿 DATA_FLOWS 边传播，看参数在不同函数之间怎么传</td>
+</tr>
+<tr>
+<td>评估一次改动的波及范围</td>
+<td><code>detect_changes</code></td>
+<td>基于 diff 算出受影响的下游节点</td>
+</tr>
+<tr>
+<td>复杂 / 多跳关系查询</td>
+<td><code>query_graph</code>（Cypher）</td>
+<td>任意图模式，例如"找所有调用 A 且被 B 调用的函数"</td>
+</tr>
+<tr>
+<td>看整体架构、模块边界</td>
+<td><code>get_architecture</code></td>
+<td>高层包/服务/依赖 + Leiden 社区聚类，一眼看清真实的模块划分</td>
+</tr>
+<tr>
+<td>看某段函数的具体源码</td>
+<td><code>get_code_snippet</code></td>
+<td>已经定位到具体符号后，再读它的实现细节</td>
+</tr>
+</tbody>
+</table>
+<h2>调查流程</h2>
+<ol>
+<li><strong>确认索引</strong>：先 <code>list_projects</code>，确认 <code>D-POJ-NodeMaster</code> 已索引。如果没索引，提醒用户先 <code>index_repository</code>，不要在没图谱的情况下退回 grep。</li>
+<li><strong>不确定图里有什么时</strong>：<code>get_graph_schema</code> 看节点标签和边类型，避免写出查不到东西的查询。</li>
+<li><strong>定位目标</strong>：<code>search_graph</code> 找到具体的函数/类，拿到 <code>qualified_name</code>。</li>
+<li><strong>展开关系</strong>：用拿到的 <code>qualified_name</code> 调 <code>trace_path</code> 追踪调用链 / 数据流。</li>
+<li><strong>需要源码细节时</strong>：才用 <code>get_code_snippet</code> 读具体实现。</li>
+</ol>
+<blockquote>
+<p>分工原则：<strong>图谱负责"定位 + 关系"，源码负责"细节"</strong>。不要用图谱去看一段函数怎么写的，也不要用读文件去找一个函数在哪定义。</p>
+</blockquote>
+<h2>什么时候读文件 / 用 grep 是合理的</h2>
+<p>读源码本身是必要的，关键是<strong>顺序</strong>：先用图谱定位，再按需读细节。以下情况直接读文件没问题：</p>
+<ul>
+<li><code>get_code_snippet</code> 已告诉你函数在哪个文件，但你需要看它的完整上下文（周围的字段定义、相邻方法、整个类的结构）。</li>
+<li>改动<strong>非代码</strong>文件：配置、<code>.bat</code>、<code>.xml</code>、<code>.txt</code>、文档——图谱只索引代码，这些必须直接读。</li>
+<li>确认某个非常局部、不涉及调用关系的事实（比如一个常量的具体值、一行配置）。</li>
+</ul>
+<p><strong>要避免的模式</strong>：在还没查图谱的情况下，凭直觉 <code>Glob</code> / <code>Grep</code> 一堆文件、然后逐个 <code>Read</code> 去回答"X 在哪定义"或"谁调用了 X"——这正是图谱已经替你做完的事，手工做既慢又容易漏。</p>
+<h2>一个示例</h2>
+<p>用户问："<code>BuildOrderSortTool</code> 这个工具是谁在调用？我想知道改它会影响哪里。"</p>
+<p>❌ 错误做法：<code>grep BuildOrderSortTool</code> → 几十个文件命中 → 逐个 Read 排查调用点。</p>
+<p>✅ 正确做法：
+1. <code>search_graph</code>（query="BuildOrderSortTool"）→ 拿到该工具节点和 <code>qualified_name</code>。
+2. <code>trace_path</code>（function_name=..., direction=inbound）→ 拿到全部调用方。
+3. 评估改动影响：<code>detect_changes</code>。
+4. 只在需要确认某处调用的具体写法时，才 <code>get_code_snippet</code> 读那一段。</p></div></div><button class="expand-btn">Show more</button></div></div>
+</div></div>
+<div class="index-item"><a href="page-001.html#msg-2026-07-07T00-28-29-423Z"><div class="index-item-header"><span class="index-item-number">#3</span><time datetime="2026-07-07T00:28:29.423Z" data-timestamp="2026-07-07T00:28:29.423Z">2026-07-07T00:28:29.423Z</time></div><div class="index-item-content"><p>[Request interrupted by user]</p></div></a></div>
+        
+
+<div class="pagination">
+<span class="current">Index</span>
+<span class="disabled">&larr; Prev</span>
+<a href="page-001.html">1</a>
+<a href="page-001.html">Next &rarr;</a>
+</div>
+
+
+        <dialog id="search-modal">
+            <div class="search-modal-header">
+                <input type="text" id="modal-search-input" placeholder="Search..." aria-label="Search transcripts">
+                <button id="modal-search-btn" type="button" aria-label="Search">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+                </button>
+                <button id="modal-close-btn" type="button" aria-label="Close">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+                </button>
+            </div>
+            <div id="search-status"></div>
+            <div id="search-results"></div>
+        </dialog>
+        <script>
+(function() {
+    var totalPages = 1;
+    var searchBox = document.getElementById('search-box');
+    var searchInput = document.getElementById('search-input');
+    var searchBtn = document.getElementById('search-btn');
+    var modal = document.getElementById('search-modal');
+    var modalInput = document.getElementById('modal-search-input');
+    var modalSearchBtn = document.getElementById('modal-search-btn');
+    var modalCloseBtn = document.getElementById('modal-close-btn');
+    var searchStatus = document.getElementById('search-status');
+    var searchResults = document.getElementById('search-results');
+
+    if (!searchBox || !modal) return;
+
+    // Hide search on file:// protocol (doesn't work due to CORS restrictions)
+    if (window.location.protocol === 'file:') return;
+
+    // Show search box (progressive enhancement)
+    searchBox.style.display = 'flex';
+
+    // Gist preview support - detect if we're on gisthost.github.io or gistpreview.github.io
+    var hostname = window.location.hostname;
+    var isGistPreview = hostname === 'gisthost.github.io' || hostname === 'gistpreview.github.io';
+    var gistId = null;
+    var gistOwner = null;
+    var gistInfoLoaded = false;
+
+    if (isGistPreview) {
+        // Extract gist ID from URL query string like ?78a436a8a9e7a2e603738b8193b95410/index.html
+        var queryMatch = window.location.search.match(/^\?([a-f0-9]+)/i);
+        if (queryMatch) {
+            gistId = queryMatch[1];
+        }
+    }
+
+    async function loadGistInfo() {
+        if (!isGistPreview || !gistId || gistInfoLoaded) return;
+        try {
+            var response = await fetch('https://api.github.com/gists/' + gistId);
+            if (response.ok) {
+                var info = await response.json();
+                gistOwner = info.owner.login;
+                gistInfoLoaded = true;
+            }
+        } catch (e) {
+            console.error('Failed to load gist info:', e);
+        }
+    }
+
+    function getPageFetchUrl(pageFile) {
+        if (isGistPreview && gistOwner && gistId) {
+            // Use raw gist URL for fetching content
+            return 'https://gist.githubusercontent.com/' + gistOwner + '/' + gistId + '/raw/' + pageFile;
+        }
+        return pageFile;
+    }
+
+    function getPageLinkUrl(pageFile) {
+        if (isGistPreview && gistId) {
+            // Use gistpreview URL format for navigation links
+            return '?' + gistId + '/' + pageFile;
+        }
+        return pageFile;
+    }
+
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function escapeRegex(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function openModal(query) {
+        modalInput.value = query || '';
+        searchResults.innerHTML = '';
+        searchStatus.textContent = '';
+        modal.showModal();
+        modalInput.focus();
+        if (query) {
+            performSearch(query);
+        }
+    }
+
+    function closeModal() {
+        modal.close();
+        // Update URL to remove search fragment, preserving path and query string
+        if (window.location.hash.startsWith('#search=')) {
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+    }
+
+    function updateUrlHash(query) {
+        if (query) {
+            // Preserve path and query string when adding hash
+            history.replaceState(null, '', window.location.pathname + window.location.search + '#search=' + encodeURIComponent(query));
+        }
+    }
+
+    function highlightTextNodes(element, searchTerm) {
+        var walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
+        var nodesToReplace = [];
+
+        while (walker.nextNode()) {
+            var node = walker.currentNode;
+            if (node.nodeValue.toLowerCase().indexOf(searchTerm.toLowerCase()) !== -1) {
+                nodesToReplace.push(node);
+            }
+        }
+
+        nodesToReplace.forEach(function(node) {
+            var text = node.nodeValue;
+            var regex = new RegExp('(' + escapeRegex(searchTerm) + ')', 'gi');
+            var parts = text.split(regex);
+            if (parts.length > 1) {
+                var span = document.createElement('span');
+                parts.forEach(function(part) {
+                    if (part.toLowerCase() === searchTerm.toLowerCase()) {
+                        var mark = document.createElement('mark');
+                        mark.textContent = part;
+                        span.appendChild(mark);
+                    } else {
+                        span.appendChild(document.createTextNode(part));
+                    }
+                });
+                node.parentNode.replaceChild(span, node);
+            }
+        });
+    }
+
+    function fixInternalLinks(element, pageFile) {
+        // Update all internal anchor links to include the page file
+        var links = element.querySelectorAll('a[href^="#"]');
+        links.forEach(function(link) {
+            var href = link.getAttribute('href');
+            link.setAttribute('href', pageFile + href);
+        });
+    }
+
+    function processPage(pageFile, html, query) {
+        var parser = new DOMParser();
+        var doc = parser.parseFromString(html, 'text/html');
+        var resultsFromPage = 0;
+
+        // Find all message blocks
+        var messages = doc.querySelectorAll('.message');
+        messages.forEach(function(msg) {
+            var text = msg.textContent || '';
+            if (text.toLowerCase().indexOf(query.toLowerCase()) !== -1) {
+                resultsFromPage++;
+
+                // Get the message ID for linking
+                var msgId = msg.id || '';
+                var pageLinkUrl = getPageLinkUrl(pageFile);
+                var link = pageLinkUrl + (msgId ? '#' + msgId : '');
+
+                // Clone the message HTML and highlight matches
+                var clone = msg.cloneNode(true);
+                // Fix internal links to include the page file
+                fixInternalLinks(clone, pageLinkUrl);
+                highlightTextNodes(clone, query);
+
+                var resultDiv = document.createElement('div');
+                resultDiv.className = 'search-result';
+                resultDiv.innerHTML = '<a href="' + link + '">' +
+                    '<div class="search-result-page">' + escapeHtml(pageFile) + '</div>' +
+                    '<div class="search-result-content">' + clone.innerHTML + '</div>' +
+                    '</a>';
+                searchResults.appendChild(resultDiv);
+            }
+        });
+
+        return resultsFromPage;
+    }
+
+    async function performSearch(query) {
+        if (!query.trim()) {
+            searchStatus.textContent = 'Enter a search term';
+            return;
+        }
+
+        updateUrlHash(query);
+        searchResults.innerHTML = '';
+        searchStatus.textContent = 'Searching...';
+
+        // Load gist info if on gistpreview (needed for constructing URLs)
+        if (isGistPreview && !gistInfoLoaded) {
+            searchStatus.textContent = 'Loading gist info...';
+            await loadGistInfo();
+            if (!gistOwner) {
+                searchStatus.textContent = 'Failed to load gist info. Search unavailable.';
+                return;
+            }
+        }
+
+        var resultsFound = 0;
+        var pagesSearched = 0;
+
+        // Build list of pages to fetch
+        var pagesToFetch = [];
+        for (var i = 1; i <= totalPages; i++) {
+            pagesToFetch.push('page-' + String(i).padStart(3, '0') + '.html');
+        }
+
+        searchStatus.textContent = 'Searching...';
+
+        // Process pages in batches of 3, but show results immediately as each completes
+        var batchSize = 3;
+        for (var i = 0; i < pagesToFetch.length; i += batchSize) {
+            var batch = pagesToFetch.slice(i, i + batchSize);
+
+            // Create promises that process results immediately when each fetch completes
+            var promises = batch.map(function(pageFile) {
+                return fetch(getPageFetchUrl(pageFile))
+                    .then(function(response) {
+                        if (!response.ok) throw new Error('Failed to fetch');
+                        return response.text();
+                    })
+                    .then(function(html) {
+                        // Process and display results immediately
+                        var count = processPage(pageFile, html, query);
+                        resultsFound += count;
+                        pagesSearched++;
+                        searchStatus.textContent = 'Found ' + resultsFound + ' result(s) in ' + pagesSearched + '/' + totalPages + ' pages...';
+                    })
+                    .catch(function() {
+                        pagesSearched++;
+                        searchStatus.textContent = 'Found ' + resultsFound + ' result(s) in ' + pagesSearched + '/' + totalPages + ' pages...';
+                    });
+            });
+
+            // Wait for this batch to complete before starting the next
+            await Promise.all(promises);
+        }
+
+        searchStatus.textContent = 'Found ' + resultsFound + ' result(s) in ' + totalPages + ' pages';
+    }
+
+    // Event listeners
+    searchBtn.addEventListener('click', function() {
+        openModal(searchInput.value);
+    });
+
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            openModal(searchInput.value);
+        }
+    });
+
+    modalSearchBtn.addEventListener('click', function() {
+        performSearch(modalInput.value);
+    });
+
+    modalInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            performSearch(modalInput.value);
+        }
+    });
+
+    modalCloseBtn.addEventListener('click', closeModal);
+
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+
+    // Check for #search= in URL on page load
+    if (window.location.hash.startsWith('#search=')) {
+        var query = decodeURIComponent(window.location.hash.substring(8));
+        if (query) {
+            searchInput.value = query;
+            openModal(query);
+        }
+    }
+})();
+        </script>
+    </div>
+    <script>
+document.querySelectorAll('time[data-timestamp]').forEach(function(el) {
+    const timestamp = el.getAttribute('data-timestamp');
+    const date = new Date(timestamp);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    if (isToday) { el.textContent = timeStr; }
+    else { el.textContent = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + timeStr; }
+});
+document.querySelectorAll('pre.json').forEach(function(el) {
+    let text = el.textContent;
+    text = text.replace(/"([^"]+)":/g, '<span style="color: #ce93d8">"$1"</span>:');
+    text = text.replace(/: "([^"]*)"/g, ': <span style="color: #81d4fa">"$1"</span>');
+    text = text.replace(/: (\d+)/g, ': <span style="color: #ffcc80">$1</span>');
+    text = text.replace(/: (true|false|null)/g, ': <span style="color: #f48fb1">$1</span>');
+    el.innerHTML = text;
+});
+document.querySelectorAll('.truncatable').forEach(function(wrapper) {
+    const content = wrapper.querySelector('.truncatable-content');
+    const btn = wrapper.querySelector('.expand-btn');
+    if (content.scrollHeight > 250) {
+        wrapper.classList.add('truncated');
+        btn.addEventListener('click', function() {
+            if (wrapper.classList.contains('truncated')) { wrapper.classList.remove('truncated'); wrapper.classList.add('expanded'); btn.textContent = 'Show less'; }
+            else { wrapper.classList.remove('expanded'); wrapper.classList.add('truncated'); btn.textContent = 'Show more'; }
+        });
+    }
+});
+</script>
+</body>
+</html>

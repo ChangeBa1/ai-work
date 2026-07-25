@@ -1,0 +1,4233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code transcript - Index</title>
+    <style>
+:root { --bg-color: #f5f5f5; --card-bg: #ffffff; --user-bg: #e3f2fd; --user-border: #1976d2; --assistant-bg: #f5f5f5; --assistant-border: #9e9e9e; --thinking-bg: #fff8e1; --thinking-border: #ffc107; --thinking-text: #666; --tool-bg: #f3e5f5; --tool-border: #9c27b0; --tool-result-bg: #e8f5e9; --tool-error-bg: #ffebee; --text-color: #212121; --text-muted: #757575; --code-bg: #263238; --code-text: #aed581; }
+* { box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 16px; line-height: 1.6; }
+.container { max-width: 800px; margin: 0 auto; }
+h1 { font-size: 1.5rem; margin-bottom: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--user-border); }
+.header-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 2px solid var(--user-border); padding-bottom: 8px; margin-bottom: 24px; }
+.header-row h1 { border-bottom: none; padding-bottom: 0; margin-bottom: 0; flex: 1; min-width: 200px; }
+.message { margin-bottom: 16px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.message.user { background: var(--user-bg); border-left: 4px solid var(--user-border); }
+.message.assistant { background: var(--card-bg); border-left: 4px solid var(--assistant-border); }
+.message.tool-reply { background: #fff8e1; border-left: 4px solid #ff9800; }
+.tool-reply .role-label { color: #e65100; }
+.tool-reply .tool-result { background: transparent; padding: 0; margin: 0; }
+.tool-reply .tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff8e1); }
+.message-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: rgba(0,0,0,0.03); font-size: 0.85rem; }
+.role-label { font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.user .role-label { color: var(--user-border); }
+time { color: var(--text-muted); font-size: 0.8rem; }
+.timestamp-link { color: inherit; text-decoration: none; }
+.timestamp-link:hover { text-decoration: underline; }
+.message:target { animation: highlight 2s ease-out; }
+@keyframes highlight { 0% { background-color: rgba(25, 118, 210, 0.2); } 100% { background-color: transparent; } }
+.message-content { padding: 16px; }
+.message-content p { margin: 0 0 12px 0; }
+.message-content p:last-child { margin-bottom: 0; }
+.thinking { background: var(--thinking-bg); border: 1px solid var(--thinking-border); border-radius: 8px; padding: 12px; margin: 12px 0; font-size: 0.9rem; color: var(--thinking-text); }
+.thinking-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #f57c00; margin-bottom: 8px; }
+.thinking p { margin: 8px 0; }
+.assistant-text { margin: 8px 0; }
+.tool-use { background: var(--tool-bg); border: 1px solid var(--tool-border); border-radius: 8px; padding: 12px; margin: 12px 0; }
+.tool-header { font-weight: 600; color: var(--tool-border); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.tool-icon { font-size: 1.1rem; }
+.tool-description { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 8px; font-style: italic; }
+.tool-result { background: var(--tool-result-bg); border-radius: 8px; padding: 12px; margin: 12px 0; }
+.tool-result.tool-error { background: var(--tool-error-bg); }
+.file-tool { border-radius: 8px; padding: 12px; margin: 12px 0; }
+.write-tool { background: linear-gradient(135deg, #e3f2fd 0%, #e8f5e9 100%); border: 1px solid #4caf50; }
+.edit-tool { background: linear-gradient(135deg, #fff3e0 0%, #fce4ec 100%); border: 1px solid #ff9800; }
+.file-tool-header { font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.write-header { color: #2e7d32; }
+.edit-header { color: #e65100; }
+.file-tool-icon { font-size: 1rem; }
+.file-tool-path { font-family: monospace; background: rgba(0,0,0,0.08); padding: 2px 8px; border-radius: 4px; }
+.file-tool-fullpath { font-family: monospace; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px; word-break: break-all; }
+.file-content { margin: 0; }
+.edit-section { display: flex; margin: 4px 0; border-radius: 4px; overflow: hidden; }
+.edit-label { padding: 8px 12px; font-weight: bold; font-family: monospace; display: flex; align-items: flex-start; }
+.edit-old { background: #fce4ec; }
+.edit-old .edit-label { color: #b71c1c; background: #f8bbd9; }
+.edit-old .edit-content { color: #880e4f; }
+.edit-new { background: #e8f5e9; }
+.edit-new .edit-label { color: #1b5e20; background: #a5d6a7; }
+.edit-new .edit-content { color: #1b5e20; }
+.edit-content { margin: 0; flex: 1; background: transparent; font-size: 0.85rem; }
+.edit-replace-all { font-size: 0.75rem; font-weight: normal; color: var(--text-muted); }
+.write-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #e6f4ea); }
+.edit-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff0e5); }
+.todo-list { background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); border: 1px solid #81c784; border-radius: 8px; padding: 12px; margin: 12px 0; }
+.todo-header { font-weight: 600; color: #2e7d32; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.todo-items { list-style: none; margin: 0; padding: 0; }
+.todo-item { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.06); font-size: 0.9rem; }
+.todo-item:last-child { border-bottom: none; }
+.todo-icon { flex-shrink: 0; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 50%; }
+.todo-completed .todo-icon { color: #2e7d32; background: rgba(46, 125, 50, 0.15); }
+.todo-completed .todo-content { color: #558b2f; text-decoration: line-through; }
+.todo-in-progress .todo-icon { color: #f57c00; background: rgba(245, 124, 0, 0.15); }
+.todo-in-progress .todo-content { color: #e65100; font-weight: 500; }
+.todo-pending .todo-icon { color: #757575; background: rgba(0,0,0,0.05); }
+.todo-pending .todo-content { color: #616161; }
+pre { background: var(--code-bg); color: var(--code-text); padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; line-height: 1.5; margin: 8px 0; white-space: pre-wrap; word-wrap: break-word; }
+pre.json { color: #e0e0e0; }
+code { background: rgba(0,0,0,0.08); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+pre code { background: none; padding: 0; }
+.user-content { margin: 0; }
+.truncatable { position: relative; }
+.truncatable.truncated .truncatable-content { max-height: 200px; overflow: hidden; }
+.truncatable.truncated::after { content: ''; position: absolute; bottom: 32px; left: 0; right: 0; height: 60px; background: linear-gradient(to bottom, transparent, var(--card-bg)); pointer-events: none; }
+.message.user .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--user-bg)); }
+.message.tool-reply .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff8e1); }
+.tool-use .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-bg)); }
+.tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-result-bg)); }
+.expand-btn { display: none; width: 100%; padding: 8px 16px; margin-top: 4px; background: rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; cursor: pointer; font-size: 0.85rem; color: var(--text-muted); }
+.expand-btn:hover { background: rgba(0,0,0,0.1); }
+.truncatable.truncated .expand-btn, .truncatable.expanded .expand-btn { display: block; }
+.pagination { display: flex; justify-content: center; gap: 8px; margin: 24px 0; flex-wrap: wrap; }
+.pagination a, .pagination span { padding: 5px 10px; border-radius: 6px; text-decoration: none; font-size: 0.85rem; }
+.pagination a { background: var(--card-bg); color: var(--user-border); border: 1px solid var(--user-border); }
+.pagination a:hover { background: var(--user-bg); }
+.pagination .current { background: var(--user-border); color: white; }
+.pagination .disabled { color: var(--text-muted); border: 1px solid #ddd; }
+.pagination .index-link { background: var(--user-border); color: white; }
+details.continuation { margin-bottom: 16px; }
+details.continuation summary { cursor: pointer; padding: 12px 16px; background: var(--user-bg); border-left: 4px solid var(--user-border); border-radius: 12px; font-weight: 500; color: var(--text-muted); }
+details.continuation summary:hover { background: rgba(25, 118, 210, 0.15); }
+details.continuation[open] summary { border-radius: 12px 12px 0 0; margin-bottom: 0; }
+.index-item { margin-bottom: 16px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); background: var(--user-bg); border-left: 4px solid var(--user-border); }
+.index-item a { display: block; text-decoration: none; color: inherit; }
+.index-item a:hover { background: rgba(25, 118, 210, 0.1); }
+.index-item-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: rgba(0,0,0,0.03); font-size: 0.85rem; }
+.index-item-number { font-weight: 600; color: var(--user-border); }
+.index-item-content { padding: 16px; }
+.index-item-stats { padding: 8px 16px 12px 32px; font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid rgba(0,0,0,0.06); }
+.index-item-commit { margin-top: 6px; padding: 4px 8px; background: #fff3e0; border-radius: 4px; font-size: 0.85rem; color: #e65100; }
+.index-item-commit code { background: rgba(0,0,0,0.08); padding: 1px 4px; border-radius: 3px; font-size: 0.8rem; margin-right: 6px; }
+.commit-card { margin: 8px 0; padding: 10px 14px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 6px; }
+.commit-card a { text-decoration: none; color: #5d4037; display: block; }
+.commit-card a:hover { color: #e65100; }
+.commit-card-hash { font-family: monospace; color: #e65100; font-weight: 600; margin-right: 8px; }
+.index-commit { margin-bottom: 12px; padding: 10px 16px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+.index-commit a { display: block; text-decoration: none; color: inherit; }
+.index-commit a:hover { background: rgba(255, 152, 0, 0.1); margin: -10px -16px; padding: 10px 16px; border-radius: 8px; }
+.index-commit-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; margin-bottom: 4px; }
+.index-commit-hash { font-family: monospace; color: #e65100; font-weight: 600; }
+.index-commit-msg { color: #5d4037; }
+.index-item-long-text { margin-top: 8px; padding: 12px; background: var(--card-bg); border-radius: 8px; border-left: 3px solid var(--assistant-border); }
+.index-item-long-text .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--card-bg)); }
+.index-item-long-text-content { color: var(--text-color); }
+#search-box { display: none; align-items: center; gap: 8px; }
+#search-box input { padding: 6px 12px; border: 1px solid var(--assistant-border); border-radius: 6px; font-size: 16px; width: 180px; }
+#search-box button, #modal-search-btn, #modal-close-btn { background: var(--user-border); color: white; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+#search-box button:hover, #modal-search-btn:hover { background: #1565c0; }
+#modal-close-btn { background: var(--text-muted); margin-left: 8px; }
+#modal-close-btn:hover { background: #616161; }
+#search-modal[open] { border: none; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.2); padding: 0; width: 90vw; max-width: 900px; height: 80vh; max-height: 80vh; display: flex; flex-direction: column; }
+#search-modal::backdrop { background: rgba(0,0,0,0.5); }
+.search-modal-header { display: flex; align-items: center; gap: 8px; padding: 16px; border-bottom: 1px solid var(--assistant-border); background: var(--bg-color); border-radius: 12px 12px 0 0; }
+.search-modal-header input { flex: 1; padding: 8px 12px; border: 1px solid var(--assistant-border); border-radius: 6px; font-size: 16px; }
+#search-status { padding: 8px 16px; font-size: 0.85rem; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); }
+#search-results { flex: 1; overflow-y: auto; padding: 16px; }
+.search-result { margin-bottom: 16px; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.search-result a { display: block; text-decoration: none; color: inherit; }
+.search-result a:hover { background: rgba(25, 118, 210, 0.05); }
+.search-result-page { padding: 6px 12px; background: rgba(0,0,0,0.03); font-size: 0.8rem; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); }
+.search-result-content { padding: 12px; }
+.search-result mark { background: #fff59d; padding: 1px 2px; border-radius: 2px; }
+@media (max-width: 600px) { body { padding: 8px; } .message, .index-item { border-radius: 8px; } .message-content, .index-item-content { padding: 12px; } pre { font-size: 0.8rem; padding: 8px; } #search-box input { width: 120px; } #search-modal[open] { width: 95vw; height: 90vh; } }
+</style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-row">
+            <h1>Claude Code transcript</h1>
+            <div id="search-box">
+                <input type="text" id="search-input" placeholder="Search..." aria-label="Search transcripts">
+                <button id="search-btn" type="button" aria-label="Search">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+                </button>
+            </div>
+        </div>
+        
+
+<div class="pagination">
+<span class="current">Index</span>
+<span class="disabled">&larr; Prev</span>
+<a href="page-001.html">1</a>
+<a href="page-001.html">Next &rarr;</a>
+</div>
+
+        <p style="color: var(--text-muted); margin-bottom: 24px;">1 prompts · 3 messages · 0 tool calls · 0 commits · 1 pages</p>
+        
+<div class="index-item"><a href="page-001.html#msg-2026-07-09T06-18-00-154Z"><div class="index-item-header"><span class="index-item-number">#1</span><time datetime="2026-07-09T06:18:00.154Z" data-timestamp="2026-07-09T06:18:00.154Z">2026-07-09T06:18:00.154Z</time></div><div class="index-item-content"><p>IMPORTANT EXECUTION MODE FOR CLAUDE CLI:
+- Do not use tools.
+- Do not read or write files.
+- Do not ask for permissions.
+- Produce the requested final markdown directly on stdout.
+- The workflow runner will save stdout to the output path.
+- Ignore any instruction that implies you should write the output file yourself; instead print the full content.</p>
+<p>BEGIN ORIGINAL PROMPT</p>
+<p>你是源码教材项目的信息提取员，不是散文作者。</p>
+<p>任务：根据下面的带行号源码，为本 batch 中的每个文件生成“文件级源码讲解笔记”。</p>
+<p>Batch 信息：
+- Batch ID: batch_021
+- Batch Name: config_config_settings
+- Module: config
+- Purpose: 解释项目配置、构建配置、依赖配置和运行时配置加载线索
+- Related Runtime Flows: 错误处理流程、日志流程
+- Output Note Path: _sourcebook/notes/batch_021_config_config_settings_file_notes.md</p>
+<p>本批文件：
+- Source/POS4ULogicService/Settings/Message_FC.xml
+- Source/POS4ULogicService/Settings/Plugin.xml
+- Source/POS4ULogicService/Settings/PluginLogicService.xml
+- Source/POS4ULogicService/Settings/SettingLogicService.xml
+- Source/POS4ULogicService/Settings/SettingLogicServiceEnvironment.xml
+- Source/POS4ULogicService/Settings/SettingLogicServiceWeb.xml</p>
+<p>本批任务目标：
+- 为本批每个文件生成可追溯到源码行号的文件级笔记。
+- 重点说明文件职责、对外暴露内容、关键逻辑、依赖关系、错误处理、测试建议和不确定点。
+- 只做文件级源码笔记，不写最终教材正文。</p>
+<p>硬性规则：</p>
+<ol>
+<li>必须基于实际源码。</li>
+<li>每一条技术事实都要引用文件路径和行号。</li>
+<li>不允许编造不存在的函数、参数、返回值、配置项、业务逻辑。</li>
+<li>如果无法确定，请写“需要结合其他文件确认”。</li>
+<li>不要只讲核心函数，小工具函数、边界处理、异常处理也要说明。</li>
+<li>每个文件必须单独成节。</li>
+<li>不要写最终教材章节，只写文件级源码笔记。</li>
+<li>不要省略本批任何文件。</li>
+<li>如果某个文件很简单，也要说明它为什么简单、在项目中承担什么角色。</li>
+<li>如果发现当前 batch 缺少理解该文件所需的上下文，请在“不确定点”中明确列出需要结合哪些文件。</li>
+</ol>
+<p>质量规则：
+- 优先解释运行时行为和业务意图，再补充语法层面的说明。
+- 遇到配置、SQL、脚本、文档、二进制占位文件，也必须说明它对项目理解的作用。
+- 对非文本文件、缺失文件或无法从当前 batch 判断的内容，必须标记“需要结合其他文件确认”或“需要人工确认”，不要猜。
+- 入口、配置加载、请求处理、数据读写、错误处理、日志、测试相关线索要特别标出。
+- 输出中不要出现未引用行号的技术断言。</p>
+<p>覆盖确认要求：
+- 结尾必须输出“本批覆盖确认”表。
+- 表中必须逐一列出本批所有文件。
+- 覆盖状态只能使用：已详细讲解 / 已简略讲解 / 需要结合其他文件确认。</p>
+<p>输出格式：</p>
+<h1>文件级源码笔记：config_config_settings</h1>
+<h2>Batch 信息</h2>
+<ul>
+<li>Batch ID: batch_021</li>
+<li>Batch Name: config_config_settings</li>
+<li>Module: config</li>
+<li>Purpose: 解释项目配置、构建配置、依赖配置和运行时配置加载线索</li>
+</ul>
+<hr />
+<h2>文件：<path></h2>
+<h3>1. 文件定位</h3>
+<p>说明这个文件在项目中的角色，属于哪个模块，解决什么问题。</p>
+<h3>2. 对外暴露内容</h3>
+<p>列出 class / function / component / API / command / config / export。</p>
+<p>每一项都要包含：
+- 名称
+- 文件路径 + 行号
+- 用途</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>按代码执行顺序解释关键逻辑。</p>
+<p>要求：
+- 引用文件路径和行号
+- 解释运行时会发生什么
+- 不要只翻译代码，要说明代码意图</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>逐个说明：
+- 名称
+- 位置：文件路径 + 行号
+- 输入
+- 输出
+- 副作用
+- 调用关系
+- 边界情况
+- 可能的坑</p>
+<h3>5. 依赖关系</h3>
+<p>说明它依赖哪些文件、库、配置、类型、组件，以及这些依赖的用途。</p>
+<h3>6. 错误处理与边界情况</h3>
+<p>必须引用源码行号。</p>
+<p>如果没有明显错误处理，也要说明“当前文件没有显式错误处理”，并指出可能依赖哪里处理。</p>
+<h3>7. 测试相关</h3>
+<p>说明：
+- 当前输入中是否包含对应测试
+- 如果有，测试覆盖了什么
+- 如果没有，应该如何测试这个文件</p>
+<h3>8. 新人阅读建议</h3>
+<p>告诉新人应该如何理解这个文件，阅读时先看哪里，再看哪里。</p>
+<h3>9. 不确定点</h3>
+<p>列出不能从当前 batch 确认的问题，不要猜。</p>
+<hr />
+<h2>本批覆盖确认</h2>
+<p>请列出本批所有文件，并标记：</p>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>覆盖状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>path</td>
+<td>已详细讲解 / 已简略讲解 / 需要结合其他文件确认</td>
+<td>说明</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p>下面是本批源码：</p>
+<p>FILE: Source/POS4ULogicService/Settings/Message_FC.xml
+SHA256: 1c207dd0ace47cfd5b816cd537e346ad55cc6d054f6c85b2994359cef30d15ad
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8" ?>
+00002: <Messages>
+00003:   <Message Id="ErrorUnknown"
+00004:            Code="1884">POS4ULogicServiceシステムエラーが発生しました。</Message>
+00005:   <Message Id="ErrorTransactionToken"
+00006:            Code="E0001">トランザクショントークンエラー</Message>
+00007:   <Message Id="ErrorExecuteDefault"
+00008:            Code="E0002">現在この操作は行えません。もう一度、操作をやり直して下さい。</Message>
+00009:   <Message Id="InfoMessage">{0}</Message>
+00010:   <Message Id="ErrorItemNotFound"
+00011:            Code="0001">商品が見つかりませんでした。正しいコードを入力し直してください。</Message>
+00012:   <Message Id="ErrorInvalidLineNo"
+00013:            Code="0003">明細番号を正しく指定してください。</Message>
+00014:   <Message Id="ErrorInvalidBarcode"
+00015:            Code="0007">バーコードが不正です。</Message>
+00016:   <Message Id="ErrorInputCodeByCheckDigit"
+00017:            Code="0007">バーコードが不正です。</Message>
+00018:   <Message Id="ErrorCannotChangeQuantityForCanceled"
+00019:            Code="0009">明細訂正されたため数量変更できません。</Message>
+00020:   <Message Id="ErrorCannotChangePriceForCanceled"
+00021:            Code="0010">明細訂正されたため売価変更できません。</Message>
+00022:   <Message Id="ErrorCannotSubTotalForCanceled"
+00023:            Code="0011">すべての商品が明細訂正されたため小計できません。</Message>
+00024:   <Message Id="ErrorInputRangeOver"
+00025:            Code="0026">入力データが範囲を超えています。ご確認の上、再度入力してください。</Message>
+00026:   <Message Id="ErrorCannotChangeQuantityForItemDiscount"
+00027:            Code="0039">アイテム値割引されたため数量変更できません。</Message>
+00028:   <Message Id="ErrorCannotChangePriceForItemDiscount"
+00029:            Code="0040">アイテム値割引されたため売価変更できません。</Message>
+00030:   <Message Id="ErrorChangePriceProhibition"
+00031:            Code="0045">売価変更が出来ない商品です。</Message>
+00032:   <Message Id="ErrorCannotAddPayment"
+00033:            Code="0052">入力された支払方法は追加できません。PaymentCode = {0}</Message>
+00034:   <Message Id="ErrorCannotAddQuantity"
+00035:            Code="0060">明細の増数はできません。</Message>
+00036:   <Message Id="ErrorCannotRaisePrice"
+00037:            Code="0061">明細の増額はできません。</Message>
+00038:   <Message Id="ErrorCannotCancelRMTrialCouponTarget"
+00039:            Code="0062">お試しクーポン適用商品を含む明細は取消できません。LineItemNo = {0}</Message>
+00040:   <Message Id="ErrorCannotSubTotalIncreasedAmount"
+00041:            Code="0063">合計金額が元取引から増額されているため小計できません。元取引 : {0}</Message>
+00042:   <Message Id="ErrorItemQuantityMinUnder"
+00043:            Code="1808">個数に「０」は入力できません。</Message>
+00044:   <Message Id="ErrorItemQuantityMaxOver"
+00045:            Code="1809">入力された数量が最大値を超えています。</Message>
+00046:   <Message Id="ErrorItemPriceMinUnder"
+00047:            Code="1810">0円の商品は登録出来ません。</Message>
+00048:   <Message Id="ErrorItemPriceMaxOver"
+00049:            Code="1811">売価が最大値を超えています。</Message>
+00050:   <Message Id="ErrorTicketCountMaxOver"
+00051:            Code="1812">入力された券種枚数が最大値を超えています。</Message>
+00052:   <Message Id="ErrorZeroDiscount"
+00053:            Code="1816">０円値引き操作はできません。</Message>
+00054:   <Message Id="ErrorPayment"
+00055:            Code="1817">支払（払戻）内容に誤りがあります。ご確認の上、正しく入力してください。</Message>
+00056:   <Message Id="ErrorClassNotFound"
+00057:            Code="1821">該当商品のクラス情報が見つかりません。</Message>
+00058:   <Message Id="ErrorCollectionTargetItem"
+00059:            Code="1825">回収対象商品のため商品登録はできません。</Message>
+00060:   <Message Id="ErrorOTCDrugSales"
+00061:            Code="1826">この商品はOTC医薬品のため、当端末では購入できません。ドラッグ専用レジでのみ購入できます。</Message>
+00062:   <Message Id="WarningOTCDrugSales"
+00063:            Code="W1826">この商品はOTC医薬品のため、当端末では購入できません。ドラッグ専用レジでのみ購入できます。</Message>
+00064:   <Message Id="ErrorCannotChangeTaxGroup"
+00065:            Code="1828">税変更が出来ない商品です。</Message>
+00066:   <Message Id="ErrorCannotChangeTaxGroupForCanceled"
+00067:            Code="1829">明細訂正されたため税変更できません。</Message>
+00068:   <Message Id="ErrorMemberPointScanedForExistPayment"
+00069:            Code="1865">支払がすでに入力されているためカードスキャンできません。</Message>
+00070:   <Message Id="ErrorPosLogicInternal"
+00071:            Code="1884">POS4ULogicServiceシステムエラーが発生しました。</Message>
+00072:   <Message Id="ErrorPointBalance"
+00073:            Code="1890">ポイント残高が不足しています。&#xa;ポイント残高:{0}</Message>
+00074:   <Message Id="ErrorPointInputOver"
+00075:            Code="1892">入力されたポイントだと、お支払い総額がお買上金額を超過します。入力ポイント:{0}</Message>
+00076:   <Message Id="ErrorStoreNotFound"
+00077:            Code="1894">入力された店舗コードは未登録です。[StoreCode:{0}]</Message>
+00078:   <Message Id="ErrorTerminalNotFound"
+00079:            Code="1895">入力された端末番号は未登録です。[StoreCode:{0},TerminalNo:{1}]</Message>
+00080:   <Message Id="WarningRMCouponCanNotAdd"
+00081:            Code="W1896">追加できなかったRMクーポン情報があります。</Message>
+00082:   <Message Id="WarningInvalidItemCode"
+00083:            Code="W1897">商品コードリストに不正な商品コードが存在します。</Message>
+00084:   <Message Id="ErrorInvalidRMLoginPoint"
+00085:            Code="1898">入力されたログインポイント値は不正です。</Message>
+00086:   <Message Id="ErrorNotTrainingCard"
+00087:            Code="1899">練習モードでは、&#xa;練習用カード以外の使用は出来ません。</Message>
+00088:   <Message Id="ErrorTrainingCardInProduction"
+00089:            Code="1799">バーコードが不正です。</Message>
+00090:   <Message Id="WarningCannotLoadDealNo"
+00091:            Code="W1899">VD承認番号が取得できませんでした。</Message>
+00092:   <Message Id="ErrorUnavailableCancel"
+00093:            Code="1900">引去が成功しているため、取引中止ではなく取引確定を実施してください。</Message>
+00094:   <Message Id="ErrorValueGetBalanceCancelTransaction"
+00095:            Code="1901">電子マネーの残高照会の通信中にエラーが発生しました。再度取引中止を実行してください。</Message>
+00096:   <Message Id="ErrorDepositUnavailableCancel"
+00097:            Code="1902">入金が成功しているため、取引中止ではなく取引確定を実施してください。</Message>
+00098:   <Message Id="ErrorValueCardOffline"
+00099:            Code="2001">電子マネーサーバーと通信できませんでした。</Message>
+00100:   <Message Id="ErrorValueNotFoundOrPinInvalid"
+00101:            Code="2002">PINコードが不正、または入力された会員番号が電子マネーサーバーに存在しません。</Message>
+00102:   <Message Id="ErrorValueCardServerInternal"
+00103:            Code="2003">電子マネーサーバー内部処理でエラーが発生しました。</Message>
+00104:   <Message Id="ErrorValueBalance"
+00105:            Code="2004">利用額が残高を超えています。</Message>
+00106:   <Message Id="ErrorValueWithDrawTimeOut"
+00107:            Code="2005">電子マネー引去の通信中にエラーが発生しました。再度引去を実行してください。</Message>
+00108:   <Message Id="ErrorValueCheckUnfinishedTimeOut"
+00109:            Code="2006">プリカ払い中にエラーが発生したので、再実行してください。</Message>
+00110:   <Message Id="ErrorMemberPointScanedForOffLine"
+00111:            Code="2101">ポイントアーティストサーバーと通信できませんでした。</Message>
+00112:   <Message Id="ErrorMemberPointServer"
+00113:            Code="2104">ポイントアーティストサーバー内部処理でエラーが発生しました。</Message>
+00114:   <Message Id="WarningPointSetOffline"
+00115:            Code="W2105">入力された会員番号で使用されたポイントと付与されたポイントは、リアル反映されていません。</Message>
+00116:   <Message Id="WarningPointRefOffline"
+00117:            Code="W2106">現在ポイントアーティストサーバーがオフラインのため利用できません。</Message>
+00118:   <Message Id="WarningPointRefNg"
+00119:            Code="W2107">入力された会員番号は現在ポイントアーティストサーバーを利用できません。</Message>
+00120:   <Message Id="WarningPointSetNg"
+00121:            Code="W2108">入力された会員番号は現在ポイントアーティストサーバーを利用できないためポイントが付与されませんでした。</Message>
+00122:   <Message Id="ErrorValueAccessKeyOrTerminalId"
+00123:            Code="2109">電子マネーサーバー接続のアクセスキーまたは端末IDが不正です。</Message>
+00124:   <Message Id="ErrorPointServerPointNotAvailableForOffline"
+00125:            Code="2110">ポイントアーティストサーバー接続がオフラインのため、ポイントの利用はできません。</Message>
+00126:   <Message Id="ErrorPointServerPointNotAvailableForNg"
+00127:            Code="2111">ポイントアーティストサーバーが応答エラーのため、ポイントの利用はできません。</Message>
+00128:   <Message Id="ErrorValueDepositLimit"
+00129:            Code="2112">入金額が入金限度額 = {0} 円を超えています。</Message>
+00130:   <Message Id="ErrorValueDisposable"
+00131:            Code="2113">バーコードが不正です。</Message>
+00132:   <Message Id="ErrorInvalidReasonCode"
+00133:            Code="2115">理由コードが不正です。 InputReasonCode = {0}</Message>
+00134:   <Message Id="WarningPointExceptionError"
+00135:            Code="W2116">ポイント処理で予期せぬエラーが発生したため、使用ポイントと付与ポイントは、リアル反映されていません。</Message>
+00136:   <Message Id="WarningCRMPointServerPointNotAvailableForOffline"
+00137:            Code="W2117">CRMポイントサーバーがオフラインのため、ポイントの付与はできません。</Message>
+00138:   <Message Id="WarningCRMPointServerPointNotAvailableForNg"
+00139:            Code="W2118">CRMポイントサーバーが応答エラーのため、ポイントの付与はできません。ErrorMessageCD = {0}</Message>
+00140:   <Message Id="ErrorValueClassCanceled"
+00141:            Code="2119">電子マネーサーバー内部処理で&#xa;エラーが発生しました。</Message>
+00142:   <Message Id="ErrorDiscountDuplicated"
+00143:            Code="2201">併用不可値引きです。</Message>
+00144:   <Message Id="ErrorInputDecimal"
+00145:            Code="2203">少数値を入力することは出来ません。</Message>
+00146:   <Message Id="ErrorSignInOut"
+00147:            Code="2204">サインイン/アウトに失敗しました。</Message>
+00148:   <Message Id="ErrorZeroAmountSaveMTransaction"
+00149:            Code="2205">この操作を合計金額0円の取引に対して行うことはできません。</Message>
+00150:   <Message Id="ErrorTrainingSaveMTransaction"
+00151:            Code="2206">この操作をトレーニングモード中の取引に対して行うことはできません。</Message>
+00152:   <Message Id="ErrorCannotDiscountManualLineItemForCanceled"
+00153:            Code="2207">明細訂正されたため、明細手動値下げはできません。</Message>
+00154:   <Message Id="ErrorCannotDiscountManualLineItem"
+00155:            Code="2208">明細手動値下げ不可の商品です。</Message>
+00156:   <Message Id="ErrorNeedApprovalAgeConfirmation"
+00157:            Code="2209">成年確認が必要な商品があります。成年確認承認を行ってください。</Message>
+00158:   <Message Id="ErrorGetOneTimeBarcode"
+00159:            Code="2210">ワンタイムバーコード生成に失敗しました。{0}</Message>
+00160:   <Message Id="ErrorInValidOneTimeBarcode"
+00161:            Code="2211">{0}</Message>
+00162:   <Message Id="WarningNeedApprovalAgeConfirmation"
+00163:            Code="W2212">成年確認が必要な商品があります。成年確認承認を行ってください。</Message>
+00164:   <Message Id="ErrorPointUpdateExceptionDetail"
+00165:            Code="3008">入力された会員番号で使用されたポイントと付与されたポイントは、リアル反映済みか不明です。</Message>
+00166:   <Message Id="ErrorPointPosLogicInternal"
+00167:            Code="3009">ポイントＰＯＳ内部処理でエラーが発生しました。</Message>
+00168:   <Message Id="ErrorOldModuleVersion"
+00169:            Code="3010">旧モジュールバージョンエラー</Message>
+00170:   <Message Id="ErrorCashChangerDepositOver"
+00171:            Code="3011">お釣りが1万円以上になる、お預かりは出来ません。</Message>
+00172:   <Message Id="ErrorCashChangerBeginDeposit"
+00173:            Code="3012">釣銭機開始処理が失敗しました。再実行してください。</Message>
+00174:   <Message Id="ErrorCashChangerFixDeposit"
+00175:            Code="3013">釣銭機確定処理が失敗しました。再実行してください。</Message>
+00176:   <Message Id="ErrorDevice"
+00177:            Code="3014">{0}</Message>
+00178:   <Message Id="ErrorOpenedAlready"
+00179:            Code="3015">既に開設処理が行われています。</Message>
+00180:   <Message Id="ErrorOpenFirst"
+00181:            Code="3016">まず始めに開設処理を行ってください。</Message>
+00182:   <Message Id="ErrorSummaryNotCompleted"
+00183:            Code="3017">集計処理が完了していません。もうしばらくしてから再実行してください。</Message>
+00184:   <Message Id="ErrorInquiryMTranOffline"
+00185:            Code="3018">サーバとの通信に失敗しました。スキャンを再実行してください。</Message>
+00186:   <Message Id="ErrorInquiryMTranIllegal"
+00187:            Code="3019">スキャンに失敗しました。</Message>
+00188:   <Message Id="ErrorPaymentStationOffline"
+00189:            Code="3020">サーバとの通信に失敗しました。</Message>
+00190:   <Message Id="ErrorNotFoundMTransaction"
+00191:            Code="3021">中間取引が存在しません。&#xa;または、既に復元済の中間取引です。</Message>
+00192:   <Message Id="ErrorLogicService"
+00193:            Code="3022">{0}</Message>
+00194:   <Message Id="ErrorCashChanger"
+00195:            Code="3023">{0}</Message>
+00196:   <Message Id="ErrorInvalidInputChargeAmount"
+00197:            Code="3024">チャージ金額を入力してください。</Message>
+00198:   <Message Id="ErrorValueDepositUnitLimit"
+00199:            Code="3025">入金額が1度あたりの入金限度額 = {0} 円を超えています。</Message>
+00200:   <Message Id="ErrorExitPassword"
+00201:            Code="3026">パスワードが違います。</Message>
+00202:   <Message Id="ErrorPrint"
+00203:            Code="3027">「レシート再印字」を実行してください。</Message>
+00204:   <Message Id="WarningMTranNeutral"
+00205:            Code="3028">取引が開始されていませんでした。「戻る」ボタンを押下し、初めから操作をやり直してください。</Message>
+00206:   <Message Id="WarningMTranIsOperating"
+00207:            Code="3029">取引を復旧しました。「戻る」ボタンを押下し、操作を再開してください。</Message>
+00208:   <Message Id="ErrorPrintDataNotExists"
+00209:            Code="3030">印字データが存在しません。</Message>
+00210:   <Message Id="ErrorReprintOverPermitCount"
+00211:            Code="3031">再印字可能枚数を超過しているため、再印字できません。</Message>
+00212:   <Message Id="ErrorValueDepositTimeOut"
+00213:            Code="3032">入金に失敗しました。状態確認を行ってください。</Message>
+00214:   <Message Id="ErrorValueCheckUnfinishedDepositTimeOut"
+00215:            Code="3033">プリカ利用取消中にエラーが発生したので、再実行してください。</Message>
+00216:   <Message Id="ErrorCashChangerStatusFull"
+00217:            Code="3034">釣銭機にフルの現金スロットがあります。ご確認ください。</Message>
+00218:   <Message Id="ErrorCashChangerStatusEmpty"
+00219:            Code="3035">釣銭機にエンプティの現金スロットがあります。ご確認ください。</Message>
+00220:   <Message Id="ErrorCashChangerStatusNearFull"
+00221:            Code="3036">釣銭機にニアフルの現金スロットがあります。ご確認ください。</Message>
+00222:   <Message Id="ErrorCashChangerStatusNearEmpty"
+00223:            Code="3037">釣銭機にニアエンプティの現金スロットがあります。ご確認ください。</Message>
+00224:   <Message Id="WarningFailedInsertItemMasterMaintenance"
+00225:            Code="3038">商品マスタの緊急メンテナンス履歴を登録中に問題が発生しました。売価変更/名称変更は行われますが、履歴が記録されていない可能性があります。店舗コード:{0} 商品コード:{1}</Message>
+00226:   <Message Id="NoticeCancelPayment"
+00227:            Code="3039">会計操作中止を実行すると、&#xa;取引をバーコードスキャン前の状態に戻します。&#xa;取引は完了していないため、&#xa;お客様には「お会計票」を無くさないよう&#xa;アナウンスください。&#xa;実行してよろしいですか？</Message>
+00228:   <Message Id="NoticeCancelTransaction"
+00229:            Code="3040">取引中止を実行します。&#xa;実行してよろしいですか？</Message>
+00230:   <Message Id="NoticeCancelTransaction_Customer"
+00231:            Code="3040">取引中止を実行します。&#xa;実行してよろしいですか？</Message>
+00232:   <Message Id="NoticeCancelResalesTransactionNoChange">レジマイナスのみ完了し、売上が立っていない状態です。&#xa;売上を立てる必要がある場合は取引完了操作を再度実行してください。&#xa;&#xa;取引中止を行ってもよろしいですか？</Message>
+00233:   <Message Id="NoticeCancelResalesTransactionChange">レジマイナスのみ完了し、売上が立っていない状態です。&#xa;売上を立てる必要がある場合は取引完了操作を再度実行してください。&#xa;&#xa;取引中止を行ってもよろしいですか？</Message>
+00234:   <Message Id="NoticeCancelTransactionWithChange">現状、売上が立っていない状態です。&#xa;このまま取引中止を実施すると&#xa;チャージ取引のみ成立し、レシートとお釣りが排出されます。&#xa;&#xa;取引中止を実施してよろしいですか？</Message>
+00235:   <Message Id="NoticeCancelTransactionWithReceipt">現状、売上が立っていない状態です。&#xa;このまま取引中止を実施すると&#xa;チャージ取引のみ成立し、レシートとお釣りが排出されます。&#xa;&#xa;取引中止を実施してよろしいですか？</Message>
+00236:   <Message Id="WarningValueCardInquiry"
+00237:            Code="3041">トライアルプリカ照会に失敗しました。&#xa;ポイント利用は可能ですが、お支払にはお使いいただけません。</Message>
+00238:   <Message Id="ErrorReceiptServiceOffline"
+00239:            Code="3042">レシート取得時にサーバとの通信に失敗しました。「レシート再印字」を再実行してください。</Message>
+00240:   <Message Id="ErrorCashChangerDeviceInit"
+00241:            Code="3043">釣銭機に異常が発生しているため、&#xa;再接続に失敗しました。&#xa;釣銭機本体に表示されているエラーを解除し、&#xa;再度「釣銭機再接続」を実行してください。</Message>
+00242:   <Message Id="ErrorValueCardScanErrorForCustomer"
+00243:            Code="3044">スキャンに失敗しました。もう一度、スキャン操作をお願いします。再度失敗する場合はお手数ですが、お近くの係員にお問い合わせください。</Message>
+00244:   <Message Id="ErrorLogicServiceClientOffline"
+00245:            Code="3045">LogicServiceに接続できませんでした。</Message>
+00246:   <Message Id="ErrorInvalidChargePoint"
+00247:            Code="3046">入力されたチャージポイントが不正です。</Message>
+00248:   <Message Id="ErrorEventCodeNotExists"
+00249:            Code="3047">イベントコードが存在しません。</Message>
+00250:   　<Message Id="ErrorInitPOSData"
+00251:            Code="3048">取引の初期化に失敗しました。</Message>
+00252:   <Message Id="WarningRMTrialCouponCanNotAdd"
+00253:            Code="W3049">追加できなかったRMお試し引換券情報があります。</Message>
+00254:   <Message Id="ErrorCashChangerReadCashCounts"
+00255:            Code="3050">釣銭機在高読取り処理が失敗しました。再実行してください。</Message>
+00256:   <Message Id="ErrorCashChangerBeginReplenish"
+00257:            Code="3051">釣銭機開始処理が失敗しました。再実行してください。</Message>
+00258:   <Message Id="ErrorCashChangerEndReplenish"
+00259:            Code="3052">釣銭機確定処理が失敗しました。再実行してください。</Message>
+00260:   <Message Id="ErrorRecoveredRecoveryBox"
+00261:            Code="3053">釣銭機の回収庫からお金が回収されています。確定を行ってください。</Message>
+00262:   <Message Id="ErrorOverRecoverCount"
+00263:            Code="3054">枚数が多すぎます。</Message>
+00264:   <Message Id="ErrorNotRecoveredRecoveryBox"
+00265:            Code="3055">回収庫に未回収の紙幣があります。&#xa;回収金額に含める場合は、&#xa;回収対象にチェックを入れてください。&#xa;&#xa;先に回収庫を取り外す場合は、&#xa;本画面を終了してから行ってください。</Message>
+00266:   <Message Id="ErrorNeedRecoverRecoveryBox"
+00267:            >回収庫に未回収の紙幣があります。&#xa;回収対象にチェックを入れてください。</Message>
+00268:   <Message Id="ErrorNotRecovered"
+00269:            Code="3056">回収金額がありません。</Message>
+00270:   <Message Id="ErrorCashChangerRecoverCash"
+00271:            Code="3057">釣銭機確定処理が失敗しました。再実行してください。</Message>
+00272:   <Message Id="ErrorDebitDeviceInit"
+00273:            Code="3058">デビット端末に異常が発生しているため、&#xa;再接続に失敗しました。&#xa;デビット端末に表示されているエラーを解除し、&#xa;再度「デビット端末再接続」を実行してください。</Message>
+00274:   <Message Id="ErrorDebitHealthCheck"
+00275:            Code="3059">デビット接続に失敗しました。&#xa;現在利用出来ない状態のため、&#xa;お使いの際はお近くの係員へお声かけください。</Message>
+00276:   <Message Id="ErrorDebitSalesRequest"
+00277:            Code="3060">デビット支払に失敗しました。&#xa;現在利用出来ない状態のため、&#xa;お使いの際はお近くの係員へお声かけください。</Message>
+00278:   <Message Id="ErrorDebitSalesCancel"
+00279:            Code="3061">デビット端末から中止されました。</Message>
+00280:   <Message Id="ErrorDuplicatedItemMultipleRMTrialCoupon"
+00281:            Code="3062">RMお試し引換券情報の追加に失敗しました。複数のクーポンIDに同一商品が存在します。</Message>
+00282:   <Message Id="NoticeCancelDebitTransaction"
+00283:            Code="3063">デビット端末操作中は実行しないでください。&#xa;取引中止を行うと、デビット口座の引き落とし額が&#xa;プリカカードにチャージされない状況が発生します。&#xa;操作を継続する場合は係員画面を終了してください。&#xa;&#xa;取引中止を実行してよろしいですか？</Message>
+00284:   <Message Id="ErrorCashChangerErrorCanceled"
+00285:            Code="3064">釣銭機補充キャンセル処理が失敗しました。再実行してください。</Message>
+00286:   <Message Id="RecoverCashChangerCheck"
+00287:            Code="3065">回収庫からの回収は鍵が必要になります。</Message>
+00288:   <Message Id="ErrorNotMatchRecoverCount"
+00289:            Code="3066">補充合計金額と回収合計金額が一致しません。</Message>
+00290:   <Message Id="ErrorNotReplenish"
+00291:            Code="3067">補充金額がありません。</Message>
+00292:   <Message Id="ExchangeMoneyCheck"
+00293:            Code="3068">補充合計金額と回収合計金額が一致しません。&#xa;金額を一致させてください。&#xa;&#xa;追加で補充したい場合は終了をして最初から操作を行ってください。</Message>
+00294:   <Message Id="RecoverCashChangerCheckCharge"
+00295:            Code="3069">回収後、回収庫から紙幣を回収してください。</Message>
+00296:   <Message Id="ErrorExchangeNotRecoveredRecoveryBox"
+00297:            Code="3070">回収庫に未回収の紙幣があります。&#xa;&#xa;釣銭機回収操作完了後に&#xa;釣銭機両替操作を行ってください。</Message>
+00298:   <Message Id="WarningCashChangerStatusNearFullDetil"
+00299:            Code="W3071">釣銭機にニアフルの現金スロットがあります。&#xa;以下の現金スロットをご確認ください。&#xa;&#xa;[ニアフル]&#xa;{0}</Message>
+00300:   <Message Id="WarningCashChangerStatusNearEmptyDetil"
+00301:            Code="W3072">釣銭機にニアエンプティの現金スロットがあります。&#xa;以下の現金スロットをご確認ください。&#xa;&#xa;[ニアエンプティ]&#xa;{0}</Message>
+00302:   <Message Id="WarningCashChangerStatusNearDetil"
+00303:            Code="W3073">釣銭機にニアフル・ニアエンプティの現金スロットがあります。&#xa;以下の現金スロットをご確認ください。&#xa;&#xa;[ニアフル]&#xa;{0}&#xa;[ニアエンプティ]&#xa;{1}</Message>
+00304:   <Message Id="CashChangerInitConfirm"
+00305:            Code="3074">釣銭機の再接続を行いますか？&#xa;&#xa;釣銭機のエラー状態を解除しないまま&#xa;再接続を行うと必ず失敗します。&#xa;エラー状態を解除してから&#xa;再接続を行ってください。</Message>
+00306:   <Message Id="ErrorCloseCountRecoveryBox"
+00307:            Code="3075">回収庫に未回収の紙幣があります。&#xa;精算前に必ず回収してください。</Message>
+00308:   <Message Id="ErrorNewModuleVersion"
+00309:            Code="3076">新モジュールバージョンエラー</Message>
+00310:   <Message Id="ErrorNotFoundSalesTransaction"
+00311:            Code="3077">売上取引が存在しません。&#xa;または、既に取消済の売上取引です。</Message>
+00312:   <Message Id="ErrorCannotVoidTransaction"
+00313:            Code="3078">売上取引以外の取消操作はできません。</Message>
+00314:   <Message Id="ErrorRequiredWithName"
+00315:            Code="3079">{0}は必須です。</Message>
+00316:   <Message Id="ErrorIllegalWithName"
+00317:            Code="3080">{0}が正しくありません。</Message>
+00318:   <Message Id="ErrorFreeMessage"
+00319:            Code="3081">{0}</Message>
+00320:   <Message Id="ErrorCloseCountUncertain"
+00321:            Code="3082">違算状態を検出しました。精算をするためには違算状態を解消してください。&#xa;違算状態を解消する方法はマニュアルを参照してください。</Message>
+00322:   <Message Id="ErrorLoadOtherMTranDuringSendMTransaction"
+00323:            Code="3083">現在別の取引を送信中のため復元できません。</Message>
+00324:   <Message Id="ErrorSaveMTransaction"
+00325:            Code="3084">中間取引の保存に失敗しました。</Message>
+00326:   <Message Id="ErrorSaveMTransactionDuetoPayment"
+00327:            Code="3085">商品券・お試し引換券以外の支払いがあるため、中間取引が保存できません。</Message>
+00328:   <Message Id="ErrorCannotVoidDuetoPayment"
+00329:            Code="3086">{0}の支払いを含むため訂正できない売上取引です。</Message>
+00330:   <Message Id="ErrorCannotReSalesDuetoPayment"
+00331:            Code="3087">{0}の支払いを含むため打ち直しできない売上取引です。</Message>
+00332:   <Message Id="ErrorCannotVoidCurrentMode"
+00333:            Code="3088">現在のモードでは読み込めない売上取引です。</Message>
+00334:   <Message Id="ErrorValueDeficiencyLimit"
+00335:            Code="3089">入金額はお会計の不足額より大きい金額で入力してください。</Message>
+00336:   <Message Id="ErrorReSalesRestoreMember"
+00337:            Code="3090">会員照会に失敗しました。再実行してください。</Message>
+00338:   <Message Id="ErrorReSalesRestoreTran"
+00339:            Code="3091">取引の復元でシステムエラーが発生しました。&#xa;売上取引は通常の売上機能から作成してください。</Message>
+00340:   <Message Id="ErrorSavedMTranLimit"
+00341:            Code="3092">保留制限件数を超えています。</Message>
+00342:   <Message Id="ErrorDebitSalesStopNoOperation"
+00343:            Code="3093">デビット支払いを中止しました。</Message>
+00344:   <Message Id="ErrorDebitSalesErrorNoOperation"
+00345:            Code="3094">デビット支払に失敗しました。&#xa;{0}</Message>
+00346:   <Message Id="ErrorDebitSalesRejectedNoOperation"
+00347:            Code="3095">デビット支払に失敗しました。&#xa;ご利用の金融機関へお問い合わせください。</Message>
+00348:   <Message Id="ErrorDebitHealthCheckErrorNoOperation"
+00349:            Code="3096">{0}デビット接続に失敗しました。&#xa;デビット端末の状態を確認し、「デビット端末再接続」を実行してください。</Message>
+00350:   <Message Id="ErrorDebitStopErrorNoOperation"
+00351:            Code="3096">{0}デビット支払に失敗しました。&#xa;デビット端末の状態を確認し、「デビット端末再接続」を実行してください。</Message>
+00352:   <Message Id="ErrorDebitErrorNoOperation"
+00353:            Code="3097">{0}デビット支払に失敗しました。&#xa;ヘルプデスクに取引状況を確認してください。&#xa;デビット端末の状態を確認し、「デビット端末再接続」を実行してください。</Message>
+00354:   <Message Id="ErrorDebitRetryNoOperation"
+00355:            Code="3098">デビット支払に失敗しました。&#xa;再度、実行してください。&#xa;繰り返し発生する場合は別のカードで実施してください。</Message>
+00356:   <Message Id="ErrorDebitSalesStopFailedNoOperation"
+00357:            Code="3099">中止に失敗しました。</Message>
+00358:   <Message Id="ErrorMSRInit"
+00359:            Code="4000">MSRカードリーダーの初期化に失敗しました。再試行しますか？</Message>
+00360:   <Message Id="ErrorLineDisplayInit"
+00361:            Code="4001">客側表示機の初期化に失敗しました。再試行しますか？</Message>
+00362:   <Message Id="ErrorScannerInit"
+00363:            Code="4002">スキャナーの初期化に失敗しました。再試行しますか？</Message>
+00364:   <Message Id="ErrorPOSPrinterInit"
+00365:            Code="4003">プリンターの初期化に失敗しました。&#xa;レシート用紙、プリンターカバーを&#xa;確認してください。</Message>
+00366:   <Message Id="ErrorCashChangerInit"
+00367:            Code="4004">釣銭機の初期化に失敗しました。再試行しますか？{0}</Message>
+00368:   <Message Id="ErrorCAFISArchInit"
+00369:            Code="4005">CAFIS Arch 端末の初期化に失敗しました。再試行しますか？</Message>
+00370:   <Message Id="ErrorLaneLightInit"
+00371:            Code="4006">レーンライトの初期化に失敗しました。再試行しますか？</Message>
+00372:   <Message Id="ErrorGuidanceLEDInit"
+00373:            Code="4007">ガイダンスLEDの初期化に失敗しました。再試行しますか？</Message>
+00374:   <Message Id="ErrorStateManagementInit"
+00375:            Code="4008">アテンダントPC通信の初期化に失敗しました。再試行しますか？</Message>
+00376:   <Message Id="ErrorPosKeyboardInit"
+00377:            Code="4009">POSキーボードの初期化に失敗しました。再試行しますか？</Message>
+00378:   <Message Id="ErrorCannotReSalesDuetoItemCount"
+00379:            Code="4011">部分返品できない取引です。&#xa;返品は一括取消を利用してください。</Message>
+00380:   <Message Id="WarningCreateItemMasterMaintenanceFileFailed"
+00381:            Code="4012">商品マスタメンテナンスのファイル名重複によりファイル作成できませんでした。</Message>
+00382:   <Message Id="WarningDeleteItemMasterMaintenanceFileFailed"
+00383:            Code="4013">商品マスタメンテナンスのファイル名重複によりファイル削除できませんでした。</Message>
+00384:   <Message Id="ErrorValueCardIncorrect"
+00385:            Code="4013">バリューカードの情報が不正、確認ください。</Message>
+00386:   <Message Id="ErrorNotFoundEMoneyChargeTransaction"
+00387:            Code="4014">チャージ取引が存在しません。&#xa;または、既に取消済のチャージ取引です。</Message>
+00388:   <Message Id="ErrorValueCardBalanceNotDeficiency"
+00389:            Code="4015">バリューカードの金額が足りない。</Message>
+00390:   <Message Id="ErrorCannotEMoneyChargeVoidTransaction"
+00391:            Code="4016">チャージ取引以外の取消操作はできません。</Message>
+00392:   <Message Id="ErrorEMoneyChargeVoidValueCardOffline"
+00393:            Code="4017">入金取消に失敗しました。&#xa;再実行してください。</Message>
+00394:   <Message Id="ErrorValueDepositCancel"
+00395:            Code="4018">チャージ後に電子マネーの利用があるため&#xa;チャージ取消できません。&#xa;お客様相談室に問合せしてください。</Message>
+00396:   <Message Id="ErrorCanOperate"
+00397:            Code="4019">操作禁止</Message>
+00398:   <Message Id="ErrorTrainingEMoneyChargeVoidTransaction"
+00399:            Code="4020">練習モードで作成された&#xa;チャージ取引の取消操作は出来ません。</Message>
+00400:   <Message Id="ErrorCannotReSalesDuetoReasonCode"
+00401:            Code="4021">アプリ・プリカが登録されている取引では、&#xa;「Pカード通し忘れ」は選択できません。</Message>
+00402:   <Message Id="ErrorCannotReSalesDuetoCreditCombinedUse"
+00403:            Code="4022">部分返品できない取引です。&#xa;返品は一括取消を利用してください。</Message>
+00404:   <Message Id="ErrorCannotReSalesCreditCombinedUse"
+00405:            Code="4023">クレジットとその他の支払方法の併用はできません。</Message>
+00406:   <Message Id="ErrorCannotSalesCreditCombinedUse"
+00407:            Code="4024">クレジットとその他の支払方法の併用はできません。</Message>
+00408:   <Message Id="ErrorInputNeed"
+00409:            Code="8000">入力値が必要な操作です。&#xa;（入力値＋操作キー）</Message>
+00410:   <Message Id="ErrorInputIllegal"
+00411:            Code="8001">入力値が不正です。</Message>
+00412:   <Message Id="ErrorParameter"
+00413:            Code="9001">パラメータに誤りがあります。{0}</Message>
+00414:   <Message Id="ErrorTranState"
+00415:            Code="9003">現在この操作は行えません。もう一度、操作をやり直して下さい。</Message>
+00416:   <Message Id="ErrorAccessCode"
+00417:            Code="9005">アクセスコードが不正です。</Message>
+00418:   <Message Id="ErrorLoginFailure"
+00419:            Code="9006">ユーザーIDあるいはパスワードに誤りがあります。</Message>
+00420:   <Message Id="ErrorLockPOSData"
+00421:            Code="9012">先行する処理が実行中のためAPIを受付できません。</Message>
+00422:   <Message Id="ErrorException"
+00423:            Code="9999">例外発生[{0}]</Message>
+00424:   <Message Id="ErrorNonBarcodeItemNotFound">バーコードなし商品はありません。</Message>
+00425:   <Message Id="PointConfirm">CRMポイントサーバーと通信できません。&#xa;ポイントは後日反映されます。&#xa;よろしいですか？</Message>
+00426:   <Message Id="POSPrinterStatusConfirm">プリンターの状態を確認してください</Message>
+00427:   <Message Id="CashChangerDescription">釣銭機</Message>
+00428:   <Message Id="CashDrawerDescription">キャッシュドロワー</Message>
+00429:   <Message Id="LineDisplayDescription">客側表示機</Message>
+00430:   <Message Id="MSRDescription">MSRカードリーダーシミュレーター</Message>
+00431:   <Message Id="POSPrinterDescription">POSプリンター</Message>
+00432:   <Message Id="ScannerDescription">スキャナー</Message>
+00433:   <Message Id="PointServiceDescription">ポイントサービス</Message>
+00434:   <Message Id="CAFISArchDescription">CAFIS Arch 端末</Message>
+00435:   <Message Id="MTranServiceDescription">中間取引サービス</Message>
+00436:   <Message Id="POSPrinterCoverOpen">プリンターカバーオープン</Message>
+00437:   <Message Id="POSPrinterCoverOK">プリンターカバーオープン解除</Message>
+00438:   <Message Id="POSPrinterRecEmpty">プリンター用紙を交換してください</Message>
+00439:   <Message Id="POSPrinterRecPaperOK">プリンター用紙の準備ができました</Message>
+00440:   <Message Id="NoticeOpenCountStart">開設処理を開始してよろしいですか？</Message>
+00441:   <Message Id="NoticeCloseCountStart">精算処理を開始してよろしいですか？</Message>
+00442:   <Message Id="NoticeCloseCountUnOperatedMTran">処理されていない保留取引があります。&#xa;続行しますか？</Message>
+00443:   <Message Id="NoticeCloseCountSummaryError">集計エラーがあります。&#xa;続行しますか？</Message>
+00444:   <Message Id="NoticeCloseCountCAFISArchError">デビット日計エラーがあります。{0}&#xa;デビット日計を出力せずに続行しますか？</Message>
+00445:   <Message Id="NoticeCloseCountCAFISArchErrorByArchTerminal">&#xa;デビット端末を切断しました。&#xa;デビット日計を出力するには、再実行を押してください。</Message>
+00446:   <Message Id="NoticeCloseCountCAFISArchErrorByArchTerminalWithoutIdle">&#xa;デビット端末の状態を確認してください。</Message>
+00447:   <Message Id="NoticeCloseCountCAFISArchDebitInit">デビット端末との接続が、切断状態です。&#xa;自動接続して、再実行しますか？&#xa;デビット日計処理を省略して処理続行しますか？</Message>
+00448:   <Message Id="NoticeExitApplication">アプリケーションを終了してよろしいですか？</Message>
+00449:   <Message Id="NoticeShutdown">シャットダウンを実行してよろしいですか？</Message>
+00450:   <Message Id="NoticeReboot">再起動を実行してよろしいですか？</Message>
+00451:   <Message Id="NoticeMenuReboot">再起動しますか？&#xa;０：しない　９：する</Message>
+00452:   <Message Id="ButtonAbort">強制終了</Message>
+00453:   <Message Id="ButtonConnect">接続</Message>
+00454:   <Message Id="ButtonDisconnect">切断</Message>
+00455:   <Message Id="Batch_WaitingTransferCompletion">転送完了待機中です。</Message>
+00456:   <Message Id="DeviceSetting_NoticeSuccessConnect">接続に成功しました。</Message>
+00457:   <Message Id="DeviceSetting_NoticeSuccessDisconnect">切断に成功しました。</Message>
+00458:   <Message Id="DeviceSetting_NoticeFailedConnect">接続に失敗しました。</Message>
+00459:   <Message Id="BeepSoundDescription">ビープ</Message>
+00460:   <Message Id="ErrorBeepSoundDescription">エラービープ</Message>
+00461:   <Message Id="ErrorDeviceInit">{0}の初期化に失敗しました。再試行しますか？</Message>
+00462:   <Message Id="ErrorDeviceNotConnect">{0}がシステムに接続されていないか､電源OFFの状態です。</Message>
+00463:   <Message Id="ButtonReboot">再起動</Message>
+00464:   <Message Id="ButtonExit">強制続行</Message>
+00465:   <Message Id="ButtonRetry">再試行</Message>
+00466:   <Message Id="ButtonShutdonw">ｼｬｯﾄﾀﾞｳﾝ</Message>
+00467:   <Message Id="ExecuteTableDelete">{0}の削除</Message>
+00468:   <Message Id="ExecuteTableImport">{0}のインポート</Message>
+00469:   <Message Id="ExecuteTableUpdate">{0}の更新</Message>
+00470:   <Message Id="ProcessNameDatabaseRestore">データベースの復元</Message>
+00471:   <Message Id="ProcessNameDatabaseBackup">データベースのバックアップ</Message>
+00472:   <Message Id="ProcessNameDiffMasterFileDownload">差分マスタ配信ファイルのダウンロード（Version：{0}、MinorVersion：{1}）</Message>
+00473:   <Message Id="ProcessNameMasterFileDownload">マスタ配信ファイルのダウンロード（Version：{0}）</Message>
+00474:   <Message Id="ProcessNameGetDiffMasterDownloadInfo">差分マスタ配信ファイルのダウンロード情報取得</Message>
+00475:   <Message Id="ProcessNameGetDiffMasterUpdateInfo">差分マスタ配信ファイルの更新情報取得</Message>
+00476:   <Message Id="ProcessNameGetMasterDownloadInfo">マスタ配信ファイルのダウンロード情報取得</Message>
+00477:   <Message Id="ProcessNameGetMasterUpdateInfo">マスタ配信ファイルの更新情報取得</Message>
+00478:   <Message Id="ProcessNameMasterClear">マスタのクリア</Message>
+00479:   <Message Id="ProcessNameEntryUploadMasterDownloadFile">配信ファイルの登録</Message>
+00480:   <Message Id="ProcessNameRegistTerminalVersion">自端末のバージョン登録</Message>
+00481:   <Message Id="ProcessNameNotifyDiffMasterDownloadCompleted">差分マスタ配信ファイルのダウンロード完了報告</Message>
+00482:   <Message Id="ProcessNameNotifyDiffMasterUpdateCompleted">差分マスタの更新完了報告</Message>
+00483:   <Message Id="ProcessNameNotifyMasterDownloadCompleted">マスタ配信ファイルのダウンロード完了報告</Message>
+00484:   <Message Id="ProcessNameNotifyMasterUpdateCompleted">マスタの更新完了報告</Message>
+00485:   <Message Id="ProcessNameShrinkDatabase">データベースの圧縮</Message>
+00486:   <Message Id="ProcessNameUncompressMasterZipFile">マスタ配信ファイルの解凍</Message>
+00487:   <Message Id="ProcessNameUpdateDBStatistics">データベースの統計情報更新</Message>
+00488:   <Message Id="TitleMasterSync">マスタ同期</Message>
+00489:   <Message Id="SyncResultError">失敗</Message>
+00490:   <Message Id="SyncResultNone">無し</Message>
+00491:   <Message Id="SyncReusltProcess">処理中</Message>
+00492:   <Message Id="SyncResultSuccess">成功</Message>
+00493:   <Message Id="SyncResultMasterUpdateNone">マスタ更新無し</Message>
+00494:   <Message Id="SyncResultStart">開始</Message>
+00495:   <Message Id="SyncResultEnd">終了</Message>
+00496:   <Message Id="SyncResultOffline">オフライン</Message>
+00497:   <Message Id="ProcessNameMasterSyncStart">マスタの適用開始（Version：{0}）</Message>
+00498:   <Message Id="ProcessNameMasterSyncEnd">マスタの適用終了（Version：{0}）</Message>
+00499:   <Message Id="ProcessNameDiffMasterSyncStart">マスタの適用開始（Version：{0}、MinorVersion：{1}）</Message>
+00500:   <Message Id="ProcessNameDiffMasterSyncEnd">マスタの適用終了（Version：{0}、MinorVersion：{1}）</Message>
+00501:   <Message Id="ProcessNameAllStoreMasterSync">全店舗共通の各マスタの同期</Message>
+00502:   <Message Id="ProcessNameStoreMasterSync">店舗の各マスタの同期</Message>
+00503:   <Message Id="GuidanceMasterSync">
+00504:     マスタ同期でエラーが発生した場合、下記のボタンが押下可能になります。
+00505:     再試行　　　　　：  マスタ同期を再試行します。
+00506:     強制続行　　　　：  マスタ同期せず、前回のマスタで営業します。
+00507:     再起動　　　　　：  端末を再起動させ、マスタ同期を再試行します。
+00508:     ｼｬｯﾄﾀﾞｳﾝ　　　　：  端末の電源をＯＦＦします。
+00509:   </Message>
+00510:   <Message Id="ErrorEMoneyChargeVD">入金に失敗しました。再実行してください。数回再実行しても成功できない場合、係員呼出してください。</Message>
+00511:   <Message Id="ErrorEMoneyChargeEmployeeVD">入金に失敗しました。&#xa;再実行してください。</Message>
+00512:   <Message Id="WarningRMStamprallyCanNotAdd"
+00513:          Code="W2213">追加できなかったRMスタンプラリー情報があります。</Message>
+00514:   <Message Id="NoticeCancelSelfSalesTransaction"
+00515:          Code="3040">お買物を中止します&#xa;よろしいですか？</Message>
+00516:   <Message Id="ErrorPOSPrinter24VPowerDown">24Vダウンエラーが発生しました。&#xa;プリンターの開閉を行ってください。&#xa;改善しない場合はヘルプデスクへ連絡してください。</Message>
+00517:   <Message Id="ErrorPOSPrinterJam">レシート用紙のジャムエラーが発生しました。&#xa;プリンターの開閉を行ってください。&#xa;改善しない場合はヘルプデスクへ連絡してください。</Message>
+00518:   <Message Id="ErrorPOSPrinterCutter">カッターエラーが発生しました。&#xa;ヘルプデスクへ連絡してください。</Message>
+00519:   <Message Id="ErrorPOSPrinterHeadBroken">サーマル印字ヘッドのドット抜けが&#xa;発生しました。&#xa;ヘルプデスクへ連絡してください。</Message>
+00520:   <Message Id="ErrorPOSPrinterPrint">印字エラーが発生しました。&#xa;プリンターの開閉を行ってください。&#xa;改善しない場合はヘルプデスクへ連絡してください。</Message>
+00521:   <Message Id="ErrorMSRReadMagnetism">MSR読取磁気エラー</Message>
+00522:   <Message Id="ErrorMSREntryCard">MSRカード挿入可能状態遷移エラー</Message>
+00523:   <Message Id="CashChangerErrorRemoveMoney">釣銭排出口に釣銭が残留しています。回収してください。</Message>
+00524:   <Message Id="LaneLightDescription">レーンライト</Message>
+00525:   <Message Id="GuidanceLEDDescription">ガイダンスLED</Message>
+00526:   <Message Id="CancelNonBarcodeItemConfirm">取消してもよろしいでしょうか？</Message>
+00527:   <Message Id="GuidanceCallAttendantCAFISArchUnfinished">引落し状況を確認する必要があります。&#xa;レシートを従業員へお渡し下さい。</Message>
+00528:   <Message Id="GuidanceCallAttendantCAFISArchVDOffline">レシートを従業員へお渡し下さい。</Message>
+00529:   <Message Id="PaymentServiceDescription">決済端末</Message>
+00530:   <Message Id="ErrorPaymentServiceInit">決済端末の初期化に失敗しました。</Message>
+00531: <br />
+00532:   <Message Id="TextDate">日付</Message>
+00533:   <Message Id="TextTime">時刻</Message>
+00534:   <Message Id="TextType">種別</Message>
+00535:   <Message Id="TextTerminalNo">端末番号</Message>
+00536:   <Message Id="TextReceiptNo">レシート番号</Message>
+00537:   <Message Id="TextCarcNo">カード番号</Message>
+00538:   <Message Id="TextQuantityFull">点数</Message>
+00539:   <Message Id="TextQuantity">点</Message>
+00540:   <Message Id="TextAmount">金額</Message>
+00541:   <Message Id="TextFullWidthSpace">　</Message>
+00542:   <Message Id="TextCancel">ｷｬﾝｾﾙ</Message>
+00543:   <Message Id="TextOK">OK</Message>
+00544:   <Message Id="TextCartTerminalNo">カート番号</Message>
+00545: 
+00546:   <Message Id="AgeConfirm">身分証の確認をする場合は、&#xa;{0}&#xa;以降の方が酒・たばこ販売禁止対象です。</Message>
+00547:   <Message Id="DrugConfirm">お客様へ医薬品の利用方法を説明しますか</Message>
+00548:   <Message Id="PreventionConfirm">防犯商品確認お願いします。</Message>
+00549:   <Message Id="ErrorBestByDateBarcode"
+00550:            Code="1827">賞味期限切れの商品のためお買上できません。</Message>
+00551:   <Message Id="ErrorSecondDisplayInit">客面の初期化に失敗しました。再試行しますか？</Message>
+00552:   <Message Id="InfoItemCancelWaiting">取消する商品をスキャンしてください。</Message>
+00553:   <Message Id="InfoReceiptRecoverWaiting">レシートの回収をお願いします。</Message>
+00554:   <Message Id="ErrorNotFoundSalesEvidenceTransaction">売上取引が存在しません。&#xa;または、既に発行済の売上取引です。</Message>
+00555:   <Message Id="ErrorCannotSalesEvidenceTransaction">売上取引以外の発行操作はできません。</Message>
+00556:   <Message Id="InfoCAFISArchTerminalStateC1">キャッシュカードを&#xa;スリットに通してください</Message>
+00557:   <Message Id="InfoCAFISArchTerminalStateC2"></Message>
+00558:   <Message Id="InfoCAFISArchTerminalStateC3">再度、キャッシュカードを&#xa;スリットに通してください</Message>
+00559:   <Message Id="InfoCAFISArchTerminalStateP1">暗証番号を入力して下さい。</Message>
+00560:   <Message Id="InfoCAFISArchTerminalStateP2"></Message>
+00561:   <Message Id="InfoCAFISArchTerminalStateP3">再度、暗証番号を入力してください</Message>
+00562:   <Message Id="ErrorCAFISArchDebitSalesCommunicationError">通信エラーが発生しました。&#xa;ヘルプデスクに取引状況を確認してください。</Message>
+00563:   <Message Id="ErrorCAFISArchSystemInternalError">システム内部エラーが発生しました</Message>
+00564:   <Message Id="CAFISArchDebitResultCodeCOMError">COMエラー</Message>
+00565:   <Message Id="CAFISArchDebitResultCodeTimeout">タイムアウトエラー</Message>
+00566:   <Message Id="CAFISArchDebitResultCodeUnknown">不明なエラー</Message>
+00567:   <Message Id="CAFISArchDebitServiceHealthCheck">ヘルスチェック</Message>
+00568:   <Message Id="CAFISArchDebitServiceDebitSales">デビット売上</Message>
+00569:   <Message Id="CAFISArchDebitServiceStop">中止</Message>
+00570:   <Message Id="CAFISArchDebitServiceDebitReget">デビット再印字</Message>
+00571:   <Message Id="CAFISArchDebitServiceDebitSummary">デビット集計</Message>
+00572:   <Message Id="InfoTicketHasChangeSales">お預りした券類のお釣りは&#xa;払い出しません。</Message>
+00573:   <Message Id="LDSP_Balance">残額</Message>
+00574:   <Message Id="LDSP_Balance2">不足</Message>
+00575:   <Message Id="LDSP_CancelTransaction">取引を中止しました</Message>
+00576:   <Message Id="LDSP_ChangeAmount">お釣り</Message>
+00577:   <Message Id="LDSP_Correction"><strong><em>訂正</em></strong></Message>
+00578:   <Message Id="LDSP_CorrectionAmount">訂正後金額</Message>
+00579:   <Message Id="LDSP_CorrectionDemandAmount">訂正後請求額</Message>
+00580:   <Message Id="LDSP_Currency">円</Message>
+00581:   <Message Id="LDSP_DepositAmount">お預り</Message>
+00582:   <Message Id="LDSP_DiscountAmount">値引</Message>
+00583:   <Message Id="LDSP_DiscountAmountNoSpace">値引</Message>
+00584:   <Message Id="LDSP_DiscountBundle">まとめ値引</Message>
+00585:   <Message Id="LDSP_DiscountItemCouponAmountOff">クーポン値引</Message>
+00586:   <Message Id="LDSP_DiscountItemCouponPercentOff">クーポン割引</Message>
+00587:   <Message Id="LDSP_DiscountOff">割引</Message>
+00588:   <Message Id="LDSP_FromSalesReturnAmount">元売上預り額</Message>
+00589:   <Message Id="LDSP_MemberAmountOffDiscount">会員値引</Message>
+00590:   <Message Id="LDSP_MemberNewPricePrice">会員価格</Message>
+00591:   <Message Id="LDSP_MemberPercentDiscount">会員割引</Message>
+00592:   <Message Id="LDSP_Minus">-</Message>
+00593:   <Message Id="LDSP_Multiple">*</Message>
+00594:   <Message Id="LDSP_OneBlank">　</Message>
+00595:   <Message Id="LDSP_Percent">％</Message>
+00596:   <Message Id="LDSP_Quantity">点</Message>
+00597:   <Message Id="LDSP_QuantityFull">点数</Message>
+00598:   <Message Id="LDSP_ReSalesBalance">訂正後残額</Message>
+00599:   <Message Id="LDSP_ReSalesReturnAmount">訂正後返金額</Message>
+00600:   <Message Id="LDSP_ReturnPrice">返金</Message>
+00601:   <Message Id="LDSP_SalesTitle">現金</Message>
+00602:   <Message Id="LDSP_SubTotal">小計</Message>
+00603:   <Message Id="LDSP_SubTotalDiscountAmount">小計値引</Message>
+00604:   <Message Id="LDSP_SubTotalDiscountOff">小計割引</Message>
+00605:   <Message Id="LDSP_TotalAmount">合計</Message>
+00606:   <Message Id="LDSP_TwoBlank">　　</Message>
+00607:   <Message Id="LDSP_DiscountPairMatch">セット値引</Message>
+00608:   <Message Id="NoticeCancelOrderKitchenTransaction" >ご注文を中止します&#xa;よろしいですか？</Message>
+00609:   <Message Id="NoticeSoldOutProductsConfirm" >{0}は売切れになりました。</Message>
+00610:   <Message Id="NoticeStockLackOrderKitchen" >ご注文していただいている商品の在庫は不足しています。&#xa;ご確認ください。</Message>
+00611:   <Message Id="ErrorFreeProductsCheckOrderKitchen" >ご飯の点数は弁当数を超えています。&#xa;ご確認ください。</Message>
+00612:   <Message Id="ErrorOrderKitchenServiceInit">オーダーキッチンAPIサービスの初期化に失敗しました。</Message>
+00613:   <Message Id="ErrorOrderKitchenStockAvailableCheck">注文リスト内商品の販売可能数チェックは失敗しました。</Message>
+00614:   <Message Id="NoticeSoldOutOrderKitchen">この商品は売り切れです。</Message>
+00615:   <Message Id="ErrorOrderKitchenSaveOrder">注文情報保存を失敗しました。</Message>
+00616:   <Message Id="NoticeTimeLimitOrderKitchen">時間限定メニューです。</Message>
+00617:   <Message Id="NoticeOrderTypeUnChecked">持ち帰りかイートインを選択してください。</Message>
+00618:   <Message Id="NoticeOrderKitchenUnavailable">営業時間外のため、利用できません。</Message>
+00619:   <Message Id="NoticeEatAfterMessage">お食事の後にお声がけください。&#xa;食後の商品を提供させていただきます。</Message>
+00620:   <Message Id="InfoMultipleReceiptWaiting">控えレシートを１枚発行します。</Message>
+00621:   <Message Id="CreditPayment_ErrorTimeout">操作タイムアウトが発生しました。&#xa;決済端末側の操作をキャンセルし、再度操作してください。</Message>
+00622:   <Message Id="CreditPayment_ErrorSerialPortWrite">POS・決済端末間のケーブル接続状態を確認してください。</Message>
+00623:   <Message Id="CreditPayment_ErrorReceiveUnexpectedLinkLevelPhase">水平パリティチェックで問題が発生しました。&#xa;ヘルプデスクへ連絡してください。</Message>
+00624:   <Message Id="CreditPayment_ErrorTeregramFormat">送信電文フォーマットに問題あります。&#xa;ヘルプデスクへ連絡してください。</Message>
+00625:   <Message Id="CreditPayment_ErrorBusy">決済端末が他業務処理中のため応答できません。&#xa;クレジット業務に切り替えてください。</Message>
+00626:   <Message Id="CreditPayment_ErrorModeMismatch">決済端末のモードが違います。&#xa;練習の終了、もしくは、クレジット業務に切り替えて操作して下さい。</Message>
+00627:   <Message Id="CreditPayment_ErrorCancel">決済端末側で操作がキャンセルされました。</Message>
+00628:   <Message Id="CreditPayment_ErrorUnknown">予期せぬエラーが発生しています。&#xa;ヘルプデスクへ連絡してください。</Message>
+00629:   <Message Id="CreditPayment_ErrorPortIsClosedOrProcessing">POS・決済端末間のケーブル接続状態を確認し、再度操作を行ってください。</Message>
+00630:   <Message Id="CreditPayment_ErrorNotFoundResult">該当する処理結果が存在しません。&#xa;ヘルプデスクへ連絡してください。</Message>
+00631:   <Message Id="CreditPayment_NoticeConnectingCreditService">決済端末と連動しています。</Message>
+00632:   <Message Id="CreditPayment_ErrorCancelTransaction">クレジット決済を選択しているため、一括取消できません。</Message>
+00633:   <Message Id="CreditPayment_ErrorFailedCreditPayment">決済に失敗しました。&#xa;決済端末側での処理が完了している場合は、&#xa;「オフラインクレジット」で処理を進めてください。</Message>
+00634:   <Message Id="CreditPayment_TextOneTime">一括</Message>
+00635:   <Message Id="CreditPayment_TextBonus">ﾎﾞｰﾅｽ</Message>
+00636:   <Message Id="CreditPayment_TextInstallments">分割</Message>
+00637:   <Message Id="CreditPayment_TextBonusCombine">ﾎﾞｰﾅｽ併用</Message>
+00638:   <Message Id="CreditPayment_TextRevolving">ﾘﾎﾞﾙﾋﾞﾝｸﾞ</Message>
+00639:   <Message Id="ErrorCannotEvidenceSpecifyItem">指定商品が１つしかありません。&#xa;通常の領収書発行機能を利用してください。</Message>
+00640:   <Message Id="ErrorEvidenceItemUnSelected">商品を指定してください。</Message>
+00641:   <Message Id="NoticeRequireAggregatedData">クレジット日計レポートを出力します。</Message>
+00642:   <Message Id="ErrorRequireAggregatedData">クレジット日計レポートの出力に失敗しました。</Message>
+00643:   <Message Id="ErrorSearchCountLimitOver">検索件数が{0}件を超えました。条件を絞り込んでください。</Message>
+00644:   <Message Id="ErrorResisterData">データ登録に失敗しました。システム管理者へ連絡してください。</Message>
+00645:   <Message Id="ErrorNotFoundData">対象データがありませんでした。</Message>
+00646:   <Message Id="ErrorNotFoundNodeTypeForUpdate">編集可能な端末種別がありません。システム管理者へ連絡してください。</Message>
+00647:   <Message Id="ErrorNotFoundCopyData">コピー元のデータが存在しません。</Message>
+00648:   <Message Id="ErrorLoginUserInfoNotFound">ログインユーザー情報が不正です。ログイン画面からやり直してください。</Message>
+00649:   <Message Id="ErrorNotFoundCreditService">決済端末に接続できませんでした。&#xa;クレジットの支払いを含むため取消できないチャージ取引です。</Message>
+00650:   <Message Id="ErrorEMoneyChargeValueCardFail">プリカチャージに失敗しました（入金失敗）&#xa;決済端末で行ったクレジット操作を取消してください。</Message>
+00651:   <Message Id="ErrorEMoneyChargeVoidCreditServiceFail">クレジット取消に失敗しました。&#xa;クレジット端末で必ず取消してください。</Message>
+00652:   <Message Id="ErrorCAFISArchLANEMoneyChargeValueCardFail">プリカチャージに失敗しました（入金失敗）&#xa;ヘルプデスクに確認してください。</Message>
+00653:   <Message Id="NoticeOpenCountAmountNon">釣銭機から金額情報が取得できません&#xa;鍵位置確認や操作中の状態は終了して下さい&#xa;強制続行の場合、準備金は０円で登録します</Message>
+00654:   <Message Id="ErrorOpenCountAmountDiffer">表示中金額と釣銭機内金額が一致しません&#xa;情報を再取得します</Message><br />
+00655:   <Message Id="ErrorPaymentRequestToCAFISArch">現在、決済が行えません。&#xa;繰り返し発生する場合は店員をお呼びください。</Message>
+00656:   <Message Id="ErrorHealthCheckToCAFISArch">CAFIS Arch端末に接続されていないか､&#xa;繰り返し発生する場合は店員をお呼びください。</Message>
+00657:   <Message Id="ErrorCAFISArchLANDeviceInit">CAFIS Arch端末に異常が発生しているため、&#xa;再接続に失敗しました。&#xa;CAFIS Arch端末に表示されているエラーを解除し、&#xa;再度「ｸﾚｼﾞｯﾄ端末再接続」を実行してください。</Message>
+00658:   <Message Id="HasCreditProhibitionItems">{0}販売禁止商品がありますので、&#xa;サービスカウンターで購入してください。</Message>
+00659:   <Message Id="CAFISArchLANPaymentError">{0}支払いエラー：</Message>
+00660:   <Message Id="NoticeCloseCountCAFISArchLANInit">CAFIS Arch端末との接続が、切断状態です。&#xa;自動接続して、再実行しますか？&#xa;日計処理を省略して処理続行しますか？</Message>
+00661:   <Message Id="NoticeCloseCountCAFISArchLANError">CAFIS Arch端末日計エラーがあります。{0}&#xa;CAFIS Arch端末日計を出力せずに続行しますか？</Message>
+00662:   <Message Id="NoticeCloseCountCAFISArchLANErrorByArchTerminal">&#xa;CAFIS Arch端末を切断しました。&#xa;日計を出力するには、再実行を押してください。</Message>
+00663:   <Message Id="CAFISArchLANSalesPaymentError">{0}</Message>
+00664:   <Message Id="ErrorNotFoundCAFISArchLAN">{0}に接続できませんでした。&#xa;{1}の支払いを含むため取消できない取引です。</Message>
+00665:   <Message Id="CAFISArchLANDescription">CAFIS Arch LAN端末</Message>
+00666:   <Message Id="ErrorCAFISArchLANInit">CAFIS Arch LAN端末の初期化に失敗しました。再試行しますか？</Message>
+00667:   <Message Id="CAFISArchLANTransactionStateUnknown">引き落としが不明の為、&#xa;ヘルプデスクに取引状況を確認してください。</Message>
+00668:   <Message Id="EMoneyChargeErrorValueDepositOffline">プリカサーバーの入金に失敗しました。「状態確認」を実行してください。&#xa;{0}引き落としが成立しています。&#xa;チャージ金額：{1}円&#xa;引落金額    ：{2}円</Message>
+00669:   <Message Id="EMoneyChargeErrorValueDepositError">プリカカードへのチャージに失敗しました。取引中止し、ヘルプデスクに問い合わせてください。&#xa;{0}引き落としが成立しています。&#xa;チャージ金額：{1}円&#xa;引落金額    ：{2}円</Message>
+00670:   <Message Id="ErroCashchangerInitProhibition">釣銭機側の異常を解除してください。</Message>
+00671:   <Message Id="ErrorAddPaymentCash">釣銭機に異常が発生しました、近くの従業員へ連絡してください。</Message>
+00672:   <Message Id="InfoWaitingSendFromChecker">チェッカーからの&#xa;送信を待機しています。</Message>
+00673:   <Message Id="InfoConfirmSendTwoOperatorsMTransaction">取引を送信します。</Message>
+00674:   <Message Id="InfoSendTwoOperatorsMTransaction">取引を送信しています。</Message>
+00675:   <Message Id="ErrorUsingTwoOperatorsCashier">キャッシャーが利用中です。&#xa;キャッシャーの操作を&#xa;終了してください。</Message>
+00676:   <Message Id="ErrorRestoreTwoOperatorsMTransaction">取引の復元でエラーが発生しました。</Message>
+00677:   <Message Id="ErrorSendTwoOperatorsMTransaction">取引の送信でエラーが発生しました。</Message>
+00678:   <Message Id="ErrorUsingTwoOperatorsChecker">チェッカーが利用中です。&#xa;チェッカーを休止してください。</Message>
+00679:   <Message Id="ErrorConfirmTwoOperatorsCheckerState">チェッカーの状況確認でエラーが発生しました。</Message>
+00680:   <Message Id="NoticeSalesMSRRead">カードを通してください</Message>
+00681:   <Message Id="NoticeSalesScannerDisabled">※スキャナの利用はできません</Message>
+00682:   <Message Id="ClearMemberConfirm">プリカスキャンが取り消されますが実行しますか。</Message>
+00683:   <Message Id="ErrorFaceMeService">大変申し訳ありません。&#xa;顔認証に失敗しました。</Message>
+00684:   <Message Id="ErrorDifferentMemberInquiry">既に会員情報が登録されています。&#xa;会員情報削除後、再度登録してください。&#xa;</Message>
+00685:   <Message Id="ErrorMSRDeviceException">MSR接続エラー&#xa;ヘルプデスクにご連絡ください。</Message>
+00686:   <Message Id="ErrorScannerDeviceException">{0}接続エラー&#xa;スキャナーケーブルの抜き差しを&#xa;行ってください。</Message>
+00687:   <Message Id="ErrorFixedScannerDeviceException">固定スキャナー接続エラー&#xa;ヘルプデスクにご連絡ください。</Message>
+00688:   <Message Id="ErrorPrinterDeviceException">プリンター接続エラー&#xa;デバイス設定からプリンターの&#xa;切断、接続を行ってください。</Message>
+00689: <br />
+00690:   <Message Id="ValueCardDescription">プリペイドカード</Message>
+00691:   <Message Id="SelfNeutalAttentionApplyMember">タイヨウ会員にご入会後</Message>
+00692:   <Message Id="SelfExchangeTicketButton">ﾀｲﾖｰ&#xa;商品券</Message>
+00693:   <Message Id="SelfNeutalAttentionCanCharge">{0}にチャージを済ませてご利用下さい</Message>
+00694:   <Message Id="SelfPosiflexAttentionMessage1">{0}を</Message>
+00695:   <Message Id="SelfPosiflexAttentionMessage2">{0}を読ませて下さい</Message>
+00696:   <Message Id="SelfPosiflexAttentionMessage3">※{0}の作成はお声かけください</Message>
+00697:   <Message Id="SelfSS900AttentionMessage1">{0}を&#xa;入れてください</Message>
+00698:   <Message Id="MemberBarcodeScanWithLineFeed">{0}の&#xa;バーコードを&#xa;スキャンしてください</Message>
+00699:   <Message Id="SelfMemberScanInstruct">{0}のバーコードを&#xa;スキャンしてください</Message>
+00700:   <Message Id="MemberBarcodeScan">{0}のバーコードをスキャンしてください</Message>
+00701:   <Message Id="ChargeScanCard">{0}をスキャンしてください</Message>
+00702:   <Message Id="ErrorInvalidMSRBarcode"
+00703:            Code="4010">戻るボタンを押してから、&#xa;{0}の裏面を右側にして、&#xa;磁気カードリーダーに通してください。</Message>
+00704: 
+00705:   <Message Id="ChargeVoidInquiriedEMoneyBalance">プリペイドカード残高:</Message>
+00706:   <Message Id="TextMemberID">プリペイドカード</Message>
+00707:   <Message Id="EmployeeChargeTitleMessage">プリカチャージ</Message>
+00708:   <Message Id="ChargeCardInquiryMoney">プリカ残高：</Message>
+00709:   <Message Id="PayAppOrValueCardDescription">プリペイドカード</Message>
+00710:   <Message Id="PayAppOrCardDescription">カード</Message>
+00711:   <Message Id="ChargeInsertOrScanCard">{0}を入れるか、スキャンしてください</Message>
+00712:   <Message Id="ChargeConfirmInquiryMoney">プリカ残高をご確認ください</Message>
+00713:   <Message Id="InquiriedEMoneyBalance">プリカ残高:</Message>
+00714:   <Message Id="InquiriedPoint">保有ポイント：</Message>
+00715:   <Message Id="TextBalance">残高:</Message>
+00716:   <Message Id="SelfPosiflexSuPayScanMessage"></Message>
+00717:   <Message Id="TextSelfTitle">セルフ</Message>
+00718:   <Message Id="SelfNeutalUseInstruction">※画面右側を選択してお会計を始めてください</Message>
+00719:   <Message Id="ButtonAppOrCardHold">{0}を&#xa;お持ちの方</Message>
+00720:   <Message Id="ButtonNonAppOrCardHold">{0}を&#xa;お持ちでない方</Message>
+00721:   <Message Id="SelfMemberMSRReadInstruct">{0}を通してください</Message>
+00722:   <Message Id="SelfChargeConfirmButton">チャージ&#xa;確認</Message>
+00723:   <Message Id="SelfChargeConfirmRetryButton">カード&#xa;再問合</Message>
+00724:   <Message Id="SelfPointNgMessage">会員情報の登録がないためポイント利用できません</Message>
+00725:   <Message Id="SelfPointOfflineMessage">ポイントオフラインのためポイント利用できません</Message>
+00726:   <Message Id="SelfPointUseMessage">ポイント利用はお会計画面にて選択ください</Message>
+00727:   <Message Id="SelfPayEMoneyDescription">プリカ</Message>
+00728:   <Message Id="SelfPayCreditLANDescription">ｸﾚｼﾞｯﾄ</Message>
+00729:   <Message Id="SelfPayCashDescription">現金</Message>
+00730:   <Message Id="SelfPayUnionPayLANDescription">銀聯</Message>
+00731:   <Message Id="SelfPayQRDescription">バーコード決済</Message>
+00732:   <Message Id="TextPaySuffix">{0}払い</Message>
+00733:   <Message Id="SelfPaymentEMoneyTitleMessage">「チャージ操作」や「ポイント利用」が行えます</Message>
+00734:   <Message Id="SelfValueTotal">プリカ残高：</Message>
+00735:   <Message Id="SelfPayAccountsDescription">給料天引き</Message>
+00736:   <Message Id="NoticeMTranDelete">中間取引を削除してよろしいですか？</Message>
+00737:   <Message Id="ErrorNotFoundMTranDelete">中間取引が存在しません。</Message>
+00738:   <Message Id="OrderKitchen_OfflineCreditConfirm">確定ボタンを押すとオフラインクレジット支払でお会計完了します。</Message>
+00739:   <Message Id="OrderKitchenSelectValueCardTitle">カード利用選択</Message>
+00740:   <Message Id="OrderKitchenWithCardPayDescription">カードスキャン</Message>
+00741:   <Message Id="OrderKitchenWithoutCardPayDescription">カードなし</Message>
+00742:   <Message Id="TextOrderKitchenSelectValueCard">カードをお持ちの方は、カードスキャンを&#x0a;選択して下さい</Message>
+00743:   <Message Id="ErrorNotLimitedTimeEvidenceTransaction">当日のレシートのみ合算可能です。</Message>
+00744:   <Message Id="NoticeAttendantCancelSelfSalesTransaction">お買い物を中止します&#x0a;係員が参ります&#x0a;しばらくお待ちください</Message>
+00745: 
+00746:   <Message Id="ErrorFaceMePinInputService">大変申し訳ありません。&#xa;顔認証に失敗しました。</Message>
+00747:   <Message Id="SelfAttendantFaceMePinInputing">顔認証二段階PIN入力中</Message>
+00748:   <Message Id="SelfFaceMePinInputTipContent">顔認証二段階PINコードを入力してください</Message>
+00749:   <Message Id="SelfFaceMePinInputRemarkContent">(生年月日の下4桁)</Message>
+00750:   <Message Id="SelfMemberFaceTrialTipContent">顔認証スタート</Message>
+00751:   <Message Id="SelfMemberFaceTipContent">顔認証中</Message>
+00752:   <Message Id="SelfInsertMoney">お金を入れて下さい</Message>
+00753:   <Message Id="ErrorCashDrawerDisConnect">ドロアの切断に失敗しました。&#xa;ヘルプデスクにご連絡ください。</Message>
+00754:   <Message Id="ErrorCashDrawerConnect">ドロアの初期化に失敗しました。&#xa;ヘルプデスクにご連絡ください。</Message>
+00755:   <Message Id="ErrorFaceMeServiceOperator">顔認証に失敗しました</Message>
+00756:   <Message Id="TitleSelfAttendantCancellation">従業員解除しますか？</Message>
+00757:   <Message Id="TextSelfEmployeeCode">ユーザー</Message>
+00758:   <Message Id="TextSelfEmployeePassword">パスワード</Message>
+00759:   <Message Id="ErrorValidAttendantInfo">ユーザーまたはパスワードが不正です。</Message>
+00760:   <Message Id="NoticeQRScanConnect">{0}使用可能。&#xa;バーコードをスキャンしてください。</Message>
+00761:   <Message Id="ErrorQREnable">現在バーコード決済利用できません。</Message>
+00762:   <Message Id="ErrorQRAble">バーコード決済は他の支払いの併用はできません。</Message>
+00763:   <Message Id="ErrorQRResult">バーコード決済異常:&#xa;{0}</Message>
+00764:   <Message Id="ErrorQRAuthentication">認証情報不正です。</Message>
+00765:   <Message Id="ErrorQRBarcodeSupported">支払い可能なバーコード・QRコードではありません。</Message>
+00766:   <Message Id="ErrorQRNetwork">通信エラーです。しばらく経ってから再度お試しください。</Message>
+00767:   <Message Id="ErrorQRUnexpected">予期しないシステムエラーが発生しました</Message>
+00768:   <Message Id="ErrorQROriginalQRCodeID">元取引がありません。確認してください。</Message>
+00769:   <Message Id="ErrorQRUsed">使用済みの取引IDです。IDを更新してください。</Message>
+00770:   <Message Id="ErrorQRDeactivateAmounts">返金金額が一致しません。</Message>
+00771:   <Message Id="ErrorQRX9">予期しないシステムエラーが発生しました。</Message>
+00772:   <Message Id="ErrorQRWaitingConfirm">支払承認待ちです。お使いの端末で承認操作お願いいたします。</Message>
+00773:   <Message Id="ErrorQRPending">保留中です。</Message>
+00774:   <Message Id="ErrorQREstablish ">取引不成立です。</Message>
+00775:   <Message Id="ErrorQROffline">バーコード決済オフラインのためバーコード決済利用できません。</Message>
+00776:   <Message Id="ErrorQRCancelSuccess">バーコード決済支払い失敗しました。</Message>
+00777:   <Message Id="ErrorQRCancelFail">バーコード決済支払い失敗しました。</Message>
+00778:   <Message Id="SelfSelectNonCashContent">バーコード決済利用選択中</Message>
+00779:   <Message Id="SelfQRScanContent">バーコードスキャン待ち</Message>
+00780:   <Message Id="SelfQRScanResultContent">バーコード決済支払い完了</Message>
+00781:   <Message Id="ErrorQRBarcodeType">スキャンしたバーコードは対応していません。&#xa;{0}使用してください</Message>
+00782:   <Message Id="IncommQRApiServiceDescription">Incommバーコード決済サービス</Message>
+00783:   <Message Id="NoticeQRActivateConnect">支払い通信中...&#xa;しばらくお待ちください。</Message>
+00784:   <Message Id="NoticeQRDeactivateConnect">返品通信中...&#xa;しばらくお待ちください。</Message>
+00785:   <Message Id="ErrorQRDeactivateFail">バーコード決済返品失敗しました。</Message>
+00786:   <Message Id="ErrorCashChangerMsg">釣銭機から金額情報が取得できません&#xa;鍵位置確認や操作中の状態は終了して下さい&#xa;強制続行の場合、０円で精算を実行します</Message>
+00787:   <Message Id="ChargeAttendantDispenseCashMessage">お釣り出す</Message>
+00788:   <Message Id="ErrorPaymentServiceModeSelfDeviceInit">クレジット端末に異常が発生しているため、&#xa;再接続に失敗しました。&#xa;クレジット端末に表示されているエラーを解除し、&#xa;再度「ｸﾚｼﾞｯﾄ端末再接続」を実行してください。</Message>
+00789:   <Message Id="NoticeCloseCountPaymentServiceModeSelfError">クレジット端末日計エラーがあります。{0}&#xa;クレジット端末日計を出力せずに続行しますか？</Message>
+00790:   <Message Id="NoticeCloseCountPaymentServiceModeSelfErrorByTerminal">&#xa;日計を出力するには、再実行を押してください。</Message>
+00791:   <Message Id="PaymentServiceModeSelfResultCodeTimeout">タイムアウトエラー。</Message>
+00792:   <Message Id="PaymentServiceModeSelfResultCodeUnknown">不明なエラー。</Message>
+00793:   <Message Id="ErrorCreditLanErrorPause">取引保留エラー。</Message>
+00794:   <Message Id="ErrorCreditLanErrorModeSelf">{0}&#xa;支払いの成否は不明です。&#xa;ヘルプデスクに取引状況を確認してください。&#xa;クレジット決済端末の状態を確認してください。</Message>
+00795:   <Message Id="ErrorPaymentServiceModeSelfStartUpError">クレジット端末に異常が発生しました。&#xa;クレジット端末に表示されているエラーを解除してください。</Message>
+00796:   <Message Id="ChargeAttendantCreditOperation">クレジット決済端末操作中</Message>
+00797:   <Message Id="TaxAdd">+税</Message>
+00798:   <Message Id="ErrorMemberPointInfinityScanedForOffLine"
+00799:            Code="2101">ポイントインフィニティサーバーと通信できませんでした。</Message>
+00800:   <Message Id="ErrorMemberPointInfinityServer"
+00801:            Code="2104">ポイントインフィニティサーバー内部処理でエラーが発生しました。</Message>
+00802:   <Message Id="WarningPointInfinityRefOffline"
+00803:            Code="W2106">現在ポイントインフィニティサーバーがオフラインのため利用できません。</Message>
+00804:   <Message Id="WarningPointInfinityRefNg"
+00805:            Code="W2107">入力された会員番号は現在ポイントインフィニティサーバーを利用できません。</Message>
+00806:   <Message Id="WarningPointInfinitySetNg"
+00807:            Code="W2108">入力された会員番号は現在ポイントインフィニティサーバーを利用できないためポイントが付与されませんでした。</Message>
+00808:   <Message Id="ErrorPointInfinityServerPointNotAvailableForOffline"
+00809:            Code="2110">ポイントインフィニティサーバー接続がオフラインのため、ポイントの利用はできません。</Message>
+00810:   <Message Id="ErrorPointInfinityServerPointNotAvailableForNg"
+00811:            Code="2111">ポイントインフィニティサーバーが応答エラーのため、ポイントの利用はできません。</Message>
+00812:   <Message Id="WarningPointInfinityServerPointNotAvailableForOffline"
+00813:            Code="W2117">ポイントインフィニティサーバーがオフラインのため、ポイントの付与はできません。</Message>
+00814:   <Message Id="WarningPointInfinityServerPointNotAvailableForNg"
+00815:            Code="W2118">ポイントインフィニティサーバーが応答エラーのため、ポイントの付与はできません。ErrorMessageCD = {0}</Message>
+00816:   <Message Id="PointInfinityConfirm">ポイントインフィニティサーバーと通信できません。&#xa;ポイントは後日反映されます。&#xa;よろしいですか？</Message>
+00817:   <Message Id="ErrorPOSPrinterCable">プリンターケーブルを再度差し込んでください。</Message>
+00818:   <Message Id="ErrorOneTimeBarcodeExpired">バーコードが有効期間切れです。&#xa;バーコードを更新してください。</Message>
+00819:   <Message Id="ErrorCAFISArchDeviceNotConnect">クレジット端末が接続されていないか&#xa;電源OFFの状態です。&#xa;クレジット端末の状態確認をしてください。</Message>
+00820:   <Message Id="ErrorCartNotFoundOrPointServiceFailed">入力された会員番号が確認できないが、会員サービスをご利用いただけない状態です。</Message>
+00821:   <Message Id="SalesQRPaymentsInfo">PayPay、楽天ﾍﾟｲ、d払い、Alipay、WeChatPay</Message>
+00822:   <Message Id="SalesChinaQRPaymentsInfo">Alipay、WeChatPay</Message>
+00823:   <Message Id="ErrorDrugConfirm">資格者の従業員バーコードではありません。</Message>
+00824:   <Message Id="DrugVerify">医薬品が含まれています。&#xa;登録販売者・薬剤師の従業員バーコードを&#xa;スキャンしてください。</Message>
+00825: </Messages></p>
+<hr />
+<p>FILE: Source/POS4ULogicService/Settings/Plugin.xml
+SHA256: 85eb671cc7c03f8721854c48bc4d9019c121c7dba180ca641a5b1d3bf98eb38f
+================================================================================
+00001: <?xml version="1.0" encoding="utf-8" ?>
+00002: <Extension>
+00003:   <Plugin
+00004:     Id="InitAccessor"
+00005:     Assembly="Data.Accessor, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00006:     Class="ForYouApplications.POS4U.Data.Accessor.InitAccessor"/>
+00007:   <Plugin
+00008:     Id="InitCheckDigitManager"
+00009:     Assembly="POS4U.Framework, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00010:     Class=" ForYouApplications.POS4U.Framework.InitCheckDigitManager"/>
+00011:   <Plugin
+00012:     Id="InitRoundManager"
+00013:     Assembly="POS4U.Framework, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00014:     Class="ForYouApplications.POS4U.Framework.InitRoundManager"/>
+00015:   <Plugin
+00016:     Id="CommandController"
+00017:     Assembly="POS4U.Framework, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00018:     Class="ForYouApplications.POS4U.Framework.CommandController"/>
+00019:   <Plugin
+00020:     Id="RJManager"
+00021:     Assembly="POS4U.Framework, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00022:     Class="ForYouApplications.POS4U.Framework.RJManager"/>
+00023:   <Plugin
+00024:     Id="DiscountManager"
+00025:     Assembly="Business.Discount, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00026:     Class="ForYouApplications.POS4U.Business.Discount.DiscountManager"/>
+00027:   <Plugin
+00028:     Id="LineItemDiscountData"
+00029:     Assembly="Business.Discount, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00030:     Class="ForYouApplications.POS4U.Business.Discount.LineItemDiscountData"/>
+00031:   <Plugin
+00032:     Id="TranDiscountData"
+00033:     Assembly="Business.Discount, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00034:     Class="ForYouApplications.POS4U.Business.Discount.TranDiscountData"/>
+00035:   <Plugin
+00036:     Id="TaxManager"
+00037:     Assembly="Business.Tax, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00038:     Class="ForYouApplications.POS4U.Business.Tax.TaxManager"/>
+00039:   <Plugin
+00040:     Id="Taxes"
+00041:     Assembly="Business.Tax, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00042:     Class="ForYouApplications.POS4U.Business.Tax.Taxes"/>
+00043:   <Plugin
+00044:     Id="PaymentManager"
+00045:     Assembly="Business.Payment, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00046:     Class="ForYouApplications.POS4U.Business.Payment.PaymentManager"/>
+00047:   <Plugin
+00048:     Id="PointManager"
+00049:     Assembly="Business.Point, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00050:     Class="ForYouApplications.POS4U.Business.Point.PointManager"/>
+00051:   <Plugin
+00052:     Id="RJLayoutMapper"
+00053:     Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00054:     Class="ForYouApplications.POS4U.Business.RJ.RJLayoutMapper"/>
+00055:   <Plugin
+00056:     Id="RetailMedia"
+00057:     Assembly="Business.RetailMedia"
+00058:     Class="ForYouApplications.POS4U.Business.RetailMedia.RetailMediaObject"/>
+00059:   <Plugin
+00060:     Id="TransactionLogQueue"
+00061:     Assembly="Data.Accessor, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00062:     Class="ForYouApplications.POS4U.Data.Accessor.SQLDatabaseSummaryQueueAccessor"/>
+00063:   <Plugin
+00064:     Id="ScheduleQueue"
+00065:     Assembly="Azure.Logic, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00066:     Class="ForYouApplications.POS4U.Azure.Logic.StorageQueueAccessor"/>
+00067:   <Plugin
+00068:     Id="EJournalQueue"
+00069:     Assembly="Data.Accessor, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00070:     Class="ForYouApplications.POS4U.Data.Accessor.SQLDatabaseEJournalQueueAccessor"/>
+00071:   <Plugin
+00072:     Id="StorageBlob"
+00073:     Assembly="Azure.Logic, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00074:     Class="ForYouApplications.POS4U.Azure.Logic.StorageBlobAccessor"/>
+00075:   <Plugin
+00076:     Id="EJournalStorageAccessor"
+00077:     Assembly="Azure.Logic, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00078:     Class="ForYouApplications.POS4U.Azure.Logic.EJournalStorageAccessor"/>
+00079:   <Plugin
+00080:     Id="EJournalReceiptStorageAccessor"
+00081:     Assembly="Azure.Logic, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00082:     Class="ForYouApplications.POS4U.Azure.Logic.EJournalReceiptStorageAccessor"/>
+00083:   <!--<Plugin
+00084:     Id="StorageBlob"
+00085:     Assembly="Data.Accessor, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00086:     Class="ForYouApplications.POS4U.Data.Accessor.WindowsFolderAccessor"/>-->
+00087:   <Group
+00088:     Id="DiscountLineItemLogic">
+00089:     <Plugin
+00090:       Id="DiscountManualLineItemLogic"
+00091:       Assembly="Business.Discount, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00092:       Class="ForYouApplications.POS4U.Business.Discount.DiscountManualLineItemLogic"/>
+00093:     <Plugin
+00094:       Id="DiscountFanCouponLogic"
+00095:       Assembly="Business.Discount, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00096:       Class="ForYouApplications.POS4U.Business.Discount.DiscountFanCouponLogic"/>
+00097:     <Plugin
+00098:       Id="DiscountAutoLineItemLogic"
+00099:       Assembly="Business.Discount, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00100:       Class="ForYouApplications.POS4U.Business.Discount.DiscountAutoLineItemLogic"/>
+00101:     <Plugin
+00102:       Id="DiscountMixMatchLogic"
+00103:       Assembly="Business.Discount, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00104:       Class="ForYouApplications.POS4U.Business.Discount.DiscountMixMatchLogic"/>
+00105:     <Plugin
+00106:       Id="DiscountGroupSetLogic"
+00107:       Assembly="Business.Discount, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00108:       Class="ForYouApplications.POS4U.Business.Discount.DiscountGroupSetLogic"/>
+00109:     <Plugin
+00110:       Id="DiscountMarkDownLogic"
+00111:       Assembly="Business.Discount, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00112:       Class="ForYouApplications.POS4U.Business.Discount.DiscountMarkDownLogic"/>
+00113:   </Group>
+00114:   <Group
+00115:     Id="DiscountSubTotalLogic">
+00116:     <Plugin
+00117:       Id="DiscountManualSubTotalLogic"
+00118:       Assembly="Business.Discount, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00119:       Class="ForYouApplications.POS4U.Business.Discount.DiscountManualSubTotalLogic"/>
+00120:   </Group>
+00121:   <Group
+00122:     Id="Payment">
+00123:     <!-- IdはPaymentType -->
+00124:     <Plugin
+00125:       Id="ExchangeTicket"
+00126:       Assembly="Business.Payment, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00127:       Class="ForYouApplications.POS4U.Business.Payment.PaymentTicket"/>
+00128:     <Plugin
+00129:       Id="BeerTicketBarCode"
+00130:       Assembly="Business.Payment, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00131:       Class="ForYouApplications.POS4U.Business.Payment.PaymentBeerTicketBarCode"/>
+00132:     <Plugin
+00133:       Id="Point"
+00134:       Assembly="Business.Payment, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00135:       Class="ForYouApplications.POS4U.Business.Payment.PaymentPoint"/>
+00136:     <Plugin
+00137:       Id="ValueCard"
+00138:       Assembly="Business.Payment, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00139:       Class="ForYouApplications.POS4U.Business.Payment.PaymentValueCard"/>
+00140:     <Plugin
+00141:       Id="AccountsReceivable"
+00142:       Assembly="Business.Payment, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00143:       Class="ForYouApplications.POS4U.Business.Payment.PaymentAccountsReceivable"/>
+00144:     <Plugin
+00145:       Id="TrialCoupon"
+00146:       Assembly="Business.Payment"
+00147:       Class="ForYouApplications.POS4U.Business.Payment.PaymentTrialCoupon"/>
+00148:     <Plugin
+00149:       Id="CashInput"
+00150:       Assembly="Business.Payment, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00151:       Class="ForYouApplications.POS4U.Business.Payment.PaymentCashInput"/>
+00152:   </Group>
+00153:   <Group
+00154:     Id="RoundGroup">
+00155:     <Plugin
+00156:       Id="RoundAwayFromZero"
+00157:       Assembly="POS4U.Framework, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00158:       Class="ForYouApplications.POS4U.Framework.RoundAwayFromZero"/>
+00159:     <Plugin
+00160:       Id="RoundToCeiling"
+00161:       Assembly="POS4U.Framework, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00162:       Class="ForYouApplications.POS4U.Framework.RoundToCeiling"/>
+00163:     <Plugin
+00164:       Id="RoundToEven"
+00165:       Assembly="POS4U.Framework, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00166:       Class="ForYouApplications.POS4U.Framework.RoundToEven"/>
+00167:     <Plugin
+00168:       Id="RoundToFloor"
+00169:       Assembly="POS4U.Framework, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00170:       Class="ForYouApplications.POS4U.Framework.RoundToFloor"/>
+00171:     <Plugin
+00172:       Id="RoundNearestFive"
+00173:       Assembly="POS4U.Framework, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00174:       Class="ForYouApplications.POS4U.Framework.RoundNearestFive"/>
+00175:   </Group>
+00176:   <Group
+00177:     Id="EventConverter">
+00178:     <Plugin
+00179:       Id="EventBarcodeConverter"
+00180:       Assembly="POS4U.Framework, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00181:       Class="ForYouApplications.POS4U.Framework.EventBarcodeConverter"/>
+00182:   </Group>
+00183:   <Group
+00184:     Id="CheckDigit">
+00185:     <Plugin
+00186:       Id="CheckDigitM10W31"
+00187:       Assembly="POS4U.Framework, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00188:       Class="ForYouApplications.POS4U.Framework.CheckDigitM10W31"/>
+00189:     <Plugin
+00190:       Id="CheckDigitM10W31ForUPCE"
+00191:       Assembly="POS4U.Framework, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00192:       Class="ForYouApplications.POS4U.Framework.CheckDigitM10W31ForUPCE"/>
+00193:     <Plugin
+00194:       Id="CheckDigitM10W31ForUPCENoverify"
+00195:       Assembly="POS4U.Framework, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00196:       Class="ForYouApplications.POS4U.Framework.CheckDigitM10W31ForUPCENoverify"/>
+00197:     <Plugin
+00198:       Id="CheckDigitNone"
+00199:       Assembly="POS4U.Framework, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00200:       Class="ForYouApplications.POS4U.Framework.CheckDigitNone"/>
+00201:   </Group>
+00202:   <Group
+00203:     Id="TranLogMaker">
+00204:     <!-- IdはTranType -->
+00205:     <Plugin
+00206:       Id="Sales"
+00207:       Assembly="Business.TranLogMaker, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00208:       Class="ForYouApplications.POS4U.Business.TranLogMaker.SalesTranLogMaker"/>
+00209:     <Plugin
+00210:       Id="SelfSales"
+00211:       Assembly="Business.TranLogMaker, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00212:       Class="ForYouApplications.POS4U.Business.TranLogMaker.SalesTranLogMaker"/>
+00213:     <Plugin
+00214:       Id="Return"
+00215:       Assembly="Business.TranLogMaker, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00216:       Class="ForYouApplications.POS4U.Business.TranLogMaker.ReturnTranLogMaker"/>
+00217:     <Plugin
+00218:       Id="ReSales"
+00219:       Assembly="Business.TranLogMaker, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00220:       Class="ForYouApplications.POS4U.Business.TranLogMaker.ReSalesTranLogMaker"/>
+00221:     <Plugin
+00222:       Id="Void"
+00223:       Assembly="Business.TranLogMaker, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00224:       Class="ForYouApplications.POS4U.Business.TranLogMaker.VoidTranLogMaker"/>
+00225:     <Plugin
+00226:       Id="EMoneyCharge"
+00227:       Assembly="Business.TranLogMaker, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00228:       Class="ForYouApplications.POS4U.Business.TranLogMaker.EMoneyChargeTranLogMaker"/>
+00229:     <Plugin
+00230:       Id="EMoneyChargeVoid"
+00231:       Assembly="Business.TranLogMaker, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00232:       Class="ForYouApplications.POS4U.Business.TranLogMaker.EMoneyChargeVoidTranLogMaker"/>
+00233:     <Plugin
+00234:       Id="OrderKitchen"
+00235:       Assembly="Business.TranLogMaker, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00236:       Class="ForYouApplications.POS4U.Business.TranLogMaker.SalesTranLogMaker"/>
+00237:   </Group>
+00238:   <Group
+00239:     Id="RJLayout">
+00240:     <!-- IdはRJLayoutId -->
+00241:     <Plugin
+00242:       Id="RJLayoutSales"
+00243:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00244:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutSales"/>
+00245:     <Plugin
+00246:       Id="RJLayoutEMoneyCharge"
+00247:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00248:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutEMoneyCharge"/>
+00249:     <Plugin
+00250:       Id="RJLayoutEMoneyChargeVoid"
+00251:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00252:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutEMoneyChargeVoid"/>
+00253:     <Plugin
+00254:       Id="RJLayoutEMoneyInquiry"
+00255:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00256:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutEMoneyInquiry"/>
+00257:     <Plugin
+00258:       Id="RJLayoutCashChangeCalculated"
+00259:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00260:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutCashChangeCalculated"/>
+00261:     <Plugin
+00262:       Id="RJLayoutEntryCalculatedCash"
+00263:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00264:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutEntryCalculatedCash"/>
+00265:     <Plugin
+00266:       Id="RJLayoutCloseCount"
+00267:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00268:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutCloseCount"/>
+00269:     <Plugin
+00270:       Id="RJLayoutSalesFlash"
+00271:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00272:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutSalesFlash"/>
+00273:     <Plugin
+00274:       Id="RJLayoutCashChangeReserve"
+00275:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00276:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutCashChangeReserve"/>
+00277:     <Plugin
+00278:       Id="RJLayoutCollectMoney"
+00279:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00280:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutCollectMoney"/>
+00281:     <Plugin
+00282:       Id="RJLayoutCollectMoneyVer2"
+00283:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00284:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutCollectMoneyVer2"/>
+00285:     <Plugin
+00286:       Id="RJLayoutCashChangerReplenish"
+00287:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00288:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutCashChangerReplenish"/>
+00289:     <Plugin
+00290:       Id="RJLayoutSignOut"
+00291:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00292:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutSignOut"/>
+00293:     <Plugin
+00294:       Id="RJLayoutCashChangerExchangeMoney"
+00295:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00296:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutCashChangerExchangeMoney"/>
+00297:     <Plugin
+00298:       Id="RJLayoutCashInOut"
+00299:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00300:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutCashInOut"/>
+00301:     <Plugin
+00302:       Id="RJLayoutEntryNonCash"
+00303:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00304:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutEntryNonCash"/>
+00305:     <Plugin
+00306:       Id="RJLayoutKitchenOrder"
+00307:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00308:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutKitchenOrder"/>
+00309:     <Plugin
+00310:       Id="RJLayoutSaveMTransaction"
+00311:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00312:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutSaveMTransaction"/>
+00313:     <Plugin
+00314:       Id="RJLayoutEvidenceReceipt"
+00315:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00316:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutEvidenceReceipt"/>
+00317:     <Plugin
+00318:       Id="RJLayoutEvidenceReceiptRevenueStamp"
+00319:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00320:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutEvidenceReceiptRevenueStamp"/>
+00321:     <Plugin
+00322:       Id="RJLayoutEvidenceReceiptDuplicate"
+00323:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00324:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutEvidenceReceiptDuplicate"/>
+00325:     <Plugin
+00326:       Id="RJLayoutEvidenceReceiptSales"
+00327:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00328:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutEvidenceReceiptSales"/>
+00329:     <Plugin
+00330:       Id="RJLayoutEvidenceReceiptSum"
+00331:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00332:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutEvidenceReceiptSum"/>
+00333:     <Plugin
+00334:       Id="RJLayoutCAFISArchDebitSalesError"
+00335:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00336:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutCAFISArchDebitSalesError"/>
+00337:     <Plugin
+00338:       Id="RJLayoutCAFISArchDebitSalesErrorOther"
+00339:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00340:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutCAFISArchDebitSalesErrorOther"/>
+00341:     <Plugin
+00342:       Id="RJLayoutCAFISArchDebitSalesErrorCommunication"
+00343:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00344:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutCAFISArchDebitSalesErrorCommunication"/>
+00345:     <Plugin
+00346:       Id="RJLayoutCAFISArchDebitSalesReserve"
+00347:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00348:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutCAFISArchDebitSalesReserve"/>
+00349:     <Plugin
+00350:       Id="RJLayoutCAFISArchDebitSummary"
+00351:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00352:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutCAFISArchDebitSummary"/>
+00353:     <Plugin
+00354:       Id="RJLayoutCAFISArchDebitSummaryIncomplete"
+00355:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00356:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutCAFISArchDebitSummaryIncomplete"/>
+00357:     <Plugin
+00358:       Id="RJLayoutAccountsReceivable"
+00359:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00360:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutAccountsReceivable"/>
+00361:     <Plugin
+00362:       Id="RJLayoutSalesCertificate"
+00363:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00364:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutSalesCertificate"/>
+00365:     <Plugin
+00366:       Id="RJLayoutMemberECouponImage"
+00367:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00368:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutMemberECouponImage"/>
+00369:     <Plugin
+00370:       Id="RJLayoutMemberECouponMessage"
+00371:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00372:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutMemberECouponMessage"/>
+00373:     <Plugin
+00374:       Id="RJLayoutCAFISArchLANPaymentSalesReserve"
+00375:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00376:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutCAFISArchLANPaymentSalesReserve"/>
+00377:     <Plugin
+00378:       Id="RJLayoutCAFISArchLANPaymentSalesError"
+00379:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00380:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutCAFISArchLANPaymentSalesError"/>
+00381:     <Plugin
+00382:       Id="RJLayoutCAFISArchLANPaymentSalesErrorOther"
+00383:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00384:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutCAFISArchLANPaymentSalesErrorOther"/>
+00385:     <Plugin
+00386:       Id="RJLayoutCAFISArchLANPaymentSalesErrorTimeout"
+00387:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00388:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutCAFISArchLANPaymentSalesErrorTimeout"/>
+00389:     <Plugin
+00390:       Id="RJLayoutCAFISArchLANDailyTotal"
+00391:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00392:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutCAFISArchLANDailyTotal"/>
+00393:     <Plugin
+00394:       Id="RJLayoutCAFISArchLANDailyTotalIncomplete"
+00395:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00396:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutCAFISArchLANDailyTotalIncomplete"/><br />
+00397:     <Plugin
+00398:       Id="RJLayoutCAFISArchLANDailyTotalError"
+00399:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00400:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutCAFISArchLANDailyTotalError"/>
+00401:     <Plugin
+00402:       Id="RJLayoutCloseCountSimple"
+00403:       Assembly="Business.RJ, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00404:       Class="ForYouApplications.POS4U.Business.RJ.RJLayoutCloseCountSimple"/>
+00405:   </Group>
+00406:   <Group
+00407:     Id="CalcPointTargetLogic">
+00408:     <Plugin
+00409:       Id="CalcNormalTargetLogic"
+00410:       Assembly="Business.Point, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00411:       Class="ForYouApplications.POS4U.Business.Point.CalcNormalTargetLogic"/>
+00412:     <Plugin
+00413:       Id="CalcPaymentTargetLogic"
+00414:       Assembly="Business.Point, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00415:       Class="ForYouApplications.POS4U.Business.Point.CalcPaymentTargetLogic"/>
+00416:   </Group>
+00417:   <Group
+00418:     Id="CalcPointLogic">
+00419:     <Plugin
+00420:       Id="CalcRMPointLogic"
+00421:       Assembly="Business.Point, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00422:       Class="ForYouApplications.POS4U.Business.Point.CalcRMPointLogic"/>
+00423:     <Plugin
+00424:       Id="CalcNormalPointLogic"
+00425:       Assembly="Business.Point, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00426:       Class="ForYouApplications.POS4U.Business.Point.CalcNormalPointLogic"/>
+00427:     <!--<Plugin
+00428:       Id="CalcRankPointLogic"
+00429:       Assembly="Business.Point, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00430:       Class="ForYouApplications.POS4U.Business.Point.CalcRankPointLogic"/>-->
+00431:     <Plugin
+00432:       Id="CalcSpecificPointLogic"
+00433:       Assembly="Business.Point, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00434:       Class="ForYouApplications.POS4U.Business.Point.CalcSpecificPointLogic"/>
+00435:     <Plugin
+00436:       Id="CalcECouponPointLogic"
+00437:       Assembly="Business.Point, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00438:       Class="ForYouApplications.POS4U.Business.Point.CalcECouponPointLogic"/>
+00439:     <Plugin
+00440:       Id="CalcMemberECouponPointLogic"
+00441:       Assembly="Business.Point, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00442:       Class="ForYouApplications.POS4U.Business.Point.CalcMemberECouponPointLogic"/>
+00443:     <Plugin
+00444:       Id="CalcMediaPointLogic"
+00445:       Assembly="Business.Point, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00446:       Class="ForYouApplications.POS4U.Business.Point.CalcMediaPointLogic"/>
+00447:   </Group>
+00448:   <Group
+00449:     Id="CalcPointReturnLogic">
+00450:     <Plugin
+00451:       Id="CalcReturnPointLogic"
+00452:       Assembly="Business.Point, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00453:       Class="ForYouApplications.POS4U.Business.Point.CalcReturnPointLogic"/>
+00454:   </Group>
+00455:   <Group
+00456:     Id="CalcPointVoidAllLogic">
+00457:     <Plugin
+00458:       Id="CalcVoidAllPointLogic"
+00459:       Assembly="Business.Point, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00460:       Class="ForYouApplications.POS4U.Business.Point.CalcVoidAllPointLogic"/>
+00461:   </Group>
+00462:   <Group
+00463:     Id="CalcPointOfflineLogic">
+00464:     <!--<Plugin
+00465:       Id="CalcRankPointOfflineLogic"
+00466:       Assembly="Business.Point, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00467:       Class="ForYouApplications.POS4U.Business.Point.CalcRankPointOfflineLogic"/>-->
+00468:   </Group>
+00469: </Extension></p>
+<hr />
+<p>FILE: Source/POS4ULogicService/Settings/PluginLogicService.xml
+SHA256: 6b64e00143a76ae3f5f27a62da5a34f075a1b6462d16da028a82ef920d9c9a2e
+================================================================================
+00001: <?xml version="1.0" encoding="utf-8" ?>
+00002: <Extension>
+00003:   <Plugin
+00004:     Id="DeviceManager"
+00005:     Assembly="POS4U.Framework, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00006:     Class=" ForYouApplications.POS4U.Framework.DeviceManager"/>
+00007:   <Plugin
+00008:     Id="SessionManager"
+00009:     Assembly="LogicService.Framework, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00010:     Class="ForYouApplications.POS4U.LogicService.Framework.SessionManagerDB"/>
+00011:   <Plugin
+00012:     Id="ApiDataConverter"
+00013:     Assembly="LogicService.ApiConverter, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00014:     Class="ForYouApplications.POS4U.LogicService.ApiConverter.ApiDataConverter"/>
+00015:   <Plugin
+00016:     Id="InitPOSData"
+00017:     Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00018:     Class="ForYouApplications.POS4U.LogicService.CommandSales.InitPOSDataSales"/>
+00019:   <Plugin
+00020:     Id="CommandPreExecute"
+00021:     Assembly="LogicService.CommandCommon, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00022:     Class="ForYouApplications.POS4U.LogicService.CommandCommon.CommandPreExecute"/>
+00023:   <!--<Plugin
+00024:     Id="EJournalStorageAccessor"
+00025:     Assembly="Azure.Logic, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00026:     Class="ForYouApplications.POS4U.Azure.Logic.EJournalStorageAccessor"/>-->
+00027:   <Plugin
+00028:     Id="TransactionLogStorageAccessor"
+00029:     Assembly="Azure.Logic, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00030:     Class="ForYouApplications.POS4U.Azure.Logic.TransactionLogStorageAccessor"/>
+00031:   <Group
+00032:     Id="BarcodeConverter">
+00033:     <Plugin
+00034:       Id="BarcodeItemWithQuantityConverter"
+00035:       Assembly="Business.InputConverter, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00036:       Class="ForYouApplications.POS4U.Business.InputConverter.BarcodeItemWithQuantityConverter"/>
+00037:     <Plugin
+00038:       Id="BarcodeMarkDownConverter"
+00039:       Assembly="Business.InputConverter, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00040:       Class="ForYouApplications.POS4U.Business.InputConverter.BarcodeMarkDownConverter"/>
+00041:     <Plugin
+00042:       Id="BarcodeItemListConverter"
+00043:       Assembly="Business.InputConverter, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00044:       Class="ForYouApplications.POS4U.Business.InputConverter.BarcodeItemListConverter"/>
+00045:     <Plugin
+00046:       Id="BarcodeLogicServiceConverter"
+00047:       Assembly="Business.InputConverter, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00048:       Class="ForYouApplications.POS4U.Business.InputConverter.BarcodeLogicServiceConverter"/>
+00049:     <Plugin
+00050:       Id="BarcodeBestBeforeConverter"
+00051:       Assembly="Business.InputConverter, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00052:       Class="ForYouApplications.POS4U.Business.InputConverter.BarcodeBestBeforeConverter"/>
+00053:     <Plugin
+00054:       Id="BarcodeDynamicPricingConverter"
+00055:       Assembly="Business.InputConverter, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00056:       Class="ForYouApplications.POS4U.Business.InputConverter.BarcodeDynamicPricingConverter"/>
+00057:     <Plugin
+00058:       Id="BarcodeItemCodeConverter"
+00059:       Assembly="Business.InputConverter, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00060:       Class="ForYouApplications.POS4U.Business.InputConverter.BarcodeItemCodeConverter"/>
+00061:   </Group>
+00062:   <Group
+00063:     Id="Payment">
+00064:     <!-- IdはPaymentType -->
+00065:     <Plugin
+00066:       Id="Cash"
+00067:       Assembly="Business.Payment, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00068:       Class="ForYouApplications.POS4U.Business.Payment.PaymentCash"/>
+00069:   </Group>
+00070:   <Group
+00071:   Id="Command">
+00072:     <Plugin
+00073:       Id="Common_GetCurrentState"
+00074:       Assembly="LogicService.CommandCommon, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00075:       Class="ForYouApplications.POS4U.LogicService.CommandCommon.Common_GetCurrentState"/>
+00076:     <Plugin
+00077:       Id="Common_ChangeDisplayTraining"
+00078:       Assembly="LogicService.CommandCommon, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00079:       Class="ForYouApplications.POS4U.LogicService.CommandCommon.Common_ChangeDisplayTraining"/>
+00080:     <Plugin
+00081:       Id="Sales_ChangeDisplay"
+00082:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00083:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Sales_ChangeDisplay"/>
+00084:     <Plugin
+00085:       Id="Common_SignInOut"
+00086:       Assembly="LogicService.CommandCommon, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00087:       Class="ForYouApplications.POS4U.LogicService.CommandCommon.Common_SignInOut"/>
+00088:     <Plugin
+00089:       Id="Payment_AddPayment"
+00090:       Assembly="LogicService.CommandCommon, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00091:       Class="ForYouApplications.POS4U.LogicService.CommandCommon.Payment_AddPayment"/>
+00092:     <Plugin
+00093:       Id="Member_MemberScan"
+00094:       Assembly="LogicService.CommandCommon, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00095:       Class="ForYouApplications.POS4U.LogicService.CommandCommon.Member_MemberScan"/>
+00096:     <Plugin
+00097:       Id="Member_LoginMobileMember"
+00098:       Assembly="LogicService.CommandCommon, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00099:       Class="ForYouApplications.POS4U.LogicService.CommandCommon.Member_LoginMobileMember"/>
+00100:     <Plugin
+00101:       Id="Member_GetMobileMemberInfo"
+00102:       Assembly="LogicService.CommandCommon, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00103:       Class="ForYouApplications.POS4U.LogicService.CommandCommon.Member_GetMobileMemberInfo"/>
+00104:     <Plugin
+00105:       Id="Sales_GetPriceReferenceList"
+00106:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00107:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Sales_GetPriceReferenceList"/>
+00108:     <Plugin
+00109:       Id="Sales_PriceLookup"
+00110:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00111:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Sales_PriceLookup"/>
+00112:     <Plugin
+00113:       Id="Sales_PriceLookupMagazine"
+00114:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00115:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Sales_PriceLookupMagazine"/>
+00116:     <Plugin
+00117:       Id="Sales_PriceLookupBook"
+00118:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00119:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Sales_PriceLookupBook"/>
+00120:     <Plugin
+00121:       Id="Sales_NonPriceLookup"
+00122:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00123:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Sales_NonPriceLookup"/>
+00124:     <Plugin
+00125:       Id="Sales_ChangeQuantity"
+00126:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00127:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Sales_ChangeQuantity"/>
+00128:     <Plugin
+00129:       Id="Sales_ChangePrice"
+00130:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00131:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Sales_ChangePrice"/>
+00132:     <Plugin
+00133:       Id="Sales_CancelSpecifiedLine"
+00134:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00135:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Sales_CancelSpecifiedLine"/>
+00136:     <Plugin
+00137:       Id="Sales_CancelSpecifiedLineByItem"
+00138:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00139:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Sales_CancelSpecifiedLineByItem"/>
+00140:     <Plugin
+00141:       Id="Sales_SubTotal"
+00142:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00143:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Sales_SubTotal"/>
+00144:     <Plugin
+00145:       Id="Sales_CancelSubTotal"
+00146:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00147:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Sales_CancelSubTotal"/>
+00148:     <Plugin
+00149:       Id="Sales_ClearSubTotal"
+00150:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00151:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Sales_ClearSubTotal"/>
+00152:     <Plugin
+00153:       Id="Sales_Total"
+00154:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00155:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Sales_Total"/>
+00156:     <Plugin
+00157:       Id="Sales_CancelTransaction"
+00158:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00159:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Sales_CancelTransaction"/>
+00160:     <Plugin
+00161:       Id="Sales_DiscountManualLineItem"
+00162:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00163:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Sales_DiscountManualLineItem"/>
+00164:     <Plugin
+00165:       Id="Sales_DiscountManualSubTotal"
+00166:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00167:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Sales_DiscountManualSubTotal"/>
+00168:     <Plugin
+00169:       Id="Sales_MarkDownItem"
+00170:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00171:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Sales_MarkDownItem"/>
+00172:     <Plugin
+00173:       Id="Sales_SaveMTransactionManagement"
+00174:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00175:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Sales_SaveMTransactionManagement"/>
+00176:     <Plugin
+00177:       Id="Sales_LoadMTransactionManagement"
+00178:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00179:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Sales_LoadMTransactionManagement"/>
+00180:     <Plugin
+00181:       Id="Sales_InitMTransactionManagement"
+00182:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00183:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Sales_InitMTransactionManagement"/>
+00184:     <Plugin
+00185:       Id="Return_ChangeDisplay"
+00186:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00187:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Return_ChangeDisplay"/>
+00188:     <Plugin
+00189:       Id="Sales_GetStoreInformation"
+00190:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00191:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Sales_GetStoreInformation"/>
+00192:     <Plugin
+00193:       Id="Sales_GetTerminalInformation"
+00194:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00195:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Sales_GetTerminalInformation"/>
+00196:     <Plugin
+00197:       Id="Sales_ApprovalAgeConfirmation"
+00198:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00199:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Sales_ApprovalAgeConfirmation"/>
+00200:     <Plugin
+00201:       Id="Sales_NumberingOrderNo"
+00202:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00203:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Sales_NumberingOrderNo"/>
+00204:     <Plugin
+00205:       Id="Sales_SetRMCoupon"
+00206:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00207:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Sales_SetRMCoupon"/>
+00208:     <Plugin
+00209:       Id="Sales_SetRMLoginPoint"
+00210:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00211:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Sales_SetRMLoginPoint"/>
+00212:     <Plugin
+00213:       Id="Sales_SetRMTrialCoupon"
+00214:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00215:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Sales_SetRMTrialCoupon"/>
+00216:     <Plugin
+00217:       Id="Sales_SetRMStamprally"
+00218:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00219:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Sales_SetRMStamprally"/>
+00220:     <Plugin
+00221:       Id="Sales_ChangeTaxGroup"
+00222:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00223:       Class="ForYouApplications.POS4U.LogicService.CommandSales.Sales_ChangeTaxGroup"/>
+00224:     <Plugin
+00225:       Id="ReSales_Void4Mobile"
+00226:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00227:       Class="ForYouApplications.POS4U.LogicService.CommandSales.ReSales_Void4Mobile"/>
+00228:     <Plugin
+00229:       Id="ReSales_Total"
+00230:       Assembly="LogicService.CommandSales, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00231:       Class="ForYouApplications.POS4U.LogicService.CommandSales.ReSales_Total"/>
+00232:   </Group>
+00233:   <Group
+00234:     Id="Device">
+00235:     <!-- IdはDeviceId -->
+00236:     <Plugin
+00237:       Id="PointService"
+00238:       Assembly="Device.PointInfinityService, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00239:       Class="ForYouApplications.POS4U.Device.PointService.PointInfinityService"/>
+00240:     <!--<Plugin
+00241:         Id="PointService"
+00242:         Assembly="Device.PointInfinityServiceSimulator, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00243:         Class="ForYouApplications.POS4U.Device.PointServiceSimulator.PointInfinityServiceTester"/>-->
+00244:     <Plugin
+00245:       Id="ValueCard"
+00246:       Assembly="Device.ValueCard, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00247:       Class="ForYouApplications.POS4U.Device.ValueCard.ValueCard"/>
+00248:     <!--<Plugin
+00249:       Id="ValueCard"
+00250:       Assembly="Device.ValueCardSimulator, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00251:       Class="ForYouApplications.POS4U.Device.ValueCardSimulator.ValueCardTester"/>-->
+00252:     <Plugin
+00253:       Id="RetailMediaService"
+00254:       Assembly="Device.RetailMediaService, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00255:       Class="ForYouApplications.POS4U.Device.RetailMediaService.RetailMediaService"/>
+00256:     <Plugin
+00257:       Id="CRM"
+00258:       Assembly="Device.CRM, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00259:       Class="ForYouApplications.POS4U.Device.CRM.CRM"/>
+00260:     <Plugin
+00261:       Id="MTranService"
+00262:       Assembly="Device.MTranService, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00263:       Class="ForYouApplications.POS4U.Device.MTranService.MTranServiceCloud"/>
+00264:     <!--<Plugin
+00265:       Id="ManjyuApiService"
+00266:       Assembly="Device.ManjyuApiService, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00267:       Class="ForYouApplications.POS4U.Device.ManjyuApiService.ManjyuApiService"/>-->
+00268:      <Plugin
+00269:         Id="ManjyuApiService"
+00270:         Assembly="Device.ManjyuApiServiceSimulator, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00271:         Class="ForYouApplications.POS4U.Device.ManjyuApiServiceSimulator.ManjyuApiServiceSimulator"/>
+00272:   </Group>
+00273: </Extension></p>
+<hr />
+<p>FILE: Source/POS4ULogicService/Settings/SettingLogicService.xml
+SHA256: b88d47dad6356bd28cd41fb45743faee787cda4c44f09004e859f73dbbd0fe0e
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8" ?>
+00002: <Settings>
+00003: 
+00004:   <!-- Framework -->
+00005:   <Setting Key="ControllerFile"
+00006:            Value="ControllerLogicService.xml"/>
+00007:   <Setting Key="StateFiles"
+00008:            Value="StateLogicService.xml"/>
+00009:   <Setting Key="DataAccessTimeLogThresholdMilliseconds"
+00010:            Value="100"/>
+00011:   <Setting Key="BarcodeEventCodeCsv"
+00012:            Value="38,84,85,90"/>
+00013:   <Setting Key="UPCEEventCode"
+00014:            Value="104"/>
+00015:   <Setting Key="UPCEWithoutCD"
+00016:            Value="True"/>
+00017: 
+00018:   <!-- FrameworkLibrary -->
+00019:   <Setting Key="CurrencyDecimalDigits"
+00020:            Value="0"/>
+00021:   <Setting Key="CurrencyNegativePattern"
+00022:            Value="2"/>
+00023: 
+00024:   <!-- Setting -->
+00025:   <Setting Key="EmployeeCodeLength"
+00026:            Value="0"/>
+00027:   <Setting Key="NonExchangeTicketAmount"
+00028:            Value="10000"/>
+00029:   <Setting Key="MaxChange"
+00030:            Value="9999"/>
+00031:   <Setting Key="ManagedNo"
+00032:            Value="1"/>
+00033:   <Setting Key="RJDateTimeFormat"
+00034:            Value="yyyy年MM月dd日(ddd)HH:mm"/>
+00035:   <Setting Key="ServiceType"
+00036:            Value="2"/>
+00037:   <Setting Key="SummaryQHealthyThresholdCount"
+00038:            Value="500"/>
+00039:   <Setting Key="PaymentTicktMaxCount"
+00040:            Value="100"/>
+00041: 
+00042:   <!-- Background -->
+00043:   <Setting Key="AdministratorIntervalMillisecond"
+00044:            Value="60000"/>
+00045:   <Setting Key="LogCopyBackdateCount"
+00046:            Value="7"/>
+00047:   <Setting Key="LocalLogKeepDay"
+00048:            Value="7"/>
+00049:   <Setting Key="RetryMaxCount"
+00050:            Value="5"/>
+00051:   <Setting Key="RetryMaxCountForGetTranLog"
+00052:            Value="5"/>
+00053:   <Setting Key="SleepTimeForGetTranLog"
+00054:            Value="100"/>
+00055:   <Setting Key="LocalOutputDirectoryPath"
+00056:            Value="C:\POS4UGO\Work\HeadquartersTransfer"/>
+00057:   <Setting Key="HeadquartersTransferIntervalMillisecond"
+00058:            Value="3000"/>
+00059:   <Setting Key="FtpShouldMoveBackup"
+00060:            Value="false"/>
+00061:   <Setting Key="MasterSyncIntervalMillisecond"
+00062:            Value="3000"/>
+00063:   <Setting Key="BulkCopyTimeOut"
+00064:            Value="900"/>
+00065:   <Setting Key="DeleteStoreAllTimeOut"
+00066:            Value="180"/>
+00067:   <Setting Key="MDHierarchyMaxLevel"
+00068:            Value="6"/>
+00069:   <Setting Key="MasterSyncRetryMaxCount"
+00070:            Value="5"/>
+00071:   <Setting Key="ReserveLockMasterSyncRetryCount"
+00072:            Value="5"/>
+00073:   <Setting Key="LimitMasterSyncRecordPerSecond"
+00074:            Value="1000"/>
+00075:   <Setting Key="BulkDownloadFolderPath"
+00076:            Value="C:\POS4UGO\Work\DownloadALLMasterSync"/>
+00077:   <Setting Key="DiffDownloadFolderPath"
+00078:            Value="C:\POS4UGO\Work\DownloadDiffMasterSync"/>
+00079:   <Setting Key="IsCheckMasterSyncBulkDate"
+00080:            Value="false"/>
+00081:   <Setting Key="RetryMakeDailyMasterDownloadFileMaxCount"
+00082:            Value="60"/>
+00083:   <Setting Key="ScheduleIntervalMillisecond"
+00084:            Value="3000"/>
+00085:   <Setting Key="CheckVMTimeSpan"
+00086:            Value="60"/>
+00087:   <Setting Key="AdministratorServiceIntervalMillisecond"
+00088:            Value="60000"/>
+00089:   <Setting Key="WebSiteName"
+00090:            Value="POS4UGOWebService"/>
+00091:   <Setting Key="WebSiteApplicationPoolName"
+00092:            Value="POS4UGOAppPool"/>
+00093:   <Setting Key="WebSiteDirectoryUsers"
+00094:            Value="IUSR,NETWORK SERVICE"/>
+00095:   <Setting Key="TranLogServiceIntervalMillisecond"
+00096:            Value="3000"/>
+00097:   <Setting Key="TransferIntervalMillisecond"
+00098:            Value="3000"/>
+00099:   <Setting Key="TransactionServerAddress"
+00100:            Value="http://localhost:63526"/>
+00101:   <Setting Key="SettingsFolderPath"
+00102:            Value="C:\POS4UGO\Settings"/>
+00103:   <Setting Key="FtpSendFileLocalPath4Point"
+00104:            Value="C:\POS4UGO\Work\AddAfterPoint\Send"/>
+00105:   <Setting Key="FtpRecvFileLocalPath4Point"
+00106:            Value="C:\POS4UGO\Work\AddAfterPoint\Recv"/>
+00107:   <Setting Key="CheckFileLocalPath4Point"
+00108:            Value="C:\POS4UGO\Work\AddAfterPoint\Check"/>
+00109:   <Setting Key="FtpSendDataFilePath4Point"
+00110:            Value="TABLET/"/>
+00111:   <Setting Key="FtpSendLockFilePath4Point"
+00112:            Value="TABLET/"/>
+00113:   <Setting Key="FtpRecvDataFilePath4Point"
+00114:            Value="TABLET/"/>
+00115:   <Setting Key="FtpRecvLockFilePath4Point"
+00116:            Value="TABLET/"/>
+00117:   <Setting Key="MasterSyncPosIntervalMillisecond"
+00118:            Value="60"/>
+00119:   <Setting Key="EJournalBackupElapsedDays"
+00120:            Value="3"/>
+00121: 
+00122:   <!-- Background BO -->
+00123:   <Setting Key="BOMastersToCopyForNewStore"
+00124:            Value="AreaMaster,CashChangerCheckMaster,CashDenominationMaster,DiscountAutoItemMaster,EmployeeRoleMaster,FunctionMenuMaster,FunctionMenuButtonMaster,MDHierarchyLevelMaster,OperationLimitMaster,PaymentMaster,PaymentTicketBarCodeMaster,PaymentTicketMaster,SettingMaster,PointRankMaster,ReasonMaster,ReceiptMessageMaster,NonBarcodeOtherItemMaster,PresetMenuMaster,PresetMenuButtonMaster,NonBarcodeOtherItemCategoryMaster,ItemImageMaster"/>
+00125:   <Setting Key="BOMasterCopyQueryTimeoutSeconds"
+00126:            Value="180"/>
+00127:   <Setting Key="BOTFTMainteNodeTypes"
+00128:            Value="07,08,09,10"/>
+00129: 
+00130:   <!-- LogicServiceFramework -->
+00131:   <Setting Key="AcceptEventTimeLogThresholdMilliseconds"
+00132:            Value="0"/>
+00133: 
+00134:   <!-- LogicService -->
+00135:   <Setting Key="AutoSignInEmployeeCode"
+00136:            Value="90001026"/>
+00137:   <Setting Key="MasterMaintenanceApiFolderPath"
+00138:            Value="C:\POS4UGO\Work\MasterMaintenanceApi"/>
+00139:   <Setting Key="ReceiveIntervalSecond"
+00140:            Value="300"/>
+00141:   <Setting Key="QueueNextVisibleTime"
+00142:            Value="3600"/>
+00143:   <Setting Key="TransferDataCount"
+00144:            Value="10"/>
+00145:   <Setting Key="MasterDownloadExcludeList"
+00146:            Value="ActivationMaster,BudgetedSalesMaster,CashInOutMaster,DiscountMDHierarchyMaster,DiscountSubTotalMaster,EmployeesAffiliationMaster,PromotionMaster,BOAreaMaster,BOAreaStoreMaster,BOBrandCodeMaster,BOCodeMaster,BORoleMaster,BOUserMaster"/>
+00147:   <Setting Key="SessionUnClearEventList"
+00148:            Value="59"/>
+00149:   <!-- Manjyuの中間取引決済送信API　URL -->
+00150:   <Setting Key="UpdateValueCardBalanceApiURL"
+00151:            Value="https://{0}/v1/user/hook/balance/update"/>
+00152:   <!-- Manjyuへ取引決済送信APIURL -->
+00153:   <Setting Key="CartPaymentFinalizeApiURL"
+00154:              Value="https://{0}/v1/user/hook/hybrid/payment/finalize/{1}/{2}/{3}"/>
+00155:   <Setting Key="CartPaymentCancelApiURL"
+00156:              Value="https://{0}/v1/user/hook/hybrid/cart/cancel/{1}/{2}/{3}"/>
+00157: </Settings></p>
+<hr />
+<p>FILE: Source/POS4ULogicService/Settings/SettingLogicServiceEnvironment.xml
+SHA256: 2d9d337530369a59be37ca557a3b97528964fdbec1e681c0e5df459482f77c21
+================================================================================
+00001: <?xml version="1.0" encoding="utf-8" ?>
+00002: <Settings>
+00003: 
+00004:   <!-- FrameworkLibrary -->
+00005:   <Setting Key="POS4UConnectionString"
+00006:            Value="Data Source=.\SQLEXPRESS;Initial Catalog=POS4U_Trial_Master;Integrated Security=True"/>
+00007:   <Setting Key="POS4UBackgroundConnectionString"
+00008:            Value="Data Source=.\SQLEXPRESS;Initial Catalog=POS4U_Trial_Tran;Integrated Security=True"/>
+00009:   <Setting Key="POS4UReadOnlyConnectionString"
+00010:            Value="Data Source=.\SQLEXPRESS;Initial Catalog=POS4U_Trial_Master;Integrated Security=True"/>
+00011:   <Setting Key="POS4UReadOnlyBackgroundConnectionString"
+00012:            Value="Data Source=.\SQLEXPRESS;Initial Catalog=POS4U_Trial_Tran;Integrated Security=True"/>
+00013:   <Setting Key="EnviromentType"
+00014:          Value="00"/>
+00015:   <Setting Key="RedirectAddress"
+00016:          Value="http://localhost:63526"/>
+00017: 
+00018:   <!-- Background -->
+00019:   <Setting Key="LogicServiceBaseAddress"
+00020:            Value="http://localhost:63526"/>
+00021:   <Setting Key="StorageConnectionString"
+00022:            Value="UseDevelopmentStorage=true"/>
+00023:   <Setting Key="StorageEJournalConnectionString"
+00024:            Value="UseDevelopmentStorage=true"/>
+00025:   <Setting Key="StorageTransactionLogConnectionString"
+00026:            Value="UseDevelopmentStorage=true"/>
+00027: </Settings></p>
+<hr />
+<p>FILE: Source/POS4ULogicService/Settings/SettingLogicServiceWeb.xml
+SHA256: 0c05a6b94e301d13bd1a337f33453dc5035f4aa0f5d7296408fcbe7d2daab834
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8" ?>
+00002: <Settings>
+00003: 
+00004:   <!-- Framework -->
+00005:   <Setting Key="MainDataAccessType"
+00006:            Value="Master"/>
+00007: </Settings></p>
+<p>END ORIGINAL PROMPT</p></div></a><div class="index-item-stats">
+<div class="index-item-long-text"><div class="truncatable"><div class="truncatable-content"><div class="index-item-long-text-content"><h1>文件级源码笔记：config_config_settings</h1>
+<h2>Batch 信息</h2>
+<ul>
+<li>Batch ID: batch_021</li>
+<li>Batch Name: config_config_settings</li>
+<li>Module: config</li>
+<li>Purpose: 解释项目配置、构建配置、依赖配置和运行时配置加载线索</li>
+</ul>
+<hr />
+<h2>文件：Source/POS4ULogicService/Settings/Message_FC.xml</h2>
+<h3>1. 文件定位</h3>
+<p>这是 POS4ULogicService 的<strong>消息定义</strong>配置文件，属于 <code>config</code> 模块下的运行时资源。它为整个 POS 系统提供所有面向用户的字符串资源，包括错误消息、警告消息、通知消息、UI 标签文本、设备描述文本和确认对话框文本。</p>
+<p>文件中的每条消息都被系统其他组件通过 <code>Message Id</code> 引用。消息文本全部为日语，表明这是一套面向日本市场的 POS 系统。</p>
+<h3>2. 对外暴露内容</h3>
+<p>Message_FC.xml 不导出 class / function，而是以 XML 文档形式暴露一个 <code>&lt;Messages&gt;</code> 集合，供运行时消息加载器读取。</p>
+<p><strong>根元素：</strong> <code>&lt;Messages&gt;</code>（第 2 行）</p>
+<p><strong>所有 <code>&lt;Message&gt;</code> 元素按用途分类如下：</strong></p>
+<table>
+<thead>
+<tr>
+<th>分类</th>
+<th>Id 命名前缀</th>
+<th>行号范围</th>
+<th>数量</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>系统错误</td>
+<td><code>ErrorUnknown</code>, <code>ErrorPosLogicInternal</code> 等</td>
+<td>第 3-4 行、第 70-71 行</td>
+<td>~2</td>
+</tr>
+<tr>
+<td>交易令牌/执行错误</td>
+<td><code>ErrorTransactionToken</code>, <code>ErrorExecuteDefault</code></td>
+<td>第 5-8 行</td>
+<td>2</td>
+</tr>
+<tr>
+<td>商品相关错误</td>
+<td><code>ErrorItemNotFound</code>, <code>ErrorInvalidBarcode</code> 等</td>
+<td>第 10-17 行</td>
+<td>3</td>
+</tr>
+<tr>
+<td>明细/数量/价格操作错误</td>
+<td><code>ErrorCannotChangeQuantityForCanceled</code> 等</td>
+<td>第 18-67 行</td>
+<td>~14</td>
+</tr>
+<tr>
+<td>支付相关错误</td>
+<td><code>ErrorCannotAddPayment</code>, <code>ErrorPayment</code> 等</td>
+<td>第 32-33 行、第 54-55 行</td>
+<td>~4</td>
+</tr>
+<tr>
+<td>電子マネー相关错误</td>
+<td><code>ErrorValueCardOffline</code>(第 98-99 行) 等</td>
+<td>第 94-141 行</td>
+<td>~14</td>
+</tr>
+<tr>
+<td>ポイント相关错误</td>
+<td><code>ErrorMemberPointScanedForOffLine</code>(第 110-111 行) 等</td>
+<td>第 110-171 行</td>
+<td>~25</td>
+</tr>
+<tr>
+<td>釣銭機相关错误</td>
+<td><code>ErrorCashChangerDepositOver</code>(第 170-171 行) 等</td>
+<td>第 170-305 行</td>
+<td>~32</td>
+</tr>
+<tr>
+<td>设备初始化错误</td>
+<td><code>ErrorMSRInit</code>(第 358-359 行) 等</td>
+<td>第 358-377 行</td>
+<td>~10</td>
+</tr>
+<tr>
+<td>デビット相关错误</td>
+<td><code>ErrorDebitDeviceInit</code>(第 272-273 行) 等</td>
+<td>第 272-357 行</td>
+<td>~20</td>
+</tr>
+<tr>
+<td>输入验证错误</td>
+<td><code>ErrorInputNeed</code>(第 408-409 行)、<code>ErrorInputIllegal</code>(第 410-411 行)</td>
+<td>第 408-411 行</td>
+<td>2</td>
+</tr>
+<tr>
+<td>基础设施错误</td>
+<td><code>ErrorParameter</code>(第 412-413 行)、<code>ErrorTranState</code>(第 414-415 行) 等</td>
+<td>第 412-423 行</td>
+<td>6</td>
+</tr>
+<tr>
+<td>设备描述</td>
+<td><code>CashChangerDescription</code>(第 427 行) 等</td>
+<td>第 427-435 行</td>
+<td>~9</td>
+</tr>
+<tr>
+<td>UI 按钮标签</td>
+<td><code>ButtonAbort</code>(第 452 行) 等</td>
+<td>第 452-466 行</td>
+<td>~8</td>
+</tr>
+<tr>
+<td>マスタ同期相关</td>
+<td><code>ProcessNameMasterSyncStart</code>(第 497 行) 等</td>
+<td>第 467-509 行</td>
+<td>~25</td>
+</tr>
+<tr>
+<td>客面表示器文本</td>
+<td><code>LDSP_Balance</code>(第 573 行) 等</td>
+<td>第 573-607 行</td>
+<td>~35</td>
+</tr>
+<tr>
+<td>クレジット支付错误</td>
+<td><code>CreditPayment_ErrorTimeout</code>(第 621 行) 等</td>
+<td>第 621-638 行</td>
+<td>~13</td>
+</tr>
+<tr>
+<td>セルフPOS相关</td>
+<td><code>SelfPayEMoneyDescription</code>(第 727 行) 等</td>
+<td>第 690-782 行</td>
+<td>~40</td>
+</tr>
+<tr>
+<td>バーコード決済相关</td>
+<td><code>ErrorQREnable</code>(第 761 行) 等</td>
+<td>第 760-785 行</td>
+<td>~22</td>
+</tr>
+<tr>
+<td>その他</td>
+<td><code>AgeConfirm</code>(第 546 行)、<code>DrugConfirm</code>(第 547 行) 等</td>
+<td>第 546-824 行</td>
+<td>杂项</td>
+</tr>
+</tbody>
+</table>
+<p>每条消息的格式为：</p>
+<pre><code>&lt;Message Id=&quot;消息标识&quot; Code=&quot;错误码（可选）&quot;&gt;消息文本&lt;/Message&gt;
+</code></pre>
+<ul>
+<li><code>Id</code>：消息唯一标识，供代码中按名称查找（<code>Message_FC</code> — FC 可能为 "Front Controller" 或某种分类前缀）</li>
+<li><code>Code</code>：错误码（可选，很多消息没有 Code，例如第 2、9、232-235、424-466 行等）</li>
+<li>文本内容：日语字符串，支持 <code>{0}</code> <code>{1}</code> <code>{2}</code> <code>{3}</code> 格式参数，<code>&amp;#xa;</code> 表示换行</li>
+</ul>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>Message_FC.xml 是一个纯声明式资源文件，<strong>不包含执行逻辑</strong>。运行时行为如下：</p>
+<ol>
+<li><strong>加载阶段</strong>：系统启动时，某个消息管理器（需结合其他文件确认）读取此 XML 文件，将 <code>&lt;Messages&gt;</code> 下的所有 <code>&lt;Message&gt;</code> 解析为内存中的字典（key = <code>Id</code>，value = 文本模板）。</li>
+<li><strong>查询阶段</strong>：当业务代码需要显示消息时，通过 <code>Id</code> 查找消息文本，将 <code>{0}</code> 等占位符替换为运行时参数。</li>
+<li><strong>显示阶段</strong>：带有 <code>Code</code> 的消息既可以作为错误码返回给前端，也能附带用户可读的说明文本。</li>
+</ol>
+<p>示例运行时路径：
+- 扫码一个不存在的商品 → 业务代码调用 <code>GetMessage("ErrorItemNotFound")</code> → 返回 <code>"商品が見つかりませんでした。正しいコードを入力し直してください。"</code>（第 10-11 行）
+- 釣銭機初始化失败 → <code>GetMessage("ErrorCashChangerInit")</code> → 返回 <code>"釣銭機の初期化に失敗しました。再試行しますか？{0}"</code>（第 366-367 行），<code>{0}</code> 会被替换为具体错误详情</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p><strong>本文件中没有函数或类定义。</strong> 但存在一个隐含的加载契约：</p>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>加载位置</td>
+<td>需结合其他文件确认哪个类负责加载 <code>Message_FC.xml</code></td>
+</tr>
+<tr>
+<td>输入</td>
+<td>XML 文件路径（运行时通过 <code>SettingsFolderPath</code>（参考 <code>SettingLogicService.xml</code> 第 101-102 行）拼接文件名确定）</td>
+</tr>
+<tr>
+<td>输出</td>
+<td>消息字典（<code>Dictionary&lt;string, string&gt;</code> 或类似结构），key = <code>Id</code>，value = 消息模板</td>
+</tr>
+<tr>
+<td>调用关系</td>
+<td>业务代码通过消息管理器间接引用此文件</td>
+</tr>
+<tr>
+<td>边界情况</td>
+<td>部分消息文本含 <code>&amp;#xa;</code> 换行（如第 73、86、87、140 行），渲染时需解码</td>
+</tr>
+</tbody>
+</table>
+<h3>5. 依赖关系</h3>
+<table>
+<thead>
+<tr>
+<th>依赖</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SettingLogicService.xml</code>（本批文件）</td>
+<td>提供 <code>SettingsFolderPath</code> 设置，指示包含 Message 文件的目录路径（第 101-102 行）</td>
+</tr>
+<tr>
+<td>XML 解析器（.NET 内置）</td>
+<td>运行时解析此 XML 文件</td>
+</tr>
+<tr>
+<td>消息管理器类（位置待确认）</td>
+<td>负责加载、缓存和按 Id 查找消息的组件</td>
+</tr>
+</tbody>
+</table>
+<h3>6. 错误处理与边界情况</h3>
+<p><strong>当前文件没有显式错误处理</strong>，因为它是纯数据文件。</p>
+<p>但文件本身反映了几类边界情况的处理策略：
+- <strong>参数占位符</strong>：<code>{0}</code> <code>{1}</code> <code>{2}</code> <code>{3}</code> — 调用方必须提供正确数量的参数，否则运行时可能出现格式化异常（例：第 33、39、77、79 行等）
+- <strong>多行文本</strong>：<code>&amp;#xa;</code> HTML 实体编码的换行 — 渲染端必须正确解码（第 73、86、87、140、303 行等）
+- <strong>共用 Code</strong>：多个消息共用相同错误码，例如 Code <code>"0007"</code> 同时出现在 <code>ErrorInvalidBarcode</code>（第 14-15 行）和 <code>ErrorInputCodeByCheckDigit</code>（第 16-17 行），也出现在 <code>ErrorTrainingCardInProduction</code>（第 88-89 行）和 <code>ErrorValueDisposable</code>（第 130-131 行） — 调用方可能根据 Code 做逻辑分支，需要区分
+- <strong>无 Code 消息</strong>：第 9 行 <code>InfoMessage</code>、第 232-235 行通知消息、第 424-466 行 UI 标签等没有 Code 属性，不可用于错误码返回
+- <strong>空内容</strong>：第 557、560 行消息内容为空字符串</p>
+<h3>7. 测试相关</h3>
+<p><strong>当前输入中没有对应的测试文件。</strong></p>
+<p>应该如何测试：
+1. <strong>加载测试</strong>：验证 XML 加载器能正确解析所有 300+ 条消息
+2. <strong>Id 唯一性测试</strong>：确保每个 <code>&lt;Message Id=""&gt;</code> 在文件中唯一，不存在重复定义
+3. <strong>占位符一致性测试</strong>：抽取所有 <code>{N}</code> 占位符，确保没有断裂的索引
+4. <strong>Code 覆盖测试</strong>：如果代码中有 code-driven 分支逻辑，确保每条 code 有对应的消息
+5. <strong>渲染测试</strong>：验证 <code>&amp;#xa;</code> 被正确渲染为换行</p>
+<h3>8. 新人阅读建议</h3>
+<ol>
+<li>先理解 <code>&lt;Message Id=""&gt;</code> 和 <code>&lt;Code=""&gt;</code> 的区别：Id 是代码引用标识，Code 是错误码（可能对接到外部系统）</li>
+<li>不要被行数吓到——文件内容重复性强，结构极其简单</li>
+<li>注意 Code 重复的情况，说明某些错误场景被归并为同一错误码</li>
+<li>重点关注文件的前 10 条消息和后 10 条消息，它们往往涉及系统级错误</li>
+<li>本文件是理解 POS 业务范围的最佳入口之一——扫描消息标题就能了解系统支持哪些业务场景（电子货币、积分、找零机、信用卡、二维码支付等）</li>
+</ol>
+<h3>9. 不确定点</h3>
+<ul>
+<li><strong>消息加载器类名和位置</strong>：需结合其他文件确认具体由哪个 C# 类加载 Message_FC.xml，以及消息注册机制</li>
+<li><strong>消息缓存策略</strong>：是每次读取文件还是启动时一次性加载到内存</li>
+<li><strong><code>Message_FC</code> 文件名含义</strong>：<code>FC</code> 的具体缩写不明，可能是 "Front Controller" 或 "Function Code"</li>
+<li><strong><code>SettingsFolderPath</code> 拼接规则</strong>：需要确认 <code>SettingLogicService.xml</code> 第 101-102 行的路径是否就是消息文件的父目录</li>
+</ul>
+<hr />
+<h2>文件：Source/POS4ULogicService/Settings/Plugin.xml</h2>
+<h3>1. 文件定位</h3>
+<p>这是 POS4U 主应用程序（非 LogicService）的<strong>插件注册</strong>配置文件，属于 <code>config</code> 模块。它定义 POS 核心领域层的所有可插拔组件（Plugin）和逻辑组（Group），通过 IoC/DI 方式将实现类注册到系统运行时。</p>
+<p>Plugin.xml 注册的是<strong>领域业务逻辑组件</strong>（折扣、税务、支付、积分、收据布局、交易日志等），而非 LogicService 的插件。</p>
+<h3>2. 对外暴露内容</h3>
+<p>文件公开一个 <code>&lt;Extension&gt;</code> 根元素（第 2 行），包含两种结构：</p>
+<h4>独立 Plugin（全局单例级组件）</h4>
+<table>
+<thead>
+<tr>
+<th>Id</th>
+<th>程序集</th>
+<th>类</th>
+<th>行号</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>InitAccessor</code></td>
+<td>Data.Accessor</td>
+<td><code>ForYouApplications.POS4U.Data.Accessor.InitAccessor</code></td>
+<td>第 3-6 行</td>
+</tr>
+<tr>
+<td><code>InitCheckDigitManager</code></td>
+<td>POS4U.Framework</td>
+<td><code>ForYouApplications.POS4U.Framework.InitCheckDigitManager</code></td>
+<td>第 7-10 行</td>
+</tr>
+<tr>
+<td><code>InitRoundManager</code></td>
+<td>POS4U.Framework</td>
+<td><code>ForYouApplications.POS4U.Framework.InitRoundManager</code></td>
+<td>第 11-14 行</td>
+</tr>
+<tr>
+<td><code>CommandController</code></td>
+<td>POS4U.Framework</td>
+<td><code>ForYouApplications.POS4U.Framework.CommandController</code></td>
+<td>第 15-18 行</td>
+</tr>
+<tr>
+<td><code>RJManager</code></td>
+<td>POS4U.Framework</td>
+<td><code>ForYouApplications.POS4U.Framework.RJManager</code></td>
+<td>第 19-22 行</td>
+</tr>
+<tr>
+<td><code>DiscountManager</code></td>
+<td>Business.Discount</td>
+<td><code>ForYouApplications.POS4U.Business.Discount.DiscountManager</code></td>
+<td>第 23-26 行</td>
+</tr>
+<tr>
+<td><code>LineItemDiscountData</code></td>
+<td>Business.Discount</td>
+<td><code>...Discount.LineItemDiscountData</code></td>
+<td>第 27-30 行</td>
+</tr>
+<tr>
+<td><code>TranDiscountData</code></td>
+<td>Business.Discount</td>
+<td><code>...Discount.TranDiscountData</code></td>
+<td>第 31-34 行</td>
+</tr>
+<tr>
+<td><code>TaxManager</code></td>
+<td>Business.Tax</td>
+<td><code>...Tax.TaxManager</code></td>
+<td>第 35-38 行</td>
+</tr>
+<tr>
+<td><code>Taxes</code></td>
+<td>Business.Tax</td>
+<td><code>...Tax.Taxes</code></td>
+<td>第 39-42 行</td>
+</tr>
+<tr>
+<td><code>PaymentManager</code></td>
+<td>Business.Payment</td>
+<td><code>...Payment.PaymentManager</code></td>
+<td>第 43-46 行</td>
+</tr>
+<tr>
+<td><code>PointManager</code></td>
+<td>Business.Point</td>
+<td><code>...Point.PointManager</code></td>
+<td>第 47-50 行</td>
+</tr>
+<tr>
+<td><code>RJLayoutMapper</code></td>
+<td>Business.RJ</td>
+<td><code>...RJ.RJLayoutMapper</code></td>
+<td>第 51-54 行</td>
+</tr>
+<tr>
+<td><code>RetailMedia</code></td>
+<td>Business.RetailMedia</td>
+<td><code>...RetailMedia.RetailMediaObject</code></td>
+<td>第 55-58 行</td>
+</tr>
+<tr>
+<td><code>TransactionLogQueue</code></td>
+<td>Data.Accessor</td>
+<td><code>...SQLDatabaseSummaryQueueAccessor</code></td>
+<td>第 59-62 行</td>
+</tr>
+<tr>
+<td><code>ScheduleQueue</code></td>
+<td>Azure.Logic</td>
+<td><code>...Azure.Logic.StorageQueueAccessor</code></td>
+<td>第 63-66 行</td>
+</tr>
+<tr>
+<td><code>EJournalQueue</code></td>
+<td>Data.Accessor</td>
+<td><code>...SQLDatabaseEJournalQueueAccessor</code></td>
+<td>第 67-70 行</td>
+</tr>
+<tr>
+<td><code>StorageBlob</code></td>
+<td>Azure.Logic</td>
+<td><code>...Azure.Logic.StorageBlobAccessor</code></td>
+<td>第 71-74 行</td>
+</tr>
+<tr>
+<td><code>EJournalStorageAccessor</code></td>
+<td>Azure.Logic</td>
+<td><code>...Azure.Logic.EJournalStorageAccessor</code></td>
+<td>第 75-78 行</td>
+</tr>
+<tr>
+<td><code>EJournalReceiptStorageAccessor</code></td>
+<td>Azure.Logic</td>
+<td><code>...Azure.Logic.EJournalReceiptStorageAccessor</code></td>
+<td>第 79-82 行</td>
+</tr>
+</tbody>
+</table>
+<h4>分组 Plugin（可替换的策略逻辑组）</h4>
+<p>每组有 Group Id，其下可注册多个 Plugin，通常按策略模式设计，运行时根据上下文选择。</p>
+<table>
+<thead>
+<tr>
+<th>Group Id</th>
+<th>策略用途</th>
+<th>行号</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DiscountLineItemLogic</code></td>
+<td>明細値引逻辑（手动、粉丝券、自动、组合、分组、降价）</td>
+<td>第 87-113 行</td>
+</tr>
+<tr>
+<td><code>DiscountSubTotalLogic</code></td>
+<td>小計値引逻辑（手动小计折扣）</td>
+<td>第 114-120 行</td>
+</tr>
+<tr>
+<td><code>Payment</code></td>
+<td>支払方法（券、啤酒券、积分、プリカ、掛売、试用券、现金）</td>
+<td>第 121-152 行</td>
+</tr>
+<tr>
+<td><code>RoundGroup</code></td>
+<td>四舍五入策略（四舍五入、向上取整、银行家舍入、向下取整、最近5分）</td>
+<td>第 153-175 行</td>
+</tr>
+<tr>
+<td><code>EventConverter</code></td>
+<td>事件转换器（条码事件转换）</td>
+<td>第 176-182 行</td>
+</tr>
+<tr>
+<td><code>CheckDigit</code></td>
+<td>校验位算法（M10W31、UPCE 用、不校验）</td>
+<td>第 183-201 行</td>
+</tr>
+<tr>
+<td><code>TranLogMaker</code></td>
+<td>交易日志生成器（销售、自销售、退货、再销售、取消、电子货币充值等）</td>
+<td>第 202-237 行</td>
+</tr>
+<tr>
+<td><code>RJLayout</code></td>
+<td>收据/日本レシート布局（40+ 种布局类型）</td>
+<td>第 238-405 行</td>
+</tr>
+<tr>
+<td><code>CalcPointTargetLogic</code></td>
+<td>积分计算目标逻辑（普通、支付）</td>
+<td>第 406-416 行</td>
+</tr>
+<tr>
+<td><code>CalcPointLogic</code></td>
+<td>积分计算逻辑（RM、普通、特定、ECoupon、会员ECoupon、媒体）</td>
+<td>第 417-447 行</td>
+</tr>
+<tr>
+<td><code>CalcPointReturnLogic</code></td>
+<td>退货积分逻辑</td>
+<td>第 448-454 行</td>
+</tr>
+<tr>
+<td><code>CalcPointVoidAllLogic</code></td>
+<td>取消全部积分逻辑</td>
+<td>第 455-461 行</td>
+</tr>
+<tr>
+<td><code>CalcPointOfflineLogic</code></td>
+<td>离线积分逻辑（被注释掉，当前无实现）</td>
+<td>第 462-468 行</td>
+</tr>
+</tbody>
+</table>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>XML 文件不含执行逻辑，但描述了运行时的<strong>插件加载流程</strong>：</p>
+<ol>
+<li><strong>框架启动时</strong>，插件管理器（需结合其他文件确认类名）读取 <code>Plugin.xml</code></li>
+<li>对每个 <code>&lt;Plugin&gt;</code> 节点：</li>
+<li>根据 <code>Assembly</code> 属性加载对应程序集（如 <code>POS4U.Framework, Version=1.0.0.0</code>）</li>
+<li>实例化 <code>Class</code> 属性指定的类型</li>
+<li>以 <code>Id</code> 作为注册键存入容器</li>
+<li>对每个 <code>&lt;Group&gt;</code> 节点：</li>
+<li>将其下所有 Plugin 视为同一策略接口的多个实现</li>
+<li>根据运行时配置或上下文，在组内选择当前生效的实现</li>
+</ol>
+<p><strong>关键可拔插设计：</strong>
+- 「存储层」有两条可替换路径：<code>StorageBlob</code>（第 71-74 行，Azure 实现）vs 被注释掉的 <code>WindowsFolderAccessor</code>（第 83-86 行，本地文件实现）
+- 「积分离线逻辑」组 <code>CalcPointOfflineLogic</code>（第 462-468 行）当前为空，说明离线积分功能尚未实现或已移除</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p><strong>本文件中没有编程语言函数定义。</strong> 但注册了多个关键的 Manager 类：</p>
+<table>
+<thead>
+<tr>
+<th>注册的类</th>
+<th>位置（行号）</th>
+<th>用途推断</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CommandController</code></td>
+<td>第 15-18 行</td>
+<td>命令执行的总控制器，接受前端请求并分发给具体命令</td>
+</tr>
+<tr>
+<td><code>DiscountManager</code></td>
+<td>第 23-26 行</td>
+<td>折扣计算的总入口，遍历 <code>DiscountLineItemLogic</code> 组和 <code>DiscountSubTotalLogic</code> 组</td>
+</tr>
+<tr>
+<td><code>TaxManager</code></td>
+<td>第 35-38 行</td>
+<td>税额计算管理器</td>
+</tr>
+<tr>
+<td><code>PaymentManager</code></td>
+<td>第 43-46 行</td>
+<td>支付管理器，遍历 <code>Payment</code> 组</td>
+</tr>
+<tr>
+<td><code>PointManager</code></td>
+<td>第 47-50 行</td>
+<td>积分管理器，调 <code>CalcPointLogic</code> 组计算积分</td>
+</tr>
+<tr>
+<td><code>RJLayoutMapper</code></td>
+<td>第 51-54 行</td>
+<td>收据布局映射器，按类型从 <code>RJLayout</code> 组选择布局实现</td>
+</tr>
+<tr>
+<td><code>RJManager</code></td>
+<td>第 19-22 行</td>
+<td>收据打印/日本レシート的管理器</td>
+</tr>
+</tbody>
+</table>
+<h3>5. 依赖关系</h3>
+<table>
+<thead>
+<tr>
+<th>依赖</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POS4U.Framework</code> 程序集</td>
+<td>框架核心（CommandController、RoundManager、CheckDigit 等）</td>
+</tr>
+<tr>
+<td><code>Business.Discount</code> 程序集</td>
+<td>折扣领域逻辑</td>
+</tr>
+<tr>
+<td><code>Business.Tax</code> 程序集</td>
+<td>税务计算逻辑</td>
+</tr>
+<tr>
+<td><code>Business.Payment</code> 程序集</td>
+<td>支付领域逻辑</td>
+</tr>
+<tr>
+<td><code>Business.Point</code> 程序集</td>
+<td>积分领域逻辑</td>
+</tr>
+<tr>
+<td><code>Business.RJ</code> 程序集</td>
+<td>收据布局领域逻辑</td>
+</tr>
+<tr>
+<td><code>Business.RetailMedia</code> 程序集</td>
+<td>零售媒体服务</td>
+</tr>
+<tr>
+<td><code>Data.Accessor</code> 程序集</td>
+<td>数据访问层（初始化、队列等）</td>
+</tr>
+<tr>
+<td><code>Azure.Logic</code> 程序集</td>
+<td>Azure 存储队列、Blob 访问器</td>
+</tr>
+<tr>
+<td><code>Business.TranLogMaker</code> 程序集</td>
+<td>交易日志生成</td>
+</tr>
+<tr>
+<td><code>Business.InputConverter</code> 程序集</td>
+<td>条码输入转换器（虽然没有在本文件引用，但 <code>PluginLogicService.xml</code> 中有）</td>
+</tr>
+<tr>
+<td><code>Device.*</code> 程序集</td>
+<td>在 PluginLogicService.xml 中注册，而非此文件</td>
+</tr>
+</tbody>
+</table>
+<p>注意：此文件<strong>不依赖</strong> <code>SettingLogicService.xml</code>，两者的配置域不同（Plugin.xml 管插件注册，SettingLogicService.xml 管键值设置）。</p>
+<h3>6. 错误处理与边界情况</h3>
+<p><strong>当前文件没有显式错误处理逻辑</strong>，但存在以下边界情况：</p>
+<ul>
+<li><strong>注释掉的 Plugin</strong>：第 83-86 行 <code>StorageBlob</code> 的本地文件实现被注释掉，第 462-468 行 <code>CalcPointOfflineLogic</code> 组为空说明离线功能不可用。如果运行时误引这些 Id，将找不到实现类</li>
+<li><strong>同名 Id 可能冲突</strong>：<code>StorageBlob</code> 在 <code>Plugin.xml</code> 和 <code>PluginLogicService.xml</code> 中都存在，不同配置文件的作用域不同</li>
+<li><strong>组内无有效实现</strong>：<code>CalcPointOfflineLogic</code> 组（第 462-468 行）没有注册任何 Plugin，如果业务代码尝试从该组获取实现，会返回空</li>
+<li><strong>强签名约束</strong>：每个 Assembly 声明 PublickeyToken=<code>7f613065d93c5dd1</code>，运行时加载需验证强名称签名</li>
+</ul>
+<h3>7. 测试相关</h3>
+<p><strong>当前输入中没有对应的测试文件。</strong></p>
+<p>应该如何测试：
+1. <strong>程序集可加载性测试</strong>：验证所有声明的 Assembly 能被运行时正确加载
+2. <strong>类型存在性测试</strong>：验证所有 Class 全名在对应程序集中存在
+3. <strong>依赖完整性测试</strong>：验证每个 Plugin Id 不重复，Group 内无 Id 冲突
+4. <strong>按需加载测试</strong>：验证框架按 Id 查找 Plugin 时能正确定位</p>
+<h3>8. 新人阅读建议</h3>
+<ol>
+<li>先看 Group 结构，理解「策略组」的设计模式——这是系统可扩展性的核心</li>
+<li>关注被注释掉的行（第 83-86、第 427-430、第 462-468 行），理解哪些功能当前不可用</li>
+<li>对比 <code>Plugin.xml</code> 和 <code>PluginLogicService.xml</code>（本批同目录），前者管领域逻辑，后者管 LogicService 运行时组件，不要混淆</li>
+<li><code>PublickeyToken=7f613065d93c5dd1</code> 是 FY 社（ForYouApplications）的强名称密钥标记</li>
+</ol>
+<h3>9. 不确定点</h3>
+<ul>
+<li><strong>插件管理器类名</strong>：需结合其他文件确认哪个类负责加载 <code>Plugin.xml</code></li>
+<li><strong>插件的生命周期</strong>：单例还是每次请求创建新实例？<code>Plugin.xml</code> 本身不表明生命周期</li>
+<li><strong>Group 内部选择策略</strong>：运行时如何从 Group 的多个 Plugin 中选出实际执行的那个（通过 Group Id + 某个选择器）</li>
+<li><strong>文件加载顺序</strong>：<code>Plugin.xml</code> 和 <code>PluginLogicService.xml</code> 是否在同一阶段加载</li>
+</ul>
+<hr />
+<h2>文件：Source/POS4ULogicService/Settings/PluginLogicService.xml</h2>
+<h3>1. 文件定位</h3>
+<p>这是 <strong>LogicService 运行时</strong>的插件注册配置文件，属于 <code>config</code> 模块。与 <code>Plugin.xml</code>（领域层）不同，此文件注册的是 LogicService 层特有的组件：设备管理器、会话管理器、API 数据转换器、销售命令、设备驱动、条码转换器等。</p>
+<p>LogicService 是 POS 系统的<strong>后端服务层</strong>，处理来自前端 POS 终端的 API 请求。</p>
+<h3>2. 对外暴露内容</h3>
+<p>根元素为 <code>&lt;Extension&gt;</code>（第 2 行），注册以下 Plugin 和 Group：</p>
+<h4>独立 Plugin</h4>
+<table>
+<thead>
+<tr>
+<th>Id</th>
+<th>Assembly</th>
+<th>Class</th>
+<th>行号</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DeviceManager</code></td>
+<td>POS4U.Framework</td>
+<td><code>ForYouApplications.POS4U.Framework.DeviceManager</code></td>
+<td>第 3-6 行</td>
+</tr>
+<tr>
+<td><code>SessionManager</code></td>
+<td>LogicService.Framework</td>
+<td><code>...LogicService.Framework.SessionManagerDB</code></td>
+<td>第 7-10 行</td>
+</tr>
+<tr>
+<td><code>ApiDataConverter</code></td>
+<td>LogicService.ApiConverter</td>
+<td><code>...LogicService.ApiConverter.ApiDataConverter</code></td>
+<td>第 11-14 行</td>
+</tr>
+<tr>
+<td><code>InitPOSData</code></td>
+<td>LogicService.CommandSales</td>
+<td><code>...LogicService.CommandSales.InitPOSDataSales</code></td>
+<td>第 15-18 行</td>
+</tr>
+<tr>
+<td><code>CommandPreExecute</code></td>
+<td>LogicService.CommandCommon</td>
+<td><code>...LogicService.CommandCommon.CommandPreExecute</code></td>
+<td>第 19-22 行</td>
+</tr>
+<tr>
+<td><code>TransactionLogStorageAccessor</code></td>
+<td>Azure.Logic</td>
+<td><code>...Azure.Logic.TransactionLogStorageAccessor</code></td>
+<td>第 27-30 行</td>
+</tr>
+</tbody>
+</table>
+<h4>Group: BarcodeConverter（条码输入转换器组）</h4>
+<table>
+<thead>
+<tr>
+<th>Plugin Id</th>
+<th>类</th>
+<th>行号</th>
+<th>用途推断</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>BarcodeItemWithQuantityConverter</code></td>
+<td><code>...BarcodeItemWithQuantityConverter</code></td>
+<td>第 33-36 行</td>
+<td>包含数量的条码</td>
+</tr>
+<tr>
+<td><code>BarcodeMarkDownConverter</code></td>
+<td><code>...BarcodeMarkDownConverter</code></td>
+<td>第 37-40 行</td>
+<td>降价标签条码</td>
+</tr>
+<tr>
+<td><code>BarcodeItemListConverter</code></td>
+<td><code>...BarcodeItemListConverter</code></td>
+<td>第 41-44 行</td>
+<td>商品列表条码</td>
+</tr>
+<tr>
+<td><code>BarcodeLogicServiceConverter</code></td>
+<td><code>...BarcodeLogicServiceConverter</code></td>
+<td>第 45-48 行</td>
+<td>LogicService 专用条码</td>
+</tr>
+<tr>
+<td><code>BarcodeBestBeforeConverter</code></td>
+<td><code>...BarcodeBestBeforeConverter</code></td>
+<td>第 49-52 行</td>
+<td>保质期限条码</td>
+</tr>
+<tr>
+<td><code>BarcodeDynamicPricingConverter</code></td>
+<td><code>...BarcodeDynamicPricingConverter</code></td>
+<td>第 53-56 行</td>
+<td>动态定价条码</td>
+</tr>
+<tr>
+<td><code>BarcodeItemCodeConverter</code></td>
+<td><code>...BarcodeItemCodeConverter</code></td>
+<td>第 57-60 行</td>
+<td>普通商品条码</td>
+</tr>
+</tbody>
+</table>
+<h4>Group: Payment（支付方式组）</h4>
+<table>
+<thead>
+<tr>
+<th>Plugin Id</th>
+<th>类</th>
+<th>行号</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Cash</code></td>
+<td><code>...Business.Payment.PaymentCash</code></td>
+<td>第 65-69 行</td>
+</tr>
+</tbody>
+</table>
+<p>注意与 <code>Plugin.xml</code> 中的 <code>Payment</code> 组对比：后者包含多种支付方式（券、积分、プリカ等），而 LogicService 层面只注册了现金支付。</p>
+<h4>Group: Command（API 命令处理组，Id = 命令名称）</h4>
+<table>
+<thead>
+<tr>
+<th>Plugin Id</th>
+<th>Assembly</th>
+<th>行号</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Common_GetCurrentState</code></td>
+<td>LogicService.CommandCommon</td>
+<td>第 72-75 行</td>
+</tr>
+<tr>
+<td><code>Common_ChangeDisplayTraining</code></td>
+<td>LogicService.CommandCommon</td>
+<td>第 76-79 行</td>
+</tr>
+<tr>
+<td><code>Sales_ChangeDisplay</code></td>
+<td>LogicService.CommandSales</td>
+<td>第 80-83 行</td>
+</tr>
+<tr>
+<td><code>Common_SignInOut</code></td>
+<td>LogicService.CommandCommon</td>
+<td>第 84-87 行</td>
+</tr>
+<tr>
+<td><code>Payment_AddPayment</code></td>
+<td>LogicService.CommandCommon</td>
+<td>第 88-91 行</td>
+</tr>
+<tr>
+<td><code>Member_MemberScan</code></td>
+<td>LogicService.CommandCommon</td>
+<td>第 92-95 行</td>
+</tr>
+<tr>
+<td><code>Member_LoginMobileMember</code></td>
+<td>LogicService.CommandCommon</td>
+<td>第 96-99 行</td>
+</tr>
+<tr>
+<td><code>Member_GetMobileMemberInfo</code></td>
+<td>LogicService.CommandCommon</td>
+<td>第 100-103 行</td>
+</tr>
+<tr>
+<td><code>Sales_GetPriceReferenceList</code> 等 17 个 Sales 命令</td>
+<td>LogicService.CommandSales</td>
+<td>第 104-231 行</td>
+</tr>
+<tr>
+<td><code>Return_ChangeDisplay</code></td>
+<td>LogicService.CommandSales</td>
+<td>第 185-187 行</td>
+</tr>
+<tr>
+<td><code>ReSales_Void4Mobile</code> / <code>ReSales_Total</code></td>
+<td>LogicService.CommandSales</td>
+<td>第 224-231 行</td>
+</tr>
+</tbody>
+</table>
+<h4>Group: Device（设备驱动组，Id = DeviceId）</h4>
+<table>
+<thead>
+<tr>
+<th>Plugin Id</th>
+<th>Assembly</th>
+<th>行号</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PointService</code></td>
+<td>Device.PointInfinityService</td>
+<td>第 237-239 行</td>
+<td>正式实现</td>
+</tr>
+<tr>
+<td><code>PointService</code>（注释）</td>
+<td>Device.PointInfinityServiceSimulator</td>
+<td>第 240-243 行</td>
+<td>仿真版本，被注释</td>
+</tr>
+<tr>
+<td><code>ValueCard</code></td>
+<td>Device.ValueCard</td>
+<td>第 244-247 行</td>
+<td>正式实现</td>
+</tr>
+<tr>
+<td><code>ValueCard</code>（注释）</td>
+<td>Device.ValueCardSimulator</td>
+<td>第 248-251 行</td>
+<td>仿真版本，被注释</td>
+</tr>
+<tr>
+<td><code>RetailMediaService</code></td>
+<td>Device.RetailMediaService</td>
+<td>第 252-255 行</td>
+<td>零售媒体服务</td>
+</tr>
+<tr>
+<td><code>CRM</code></td>
+<td>Device.CRM</td>
+<td>第 256-259 行</td>
+<td>CRM 服务</td>
+</tr>
+<tr>
+<td><code>MTranService</code></td>
+<td>Device.MTranService</td>
+<td>第 260-263 行</td>
+<td>中间取引云服务</td>
+</tr>
+<tr>
+<td><code>ManjyuApiService</code>（注释）</td>
+<td>Device.ManjyuApiService</td>
+<td>第 264-267 行</td>
+<td>正式实现，被注释</td>
+</tr>
+<tr>
+<td><code>ManjyuApiService</code>（生效）</td>
+<td>Device.ManjyuApiServiceSimulator</td>
+<td>第 268-271 行</td>
+<td>仿真版本，当前生效</td>
+</tr>
+</tbody>
+</table>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>LogicService 启动时的插件加载流程：</p>
+<ol>
+<li><strong>读取 PluginLogicService.xml</strong>：LogicService 插件管理器读取本文件</li>
+<li><strong>注册全局组件</strong>：</li>
+<li><code>DeviceManager</code>（第 3-6 行）— 管理所有物理/逻辑设备</li>
+<li><code>SessionManagerDB</code>（第 7-10 行）— 会话管理（基于数据库持久化）</li>
+<li><code>ApiDataConverter</code>（第 11-14 行）— API 数据转换</li>
+<li><code>InitPOSData</code>（第 15-18 行）— 交易数据初始化</li>
+<li><code>CommandPreExecute</code>（第 19-22 行）— 命令前置处理（权限校验等）</li>
+<li><strong>注册命令处理组</strong>（<code>Group Id="Command"</code>，第 70-232 行）：</li>
+<li>每个 <code>Plugin Id</code> 对应一个 API 命令名称</li>
+<li>前端通过命令名称查找对应的处理类，反射调用其 Execute 方法</li>
+<li><strong>注册设备驱动组</strong>（<code>Group Id="Device"</code>，第 233-272 行）：</li>
+<li>按设备类型分别注册驱动类</li>
+<li>仿真与正式实现互斥（通过注释切换）</li>
+</ol>
+<p><strong>仿真注册模式（重要设计考量）：</strong>
+- <code>PointService</code> 和 <code>ValueCard</code> 的仿真实现被注释掉（第 240-243、第 248-251 行），说明正式部署使用真实服务
+- 相反，<code>ManjyuApiService</code> 的正式实现被注释（第 264-267 行），当前使用的反而是仿真版本 <code>ManjyuApiServiceSimulator</code>（第 268-271 行）— 这可能意味着 Manjyu API 仍在开发中，或需要在无真实 Manjyu 服务器的环境中运行</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p><strong>本文件中没有编程语言函数定义，</strong> 但注册的 Command 类构成了 LogicService 的 API 接口列表。以下为重点命令：</p>
+<table>
+<thead>
+<tr>
+<th>命令 Id</th>
+<th>类</th>
+<th>用途推断</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Sales_Total</code></td>
+<td><code>..CommandSales.Sales_Total</code>（第 152-155 行）</td>
+<td>交易合计（结账）</td>
+</tr>
+<tr>
+<td><code>Sales_CancelTransaction</code></td>
+<td><code>..CommandSales.Sales_CancelTransaction</code>（第 156-159 行）</td>
+<td>交易取消</td>
+</tr>
+<tr>
+<td><code>Payment_AddPayment</code></td>
+<td><code>..CommandCommon.Payment_AddPayment</code>（第 88-91 行）</td>
+<td>添加支付方式</td>
+</tr>
+<tr>
+<td><code>Common_SignInOut</code></td>
+<td><code>..CommandCommon.Common_SignInOut</code>（第 84-87 行）</td>
+<td>登录/登出</td>
+</tr>
+<tr>
+<td><code>Sales_SubTotal</code></td>
+<td><code>..CommandSales.Sales_SubTotal</code>（第 140-143 行）</td>
+<td>小计计算</td>
+</tr>
+</tbody>
+</table>
+<p>被注释的命令/组件：
+- <code>EJournalStorageAccessor</code>（第 23-26 行）— 被注释，说明电子日志存储可能改用其他方式
+- 被注释的设备仿真器（第 240-243、第 248-251 行）</p>
+<h3>5. 依赖关系</h3>
+<table>
+<thead>
+<tr>
+<th>依赖</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POS4U.Framework</code> 程序集</td>
+<td><code>DeviceManager</code> 类</td>
+</tr>
+<tr>
+<td><code>LogicService.Framework</code> 程序集</td>
+<td>会话管理（SessionManagerDB）</td>
+</tr>
+<tr>
+<td><code>LogicService.ApiConverter</code> 程序集</td>
+<td>API 数据转换</td>
+</tr>
+<tr>
+<td><code>LogicService.CommandCommon</code> 程序集</td>
+<td>通用命令（签到、支付添加、会员扫描等）</td>
+</tr>
+<tr>
+<td><code>LogicService.CommandSales</code> 程序集</td>
+<td>销售命令（合计、取消、折扣等）</td>
+</tr>
+<tr>
+<td><code>Business.InputConverter</code> 程序集</td>
+<td>条码转换器组</td>
+</tr>
+<tr>
+<td><code>Business.Payment</code> 程序集</td>
+<td>现金支付</td>
+</tr>
+<tr>
+<td><code>Azure.Logic</code> 程序集</td>
+<td>交易日志存储访问</td>
+</tr>
+<tr>
+<td><code>Device.PointInfinityService</code> 程序集</td>
+<td>积分服务驱动</td>
+</tr>
+<tr>
+<td><code>Device.ValueCard</code> 程序集</td>
+<td>プリカ（预付卡）服务驱动</td>
+</tr>
+<tr>
+<td><code>Device.RetailMediaService</code> 程序集</td>
+<td>零售媒体驱动</td>
+</tr>
+<tr>
+<td><code>Device.CRM</code> 程序集</td>
+<td>CRM 服务驱动</td>
+</tr>
+<tr>
+<td><code>Device.MTranService</code> 程序集</td>
+<td>中间取引云服务</td>
+</tr>
+<tr>
+<td><code>Device.ManjyuApiServiceSimulator</code> 程序集</td>
+<td>Manjyu API 仿真器</td>
+</tr>
+</tbody>
+</table>
+<h3>6. 错误处理与边界情况</h3>
+<p><strong>当前文件没有显式错误处理逻辑</strong>，但值得注意的是：</p>
+<ul>
+<li><strong>仿真/正式切换机制</strong>：通过注释控制哪个实现生效（第 240-243 vs 237-239；第 264-267 vs 268-271）。如果误同时取消注释，会导致 <code>Id</code> 冲突</li>
+<li><strong>ManjyuApiService 使用仿真版本</strong>（第 268-271 行）：说明 Manjyu API 可能仍在开发中，或者当前部署环境不包含 Manjyu 真实服务器</li>
+<li><strong>仅注册 Cash 支付</strong>（第 65-69 行）：LogicService 层面只处理现金支付，其他支付方式（券、积分、プリカ）在 <code>Plugin.xml</code> 中注册——说明支付逻辑的入口不在同一层</li>
+<li><strong>被注释的 EJournalStorageAccessor</strong>（第 23-26 行）：电子日志存储可能通过 <code>Plugin.xml</code> 中的 <code>EJournalStorageAccessor</code>（第 75-78 行）统一管理</li>
+</ul>
+<h3>7. 测试相关</h3>
+<p><strong>当前输入中没有对应的测试文件。</strong></p>
+<p>应该如何测试：
+1. <strong>命令路由测试</strong>：验证前端请求的命令 Id 能正确路由到注册的处理类
+2. <strong>设备驱动加载测试</strong>：验证所有 Device Plugin 能被正确实例化
+3. <strong>仿真切换测试</strong>：验证注释/取消注释仿真 Plugin 后行为正确切换
+4. <strong>依赖完整性测试</strong>：验证所有 Assembly 在部署目录中存在</p>
+<h3>8. 新人阅读建议</h3>
+<ol>
+<li>先理解 <code>Plugin.xml</code> 和 <code>PluginLogicService.xml</code> 的分层差异——前者是领域逻辑层，后者是服务层</li>
+<li>重点关注 <code>Group Id="Command"</code> 下的 Id 列表——这就是 LogicService 支持的全部 API</li>
+<li>关注仿真/正式实现的注释切换，理解测试环境与生产环境的差异</li>
+<li><code>Device</code> 组的 Id 也是设备类型标识，与 <code>SettingWinPOSDevice.xml</code>（其他文件，本批未包含）中的设备 ID 对应</li>
+</ol>
+<h3>9. 不确定点</h3>
+<ul>
+<li><strong><code>ManjyuApiService</code> 的用途</strong>：从名称推测是与 Manjyu（中文：饅頭？或品牌名）交互的 API 服务，具体用途需结合其他文件确认</li>
+<li><strong><code>CommandPreExecute</code> 具体职责</strong>：前置处理器的逻辑（权限？令牌验证？）需结合源码确认</li>
+<li><strong><code>SessionManagerDB</code> 的会话存储结构</strong>：基于 DB 的会话存储表结构需结合其他文件确认</li>
+<li><strong><code>ApiDataConverter</code> 的转换规则</strong>：输入输出数据的转换细节需结合其他文件确认</li>
+</ul>
+<hr />
+<h2>文件：Source/POS4ULogicService/Settings/SettingLogicService.xml</h2>
+<h3>1. 文件定位</h3>
+<p>这是 <strong>POS4ULogicService 的主配置</strong>文件，属于 <code>config</code> 模块。它包含 Framework 参数、业务规则参数、后台任务参数、主数据同步参数、日志参数、交易日志传输参数等几百项运行时设置。这是系统行为调整的核心配置文件。</p>
+<h3>2. 对外暴露内容</h3>
+<p>根元素为 <code>&lt;Settings&gt;</code>（第 2 行），包含约 90+ 个 <code>&lt;Setting&gt;</code> 条目。按注释分类：</p>
+<h4>2.1 Framework（第 4-16 行）</h4>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Value</th>
+<th>行号</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ControllerFile</code></td>
+<td><code>ControllerLogicService.xml</code></td>
+<td>第 5-6 行</td>
+<td>控制器配置文件路径（不含目录，拼接到 SettingsFolderPath）</td>
+</tr>
+<tr>
+<td><code>StateFiles</code></td>
+<td><code>StateLogicService.xml</code></td>
+<td>第 7-8 行</td>
+<td>状态机文件路径</td>
+</tr>
+<tr>
+<td><code>DataAccessTimeLogThresholdMilliseconds</code></td>
+<td><code>100</code></td>
+<td>第 9-10 行</td>
+<td>DAO 操作慢查询阈值(ms)，超过则记录日志</td>
+</tr>
+<tr>
+<td><code>BarcodeEventCodeCsv</code></td>
+<td><code>38,84,85,90</code></td>
+<td>第 11-12 行</td>
+<td>条码事件代码 CSV 列表</td>
+</tr>
+<tr>
+<td><code>UPCEEventCode</code></td>
+<td><code>104</code></td>
+<td>第 13-14 行</td>
+<td>UPCE 条码事件代码</td>
+</tr>
+<tr>
+<td><code>UPCEWithoutCD</code></td>
+<td><code>True</code></td>
+<td>第 15-16 行</td>
+<td>UPCE 条码是否不含校验位</td>
+</tr>
+</tbody>
+</table>
+<h4>2.2 FrameworkLibrary（第 18-22 行）</h4>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Value</th>
+<th>行号</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CurrencyDecimalDigits</code></td>
+<td><code>0</code></td>
+<td>第 19-20 行</td>
+<td>货币小数位数（0 = 日元无小数）</td>
+</tr>
+<tr>
+<td><code>CurrencyNegativePattern</code></td>
+<td><code>2</code></td>
+<td>第 21-22 行</td>
+<td>负数货币格式样式（.NET 格式）</td>
+</tr>
+</tbody>
+</table>
+<h4>2.3 Setting（业务规则，第 24-40 行）</h4>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Value</th>
+<th>行号</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>EmployeeCodeLength</code></td>
+<td><code>0</code></td>
+<td>第 25-26 行</td>
+<td>员工编号长度（0=不限）</td>
+</tr>
+<tr>
+<td><code>NonExchangeTicketAmount</code></td>
+<td><code>10000</code></td>
+<td>第 27-28 行</td>
+<td>非兑换券商品券金额上限</td>
+</tr>
+<tr>
+<td><code>MaxChange</code></td>
+<td><code>9999</code></td>
+<td>第 29-30 行</td>
+<td>最大找零金额</td>
+</tr>
+<tr>
+<td><code>ManagedNo</code></td>
+<td><code>1</code></td>
+<td>第 31-32 行</td>
+<td>管理号（未详）</td>
+</tr>
+<tr>
+<td><code>RJDateTimeFormat</code></td>
+<td><code>yyyy年MM月dd日(ddd)HH:mm</code></td>
+<td>第 33-34 行</td>
+<td>收据日期时间格式</td>
+</tr>
+<tr>
+<td><code>ServiceType</code></td>
+<td><code>2</code></td>
+<td>第 35-36 行</td>
+<td>服务类型（可能区分业态）</td>
+</tr>
+<tr>
+<td><code>SummaryQHealthyThresholdCount</code></td>
+<td><code>500</code></td>
+<td>第 37-38 行</td>
+<td>汇总队列健康阈值</td>
+</tr>
+<tr>
+<td><code>PaymentTicktMaxCount</code></td>
+<td><code>100</code></td>
+<td>第 39-40 行</td>
+<td>支付凭证最大数量</td>
+</tr>
+</tbody>
+</table>
+<h4>2.4 Background（后台任务，第 42-120 行）</h4>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Value</th>
+<th>行号</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AdministratorIntervalMillisecond</code></td>
+<td><code>60000</code></td>
+<td>第 43-44 行</td>
+<td>管理者服务轮询间隔</td>
+</tr>
+<tr>
+<td><code>LogCopyBackdateCount</code></td>
+<td><code>7</code></td>
+<td>第 45-46 行</td>
+<td>日志复制回溯天数</td>
+</tr>
+<tr>
+<td><code>LocalLogKeepDay</code></td>
+<td><code>7</code></td>
+<td>第 47-48 行</td>
+<td>本地日志保留天数</td>
+</tr>
+<tr>
+<td><code>RetryMaxCount</code></td>
+<td><code>5</code></td>
+<td>第 49-50 行</td>
+<td>重试最大次数</td>
+</tr>
+<tr>
+<td><code>LocalOutputDirectoryPath</code></td>
+<td><code>C:\POS4UGO\Work\HeadquartersTransfer</code></td>
+<td>第 55-56 行</td>
+<td>总部传输本地输出目录</td>
+</tr>
+<tr>
+<td><code>HeadquartersTransferIntervalMillisecond</code></td>
+<td><code>3000</code></td>
+<td>第 57-58 行</td>
+<td>总部传输轮询间隔</td>
+</tr>
+<tr>
+<td><code>MasterSyncIntervalMillisecond</code></td>
+<td><code>3000</code></td>
+<td>第 61-62 行</td>
+<td>主数据同步轮询间隔</td>
+</tr>
+<tr>
+<td><code>BulkCopyTimeOut</code></td>
+<td><code>900</code></td>
+<td>第 63-64 行</td>
+<td>批量拷贝超时（秒）</td>
+</tr>
+<tr>
+<td><code>BulkDownloadFolderPath</code></td>
+<td><code>C:\POS4UGO\Work\DownloadALLMasterSync</code></td>
+<td>第 75-76 行</td>
+<td>全量同步下载目录</td>
+</tr>
+<tr>
+<td><code>DiffDownloadFolderPath</code></td>
+<td><code>C:\POS4UGO\Work\DownloadDiffMasterSync</code></td>
+<td>第 77-78 行</td>
+<td>增量同步下载目录</td>
+</tr>
+<tr>
+<td><code>WebSiteName</code></td>
+<td><code>POS4UGOWebService</code></td>
+<td>第 89-90 行</td>
+<td>IIS 网站名称</td>
+</tr>
+<tr>
+<td><code>TransactionServerAddress</code></td>
+<td><code>http://localhost:63526</code></td>
+<td>第 99-100 行</td>
+<td>交易服务器地址</td>
+</tr>
+<tr>
+<td><code>SettingsFolderPath</code></td>
+<td><code>C:\POS4UGO\Settings</code></td>
+<td>第 101-102 行</td>
+<td>设置文件夹根路径</td>
+</tr>
+</tbody>
+</table>
+<p>其余参数见源码，不一一列举。</p>
+<h4>2.5 Background BO（后台业务对象，第 122-128 行）</h4>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Value</th>
+<th>行号</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>BOMastersToCopyForNewStore</code></td>
+<td>逗号分隔的 20 个 Master 名</td>
+<td>第 123-124 行</td>
+<td>新店铺需复制的 Master 列表</td>
+</tr>
+<tr>
+<td><code>BOMasterCopyQueryTimeoutSeconds</code></td>
+<td><code>180</code></td>
+<td>第 125-126 行</td>
+<td>Master 拷贝查询超时</td>
+</tr>
+<tr>
+<td><code>BOTFTMainteNodeTypes</code></td>
+<td><code>07,08,09,10</code></td>
+<td>第 127-128 行</td>
+<td>BO 传输维护节点类型</td>
+</tr>
+</tbody>
+</table>
+<h4>2.6 LogicServiceFramework（第 130-132 行）</h4>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Value</th>
+<th>行号</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AcceptEventTimeLogThresholdMilliseconds</code></td>
+<td><code>0</code></td>
+<td>第 131-132 行</td>
+<td>事件接收耗时阈值（0=关闭）</td>
+</tr>
+</tbody>
+</table>
+<h4>2.7 LogicService（第 134-156 行）</h4>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Value</th>
+<th>行号</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AutoSignInEmployeeCode</code></td>
+<td><code>90001026</code></td>
+<td>第 135-136 行</td>
+<td>自动登录员工编号</td>
+</tr>
+<tr>
+<td><code>ReceiveIntervalSecond</code></td>
+<td><code>300</code></td>
+<td>第 139-140 行</td>
+<td>接收间隔</td>
+</tr>
+<tr>
+<td><code>QueueNextVisibleTime</code></td>
+<td><code>3600</code></td>
+<td>第 141-142 行</td>
+<td>队列下次可见时间（秒）</td>
+</tr>
+<tr>
+<td><code>TransferDataCount</code></td>
+<td><code>10</code></td>
+<td>第 143-144 行</td>
+<td>每次传输数据条数</td>
+</tr>
+<tr>
+<td><code>MasterDownloadExcludeList</code></td>
+<td>21 个 Master 名称</td>
+<td>第 145-146 行</td>
+<td>下载排除的 Master 列表</td>
+</tr>
+<tr>
+<td><code>SessionUnClearEventList</code></td>
+<td><code>59</code></td>
+<td>第 147-148 行</td>
+<td>不清除会话的事件代码列表</td>
+</tr>
+<tr>
+<td><code>UpdateValueCardBalanceApiURL</code></td>
+<td><code>https://{0}/v1/user/hook/balance/update</code></td>
+<td>第 150-151 行</td>
+<td>Manjyu 余额更新 API</td>
+</tr>
+<tr>
+<td><code>CartPaymentFinalizeApiURL</code></td>
+<td><code>https://{0}/v1/user/hook/hybrid/payment/finalize/{1}/{2}/{3}</code></td>
+<td>第 153-154 行</td>
+<td>Manjyu 支付确定 API</td>
+</tr>
+<tr>
+<td><code>CartPaymentCancelApiURL</code></td>
+<td><code>https://{0}/v1/user/hook/hybrid/cart/cancel/{1}/{2}/{3}</code></td>
+<td>第 155-156 行</td>
+<td>Manjyu 支付取消 API</td>
+</tr>
+</tbody>
+</table>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>XML 文件不含执行逻辑，但描述了配置加载的运行流程：</p>
+<ol>
+<li><strong>启动时配置加载</strong>：LogicService 启动时读取 <code>SettingLogicService.xml</code></li>
+<li><strong>路径拼接</strong>：通过 <code>SettingsFolderPath</code>（第 101-102 行，<code>C:\POS4UGO\Settings</code>）拼接其他配置文件的完整路径（如 <code>ControllerFile</code> + <code>SettingsFolderPath</code> → <code>C:\POS4UGO\Settings\ControllerLogicService.xml</code>）</li>
+<li><strong>格式化配置</strong>：<code>RJDateTimeFormat</code>（第 33-34 行）用于收据日期格式化</li>
+<li><strong>后台任务控制</strong>：</li>
+<li><code>AdministratorIntervalMillisecond</code>（第 43-44 行控制管理者服务轮询）</li>
+<li><code>MasterSyncIntervalMillisecond</code>（第 61-62 行控制主数据同步轮询）</li>
+<li><code>HeadquartersTransferIntervalMillisecond</code>（第 57-58 行控制总部传输轮询）</li>
+<li><strong>性能阈值</strong>：<code>DataAccessTimeLogThresholdMilliseconds</code>（第 9-10 行）超过 100ms 的数据库操作会被记录慢日志</li>
+<li><strong>支付限制</strong>：<code>MaxChange</code>（第 29-30 行）= 9999 日元，控制单笔交易最大找零额</li>
+</ol>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p><strong>本文件中没有编程语言函数定义。</strong></p>
+<p>但以下参数相当于「运行时常量」，直接影响业务逻辑：</p>
+<table>
+<thead>
+<tr>
+<th>配置参数</th>
+<th>业务影响</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MaxChange = 9999</code></td>
+<td>找零金额上限，超过则无法交易（需结合其他文件确认具体拦截逻辑）</td>
+</tr>
+<tr>
+<td><code>CurrencyDecimalDigits = 0</code></td>
+<td>所有货币金额不显示小数（日元特性）</td>
+</tr>
+<tr>
+<td><code>AutoSignInEmployeeCode = 90001026</code></td>
+<td>系统自动签到员工——这是一个特殊后台账户</td>
+</tr>
+<tr>
+<td><code>MasterDownloadExcludeList</code></td>
+<td>排除的 Master 类型不会被自动同步</td>
+</tr>
+<tr>
+<td><code>LocalLogKeepDay = 7</code></td>
+<td>本地日志只保留7天，超期自动清理</td>
+</tr>
+<tr>
+<td><code>TransactionServerAddress = http://localhost:63526</code></td>
+<td>LogicService 本机监听地址和端口</td>
+</tr>
+</tbody>
+</table>
+<h3>5. 依赖关系</h3>
+<table>
+<thead>
+<tr>
+<th>依赖</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SettingLogicServiceEnvironment.xml</code>（本批文件）</td>
+<td>提供连接字符串和环境参数，与本配置互补</td>
+</tr>
+<tr>
+<td><code>SettingLogicServiceWeb.xml</code>（本批文件）</td>
+<td>提供 Web 相关配置</td>
+</tr>
+<tr>
+<td><code>ControllerLogicService.xml</code>（<code>ControllerFile</code> 指定）</td>
+<td>控制器定义文件，需结合其他文件确认</td>
+</tr>
+<tr>
+<td><code>StateLogicService.xml</code>（<code>StateFiles</code> 指定）</td>
+<td>状态机定义文件，需结合其他文件确认</td>
+</tr>
+<tr>
+<td><code>Message_FC.xml</code>（本批文件）</td>
+<td>错误消息，路径通过 <code>SettingsFolderPath</code> 拼接确定</td>
+</tr>
+<tr>
+<td>IIS / Web 服务器</td>
+<td><code>WebSiteName</code> = <code>POS4UGOWebService</code></td>
+</tr>
+<tr>
+<td>SQL Server</td>
+<td>数据库连接字符串在 <code>SettingLogicServiceEnvironment.xml</code></td>
+</tr>
+<tr>
+<td>Azure Storage</td>
+<td><code>StorageConnectionString</code> 在环境配置中</td>
+</tr>
+</tbody>
+</table>
+<h3>6. 错误处理与边界情况</h3>
+<p><strong>当前文件没有显式错误处理逻辑</strong>，但以下值存在潜在风险：</p>
+<ul>
+<li><code>AutoSignInEmployeeCode = 90001026</code>（第 135-136 行）：硬编码员工编号——如果该员工在系统中被删除或禁用，LogicService 启动时自动签到将失败</li>
+<li><code>MaxChange = 9999</code>（第 29-30 行）：当单笔交易需要找零 10000 日元时会被拒绝——这与日本消费税变化（10%=2019年后）结合，高金额现金交易可能触发此限制</li>
+<li><code>BulkCopyTimeOut = 900</code> 秒（15 分钟）：Master 同步超时，大数据量可能超时</li>
+<li><code>MasterDownloadExcludeList</code>（第 145-146 行）：排除的 Master 从不自动同步——如果业务需要这些 Master，必须手动处理</li>
+<li><code>LocalOutputDirectoryPath</code>（第 55-56 行）、<code>BulkDownloadFolderPath</code>（第 75-76 行）、<code>DiffDownloadFolderPath</code>（第 77-78 行）都是 <code>C:\POS4UGO\Work</code> 下的子目录——如果 C 盘空间不足将影响后台任务</li>
+</ul>
+<h3>7. 测试相关</h3>
+<p><strong>当前输入中没有对应的测试文件。</strong></p>
+<p>应该如何测试：
+1. <strong>配置键值完整性测试</strong>：验证代码中引用的所有配置键在本文件中都有定义
+2. <strong>边界值测试</strong>：对 <code>MaxChange</code> 临界值（9998、9999、10000）测试找零逻辑
+3. <strong>路径存在性测试</strong>：验证所有配置的文件夹路径在部署时存在或能被创建
+4. <strong>API URL 有效性测试</strong>：验证 <code>UpdateValueCardBalanceApiURL</code> 等模板 URL 能通过 <code>string.Format</code> 格式化</p>
+<h3>8. 新人阅读建议</h3>
+<ol>
+<li>此文件是理解系统行为的首要入口——所有运行时决策参数都在这里</li>
+<li>分区阅读：Framework → 业务规则 → 后台任务 → LogicService 自身参数</li>
+<li>关注 <code>*IntervalMillisecond</code> 系列参数，理解系统后台任务调度节奏</li>
+<li>关注 <code>*Path</code> 系列参数，理解系统文件布局</li>
+<li>对比 <code>SettingLogicServiceEnvironment.xml</code> 理解环境差异配置的分层策略</li>
+</ol>
+<h3>9. 不确定点</h3>
+<ul>
+<li><strong><code>ManagedNo = 1</code></strong> 的具体含义需要结合其他文件确认</li>
+<li><strong><code>ServiceType = 2</code></strong> 的值枚举需要结合其他文件确认</li>
+<li><strong><code>SessionUnClearEventList = 59</code></strong> 的事件代码含义需要结合其他文件确认</li>
+<li>**<code>UpdateValueCardBalanceApiURL</code>、<code>CartPaymentFinalizeApiURL</code>、<code>CartPaymentCancelApiURL** 的</code>{0}<code></code>{1}<code></code>{2}<code></code>{3}` 各代表什么参数需要结合其他文件确认</li>
+<li><strong><code>SettingsFolderPath</code> 的读取者</strong>：哪些组件通过此路径查找其他配置文件需要结合其他文件确认</li>
+</ul>
+<hr />
+<h2>文件：Source/POS4ULogicService/Settings/SettingLogicServiceEnvironment.xml</h2>
+<h3>1. 文件定位</h3>
+<p>这是 <strong>POS4ULogicService 的环境配置</strong>文件，属于 <code>config</code> 模块。它专门存放与部署环境相关的配置，包括数据库连接字符串、存储连接字符串、服务基础地址等。这些值在开发、测试、生产环境中不同，因此与业务配置（<code>SettingLogicService.xml</code>）分离。</p>
+<h3>2. 对外暴露内容</h3>
+<p>根元素为 <code>&lt;Settings&gt;</code>（第 2 行），共 12 个 <code>&lt;Setting&gt;</code> 条目：</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Value</th>
+<th>行号</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POS4UConnectionString</code></td>
+<td><code>Data Source=.\SQLEXPRESS;Initial Catalog=POS4U_Trial_Master;Integrated Security=True</code></td>
+<td>第 5-6 行</td>
+<td>主数据库连接（Master 库）</td>
+</tr>
+<tr>
+<td><code>POS4UBackgroundConnectionString</code></td>
+<td><code>Data Source=.\SQLEXPRESS;Initial Catalog=POS4U_Trial_Tran;Integrated Security=True</code></td>
+<td>第 7-8 行</td>
+<td>背景数据库连接（Tran 库）</td>
+</tr>
+<tr>
+<td><code>POS4UReadOnlyConnectionString</code></td>
+<td><code>Data Source=.\SQLEXPRESS;Initial Catalog=POS4U_Trial_Master;Integrated Security=True</code></td>
+<td>第 9-10 行</td>
+<td>只读数据库连接（同 Master）</td>
+</tr>
+<tr>
+<td><code>POS4UReadOnlyBackgroundConnectionString</code></td>
+<td><code>Data Source=.\SQLEXPRESS;Initial Catalog=POS4U_Trial_Tran;Integrated Security=True</code></td>
+<td>第 11-12 行</td>
+<td>只读背景连接（同 Tran）</td>
+</tr>
+<tr>
+<td><code>EnviromentType</code></td>
+<td><code>00</code></td>
+<td>第 13-14 行</td>
+<td>环境类型代码</td>
+</tr>
+<tr>
+<td><code>RedirectAddress</code></td>
+<td><code>http://localhost:63526</code></td>
+<td>第 15-16 行</td>
+<td>重定向地址</td>
+</tr>
+<tr>
+<td><code>LogicServiceBaseAddress</code></td>
+<td><code>http://localhost:63526</code></td>
+<td>第 19-20 行</td>
+<td>LogicService 基础地址</td>
+</tr>
+<tr>
+<td><code>StorageConnectionString</code></td>
+<td><code>UseDevelopmentStorage=true</code></td>
+<td>第 21-22 行</td>
+<td>存储连接字符串（开发存储模拟器）</td>
+</tr>
+<tr>
+<td><code>StorageEJournalConnectionString</code></td>
+<td><code>UseDevelopmentStorage=true</code></td>
+<td>第 23-24 行</td>
+<td>电子日志存储连接字符串</td>
+</tr>
+<tr>
+<td><code>StorageTransactionLogConnectionString</code></td>
+<td><code>UseDevelopmentStorage=true</code></td>
+<td>第 25-26 行</td>
+<td>交易日志存储连接字符串</td>
+</tr>
+</tbody>
+</table>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>XML 文件不含执行逻辑。运行时行为：</p>
+<ol>
+<li><strong>加载顺序</strong>：LogicService 启动时，先加载 <code>SettingLogicServiceEnvironment.xml</code>，再加载 <code>SettingLogicService.xml</code></li>
+<li><strong>连接字符串路由</strong>：</li>
+<li>读操作使用 <code>POS4UReadOnlyConnectionString</code> / <code>POS4UReadOnlyBackgroundConnectionString</code>（读写分离模式）</li>
+<li>写操作使用 <code>POS4UConnectionString</code> / <code>POS4UBackgroundConnectionString</code></li>
+<li>Master 库（第 5-6 行）：存储主数据（商品、价格等）</li>
+<li>Tran 库（第 7-8 行）：存储交易数据（销售、日志等）</li>
+<li><strong>数据库配置分析</strong>：</li>
+<li>使用 SQL Server Express 本机实例（<code>.\SQLEXPRESS</code>）</li>
+<li>集成安全性（<code>Integrated Security=True</code>）= 使用 Windows 身份验证</li>
+<li>Trial 数据库名（<code>POS4U_Trial_Master</code>、<code>POS4U_Trial_Tran</code>）表明这是一个试用/开发环境</li>
+<li><strong>存储连接</strong>：三个 <code>Storage*ConnectionString</code> 都使用 <code>UseDevelopmentStorage=true</code>，说明在开发环境使用 Azure Storage Emulator</li>
+<li><strong>地址配置</strong>：<code>RedirectAddress</code> 和 <code>LogicServiceBaseAddress</code> 都指向 <code>http://localhost:63526</code>，说明是单一本机部署</li>
+</ol>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p><strong>本文件中没有编程语言函数定义。</strong></p>
+<p>但以下配置参数是系统运行的关键支撑：</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>位置</th>
+<th>运行影响</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POS4UConnectionString</code></td>
+<td>第 5-6 行</td>
+<td>所有主数据读写的数据库入口</td>
+</tr>
+<tr>
+<td><code>POS4UBackgroundConnectionString</code></td>
+<td>第 7-8 行</td>
+<td>所有交易数据读写的数据库入口</td>
+</tr>
+<tr>
+<td><code>StorageConnectionString</code></td>
+<td>第 21-22 行</td>
+<td>Azure 队列存储连接（日志/任务队列）</td>
+</tr>
+<tr>
+<td><code>LogicServiceBaseAddress</code></td>
+<td>第 19-20 行</td>
+<td>LogicService HTTP 服务监听地址</td>
+</tr>
+<tr>
+<td><code>EnviromentType = 00</code></td>
+<td>第 13-14 行</td>
+<td>标识当前环境（可能：00=开发/测试，01=正式等）</td>
+</tr>
+</tbody>
+</table>
+<h3>5. 依赖关系</h3>
+<table>
+<thead>
+<tr>
+<th>依赖</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQL Server Express（<code>.\SQLEXPRESS</code>）</td>
+<td>两个数据库实例的载体</td>
+</tr>
+<tr>
+<td>Azure Storage Emulator</td>
+<td>开发环境存储模拟器</td>
+</tr>
+<tr>
+<td><code>SettingLogicService.xml</code>（本批文件）</td>
+<td>互补的业务配置</td>
+</tr>
+<tr>
+<td>.NET SQL Client</td>
+<td>通过连接字符串访问 SQL Server</td>
+</tr>
+</tbody>
+</table>
+<h3>6. 错误处理与边界情况</h3>
+<p><strong>当前文件没有显式错误处理逻辑</strong>，但以下情况值得注意：</p>
+<ul>
+<li><code>Integrated Security=True</code>（第 5/7/9/11 行）：使用 Windows 身份验证——如果 LogicService 运行在非域账户或网络服务账户下，可能无法访问 SQL Server。需要确保运行账户具有 SQL Server 登录权限</li>
+<li>四个连接字符串指向同一实例但不同数据库（Master vs Tran），符合读写分离设计模式</li>
+<li>三个 Storage 连接字符串全部使用开发模拟器——如果部署到 Azure，需要替换为真实的 Azure Storage 连接字符串</li>
+<li><code>EnviromentType = 00</code> — 具体枚举值含义需要确认，但通常 <code>00</code> 代表本地开发</li>
+</ul>
+<h3>7. 测试相关</h3>
+<p><strong>当前输入中没有对应的测试文件。</strong></p>
+<p>应该如何测试：
+1. <strong>连接有效性测试</strong>：验证四个连接字符串都能成功建立数据库连接
+2. <strong>存储连接测试</strong>：验证开发存储模拟器可用
+3. <strong>环境切换测试</strong>：验证生产环境替换连接字符串后系统正常工作
+4. <strong>数据库初始化脚本测试</strong>：验证 <code>POS4U_Trial_Master</code> 和 <code>POS4U_Trial_Tran</code> 数据库的 Schema 存在</p>
+<h3>8. 新人阅读建议</h3>
+<ol>
+<li>这是部署运维人员最需要关注的文件——所有连接字符串都在这里</li>
+<li>理解 Master / Tran 数据库分离的设计——读操作走 ReadOnly 连接进一步分离</li>
+<li>注意 Storage 连接使用开发模拟器——正式部署时必须替换</li>
+<li>对比实际开发环境中的 SQL Server 实例名和数据库名，确认与配置一致</li>
+</ol>
+<h3>9. 不确定点</h3>
+<ul>
+<li><strong><code>EnviromentType = 00</code> 的具体含义</strong>：需结合其他文件确认其枚举值和代码分支逻辑</li>
+<li><strong><code>RedirectAddress</code> 的用途</strong>：什么情况下使用重定向地址？需结合其他文件确认</li>
+<li><strong>Master / Tran 读写分离的具体逻辑</strong>：哪个数据访问层负责根据操作类型选择连接字符串？需结合其他文件确认</li>
+<li><strong>数据库表结构</strong>：<code>POS4U_Trial_Master</code> 和 <code>POS4U_Trial_Tran</code> 的表定义需结合其他文件确认</li>
+</ul>
+<hr />
+<h2>文件：Source/POS4ULogicService/Settings/SettingLogicServiceWeb.xml</h2>
+<h3>1. 文件定位</h3>
+<p>这是 <strong>POS4ULogicService 的 Web 配置</strong>文件，属于 <code>config</code> 模块。它定义了 LogicService 在 HTTP/Web 上下文中的行为参数。当前文件内容非常简单，只有一个配置条目。</p>
+<h3>2. 对外暴露内容</h3>
+<p>根元素为 <code>&lt;Settings&gt;</code>（第 2 行），仅包含 1 个 <code>&lt;Setting&gt;</code>：</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Value</th>
+<th>行号</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MainDataAccessType</code></td>
+<td><code>Master</code></td>
+<td>第 5-6 行</td>
+<td>主要数据访问类型，值为 <code>Master</code></td>
+</tr>
+</tbody>
+</table>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>XML 文件不含执行逻辑。运行时行为：</p>
+<ol>
+<li>LogicService 启动时加载此文件</li>
+<li><code>MainDataAccessType = Master</code> 指示系统在 Web API 请求处理中，默认数据访问指向主数据库（Master 库，而非交易库 Tran）</li>
+</ol>
+<p>这个配置虽然简短，但决定了 Web API 请求的默认数据源路由策略——所有通过 HTTP 访问 LogicService 的请求，默认读取主数据库中的主数据。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p><strong>本文件中没有编程语言函数定义。</strong></p>
+<h3>5. 依赖关系</h3>
+<table>
+<thead>
+<tr>
+<th>依赖</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SettingLogicServiceEnvironment.xml</code>（本批文件）</td>
+<td>提供 <code>POS4UConnectionString</code>（Master 库连接）</td>
+</tr>
+<tr>
+<td><code>SettingLogicService.xml</code>（本批文件）</td>
+<td>互补的 Framework 和 LogicService 配置</td>
+</tr>
+</tbody>
+</table>
+<h3>6. 错误处理与边界情况</h3>
+<p><strong>当前文件没有显式错误处理逻辑</strong>，但：</p>
+<ul>
+<li>文件只有一条配置，极其简单——如果缺少此文件，系统的默认行为需要结合其他文件确认</li>
+<li><code>MainDataAccessType = Master</code> 可能意味着 Web API 请求中，数据查询都走 Master 库——如果业务需要查询交易数据（Tran 库），可能需要显式指定其他数据访问类型</li>
+</ul>
+<h3>7. 测试相关</h3>
+<p><strong>当前输入中没有对应的测试文件。</strong></p>
+<p>应该如何测试：
+1. <strong>配置加载测试</strong>：验证文件能被正确解析
+2. <strong>配置缺省测试</strong>：验证缺少此文件时系统仍能启动（使用默认值）
+3. <strong>数据访问路由测试</strong>：验证 <code>MainDataAccessType = Master</code> 时，Web API 数据查询确实使用 <code>POS4UConnectionString</code> 而非 <code>POS4UBackgroundConnectionString</code></p>
+<h3>8. 新人阅读建议</h3>
+<ol>
+<li>这是本批中最简单的文件——只需理解其单一配置的作用</li>
+<li>它展示了配置分层思想：Web 相关的、可能与环境无关的少量设置独立成文件</li>
+<li>如果遇到 Web API 返回数据不对（返回了主数据而非交易数据），可以先检查此配置</li>
+</ol>
+<h3>9. 不确定点</h3>
+<ul>
+<li><strong><code>MainDataAccessType</code> 的完整值枚举</strong>：除了 <code>Master</code> 是否还有 <code>Background</code>、<code>ReadOnly</code> 等值？需结合其他文件确认</li>
+<li><strong>哪个组件读取此配置</strong>：数据访问层的哪个类根据此值选择连接字符串？需结合其他文件确认</li>
+<li><strong>文件是否会被省略</strong>：在生产环境中，此文件是否必须？如果没有会怎样？</li>
+</ul>
+<hr />
+<h2>本批覆盖确认</h2>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>覆盖状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Source/POS4ULogicService/Settings/Message_FC.xml</code></td>
+<td>已详细讲解</td>
+<td>全部 400+ 条消息分类说明、共用 Code 风险、参数占位符分析、加载流程、边界情况均已覆盖</td>
+</tr>
+<tr>
+<td><code>Source/POS4ULogicService/Settings/Plugin.xml</code></td>
+<td>已详细讲解</td>
+<td>所有 19 个独立 Plugin 和 13 个 Group 的注册记录全部列出，与被注释的替代实现对比分析完成</td>
+</tr>
+<tr>
+<td><code>Source/POS4ULogicService/Settings/PluginLogicService.xml</code></td>
+<td>已详细讲解</td>
+<td>所有 Plugin/Group 注册记录全部列出，仿真/正式实现切换机制分析完成，与 Plugin.xml 的分层差异已说明</td>
+</tr>
+<tr>
+<td><code>Source/POS4ULogicService/Settings/SettingLogicService.xml</code></td>
+<td>已详细讲解</td>
+<td>约 90+ 个配置项按功能分区逐项说明，关键参数的业务影响分析完成，路径拼接和后台调度策略已覆盖</td>
+</tr>
+<tr>
+<td><code>Source/POS4ULogicService/Settings/SettingLogicServiceEnvironment.xml</code></td>
+<td>已详细讲解</td>
+<td>全部 12 个配置项说明完成，数据库读写分离设计模式分析完成，开发/生产环境切换注意事项已覆盖</td>
+</tr>
+<tr>
+<td><code>Source/POS4ULogicService/Settings/SettingLogicServiceWeb.xml</code></td>
+<td>已详细讲解</td>
+<td>单一配置项 <code>MainDataAccessType = Master</code> 的用途、运行时影响和风险点已覆盖</td>
+</tr>
+</tbody>
+</table></div></div><button class="expand-btn">Show more</button></div></div>
+</div></div>
+        
+
+<div class="pagination">
+<span class="current">Index</span>
+<span class="disabled">&larr; Prev</span>
+<a href="page-001.html">1</a>
+<a href="page-001.html">Next &rarr;</a>
+</div>
+
+
+        <dialog id="search-modal">
+            <div class="search-modal-header">
+                <input type="text" id="modal-search-input" placeholder="Search..." aria-label="Search transcripts">
+                <button id="modal-search-btn" type="button" aria-label="Search">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+                </button>
+                <button id="modal-close-btn" type="button" aria-label="Close">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+                </button>
+            </div>
+            <div id="search-status"></div>
+            <div id="search-results"></div>
+        </dialog>
+        <script>
+(function() {
+    var totalPages = 1;
+    var searchBox = document.getElementById('search-box');
+    var searchInput = document.getElementById('search-input');
+    var searchBtn = document.getElementById('search-btn');
+    var modal = document.getElementById('search-modal');
+    var modalInput = document.getElementById('modal-search-input');
+    var modalSearchBtn = document.getElementById('modal-search-btn');
+    var modalCloseBtn = document.getElementById('modal-close-btn');
+    var searchStatus = document.getElementById('search-status');
+    var searchResults = document.getElementById('search-results');
+
+    if (!searchBox || !modal) return;
+
+    // Hide search on file:// protocol (doesn't work due to CORS restrictions)
+    if (window.location.protocol === 'file:') return;
+
+    // Show search box (progressive enhancement)
+    searchBox.style.display = 'flex';
+
+    // Gist preview support - detect if we're on gisthost.github.io or gistpreview.github.io
+    var hostname = window.location.hostname;
+    var isGistPreview = hostname === 'gisthost.github.io' || hostname === 'gistpreview.github.io';
+    var gistId = null;
+    var gistOwner = null;
+    var gistInfoLoaded = false;
+
+    if (isGistPreview) {
+        // Extract gist ID from URL query string like ?78a436a8a9e7a2e603738b8193b95410/index.html
+        var queryMatch = window.location.search.match(/^\?([a-f0-9]+)/i);
+        if (queryMatch) {
+            gistId = queryMatch[1];
+        }
+    }
+
+    async function loadGistInfo() {
+        if (!isGistPreview || !gistId || gistInfoLoaded) return;
+        try {
+            var response = await fetch('https://api.github.com/gists/' + gistId);
+            if (response.ok) {
+                var info = await response.json();
+                gistOwner = info.owner.login;
+                gistInfoLoaded = true;
+            }
+        } catch (e) {
+            console.error('Failed to load gist info:', e);
+        }
+    }
+
+    function getPageFetchUrl(pageFile) {
+        if (isGistPreview && gistOwner && gistId) {
+            // Use raw gist URL for fetching content
+            return 'https://gist.githubusercontent.com/' + gistOwner + '/' + gistId + '/raw/' + pageFile;
+        }
+        return pageFile;
+    }
+
+    function getPageLinkUrl(pageFile) {
+        if (isGistPreview && gistId) {
+            // Use gistpreview URL format for navigation links
+            return '?' + gistId + '/' + pageFile;
+        }
+        return pageFile;
+    }
+
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function escapeRegex(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function openModal(query) {
+        modalInput.value = query || '';
+        searchResults.innerHTML = '';
+        searchStatus.textContent = '';
+        modal.showModal();
+        modalInput.focus();
+        if (query) {
+            performSearch(query);
+        }
+    }
+
+    function closeModal() {
+        modal.close();
+        // Update URL to remove search fragment, preserving path and query string
+        if (window.location.hash.startsWith('#search=')) {
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+    }
+
+    function updateUrlHash(query) {
+        if (query) {
+            // Preserve path and query string when adding hash
+            history.replaceState(null, '', window.location.pathname + window.location.search + '#search=' + encodeURIComponent(query));
+        }
+    }
+
+    function highlightTextNodes(element, searchTerm) {
+        var walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
+        var nodesToReplace = [];
+
+        while (walker.nextNode()) {
+            var node = walker.currentNode;
+            if (node.nodeValue.toLowerCase().indexOf(searchTerm.toLowerCase()) !== -1) {
+                nodesToReplace.push(node);
+            }
+        }
+
+        nodesToReplace.forEach(function(node) {
+            var text = node.nodeValue;
+            var regex = new RegExp('(' + escapeRegex(searchTerm) + ')', 'gi');
+            var parts = text.split(regex);
+            if (parts.length > 1) {
+                var span = document.createElement('span');
+                parts.forEach(function(part) {
+                    if (part.toLowerCase() === searchTerm.toLowerCase()) {
+                        var mark = document.createElement('mark');
+                        mark.textContent = part;
+                        span.appendChild(mark);
+                    } else {
+                        span.appendChild(document.createTextNode(part));
+                    }
+                });
+                node.parentNode.replaceChild(span, node);
+            }
+        });
+    }
+
+    function fixInternalLinks(element, pageFile) {
+        // Update all internal anchor links to include the page file
+        var links = element.querySelectorAll('a[href^="#"]');
+        links.forEach(function(link) {
+            var href = link.getAttribute('href');
+            link.setAttribute('href', pageFile + href);
+        });
+    }
+
+    function processPage(pageFile, html, query) {
+        var parser = new DOMParser();
+        var doc = parser.parseFromString(html, 'text/html');
+        var resultsFromPage = 0;
+
+        // Find all message blocks
+        var messages = doc.querySelectorAll('.message');
+        messages.forEach(function(msg) {
+            var text = msg.textContent || '';
+            if (text.toLowerCase().indexOf(query.toLowerCase()) !== -1) {
+                resultsFromPage++;
+
+                // Get the message ID for linking
+                var msgId = msg.id || '';
+                var pageLinkUrl = getPageLinkUrl(pageFile);
+                var link = pageLinkUrl + (msgId ? '#' + msgId : '');
+
+                // Clone the message HTML and highlight matches
+                var clone = msg.cloneNode(true);
+                // Fix internal links to include the page file
+                fixInternalLinks(clone, pageLinkUrl);
+                highlightTextNodes(clone, query);
+
+                var resultDiv = document.createElement('div');
+                resultDiv.className = 'search-result';
+                resultDiv.innerHTML = '<a href="' + link + '">' +
+                    '<div class="search-result-page">' + escapeHtml(pageFile) + '</div>' +
+                    '<div class="search-result-content">' + clone.innerHTML + '</div>' +
+                    '</a>';
+                searchResults.appendChild(resultDiv);
+            }
+        });
+
+        return resultsFromPage;
+    }
+
+    async function performSearch(query) {
+        if (!query.trim()) {
+            searchStatus.textContent = 'Enter a search term';
+            return;
+        }
+
+        updateUrlHash(query);
+        searchResults.innerHTML = '';
+        searchStatus.textContent = 'Searching...';
+
+        // Load gist info if on gistpreview (needed for constructing URLs)
+        if (isGistPreview && !gistInfoLoaded) {
+            searchStatus.textContent = 'Loading gist info...';
+            await loadGistInfo();
+            if (!gistOwner) {
+                searchStatus.textContent = 'Failed to load gist info. Search unavailable.';
+                return;
+            }
+        }
+
+        var resultsFound = 0;
+        var pagesSearched = 0;
+
+        // Build list of pages to fetch
+        var pagesToFetch = [];
+        for (var i = 1; i <= totalPages; i++) {
+            pagesToFetch.push('page-' + String(i).padStart(3, '0') + '.html');
+        }
+
+        searchStatus.textContent = 'Searching...';
+
+        // Process pages in batches of 3, but show results immediately as each completes
+        var batchSize = 3;
+        for (var i = 0; i < pagesToFetch.length; i += batchSize) {
+            var batch = pagesToFetch.slice(i, i + batchSize);
+
+            // Create promises that process results immediately when each fetch completes
+            var promises = batch.map(function(pageFile) {
+                return fetch(getPageFetchUrl(pageFile))
+                    .then(function(response) {
+                        if (!response.ok) throw new Error('Failed to fetch');
+                        return response.text();
+                    })
+                    .then(function(html) {
+                        // Process and display results immediately
+                        var count = processPage(pageFile, html, query);
+                        resultsFound += count;
+                        pagesSearched++;
+                        searchStatus.textContent = 'Found ' + resultsFound + ' result(s) in ' + pagesSearched + '/' + totalPages + ' pages...';
+                    })
+                    .catch(function() {
+                        pagesSearched++;
+                        searchStatus.textContent = 'Found ' + resultsFound + ' result(s) in ' + pagesSearched + '/' + totalPages + ' pages...';
+                    });
+            });
+
+            // Wait for this batch to complete before starting the next
+            await Promise.all(promises);
+        }
+
+        searchStatus.textContent = 'Found ' + resultsFound + ' result(s) in ' + totalPages + ' pages';
+    }
+
+    // Event listeners
+    searchBtn.addEventListener('click', function() {
+        openModal(searchInput.value);
+    });
+
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            openModal(searchInput.value);
+        }
+    });
+
+    modalSearchBtn.addEventListener('click', function() {
+        performSearch(modalInput.value);
+    });
+
+    modalInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            performSearch(modalInput.value);
+        }
+    });
+
+    modalCloseBtn.addEventListener('click', closeModal);
+
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+
+    // Check for #search= in URL on page load
+    if (window.location.hash.startsWith('#search=')) {
+        var query = decodeURIComponent(window.location.hash.substring(8));
+        if (query) {
+            searchInput.value = query;
+            openModal(query);
+        }
+    }
+})();
+        </script>
+    </div>
+    <script>
+document.querySelectorAll('time[data-timestamp]').forEach(function(el) {
+    const timestamp = el.getAttribute('data-timestamp');
+    const date = new Date(timestamp);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    if (isToday) { el.textContent = timeStr; }
+    else { el.textContent = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + timeStr; }
+});
+document.querySelectorAll('pre.json').forEach(function(el) {
+    let text = el.textContent;
+    text = text.replace(/"([^"]+)":/g, '<span style="color: #ce93d8">"$1"</span>:');
+    text = text.replace(/: "([^"]*)"/g, ': <span style="color: #81d4fa">"$1"</span>');
+    text = text.replace(/: (\d+)/g, ': <span style="color: #ffcc80">$1</span>');
+    text = text.replace(/: (true|false|null)/g, ': <span style="color: #f48fb1">$1</span>');
+    el.innerHTML = text;
+});
+document.querySelectorAll('.truncatable').forEach(function(wrapper) {
+    const content = wrapper.querySelector('.truncatable-content');
+    const btn = wrapper.querySelector('.expand-btn');
+    if (content.scrollHeight > 250) {
+        wrapper.classList.add('truncated');
+        btn.addEventListener('click', function() {
+            if (wrapper.classList.contains('truncated')) { wrapper.classList.remove('truncated'); wrapper.classList.add('expanded'); btn.textContent = 'Show less'; }
+            else { wrapper.classList.remove('expanded'); wrapper.classList.add('truncated'); btn.textContent = 'Show more'; }
+        });
+    }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,2752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code transcript - Index</title>
+    <style>
+:root { --bg-color: #f5f5f5; --card-bg: #ffffff; --user-bg: #e3f2fd; --user-border: #1976d2; --assistant-bg: #f5f5f5; --assistant-border: #9e9e9e; --thinking-bg: #fff8e1; --thinking-border: #ffc107; --thinking-text: #666; --tool-bg: #f3e5f5; --tool-border: #9c27b0; --tool-result-bg: #e8f5e9; --tool-error-bg: #ffebee; --text-color: #212121; --text-muted: #757575; --code-bg: #263238; --code-text: #aed581; }
+* { box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 16px; line-height: 1.6; }
+.container { max-width: 800px; margin: 0 auto; }
+h1 { font-size: 1.5rem; margin-bottom: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--user-border); }
+.header-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 2px solid var(--user-border); padding-bottom: 8px; margin-bottom: 24px; }
+.header-row h1 { border-bottom: none; padding-bottom: 0; margin-bottom: 0; flex: 1; min-width: 200px; }
+.message { margin-bottom: 16px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.message.user { background: var(--user-bg); border-left: 4px solid var(--user-border); }
+.message.assistant { background: var(--card-bg); border-left: 4px solid var(--assistant-border); }
+.message.tool-reply { background: #fff8e1; border-left: 4px solid #ff9800; }
+.tool-reply .role-label { color: #e65100; }
+.tool-reply .tool-result { background: transparent; padding: 0; margin: 0; }
+.tool-reply .tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff8e1); }
+.message-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: rgba(0,0,0,0.03); font-size: 0.85rem; }
+.role-label { font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.user .role-label { color: var(--user-border); }
+time { color: var(--text-muted); font-size: 0.8rem; }
+.timestamp-link { color: inherit; text-decoration: none; }
+.timestamp-link:hover { text-decoration: underline; }
+.message:target { animation: highlight 2s ease-out; }
+@keyframes highlight { 0% { background-color: rgba(25, 118, 210, 0.2); } 100% { background-color: transparent; } }
+.message-content { padding: 16px; }
+.message-content p { margin: 0 0 12px 0; }
+.message-content p:last-child { margin-bottom: 0; }
+.thinking { background: var(--thinking-bg); border: 1px solid var(--thinking-border); border-radius: 8px; padding: 12px; margin: 12px 0; font-size: 0.9rem; color: var(--thinking-text); }
+.thinking-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #f57c00; margin-bottom: 8px; }
+.thinking p { margin: 8px 0; }
+.assistant-text { margin: 8px 0; }
+.tool-use { background: var(--tool-bg); border: 1px solid var(--tool-border); border-radius: 8px; padding: 12px; margin: 12px 0; }
+.tool-header { font-weight: 600; color: var(--tool-border); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.tool-icon { font-size: 1.1rem; }
+.tool-description { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 8px; font-style: italic; }
+.tool-result { background: var(--tool-result-bg); border-radius: 8px; padding: 12px; margin: 12px 0; }
+.tool-result.tool-error { background: var(--tool-error-bg); }
+.file-tool { border-radius: 8px; padding: 12px; margin: 12px 0; }
+.write-tool { background: linear-gradient(135deg, #e3f2fd 0%, #e8f5e9 100%); border: 1px solid #4caf50; }
+.edit-tool { background: linear-gradient(135deg, #fff3e0 0%, #fce4ec 100%); border: 1px solid #ff9800; }
+.file-tool-header { font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.write-header { color: #2e7d32; }
+.edit-header { color: #e65100; }
+.file-tool-icon { font-size: 1rem; }
+.file-tool-path { font-family: monospace; background: rgba(0,0,0,0.08); padding: 2px 8px; border-radius: 4px; }
+.file-tool-fullpath { font-family: monospace; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px; word-break: break-all; }
+.file-content { margin: 0; }
+.edit-section { display: flex; margin: 4px 0; border-radius: 4px; overflow: hidden; }
+.edit-label { padding: 8px 12px; font-weight: bold; font-family: monospace; display: flex; align-items: flex-start; }
+.edit-old { background: #fce4ec; }
+.edit-old .edit-label { color: #b71c1c; background: #f8bbd9; }
+.edit-old .edit-content { color: #880e4f; }
+.edit-new { background: #e8f5e9; }
+.edit-new .edit-label { color: #1b5e20; background: #a5d6a7; }
+.edit-new .edit-content { color: #1b5e20; }
+.edit-content { margin: 0; flex: 1; background: transparent; font-size: 0.85rem; }
+.edit-replace-all { font-size: 0.75rem; font-weight: normal; color: var(--text-muted); }
+.write-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #e6f4ea); }
+.edit-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff0e5); }
+.todo-list { background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); border: 1px solid #81c784; border-radius: 8px; padding: 12px; margin: 12px 0; }
+.todo-header { font-weight: 600; color: #2e7d32; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.todo-items { list-style: none; margin: 0; padding: 0; }
+.todo-item { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.06); font-size: 0.9rem; }
+.todo-item:last-child { border-bottom: none; }
+.todo-icon { flex-shrink: 0; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 50%; }
+.todo-completed .todo-icon { color: #2e7d32; background: rgba(46, 125, 50, 0.15); }
+.todo-completed .todo-content { color: #558b2f; text-decoration: line-through; }
+.todo-in-progress .todo-icon { color: #f57c00; background: rgba(245, 124, 0, 0.15); }
+.todo-in-progress .todo-content { color: #e65100; font-weight: 500; }
+.todo-pending .todo-icon { color: #757575; background: rgba(0,0,0,0.05); }
+.todo-pending .todo-content { color: #616161; }
+pre { background: var(--code-bg); color: var(--code-text); padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; line-height: 1.5; margin: 8px 0; white-space: pre-wrap; word-wrap: break-word; }
+pre.json { color: #e0e0e0; }
+code { background: rgba(0,0,0,0.08); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+pre code { background: none; padding: 0; }
+.user-content { margin: 0; }
+.truncatable { position: relative; }
+.truncatable.truncated .truncatable-content { max-height: 200px; overflow: hidden; }
+.truncatable.truncated::after { content: ''; position: absolute; bottom: 32px; left: 0; right: 0; height: 60px; background: linear-gradient(to bottom, transparent, var(--card-bg)); pointer-events: none; }
+.message.user .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--user-bg)); }
+.message.tool-reply .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff8e1); }
+.tool-use .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-bg)); }
+.tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-result-bg)); }
+.expand-btn { display: none; width: 100%; padding: 8px 16px; margin-top: 4px; background: rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; cursor: pointer; font-size: 0.85rem; color: var(--text-muted); }
+.expand-btn:hover { background: rgba(0,0,0,0.1); }
+.truncatable.truncated .expand-btn, .truncatable.expanded .expand-btn { display: block; }
+.pagination { display: flex; justify-content: center; gap: 8px; margin: 24px 0; flex-wrap: wrap; }
+.pagination a, .pagination span { padding: 5px 10px; border-radius: 6px; text-decoration: none; font-size: 0.85rem; }
+.pagination a { background: var(--card-bg); color: var(--user-border); border: 1px solid var(--user-border); }
+.pagination a:hover { background: var(--user-bg); }
+.pagination .current { background: var(--user-border); color: white; }
+.pagination .disabled { color: var(--text-muted); border: 1px solid #ddd; }
+.pagination .index-link { background: var(--user-border); color: white; }
+details.continuation { margin-bottom: 16px; }
+details.continuation summary { cursor: pointer; padding: 12px 16px; background: var(--user-bg); border-left: 4px solid var(--user-border); border-radius: 12px; font-weight: 500; color: var(--text-muted); }
+details.continuation summary:hover { background: rgba(25, 118, 210, 0.15); }
+details.continuation[open] summary { border-radius: 12px 12px 0 0; margin-bottom: 0; }
+.index-item { margin-bottom: 16px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); background: var(--user-bg); border-left: 4px solid var(--user-border); }
+.index-item a { display: block; text-decoration: none; color: inherit; }
+.index-item a:hover { background: rgba(25, 118, 210, 0.1); }
+.index-item-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: rgba(0,0,0,0.03); font-size: 0.85rem; }
+.index-item-number { font-weight: 600; color: var(--user-border); }
+.index-item-content { padding: 16px; }
+.index-item-stats { padding: 8px 16px 12px 32px; font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid rgba(0,0,0,0.06); }
+.index-item-commit { margin-top: 6px; padding: 4px 8px; background: #fff3e0; border-radius: 4px; font-size: 0.85rem; color: #e65100; }
+.index-item-commit code { background: rgba(0,0,0,0.08); padding: 1px 4px; border-radius: 3px; font-size: 0.8rem; margin-right: 6px; }
+.commit-card { margin: 8px 0; padding: 10px 14px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 6px; }
+.commit-card a { text-decoration: none; color: #5d4037; display: block; }
+.commit-card a:hover { color: #e65100; }
+.commit-card-hash { font-family: monospace; color: #e65100; font-weight: 600; margin-right: 8px; }
+.index-commit { margin-bottom: 12px; padding: 10px 16px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+.index-commit a { display: block; text-decoration: none; color: inherit; }
+.index-commit a:hover { background: rgba(255, 152, 0, 0.1); margin: -10px -16px; padding: 10px 16px; border-radius: 8px; }
+.index-commit-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; margin-bottom: 4px; }
+.index-commit-hash { font-family: monospace; color: #e65100; font-weight: 600; }
+.index-commit-msg { color: #5d4037; }
+.index-item-long-text { margin-top: 8px; padding: 12px; background: var(--card-bg); border-radius: 8px; border-left: 3px solid var(--assistant-border); }
+.index-item-long-text .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--card-bg)); }
+.index-item-long-text-content { color: var(--text-color); }
+#search-box { display: none; align-items: center; gap: 8px; }
+#search-box input { padding: 6px 12px; border: 1px solid var(--assistant-border); border-radius: 6px; font-size: 16px; width: 180px; }
+#search-box button, #modal-search-btn, #modal-close-btn { background: var(--user-border); color: white; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+#search-box button:hover, #modal-search-btn:hover { background: #1565c0; }
+#modal-close-btn { background: var(--text-muted); margin-left: 8px; }
+#modal-close-btn:hover { background: #616161; }
+#search-modal[open] { border: none; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.2); padding: 0; width: 90vw; max-width: 900px; height: 80vh; max-height: 80vh; display: flex; flex-direction: column; }
+#search-modal::backdrop { background: rgba(0,0,0,0.5); }
+.search-modal-header { display: flex; align-items: center; gap: 8px; padding: 16px; border-bottom: 1px solid var(--assistant-border); background: var(--bg-color); border-radius: 12px 12px 0 0; }
+.search-modal-header input { flex: 1; padding: 8px 12px; border: 1px solid var(--assistant-border); border-radius: 6px; font-size: 16px; }
+#search-status { padding: 8px 16px; font-size: 0.85rem; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); }
+#search-results { flex: 1; overflow-y: auto; padding: 16px; }
+.search-result { margin-bottom: 16px; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.search-result a { display: block; text-decoration: none; color: inherit; }
+.search-result a:hover { background: rgba(25, 118, 210, 0.05); }
+.search-result-page { padding: 6px 12px; background: rgba(0,0,0,0.03); font-size: 0.8rem; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); }
+.search-result-content { padding: 12px; }
+.search-result mark { background: #fff59d; padding: 1px 2px; border-radius: 2px; }
+@media (max-width: 600px) { body { padding: 8px; } .message, .index-item { border-radius: 8px; } .message-content, .index-item-content { padding: 12px; } pre { font-size: 0.8rem; padding: 8px; } #search-box input { width: 120px; } #search-modal[open] { width: 95vw; height: 90vh; } }
+</style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-row">
+            <h1>Claude Code transcript</h1>
+            <div id="search-box">
+                <input type="text" id="search-input" placeholder="Search..." aria-label="Search transcripts">
+                <button id="search-btn" type="button" aria-label="Search">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+                </button>
+            </div>
+        </div>
+        
+
+<div class="pagination">
+<span class="current">Index</span>
+<span class="disabled">&larr; Prev</span>
+<a href="page-001.html">1</a>
+<a href="page-001.html">Next &rarr;</a>
+</div>
+
+        <p style="color: var(--text-muted); margin-bottom: 24px;">1 prompts · 3 messages · 0 tool calls · 0 commits · 1 pages</p>
+        
+<div class="index-item"><a href="page-001.html#msg-2026-07-09T06-51-21-786Z"><div class="index-item-header"><span class="index-item-number">#1</span><time datetime="2026-07-09T06:51:21.786Z" data-timestamp="2026-07-09T06:51:21.786Z">2026-07-09T06:51:21.786Z</time></div><div class="index-item-content"><p>IMPORTANT EXECUTION MODE FOR CLAUDE CLI:
+- Do not use tools.
+- Do not read or write files.
+- Do not ask for permissions.
+- Produce the requested final markdown directly on stdout.
+- The workflow runner will save stdout to the output path.
+- Ignore any instruction that implies you should write the output file yourself; instead print the full content.</p>
+<p>BEGIN ORIGINAL PROMPT</p>
+<p>你是源码教材项目的信息提取员，不是散文作者。</p>
+<p>任务：根据下面的带行号源码，为本 batch 中的每个文件生成“文件级源码讲解笔记”。</p>
+<p>Batch 信息：
+- Batch ID: batch_049
+- Batch Name: large_file_background_service_facemeusagedatadataset_designer_cs
+- Module: background_service
+- Purpose: 解释后台服务、同步任务、Windows Service 和定时处理
+- Related Runtime Flows: 启动流程、配置加载流程
+- Output Note Path: _sourcebook/notes/batch_049_large_file_background_service_facemeusagedatadataset_designer_cs_file_notes.md</p>
+<p>本批文件：
+- Source/POS4UBackground/Data/Background.Data.BackgroundContainer/FaceMeUsageDataDataSet.Designer.cs</p>
+<p>本批任务目标：
+- 为本批每个文件生成可追溯到源码行号的文件级笔记。
+- 重点说明文件职责、对外暴露内容、关键逻辑、依赖关系、错误处理、测试建议和不确定点。
+- 只做文件级源码笔记，不写最终教材正文。</p>
+<p>硬性规则：</p>
+<ol>
+<li>必须基于实际源码。</li>
+<li>每一条技术事实都要引用文件路径和行号。</li>
+<li>不允许编造不存在的函数、参数、返回值、配置项、业务逻辑。</li>
+<li>如果无法确定，请写“需要结合其他文件确认”。</li>
+<li>不要只讲核心函数，小工具函数、边界处理、异常处理也要说明。</li>
+<li>每个文件必须单独成节。</li>
+<li>不要写最终教材章节，只写文件级源码笔记。</li>
+<li>不要省略本批任何文件。</li>
+<li>如果某个文件很简单，也要说明它为什么简单、在项目中承担什么角色。</li>
+<li>如果发现当前 batch 缺少理解该文件所需的上下文，请在“不确定点”中明确列出需要结合哪些文件。</li>
+</ol>
+<p>质量规则：
+- 优先解释运行时行为和业务意图，再补充语法层面的说明。
+- 遇到配置、SQL、脚本、文档、二进制占位文件，也必须说明它对项目理解的作用。
+- 对非文本文件、缺失文件或无法从当前 batch 判断的内容，必须标记“需要结合其他文件确认”或“需要人工确认”，不要猜。
+- 入口、配置加载、请求处理、数据读写、错误处理、日志、测试相关线索要特别标出。
+- 输出中不要出现未引用行号的技术断言。</p>
+<p>覆盖确认要求：
+- 结尾必须输出“本批覆盖确认”表。
+- 表中必须逐一列出本批所有文件。
+- 覆盖状态只能使用：已详细讲解 / 已简略讲解 / 需要结合其他文件确认。</p>
+<p>输出格式：</p>
+<h1>文件级源码笔记：large_file_background_service_facemeusagedatadataset_designer_cs</h1>
+<h2>Batch 信息</h2>
+<ul>
+<li>Batch ID: batch_049</li>
+<li>Batch Name: large_file_background_service_facemeusagedatadataset_designer_cs</li>
+<li>Module: background_service</li>
+<li>Purpose: 解释后台服务、同步任务、Windows Service 和定时处理</li>
+</ul>
+<hr />
+<h2>文件：<path></h2>
+<h3>1. 文件定位</h3>
+<p>说明这个文件在项目中的角色，属于哪个模块，解决什么问题。</p>
+<h3>2. 对外暴露内容</h3>
+<p>列出 class / function / component / API / command / config / export。</p>
+<p>每一项都要包含：
+- 名称
+- 文件路径 + 行号
+- 用途</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>按代码执行顺序解释关键逻辑。</p>
+<p>要求：
+- 引用文件路径和行号
+- 解释运行时会发生什么
+- 不要只翻译代码，要说明代码意图</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>逐个说明：
+- 名称
+- 位置：文件路径 + 行号
+- 输入
+- 输出
+- 副作用
+- 调用关系
+- 边界情况
+- 可能的坑</p>
+<h3>5. 依赖关系</h3>
+<p>说明它依赖哪些文件、库、配置、类型、组件，以及这些依赖的用途。</p>
+<h3>6. 错误处理与边界情况</h3>
+<p>必须引用源码行号。</p>
+<p>如果没有明显错误处理，也要说明“当前文件没有显式错误处理”，并指出可能依赖哪里处理。</p>
+<h3>7. 测试相关</h3>
+<p>说明：
+- 当前输入中是否包含对应测试
+- 如果有，测试覆盖了什么
+- 如果没有，应该如何测试这个文件</p>
+<h3>8. 新人阅读建议</h3>
+<p>告诉新人应该如何理解这个文件，阅读时先看哪里，再看哪里。</p>
+<h3>9. 不确定点</h3>
+<p>列出不能从当前 batch 确认的问题，不要猜。</p>
+<hr />
+<h2>本批覆盖确认</h2>
+<p>请列出本批所有文件，并标记：</p>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>覆盖状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>path</td>
+<td>已详细讲解 / 已简略讲解 / 需要结合其他文件确认</td>
+<td>说明</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p>下面是本批源码：</p>
+<p>FILE: Source/POS4UBackground/Data/Background.Data.BackgroundContainer/FaceMeUsageDataDataSet.Designer.cs
+SHA256: 692d031cedf399e8d0e9a15c1ca1425d17132dc49a719230dd9c67e42108d5b6
+================================================================================
+00001: ﻿//------------------------------------------------------------------------------
+00002: // <auto-generated>
+00003: //     このコードはツールによって生成されました。
+00004: //     ランタイム バージョン:4.0.30319.42000
+00005: //
+00006: //     このファイルへの変更は、以下の状況下で不正な動作の原因になったり、
+00007: //     コードが再生成されるときに損失したりします。
+00008: // </auto-generated>
+00009: //------------------------------------------------------------------------------
+00010: 
+00011: #pragma warning disable 1591
+00012: 
+00013: namespace ForYouApplications.POS4U.Background.Data.Container {
+00014:   <br />
+00015:   <br />
+00016:     /// <summary>
+00017:     ///Represents a strongly typed in-memory cache of data.
+00018:     ///</summary>
+00019:     [global::System.Serializable()]
+00020:     [global::System.ComponentModel.DesignerCategoryAttribute("code")]
+00021:     [global::System.ComponentModel.ToolboxItem(true)]
+00022:     [global::System.Xml.Serialization.XmlSchemaProviderAttribute("GetTypedDataSetSchema")]
+00023:     [global::System.Xml.Serialization.XmlRootAttribute("FaceMeUsageDataDataSet")]
+00024:     [global::System.ComponentModel.Design.HelpKeywordAttribute("vs.data.DataSet")]
+00025:     public partial class FaceMeUsageDataDataSet : global::System.Data.DataSet {
+00026:       <br />
+00027:         private GetFaceMeUsageDataDataTable tableGetFaceMeUsageData;
+00028:       <br />
+00029:         private global::System.Data.SchemaSerializationMode _schemaSerializationMode = global::System.Data.SchemaSerializationMode.IncludeSchema;
+00030:       <br />
+00031:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00032:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00033:         public FaceMeUsageDataDataSet() {
+00034:             this.BeginInit();
+00035:             this.InitClass();
+00036:             global::System.ComponentModel.CollectionChangeEventHandler schemaChangedHandler = new global::System.ComponentModel.CollectionChangeEventHandler(this.SchemaChanged);
+00037:             base.Tables.CollectionChanged += schemaChangedHandler;
+00038:             base.Relations.CollectionChanged += schemaChangedHandler;
+00039:             this.EndInit();
+00040:         }
+00041:       <br />
+00042:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00043:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00044:         protected FaceMeUsageDataDataSet(global::System.Runtime.Serialization.SerializationInfo info, global::System.Runtime.Serialization.StreamingContext context) : 
+00045:                 base(info, context, false) {
+00046:             if ((this.IsBinarySerialized(info, context) == true)) {
+00047:                 this.InitVars(false);
+00048:                 global::System.ComponentModel.CollectionChangeEventHandler schemaChangedHandler1 = new global::System.ComponentModel.CollectionChangeEventHandler(this.SchemaChanged);
+00049:                 this.Tables.CollectionChanged += schemaChangedHandler1;
+00050:                 this.Relations.CollectionChanged += schemaChangedHandler1;
+00051:                 return;
+00052:             }
+00053:             string strSchema = ((string)(info.GetValue("XmlSchema", typeof(string))));
+00054:             if ((this.DetermineSchemaSerializationMode(info, context) == global::System.Data.SchemaSerializationMode.IncludeSchema)) {
+00055:                 global::System.Data.DataSet ds = new global::System.Data.DataSet();
+00056:                 ds.ReadXmlSchema(new global::System.Xml.XmlTextReader(new global::System.IO.StringReader(strSchema)));
+00057:                 if ((ds.Tables["GetFaceMeUsageData"] != null)) {
+00058:                     base.Tables.Add(new GetFaceMeUsageDataDataTable(ds.Tables["GetFaceMeUsageData"]));
+00059:                 }
+00060:                 this.DataSetName = ds.DataSetName;
+00061:                 this.Prefix = ds.Prefix;
+00062:                 this.Namespace = ds.Namespace;
+00063:                 this.Locale = ds.Locale;
+00064:                 this.CaseSensitive = ds.CaseSensitive;
+00065:                 this.EnforceConstraints = ds.EnforceConstraints;
+00066:                 this.Merge(ds, false, global::System.Data.MissingSchemaAction.Add);
+00067:                 this.InitVars();
+00068:             }
+00069:             else {
+00070:                 this.ReadXmlSchema(new global::System.Xml.XmlTextReader(new global::System.IO.StringReader(strSchema)));
+00071:             }
+00072:             this.GetSerializationData(info, context);
+00073:             global::System.ComponentModel.CollectionChangeEventHandler schemaChangedHandler = new global::System.ComponentModel.CollectionChangeEventHandler(this.SchemaChanged);
+00074:             base.Tables.CollectionChanged += schemaChangedHandler;
+00075:             this.Relations.CollectionChanged += schemaChangedHandler;
+00076:         }
+00077:       <br />
+00078:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00079:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00080:         [global::System.ComponentModel.Browsable(false)]
+00081:         [global::System.ComponentModel.DesignerSerializationVisibility(global::System.ComponentModel.DesignerSerializationVisibility.Content)]
+00082:         public GetFaceMeUsageDataDataTable GetFaceMeUsageData {
+00083:             get {
+00084:                 return this.tableGetFaceMeUsageData;
+00085:             }
+00086:         }
+00087:       <br />
+00088:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00089:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00090:         [global::System.ComponentModel.BrowsableAttribute(true)]
+00091:         [global::System.ComponentModel.DesignerSerializationVisibilityAttribute(global::System.ComponentModel.DesignerSerializationVisibility.Visible)]
+00092:         public override global::System.Data.SchemaSerializationMode SchemaSerializationMode {
+00093:             get {
+00094:                 return this._schemaSerializationMode;
+00095:             }
+00096:             set {
+00097:                 this._schemaSerializationMode = value;
+00098:             }
+00099:         }
+00100:       <br />
+00101:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00102:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00103:         [global::System.ComponentModel.DesignerSerializationVisibilityAttribute(global::System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+00104:         public new global::System.Data.DataTableCollection Tables {
+00105:             get {
+00106:                 return base.Tables;
+00107:             }
+00108:         }
+00109:       <br />
+00110:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00111:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00112:         [global::System.ComponentModel.DesignerSerializationVisibilityAttribute(global::System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+00113:         public new global::System.Data.DataRelationCollection Relations {
+00114:             get {
+00115:                 return base.Relations;
+00116:             }
+00117:         }
+00118:       <br />
+00119:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00120:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00121:         protected override void InitializeDerivedDataSet() {
+00122:             this.BeginInit();
+00123:             this.InitClass();
+00124:             this.EndInit();
+00125:         }
+00126:       <br />
+00127:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00128:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00129:         public override global::System.Data.DataSet Clone() {
+00130:             FaceMeUsageDataDataSet cln = ((FaceMeUsageDataDataSet)(base.Clone()));
+00131:             cln.InitVars();
+00132:             cln.SchemaSerializationMode = this.SchemaSerializationMode;
+00133:             return cln;
+00134:         }
+00135:       <br />
+00136:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00137:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00138:         protected override bool ShouldSerializeTables() {
+00139:             return false;
+00140:         }
+00141:       <br />
+00142:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00143:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00144:         protected override bool ShouldSerializeRelations() {
+00145:             return false;
+00146:         }
+00147:       <br />
+00148:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00149:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00150:         protected override void ReadXmlSerializable(global::System.Xml.XmlReader reader) {
+00151:             if ((this.DetermineSchemaSerializationMode(reader) == global::System.Data.SchemaSerializationMode.IncludeSchema)) {
+00152:                 this.Reset();
+00153:                 global::System.Data.DataSet ds = new global::System.Data.DataSet();
+00154:                 ds.ReadXml(reader);
+00155:                 if ((ds.Tables["GetFaceMeUsageData"] != null)) {
+00156:                     base.Tables.Add(new GetFaceMeUsageDataDataTable(ds.Tables["GetFaceMeUsageData"]));
+00157:                 }
+00158:                 this.DataSetName = ds.DataSetName;
+00159:                 this.Prefix = ds.Prefix;
+00160:                 this.Namespace = ds.Namespace;
+00161:                 this.Locale = ds.Locale;
+00162:                 this.CaseSensitive = ds.CaseSensitive;
+00163:                 this.EnforceConstraints = ds.EnforceConstraints;
+00164:                 this.Merge(ds, false, global::System.Data.MissingSchemaAction.Add);
+00165:                 this.InitVars();
+00166:             }
+00167:             else {
+00168:                 this.ReadXml(reader);
+00169:                 this.InitVars();
+00170:             }
+00171:         }
+00172:       <br />
+00173:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00174:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00175:         protected override global::System.Xml.Schema.XmlSchema GetSchemaSerializable() {
+00176:             global::System.IO.MemoryStream stream = new global::System.IO.MemoryStream();
+00177:             this.WriteXmlSchema(new global::System.Xml.XmlTextWriter(stream, null));
+00178:             stream.Position = 0;
+00179:             return global::System.Xml.Schema.XmlSchema.Read(new global::System.Xml.XmlTextReader(stream), null);
+00180:         }
+00181:       <br />
+00182:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00183:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00184:         internal void InitVars() {
+00185:             this.InitVars(true);
+00186:         }
+00187:       <br />
+00188:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00189:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00190:         internal void InitVars(bool initTable) {
+00191:             this.tableGetFaceMeUsageData = ((GetFaceMeUsageDataDataTable)(base.Tables["GetFaceMeUsageData"]));
+00192:             if ((initTable == true)) {
+00193:                 if ((this.tableGetFaceMeUsageData != null)) {
+00194:                     this.tableGetFaceMeUsageData.InitVars();
+00195:                 }
+00196:             }
+00197:         }
+00198:       <br />
+00199:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00200:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00201:         private void InitClass() {
+00202:             this.DataSetName = "FaceMeUsageDataDataSet";
+00203:             this.Prefix = "";
+00204:             this.Namespace = "http://tempuri.org/FaceMeUsageDataDataSet.xsd";
+00205:             this.EnforceConstraints = true;
+00206:             this.SchemaSerializationMode = global::System.Data.SchemaSerializationMode.IncludeSchema;
+00207:             this.tableGetFaceMeUsageData = new GetFaceMeUsageDataDataTable();
+00208:             base.Tables.Add(this.tableGetFaceMeUsageData);
+00209:         }
+00210:       <br />
+00211:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00212:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00213:         private bool ShouldSerializeGetFaceMeUsageData() {
+00214:             return false;
+00215:         }
+00216:       <br />
+00217:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00218:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00219:         private void SchemaChanged(object sender, global::System.ComponentModel.CollectionChangeEventArgs e) {
+00220:             if ((e.Action == global::System.ComponentModel.CollectionChangeAction.Remove)) {
+00221:                 this.InitVars();
+00222:             }
+00223:         }
+00224:       <br />
+00225:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00226:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00227:         public static global::System.Xml.Schema.XmlSchemaComplexType GetTypedDataSetSchema(global::System.Xml.Schema.XmlSchemaSet xs) {
+00228:             FaceMeUsageDataDataSet ds = new FaceMeUsageDataDataSet();
+00229:             global::System.Xml.Schema.XmlSchemaComplexType type = new global::System.Xml.Schema.XmlSchemaComplexType();
+00230:             global::System.Xml.Schema.XmlSchemaSequence sequence = new global::System.Xml.Schema.XmlSchemaSequence();
+00231:             global::System.Xml.Schema.XmlSchemaAny any = new global::System.Xml.Schema.XmlSchemaAny();
+00232:             any.Namespace = ds.Namespace;
+00233:             sequence.Items.Add(any);
+00234:             type.Particle = sequence;
+00235:             global::System.Xml.Schema.XmlSchema dsSchema = ds.GetSchemaSerializable();
+00236:             if (xs.Contains(dsSchema.TargetNamespace)) {
+00237:                 global::System.IO.MemoryStream s1 = new global::System.IO.MemoryStream();
+00238:                 global::System.IO.MemoryStream s2 = new global::System.IO.MemoryStream();
+00239:                 try {
+00240:                     global::System.Xml.Schema.XmlSchema schema = null;
+00241:                     dsSchema.Write(s1);
+00242:                     for (global::System.Collections.IEnumerator schemas = xs.Schemas(dsSchema.TargetNamespace).GetEnumerator(); schemas.MoveNext(); ) {
+00243:                         schema = ((global::System.Xml.Schema.XmlSchema)(schemas.Current));
+00244:                         s2.SetLength(0);
+00245:                         schema.Write(s2);
+00246:                         if ((s1.Length == s2.Length)) {
+00247:                             s1.Position = 0;
+00248:                             s2.Position = 0;
+00249:                             for (; ((s1.Position != s1.Length) 
+00250:                                         &amp;&amp; (s1.ReadByte() == s2.ReadByte())); ) {
+00251:                                 ;
+00252:                             }
+00253:                             if ((s1.Position == s1.Length)) {
+00254:                                 return type;
+00255:                             }
+00256:                         }
+00257:                     }
+00258:                 }
+00259:                 finally {
+00260:                     if ((s1 != null)) {
+00261:                         s1.Close();
+00262:                     }
+00263:                     if ((s2 != null)) {
+00264:                         s2.Close();
+00265:                     }
+00266:                 }
+00267:             }
+00268:             xs.Add(dsSchema);
+00269:             return type;
+00270:         }
+00271:       <br />
+00272:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00273:         public delegate void GetFaceMeUsageDataRowChangeEventHandler(object sender, GetFaceMeUsageDataRowChangeEvent e);
+00274:       <br />
+00275:         /// <summary>
+00276:         ///Represents the strongly named DataTable class.
+00277:         ///</summary>
+00278:         [global::System.Serializable()]
+00279:         [global::System.Xml.Serialization.XmlSchemaProviderAttribute("GetTypedTableSchema")]
+00280:         public partial class GetFaceMeUsageDataDataTable : global::System.Data.TypedTableBase<GetFaceMeUsageDataRow> {
+00281:           <br />
+00282:             private global::System.Data.DataColumn columnCompanyCode;
+00283:           <br />
+00284:             private global::System.Data.DataColumn columnStoreCode;
+00285:           <br />
+00286:             private global::System.Data.DataColumn columnTerminalNo;
+00287:           <br />
+00288:             private global::System.Data.DataColumn columnTransactionNo;
+00289:           <br />
+00290:             private global::System.Data.DataColumn columnManagedNo;
+00291:           <br />
+00292:             private global::System.Data.DataColumn columnPointCardNo;
+00293:           <br />
+00294:             private global::System.Data.DataColumn columnTransactionDateTime;
+00295:           <br />
+00296:             private global::System.Data.DataColumn columnIsCanceled;
+00297:           <br />
+00298:             private global::System.Data.DataColumn columnTotalQuantity;
+00299:           <br />
+00300:             private global::System.Data.DataColumn columnTotalAmount;
+00301:           <br />
+00302:             private global::System.Data.DataColumn columnPaymentType;
+00303:           <br />
+00304:             private global::System.Data.DataColumn columnUseFaceMeType;
+00305:           <br />
+00306:             private global::System.Data.DataColumn columnIsAgeConfirm;
+00307:           <br />
+00308:             private global::System.Data.DataColumn columnAgeConfirmType;
+00309:           <br />
+00310:             private global::System.Data.DataColumn columnAgeConfirmSpan;
+00311:           <br />
+00312:             private global::System.Data.DataColumn columnRemoteAgeConfirmEndDateTime;
+00313:           <br />
+00314:             private global::System.Data.DataColumn columnRemoteAgeConfirmCount;
+00315:           <br />
+00316:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00317:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00318:             public GetFaceMeUsageDataDataTable() {
+00319:                 this.TableName = "GetFaceMeUsageData";
+00320:                 this.BeginInit();
+00321:                 this.InitClass();
+00322:                 this.EndInit();
+00323:             }
+00324:           <br />
+00325:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00326:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00327:             internal GetFaceMeUsageDataDataTable(global::System.Data.DataTable table) {
+00328:                 this.TableName = table.TableName;
+00329:                 if ((table.CaseSensitive != table.DataSet.CaseSensitive)) {
+00330:                     this.CaseSensitive = table.CaseSensitive;
+00331:                 }
+00332:                 if ((table.Locale.ToString() != table.DataSet.Locale.ToString())) {
+00333:                     this.Locale = table.Locale;
+00334:                 }
+00335:                 if ((table.Namespace != table.DataSet.Namespace)) {
+00336:                     this.Namespace = table.Namespace;
+00337:                 }
+00338:                 this.Prefix = table.Prefix;
+00339:                 this.MinimumCapacity = table.MinimumCapacity;
+00340:             }
+00341:           <br />
+00342:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00343:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00344:             protected GetFaceMeUsageDataDataTable(global::System.Runtime.Serialization.SerializationInfo info, global::System.Runtime.Serialization.StreamingContext context) : 
+00345:                     base(info, context) {
+00346:                 this.InitVars();
+00347:             }
+00348:           <br />
+00349:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00350:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00351:             public global::System.Data.DataColumn CompanyCodeColumn {
+00352:                 get {
+00353:                     return this.columnCompanyCode;
+00354:                 }
+00355:             }
+00356:           <br />
+00357:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00358:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00359:             public global::System.Data.DataColumn StoreCodeColumn {
+00360:                 get {
+00361:                     return this.columnStoreCode;
+00362:                 }
+00363:             }
+00364:           <br />
+00365:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00366:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00367:             public global::System.Data.DataColumn TerminalNoColumn {
+00368:                 get {
+00369:                     return this.columnTerminalNo;
+00370:                 }
+00371:             }
+00372:           <br />
+00373:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00374:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00375:             public global::System.Data.DataColumn TransactionNoColumn {
+00376:                 get {
+00377:                     return this.columnTransactionNo;
+00378:                 }
+00379:             }
+00380:           <br />
+00381:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00382:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00383:             public global::System.Data.DataColumn ManagedNoColumn {
+00384:                 get {
+00385:                     return this.columnManagedNo;
+00386:                 }
+00387:             }
+00388:           <br />
+00389:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00390:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00391:             public global::System.Data.DataColumn PointCardNoColumn {
+00392:                 get {
+00393:                     return this.columnPointCardNo;
+00394:                 }
+00395:             }
+00396:           <br />
+00397:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00398:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00399:             public global::System.Data.DataColumn TransactionDateTimeColumn {
+00400:                 get {
+00401:                     return this.columnTransactionDateTime;
+00402:                 }
+00403:             }
+00404:           <br />
+00405:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00406:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00407:             public global::System.Data.DataColumn IsCanceledColumn {
+00408:                 get {
+00409:                     return this.columnIsCanceled;
+00410:                 }
+00411:             }
+00412:           <br />
+00413:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00414:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00415:             public global::System.Data.DataColumn TotalQuantityColumn {
+00416:                 get {
+00417:                     return this.columnTotalQuantity;
+00418:                 }
+00419:             }
+00420:           <br />
+00421:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00422:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00423:             public global::System.Data.DataColumn TotalAmountColumn {
+00424:                 get {
+00425:                     return this.columnTotalAmount;
+00426:                 }
+00427:             }
+00428:           <br />
+00429:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00430:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00431:             public global::System.Data.DataColumn PaymentTypeColumn {
+00432:                 get {
+00433:                     return this.columnPaymentType;
+00434:                 }
+00435:             }
+00436:           <br />
+00437:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00438:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00439:             public global::System.Data.DataColumn UseFaceMeTypeColumn {
+00440:                 get {
+00441:                     return this.columnUseFaceMeType;
+00442:                 }
+00443:             }
+00444:           <br />
+00445:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00446:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00447:             public global::System.Data.DataColumn IsAgeConfirmColumn {
+00448:                 get {
+00449:                     return this.columnIsAgeConfirm;
+00450:                 }
+00451:             }
+00452:           <br />
+00453:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00454:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00455:             public global::System.Data.DataColumn AgeConfirmTypeColumn {
+00456:                 get {
+00457:                     return this.columnAgeConfirmType;
+00458:                 }
+00459:             }
+00460:           <br />
+00461:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00462:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00463:             public global::System.Data.DataColumn AgeConfirmSpanColumn {
+00464:                 get {
+00465:                     return this.columnAgeConfirmSpan;
+00466:                 }
+00467:             }
+00468:           <br />
+00469:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00470:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00471:             public global::System.Data.DataColumn RemoteAgeConfirmEndDateTimeColumn {
+00472:                 get {
+00473:                     return this.columnRemoteAgeConfirmEndDateTime;
+00474:                 }
+00475:             }
+00476:           <br />
+00477:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00478:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00479:             public global::System.Data.DataColumn RemoteAgeConfirmCountColumn {
+00480:                 get {
+00481:                     return this.columnRemoteAgeConfirmCount;
+00482:                 }
+00483:             }
+00484:           <br />
+00485:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00486:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00487:             [global::System.ComponentModel.Browsable(false)]
+00488:             public int Count {
+00489:                 get {
+00490:                     return this.Rows.Count;
+00491:                 }
+00492:             }
+00493:           <br />
+00494:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00495:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00496:             public GetFaceMeUsageDataRow this[int index] {
+00497:                 get {
+00498:                     return ((GetFaceMeUsageDataRow)(this.Rows[index]));
+00499:                 }
+00500:             }
+00501:           <br />
+00502:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00503:             public event GetFaceMeUsageDataRowChangeEventHandler GetFaceMeUsageDataRowChanging;
+00504:           <br />
+00505:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00506:             public event GetFaceMeUsageDataRowChangeEventHandler GetFaceMeUsageDataRowChanged;
+00507:           <br />
+00508:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00509:             public event GetFaceMeUsageDataRowChangeEventHandler GetFaceMeUsageDataRowDeleting;
+00510:           <br />
+00511:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00512:             public event GetFaceMeUsageDataRowChangeEventHandler GetFaceMeUsageDataRowDeleted;
+00513:           <br />
+00514:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00515:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00516:             public void AddGetFaceMeUsageDataRow(GetFaceMeUsageDataRow row) {
+00517:                 this.Rows.Add(row);
+00518:             }
+00519:           <br />
+00520:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00521:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00522:             public GetFaceMeUsageDataRow AddGetFaceMeUsageDataRow(
+00523:                         string CompanyCode, 
+00524:                         string StoreCode, 
+00525:                         int TerminalNo, 
+00526:                         long TransactionNo, 
+00527:                         int ManagedNo, 
+00528:                         string PointCardNo, 
+00529:                         System.DateTime TransactionDateTime, 
+00530:                         bool IsCanceled, 
+00531:                         int TotalQuantity, 
+00532:                         decimal TotalAmount, 
+00533:                         int PaymentType, 
+00534:                         int UseFaceMeType, 
+00535:                         bool IsAgeConfirm, 
+00536:                         int AgeConfirmType, 
+00537:                         int AgeConfirmSpan, 
+00538:                         System.DateTime RemoteAgeConfirmEndDateTime, 
+00539:                         int RemoteAgeConfirmCount) {
+00540:                 GetFaceMeUsageDataRow rowGetFaceMeUsageDataRow = ((GetFaceMeUsageDataRow)(this.NewRow()));
+00541:                 object[] columnValuesArray = new object[] {
+00542:                         CompanyCode,
+00543:                         StoreCode,
+00544:                         TerminalNo,
+00545:                         TransactionNo,
+00546:                         ManagedNo,
+00547:                         PointCardNo,
+00548:                         TransactionDateTime,
+00549:                         IsCanceled,
+00550:                         TotalQuantity,
+00551:                         TotalAmount,
+00552:                         PaymentType,
+00553:                         UseFaceMeType,
+00554:                         IsAgeConfirm,
+00555:                         AgeConfirmType,
+00556:                         AgeConfirmSpan,
+00557:                         RemoteAgeConfirmEndDateTime,
+00558:                         RemoteAgeConfirmCount};
+00559:                 rowGetFaceMeUsageDataRow.ItemArray = columnValuesArray;
+00560:                 this.Rows.Add(rowGetFaceMeUsageDataRow);
+00561:                 return rowGetFaceMeUsageDataRow;
+00562:             }
+00563:           <br />
+00564:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00565:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00566:             public GetFaceMeUsageDataRow FindByCompanyCodeStoreCodeTerminalNoTransactionNoManagedNo(string CompanyCode, string StoreCode, int TerminalNo, long TransactionNo, int ManagedNo) {
+00567:                 return ((GetFaceMeUsageDataRow)(this.Rows.Find(new object[] {
+00568:                             CompanyCode,
+00569:                             StoreCode,
+00570:                             TerminalNo,
+00571:                             TransactionNo,
+00572:                             ManagedNo})));
+00573:             }
+00574:           <br />
+00575:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00576:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00577:             public override global::System.Data.DataTable Clone() {
+00578:                 GetFaceMeUsageDataDataTable cln = ((GetFaceMeUsageDataDataTable)(base.Clone()));
+00579:                 cln.InitVars();
+00580:                 return cln;
+00581:             }
+00582:           <br />
+00583:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00584:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00585:             protected override global::System.Data.DataTable CreateInstance() {
+00586:                 return new GetFaceMeUsageDataDataTable();
+00587:             }
+00588:           <br />
+00589:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00590:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00591:             internal void InitVars() {
+00592:                 this.columnCompanyCode = base.Columns["CompanyCode"];
+00593:                 this.columnStoreCode = base.Columns["StoreCode"];
+00594:                 this.columnTerminalNo = base.Columns["TerminalNo"];
+00595:                 this.columnTransactionNo = base.Columns["TransactionNo"];
+00596:                 this.columnManagedNo = base.Columns["ManagedNo"];
+00597:                 this.columnPointCardNo = base.Columns["PointCardNo"];
+00598:                 this.columnTransactionDateTime = base.Columns["TransactionDateTime"];
+00599:                 this.columnIsCanceled = base.Columns["IsCanceled"];
+00600:                 this.columnTotalQuantity = base.Columns["TotalQuantity"];
+00601:                 this.columnTotalAmount = base.Columns["TotalAmount"];
+00602:                 this.columnPaymentType = base.Columns["PaymentType"];
+00603:                 this.columnUseFaceMeType = base.Columns["UseFaceMeType"];
+00604:                 this.columnIsAgeConfirm = base.Columns["IsAgeConfirm"];
+00605:                 this.columnAgeConfirmType = base.Columns["AgeConfirmType"];
+00606:                 this.columnAgeConfirmSpan = base.Columns["AgeConfirmSpan"];
+00607:                 this.columnRemoteAgeConfirmEndDateTime = base.Columns["RemoteAgeConfirmEndDateTime"];
+00608:                 this.columnRemoteAgeConfirmCount = base.Columns["RemoteAgeConfirmCount"];
+00609:             }
+00610:           <br />
+00611:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00612:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00613:             private void InitClass() {
+00614:                 this.columnCompanyCode = new global::System.Data.DataColumn("CompanyCode", typeof(string), null, global::System.Data.MappingType.Element);
+00615:                 base.Columns.Add(this.columnCompanyCode);
+00616:                 this.columnStoreCode = new global::System.Data.DataColumn("StoreCode", typeof(string), null, global::System.Data.MappingType.Element);
+00617:                 base.Columns.Add(this.columnStoreCode);
+00618:                 this.columnTerminalNo = new global::System.Data.DataColumn("TerminalNo", typeof(int), null, global::System.Data.MappingType.Element);
+00619:                 base.Columns.Add(this.columnTerminalNo);
+00620:                 this.columnTransactionNo = new global::System.Data.DataColumn("TransactionNo", typeof(long), null, global::System.Data.MappingType.Element);
+00621:                 base.Columns.Add(this.columnTransactionNo);
+00622:                 this.columnManagedNo = new global::System.Data.DataColumn("ManagedNo", typeof(int), null, global::System.Data.MappingType.Element);
+00623:                 base.Columns.Add(this.columnManagedNo);
+00624:                 this.columnPointCardNo = new global::System.Data.DataColumn("PointCardNo", typeof(string), null, global::System.Data.MappingType.Element);
+00625:                 base.Columns.Add(this.columnPointCardNo);
+00626:                 this.columnTransactionDateTime = new global::System.Data.DataColumn("TransactionDateTime", typeof(global::System.DateTime), null, global::System.Data.MappingType.Element);
+00627:                 base.Columns.Add(this.columnTransactionDateTime);
+00628:                 this.columnIsCanceled = new global::System.Data.DataColumn("IsCanceled", typeof(bool), null, global::System.Data.MappingType.Element);
+00629:                 base.Columns.Add(this.columnIsCanceled);
+00630:                 this.columnTotalQuantity = new global::System.Data.DataColumn("TotalQuantity", typeof(int), null, global::System.Data.MappingType.Element);
+00631:                 base.Columns.Add(this.columnTotalQuantity);
+00632:                 this.columnTotalAmount = new global::System.Data.DataColumn("TotalAmount", typeof(decimal), null, global::System.Data.MappingType.Element);
+00633:                 base.Columns.Add(this.columnTotalAmount);
+00634:                 this.columnPaymentType = new global::System.Data.DataColumn("PaymentType", typeof(int), null, global::System.Data.MappingType.Element);
+00635:                 base.Columns.Add(this.columnPaymentType);
+00636:                 this.columnUseFaceMeType = new global::System.Data.DataColumn("UseFaceMeType", typeof(int), null, global::System.Data.MappingType.Element);
+00637:                 base.Columns.Add(this.columnUseFaceMeType);
+00638:                 this.columnIsAgeConfirm = new global::System.Data.DataColumn("IsAgeConfirm", typeof(bool), null, global::System.Data.MappingType.Element);
+00639:                 base.Columns.Add(this.columnIsAgeConfirm);
+00640:                 this.columnAgeConfirmType = new global::System.Data.DataColumn("AgeConfirmType", typeof(int), null, global::System.Data.MappingType.Element);
+00641:                 base.Columns.Add(this.columnAgeConfirmType);
+00642:                 this.columnAgeConfirmSpan = new global::System.Data.DataColumn("AgeConfirmSpan", typeof(int), null, global::System.Data.MappingType.Element);
+00643:                 base.Columns.Add(this.columnAgeConfirmSpan);
+00644:                 this.columnRemoteAgeConfirmEndDateTime = new global::System.Data.DataColumn("RemoteAgeConfirmEndDateTime", typeof(global::System.DateTime), null, global::System.Data.MappingType.Element);
+00645:                 base.Columns.Add(this.columnRemoteAgeConfirmEndDateTime);
+00646:                 this.columnRemoteAgeConfirmCount = new global::System.Data.DataColumn("RemoteAgeConfirmCount", typeof(int), null, global::System.Data.MappingType.Element);
+00647:                 base.Columns.Add(this.columnRemoteAgeConfirmCount);
+00648:                 this.Constraints.Add(new global::System.Data.UniqueConstraint("Constraint1", new global::System.Data.DataColumn[] {
+00649:                                 this.columnCompanyCode,
+00650:                                 this.columnStoreCode,
+00651:                                 this.columnTerminalNo,
+00652:                                 this.columnTransactionNo,
+00653:                                 this.columnManagedNo}, true));
+00654:                 this.columnCompanyCode.AllowDBNull = false;
+00655:                 this.columnCompanyCode.MaxLength = 10;
+00656:                 this.columnStoreCode.AllowDBNull = false;
+00657:                 this.columnStoreCode.MaxLength = 10;
+00658:                 this.columnTerminalNo.AllowDBNull = false;
+00659:                 this.columnTransactionNo.AllowDBNull = false;
+00660:                 this.columnManagedNo.AllowDBNull = false;
+00661:                 this.columnPointCardNo.MaxLength = 30;
+00662:                 this.columnTransactionDateTime.AllowDBNull = false;
+00663:                 this.columnIsCanceled.AllowDBNull = false;
+00664:                 this.columnTotalQuantity.AllowDBNull = false;
+00665:                 this.columnTotalAmount.AllowDBNull = false;
+00666:                 this.columnPaymentType.AllowDBNull = false;
+00667:                 this.columnUseFaceMeType.AllowDBNull = false;
+00668:                 this.columnIsAgeConfirm.AllowDBNull = false;
+00669:                 this.columnAgeConfirmType.AllowDBNull = false;
+00670:                 this.columnAgeConfirmSpan.AllowDBNull = false;
+00671:             }
+00672:           <br />
+00673:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00674:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00675:             public GetFaceMeUsageDataRow NewGetFaceMeUsageDataRow() {
+00676:                 return ((GetFaceMeUsageDataRow)(this.NewRow()));
+00677:             }
+00678:           <br />
+00679:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00680:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00681:             protected override global::System.Data.DataRow NewRowFromBuilder(global::System.Data.DataRowBuilder builder) {
+00682:                 return new GetFaceMeUsageDataRow(builder);
+00683:             }
+00684:           <br />
+00685:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00686:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00687:             protected override global::System.Type GetRowType() {
+00688:                 return typeof(GetFaceMeUsageDataRow);
+00689:             }
+00690:           <br />
+00691:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00692:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00693:             protected override void OnRowChanged(global::System.Data.DataRowChangeEventArgs e) {
+00694:                 base.OnRowChanged(e);
+00695:                 if ((this.GetFaceMeUsageDataRowChanged != null)) {
+00696:                     this.GetFaceMeUsageDataRowChanged(this, new GetFaceMeUsageDataRowChangeEvent(((GetFaceMeUsageDataRow)(e.Row)), e.Action));
+00697:                 }
+00698:             }
+00699:           <br />
+00700:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00701:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00702:             protected override void OnRowChanging(global::System.Data.DataRowChangeEventArgs e) {
+00703:                 base.OnRowChanging(e);
+00704:                 if ((this.GetFaceMeUsageDataRowChanging != null)) {
+00705:                     this.GetFaceMeUsageDataRowChanging(this, new GetFaceMeUsageDataRowChangeEvent(((GetFaceMeUsageDataRow)(e.Row)), e.Action));
+00706:                 }
+00707:             }
+00708:           <br />
+00709:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00710:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00711:             protected override void OnRowDeleted(global::System.Data.DataRowChangeEventArgs e) {
+00712:                 base.OnRowDeleted(e);
+00713:                 if ((this.GetFaceMeUsageDataRowDeleted != null)) {
+00714:                     this.GetFaceMeUsageDataRowDeleted(this, new GetFaceMeUsageDataRowChangeEvent(((GetFaceMeUsageDataRow)(e.Row)), e.Action));
+00715:                 }
+00716:             }
+00717:           <br />
+00718:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00719:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00720:             protected override void OnRowDeleting(global::System.Data.DataRowChangeEventArgs e) {
+00721:                 base.OnRowDeleting(e);
+00722:                 if ((this.GetFaceMeUsageDataRowDeleting != null)) {
+00723:                     this.GetFaceMeUsageDataRowDeleting(this, new GetFaceMeUsageDataRowChangeEvent(((GetFaceMeUsageDataRow)(e.Row)), e.Action));
+00724:                 }
+00725:             }
+00726:           <br />
+00727:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00728:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00729:             public void RemoveGetFaceMeUsageDataRow(GetFaceMeUsageDataRow row) {
+00730:                 this.Rows.Remove(row);
+00731:             }
+00732:           <br />
+00733:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00734:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00735:             public static global::System.Xml.Schema.XmlSchemaComplexType GetTypedTableSchema(global::System.Xml.Schema.XmlSchemaSet xs) {
+00736:                 global::System.Xml.Schema.XmlSchemaComplexType type = new global::System.Xml.Schema.XmlSchemaComplexType();
+00737:                 global::System.Xml.Schema.XmlSchemaSequence sequence = new global::System.Xml.Schema.XmlSchemaSequence();
+00738:                 FaceMeUsageDataDataSet ds = new FaceMeUsageDataDataSet();
+00739:                 global::System.Xml.Schema.XmlSchemaAny any1 = new global::System.Xml.Schema.XmlSchemaAny();
+00740:                 any1.Namespace = "http://www.w3.org/2001/XMLSchema";
+00741:                 any1.MinOccurs = new decimal(0);
+00742:                 any1.MaxOccurs = decimal.MaxValue;
+00743:                 any1.ProcessContents = global::System.Xml.Schema.XmlSchemaContentProcessing.Lax;
+00744:                 sequence.Items.Add(any1);
+00745:                 global::System.Xml.Schema.XmlSchemaAny any2 = new global::System.Xml.Schema.XmlSchemaAny();
+00746:                 any2.Namespace = "urn:schemas-microsoft-com:xml-diffgram-v1";
+00747:                 any2.MinOccurs = new decimal(1);
+00748:                 any2.ProcessContents = global::System.Xml.Schema.XmlSchemaContentProcessing.Lax;
+00749:                 sequence.Items.Add(any2);
+00750:                 global::System.Xml.Schema.XmlSchemaAttribute attribute1 = new global::System.Xml.Schema.XmlSchemaAttribute();
+00751:                 attribute1.Name = "namespace";
+00752:                 attribute1.FixedValue = ds.Namespace;
+00753:                 type.Attributes.Add(attribute1);
+00754:                 global::System.Xml.Schema.XmlSchemaAttribute attribute2 = new global::System.Xml.Schema.XmlSchemaAttribute();
+00755:                 attribute2.Name = "tableTypeName";
+00756:                 attribute2.FixedValue = "GetFaceMeUsageDataDataTable";
+00757:                 type.Attributes.Add(attribute2);
+00758:                 type.Particle = sequence;
+00759:                 global::System.Xml.Schema.XmlSchema dsSchema = ds.GetSchemaSerializable();
+00760:                 if (xs.Contains(dsSchema.TargetNamespace)) {
+00761:                     global::System.IO.MemoryStream s1 = new global::System.IO.MemoryStream();
+00762:                     global::System.IO.MemoryStream s2 = new global::System.IO.MemoryStream();
+00763:                     try {
+00764:                         global::System.Xml.Schema.XmlSchema schema = null;
+00765:                         dsSchema.Write(s1);
+00766:                         for (global::System.Collections.IEnumerator schemas = xs.Schemas(dsSchema.TargetNamespace).GetEnumerator(); schemas.MoveNext(); ) {
+00767:                             schema = ((global::System.Xml.Schema.XmlSchema)(schemas.Current));
+00768:                             s2.SetLength(0);
+00769:                             schema.Write(s2);
+00770:                             if ((s1.Length == s2.Length)) {
+00771:                                 s1.Position = 0;
+00772:                                 s2.Position = 0;
+00773:                                 for (; ((s1.Position != s1.Length) 
+00774:                                             &amp;&amp; (s1.ReadByte() == s2.ReadByte())); ) {
+00775:                                     ;
+00776:                                 }
+00777:                                 if ((s1.Position == s1.Length)) {
+00778:                                     return type;
+00779:                                 }
+00780:                             }
+00781:                         }
+00782:                     }
+00783:                     finally {
+00784:                         if ((s1 != null)) {
+00785:                             s1.Close();
+00786:                         }
+00787:                         if ((s2 != null)) {
+00788:                             s2.Close();
+00789:                         }
+00790:                     }
+00791:                 }
+00792:                 xs.Add(dsSchema);
+00793:                 return type;
+00794:             }
+00795:         }
+00796:       <br />
+00797:         /// <summary>
+00798:         ///Represents strongly named DataRow class.
+00799:         ///</summary>
+00800:         public partial class GetFaceMeUsageDataRow : global::System.Data.DataRow {
+00801:           <br />
+00802:             private GetFaceMeUsageDataDataTable tableGetFaceMeUsageData;
+00803:           <br />
+00804:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00805:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00806:             internal GetFaceMeUsageDataRow(global::System.Data.DataRowBuilder rb) : 
+00807:                     base(rb) {
+00808:                 this.tableGetFaceMeUsageData = ((GetFaceMeUsageDataDataTable)(this.Table));
+00809:             }
+00810:           <br />
+00811:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00812:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00813:             public string CompanyCode {
+00814:                 get {
+00815:                     return ((string)(this[this.tableGetFaceMeUsageData.CompanyCodeColumn]));
+00816:                 }
+00817:                 set {
+00818:                     this[this.tableGetFaceMeUsageData.CompanyCodeColumn] = value;
+00819:                 }
+00820:             }
+00821:           <br />
+00822:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00823:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00824:             public string StoreCode {
+00825:                 get {
+00826:                     return ((string)(this[this.tableGetFaceMeUsageData.StoreCodeColumn]));
+00827:                 }
+00828:                 set {
+00829:                     this[this.tableGetFaceMeUsageData.StoreCodeColumn] = value;
+00830:                 }
+00831:             }
+00832:           <br />
+00833:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00834:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00835:             public int TerminalNo {
+00836:                 get {
+00837:                     return ((int)(this[this.tableGetFaceMeUsageData.TerminalNoColumn]));
+00838:                 }
+00839:                 set {
+00840:                     this[this.tableGetFaceMeUsageData.TerminalNoColumn] = value;
+00841:                 }
+00842:             }
+00843:           <br />
+00844:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00845:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00846:             public long TransactionNo {
+00847:                 get {
+00848:                     return ((long)(this[this.tableGetFaceMeUsageData.TransactionNoColumn]));
+00849:                 }
+00850:                 set {
+00851:                     this[this.tableGetFaceMeUsageData.TransactionNoColumn] = value;
+00852:                 }
+00853:             }
+00854:           <br />
+00855:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00856:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00857:             public int ManagedNo {
+00858:                 get {
+00859:                     return ((int)(this[this.tableGetFaceMeUsageData.ManagedNoColumn]));
+00860:                 }
+00861:                 set {
+00862:                     this[this.tableGetFaceMeUsageData.ManagedNoColumn] = value;
+00863:                 }
+00864:             }
+00865:           <br />
+00866:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00867:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00868:             public string PointCardNo {
+00869:                 get {
+00870:                     try {
+00871:                         return ((string)(this[this.tableGetFaceMeUsageData.PointCardNoColumn]));
+00872:                     }
+00873:                     catch (global::System.InvalidCastException e) {
+00874:                         throw new global::System.Data.StrongTypingException("テーブル \'GetFaceMeUsageData\' にある列 \'PointCardNo\' の値は DBNull です。", e);
+00875:                     }
+00876:                 }
+00877:                 set {
+00878:                     this[this.tableGetFaceMeUsageData.PointCardNoColumn] = value;
+00879:                 }
+00880:             }
+00881:           <br />
+00882:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00883:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00884:             public System.DateTime TransactionDateTime {
+00885:                 get {
+00886:                     return ((global::System.DateTime)(this[this.tableGetFaceMeUsageData.TransactionDateTimeColumn]));
+00887:                 }
+00888:                 set {
+00889:                     this[this.tableGetFaceMeUsageData.TransactionDateTimeColumn] = value;
+00890:                 }
+00891:             }
+00892:           <br />
+00893:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00894:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00895:             public bool IsCanceled {
+00896:                 get {
+00897:                     return ((bool)(this[this.tableGetFaceMeUsageData.IsCanceledColumn]));
+00898:                 }
+00899:                 set {
+00900:                     this[this.tableGetFaceMeUsageData.IsCanceledColumn] = value;
+00901:                 }
+00902:             }
+00903:           <br />
+00904:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00905:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00906:             public int TotalQuantity {
+00907:                 get {
+00908:                     return ((int)(this[this.tableGetFaceMeUsageData.TotalQuantityColumn]));
+00909:                 }
+00910:                 set {
+00911:                     this[this.tableGetFaceMeUsageData.TotalQuantityColumn] = value;
+00912:                 }
+00913:             }
+00914:           <br />
+00915:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00916:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00917:             public decimal TotalAmount {
+00918:                 get {
+00919:                     return ((decimal)(this[this.tableGetFaceMeUsageData.TotalAmountColumn]));
+00920:                 }
+00921:                 set {
+00922:                     this[this.tableGetFaceMeUsageData.TotalAmountColumn] = value;
+00923:                 }
+00924:             }
+00925:           <br />
+00926:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00927:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00928:             public int PaymentType {
+00929:                 get {
+00930:                     return ((int)(this[this.tableGetFaceMeUsageData.PaymentTypeColumn]));
+00931:                 }
+00932:                 set {
+00933:                     this[this.tableGetFaceMeUsageData.PaymentTypeColumn] = value;
+00934:                 }
+00935:             }
+00936:           <br />
+00937:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00938:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00939:             public int UseFaceMeType {
+00940:                 get {
+00941:                     return ((int)(this[this.tableGetFaceMeUsageData.UseFaceMeTypeColumn]));
+00942:                 }
+00943:                 set {
+00944:                     this[this.tableGetFaceMeUsageData.UseFaceMeTypeColumn] = value;
+00945:                 }
+00946:             }
+00947:           <br />
+00948:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00949:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00950:             public bool IsAgeConfirm {
+00951:                 get {
+00952:                     return ((bool)(this[this.tableGetFaceMeUsageData.IsAgeConfirmColumn]));
+00953:                 }
+00954:                 set {
+00955:                     this[this.tableGetFaceMeUsageData.IsAgeConfirmColumn] = value;
+00956:                 }
+00957:             }
+00958:           <br />
+00959:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00960:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00961:             public int AgeConfirmType {
+00962:                 get {
+00963:                     return ((int)(this[this.tableGetFaceMeUsageData.AgeConfirmTypeColumn]));
+00964:                 }
+00965:                 set {
+00966:                     this[this.tableGetFaceMeUsageData.AgeConfirmTypeColumn] = value;
+00967:                 }
+00968:             }
+00969:           <br />
+00970:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00971:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00972:             public int AgeConfirmSpan {
+00973:                 get {
+00974:                     return ((int)(this[this.tableGetFaceMeUsageData.AgeConfirmSpanColumn]));
+00975:                 }
+00976:                 set {
+00977:                     this[this.tableGetFaceMeUsageData.AgeConfirmSpanColumn] = value;
+00978:                 }
+00979:             }
+00980:           <br />
+00981:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00982:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00983:             public System.DateTime RemoteAgeConfirmEndDateTime {
+00984:                 get {
+00985:                     try {
+00986:                         return ((global::System.DateTime)(this[this.tableGetFaceMeUsageData.RemoteAgeConfirmEndDateTimeColumn]));
+00987:                     }
+00988:                     catch (global::System.InvalidCastException e) {
+00989:                         throw new global::System.Data.StrongTypingException("テーブル \'GetFaceMeUsageData\' にある列 \'RemoteAgeConfirmEndDateTime\' の値は DBNull です。", e);
+00990:                     }
+00991:                 }
+00992:                 set {
+00993:                     this[this.tableGetFaceMeUsageData.RemoteAgeConfirmEndDateTimeColumn] = value;
+00994:                 }
+00995:             }
+00996:           <br />
+00997:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00998:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00999:             public int RemoteAgeConfirmCount {
+01000:                 get {
+01001:                     try {
+01002:                         return ((int)(this[this.tableGetFaceMeUsageData.RemoteAgeConfirmCountColumn]));
+01003:                     }
+01004:                     catch (global::System.InvalidCastException e) {
+01005:                         throw new global::System.Data.StrongTypingException("テーブル \'GetFaceMeUsageData\' にある列 \'RemoteAgeConfirmCount\' の値は DBNull です。", e);
+01006:                     }
+01007:                 }
+01008:                 set {
+01009:                     this[this.tableGetFaceMeUsageData.RemoteAgeConfirmCountColumn] = value;
+01010:                 }
+01011:             }
+01012:           <br />
+01013:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01014:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01015:             public bool IsPointCardNoNull() {
+01016:                 return this.IsNull(this.tableGetFaceMeUsageData.PointCardNoColumn);
+01017:             }
+01018:           <br />
+01019:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01020:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01021:             public void SetPointCardNoNull() {
+01022:                 this[this.tableGetFaceMeUsageData.PointCardNoColumn] = global::System.Convert.DBNull;
+01023:             }
+01024:           <br />
+01025:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01026:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01027:             public bool IsRemoteAgeConfirmEndDateTimeNull() {
+01028:                 return this.IsNull(this.tableGetFaceMeUsageData.RemoteAgeConfirmEndDateTimeColumn);
+01029:             }
+01030:           <br />
+01031:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01032:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01033:             public void SetRemoteAgeConfirmEndDateTimeNull() {
+01034:                 this[this.tableGetFaceMeUsageData.RemoteAgeConfirmEndDateTimeColumn] = global::System.Convert.DBNull;
+01035:             }
+01036:           <br />
+01037:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01038:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01039:             public bool IsRemoteAgeConfirmCountNull() {
+01040:                 return this.IsNull(this.tableGetFaceMeUsageData.RemoteAgeConfirmCountColumn);
+01041:             }
+01042:           <br />
+01043:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01044:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01045:             public void SetRemoteAgeConfirmCountNull() {
+01046:                 this[this.tableGetFaceMeUsageData.RemoteAgeConfirmCountColumn] = global::System.Convert.DBNull;
+01047:             }
+01048:         }
+01049:       <br />
+01050:         /// <summary>
+01051:         ///Row event argument class
+01052:         ///</summary>
+01053:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01054:         public class GetFaceMeUsageDataRowChangeEvent : global::System.EventArgs {
+01055:           <br />
+01056:             private GetFaceMeUsageDataRow eventRow;
+01057:           <br />
+01058:             private global::System.Data.DataRowAction eventAction;
+01059:           <br />
+01060:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01061:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01062:             public GetFaceMeUsageDataRowChangeEvent(GetFaceMeUsageDataRow row, global::System.Data.DataRowAction action) {
+01063:                 this.eventRow = row;
+01064:                 this.eventAction = action;
+01065:             }
+01066:           <br />
+01067:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01068:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01069:             public GetFaceMeUsageDataRow Row {
+01070:                 get {
+01071:                     return this.eventRow;
+01072:                 }
+01073:             }
+01074:           <br />
+01075:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01076:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01077:             public global::System.Data.DataRowAction Action {
+01078:                 get {
+01079:                     return this.eventAction;
+01080:                 }
+01081:             }
+01082:         }
+01083:     }
+01084: }
+01085: namespace ForYouApplications.POS4U.Background.Data.Container.FaceMeUsageDataDataSetTableAdapters {
+01086:   <br />
+01087:   <br />
+01088:     /// <summary>
+01089:     ///Represents the connection and commands used to retrieve and save data.
+01090:     ///</summary>
+01091:     [global::System.ComponentModel.DesignerCategoryAttribute("code")]
+01092:     [global::System.ComponentModel.ToolboxItem(true)]
+01093:     [global::System.ComponentModel.DataObjectAttribute(true)]
+01094:     [global::System.ComponentModel.DesignerAttribute("Microsoft.VSDesigner.DataSource.Design.TableAdapterDesigner, Microsoft.VSDesigner" +
+01095:         ", Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a")]
+01096:     [global::System.ComponentModel.Design.HelpKeywordAttribute("vs.data.TableAdapter")]
+01097:     public partial class GetFaceMeUsageDataTableAdapter : global::System.ComponentModel.Component {
+01098:       <br />
+01099:         private global::System.Data.SqlClient.SqlDataAdapter _adapter;
+01100:       <br />
+01101:         private global::System.Data.SqlClient.SqlConnection _connection;
+01102:       <br />
+01103:         private global::System.Data.SqlClient.SqlTransaction _transaction;
+01104:       <br />
+01105:         private global::System.Data.SqlClient.SqlCommand[] _commandCollection;
+01106:       <br />
+01107:         private bool _clearBeforeFill;
+01108:       <br />
+01109:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01110:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01111:         public GetFaceMeUsageDataTableAdapter() {
+01112:             this.ClearBeforeFill = true;
+01113:         }
+01114:       <br />
+01115:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01116:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01117:         protected internal global::System.Data.SqlClient.SqlDataAdapter Adapter {
+01118:             get {
+01119:                 if ((this._adapter == null)) {
+01120:                     this.InitAdapter();
+01121:                 }
+01122:                 return this._adapter;
+01123:             }
+01124:         }
+01125:       <br />
+01126:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01127:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01128:         public global::System.Data.SqlClient.SqlConnection Connection {
+01129:             get {
+01130:                 if ((this._connection == null)) {
+01131:                     this.InitConnection();
+01132:                 }
+01133:                 return this._connection;
+01134:             }
+01135:             set {
+01136:                 this._connection = value;
+01137:                 if ((this.Adapter.InsertCommand != null)) {
+01138:                     this.Adapter.InsertCommand.Connection = value;
+01139:                 }
+01140:                 if ((this.Adapter.DeleteCommand != null)) {
+01141:                     this.Adapter.DeleteCommand.Connection = value;
+01142:                 }
+01143:                 if ((this.Adapter.UpdateCommand != null)) {
+01144:                     this.Adapter.UpdateCommand.Connection = value;
+01145:                 }
+01146:                 for (int i = 0; (i &lt; this.CommandCollection.Length); i = (i + 1)) {
+01147:                     if ((this.CommandCollection[i] != null)) {
+01148:                         ((global::System.Data.SqlClient.SqlCommand)(this.CommandCollection[i])).Connection = value;
+01149:                     }
+01150:                 }
+01151:             }
+01152:         }
+01153:       <br />
+01154:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01155:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01156:         internal global::System.Data.SqlClient.SqlTransaction Transaction {
+01157:             get {
+01158:                 return this._transaction;
+01159:             }
+01160:             set {
+01161:                 this._transaction = value;
+01162:                 for (int i = 0; (i &lt; this.CommandCollection.Length); i = (i + 1)) {
+01163:                     this.CommandCollection[i].Transaction = this._transaction;
+01164:                 }
+01165:                 if (((this.Adapter != null) 
+01166:                             &amp;&amp; (this.Adapter.DeleteCommand != null))) {
+01167:                     this.Adapter.DeleteCommand.Transaction = this._transaction;
+01168:                 }
+01169:                 if (((this.Adapter != null) 
+01170:                             &amp;&amp; (this.Adapter.InsertCommand != null))) {
+01171:                     this.Adapter.InsertCommand.Transaction = this._transaction;
+01172:                 }
+01173:                 if (((this.Adapter != null) 
+01174:                             &amp;&amp; (this.Adapter.UpdateCommand != null))) {
+01175:                     this.Adapter.UpdateCommand.Transaction = this._transaction;
+01176:                 }
+01177:             }
+01178:         }
+01179:       <br />
+01180:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01181:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01182:         protected global::System.Data.SqlClient.SqlCommand[] CommandCollection {
+01183:             get {
+01184:                 if ((this._commandCollection == null)) {
+01185:                     this.InitCommandCollection();
+01186:                 }
+01187:                 return this._commandCollection;
+01188:             }
+01189:         }
+01190:       <br />
+01191:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01192:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01193:         public bool ClearBeforeFill {
+01194:             get {
+01195:                 return this._clearBeforeFill;
+01196:             }
+01197:             set {
+01198:                 this._clearBeforeFill = value;
+01199:             }
+01200:         }
+01201:       <br />
+01202:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01203:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01204:         private void InitAdapter() {
+01205:             this._adapter = new global::System.Data.SqlClient.SqlDataAdapter();
+01206:             global::System.Data.Common.DataTableMapping tableMapping = new global::System.Data.Common.DataTableMapping();
+01207:             tableMapping.SourceTable = "Table";
+01208:             tableMapping.DataSetTable = "GetFaceMeUsageData";
+01209:             tableMapping.ColumnMappings.Add("CompanyCode", "CompanyCode");
+01210:             tableMapping.ColumnMappings.Add("StoreCode", "StoreCode");
+01211:             tableMapping.ColumnMappings.Add("TerminalNo", "TerminalNo");
+01212:             tableMapping.ColumnMappings.Add("TransactionNo", "TransactionNo");
+01213:             tableMapping.ColumnMappings.Add("ManagedNo", "ManagedNo");
+01214:             tableMapping.ColumnMappings.Add("PointCardNo", "PointCardNo");
+01215:             tableMapping.ColumnMappings.Add("TransactionDateTime", "TransactionDateTime");
+01216:             tableMapping.ColumnMappings.Add("IsCanceled", "IsCanceled");
+01217:             tableMapping.ColumnMappings.Add("TotalQuantity", "TotalQuantity");
+01218:             tableMapping.ColumnMappings.Add("TotalAmount", "TotalAmount");
+01219:             tableMapping.ColumnMappings.Add("PaymentType", "PaymentType");
+01220:             tableMapping.ColumnMappings.Add("UseFaceMeType", "UseFaceMeType");
+01221:             tableMapping.ColumnMappings.Add("IsAgeConfirm", "IsAgeConfirm");
+01222:             tableMapping.ColumnMappings.Add("AgeConfirmType", "AgeConfirmType");
+01223:             tableMapping.ColumnMappings.Add("AgeConfirmSpan", "AgeConfirmSpan");
+01224:             tableMapping.ColumnMappings.Add("RemoteAgeConfirmEndDateTime", "RemoteAgeConfirmEndDateTime");
+01225:             tableMapping.ColumnMappings.Add("RemoteAgeConfirmCount", "RemoteAgeConfirmCount");
+01226:             this._adapter.TableMappings.Add(tableMapping);
+01227:         }
+01228:       <br />
+01229:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01230:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01231:         private void InitConnection() {
+01232:             this._connection = new global::System.Data.SqlClient.SqlConnection();
+01233:             this._connection.ConnectionString = global::ForYouApplications.POS4U.Background.Data.Container.Properties.Settings.Default.POS4U_Trial_TranConnectionString;
+01234:         }
+01235:       <br />
+01236:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01237:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01238:         private void InitCommandCollection() {
+01239:             this._commandCollection = new global::System.Data.SqlClient.SqlCommand[1];
+01240:             this._commandCollection[0] = new global::System.Data.SqlClient.SqlCommand();
+01241:             this._commandCollection[0].Connection = this.Connection;
+01242:             this._commandCollection[0].CommandText = "dbo.usp_GetFaceMeUsageData";
+01243:             this._commandCollection[0].CommandType = global::System.Data.CommandType.StoredProcedure;
+01244:             this._commandCollection[0].Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@RETURN_VALUE", global::System.Data.SqlDbType.Int, 4, global::System.Data.ParameterDirection.ReturnValue, 10, 0, null, global::System.Data.DataRowVersion.Current, false, null, "", "", ""));
+01245:             this._commandCollection[0].Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@CompanyCode", global::System.Data.SqlDbType.NVarChar, 10, global::System.Data.ParameterDirection.Input, 0, 0, null, global::System.Data.DataRowVersion.Current, false, null, "", "", ""));
+01246:             this._commandCollection[0].Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@StoreCode", global::System.Data.SqlDbType.NVarChar, 10, global::System.Data.ParameterDirection.Input, 0, 0, null, global::System.Data.DataRowVersion.Current, false, null, "", "", ""));
+01247:             this._commandCollection[0].Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@TargetDateTimeFrom", global::System.Data.SqlDbType.DateTime2, 8, global::System.Data.ParameterDirection.Input, 27, 7, null, global::System.Data.DataRowVersion.Current, false, null, "", "", ""));
+01248:             this._commandCollection[0].Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@TargetDateTimeTo", global::System.Data.SqlDbType.DateTime2, 8, global::System.Data.ParameterDirection.Input, 27, 7, null, global::System.Data.DataRowVersion.Current, false, null, "", "", ""));
+01249:         }
+01250:       <br />
+01251:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01252:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01253:         [global::System.ComponentModel.Design.HelpKeywordAttribute("vs.data.TableAdapter")]
+01254:         [global::System.ComponentModel.DataObjectMethodAttribute(global::System.ComponentModel.DataObjectMethodType.Fill, true)]
+01255:         public virtual int Fill(FaceMeUsageDataDataSet.GetFaceMeUsageDataDataTable dataTable, string CompanyCode, string StoreCode, global::System.Nullable<global::System.DateTime> TargetDateTimeFrom, global::System.Nullable<global::System.DateTime> TargetDateTimeTo) {
+01256:             this.Adapter.SelectCommand = this.CommandCollection[0];
+01257:             if ((CompanyCode == null)) {
+01258:                 this.Adapter.SelectCommand.Parameters[1].Value = global::System.DBNull.Value;
+01259:             }
+01260:             else {
+01261:                 this.Adapter.SelectCommand.Parameters[1].Value = ((string)(CompanyCode));
+01262:             }
+01263:             if ((StoreCode == null)) {
+01264:                 this.Adapter.SelectCommand.Parameters[2].Value = global::System.DBNull.Value;
+01265:             }
+01266:             else {
+01267:                 this.Adapter.SelectCommand.Parameters[2].Value = ((string)(StoreCode));
+01268:             }
+01269:             if ((TargetDateTimeFrom.HasValue == true)) {
+01270:                 this.Adapter.SelectCommand.Parameters[3].Value = ((System.DateTime)(TargetDateTimeFrom.Value));
+01271:             }
+01272:             else {
+01273:                 this.Adapter.SelectCommand.Parameters[3].Value = global::System.DBNull.Value;
+01274:             }
+01275:             if ((TargetDateTimeTo.HasValue == true)) {
+01276:                 this.Adapter.SelectCommand.Parameters[4].Value = ((System.DateTime)(TargetDateTimeTo.Value));
+01277:             }
+01278:             else {
+01279:                 this.Adapter.SelectCommand.Parameters[4].Value = global::System.DBNull.Value;
+01280:             }
+01281:             if ((this.ClearBeforeFill == true)) {
+01282:                 dataTable.Clear();
+01283:             }
+01284:             int returnValue = this.Adapter.Fill(dataTable);
+01285:             return returnValue;
+01286:         }
+01287:       <br />
+01288:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01289:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01290:         [global::System.ComponentModel.Design.HelpKeywordAttribute("vs.data.TableAdapter")]
+01291:         [global::System.ComponentModel.DataObjectMethodAttribute(global::System.ComponentModel.DataObjectMethodType.Select, true)]
+01292:         public virtual FaceMeUsageDataDataSet.GetFaceMeUsageDataDataTable GetData(string CompanyCode, string StoreCode, global::System.Nullable<global::System.DateTime> TargetDateTimeFrom, global::System.Nullable<global::System.DateTime> TargetDateTimeTo) {
+01293:             this.Adapter.SelectCommand = this.CommandCollection[0];
+01294:             if ((CompanyCode == null)) {
+01295:                 this.Adapter.SelectCommand.Parameters[1].Value = global::System.DBNull.Value;
+01296:             }
+01297:             else {
+01298:                 this.Adapter.SelectCommand.Parameters[1].Value = ((string)(CompanyCode));
+01299:             }
+01300:             if ((StoreCode == null)) {
+01301:                 this.Adapter.SelectCommand.Parameters[2].Value = global::System.DBNull.Value;
+01302:             }
+01303:             else {
+01304:                 this.Adapter.SelectCommand.Parameters[2].Value = ((string)(StoreCode));
+01305:             }
+01306:             if ((TargetDateTimeFrom.HasValue == true)) {
+01307:                 this.Adapter.SelectCommand.Parameters[3].Value = ((System.DateTime)(TargetDateTimeFrom.Value));
+01308:             }
+01309:             else {
+01310:                 this.Adapter.SelectCommand.Parameters[3].Value = global::System.DBNull.Value;
+01311:             }
+01312:             if ((TargetDateTimeTo.HasValue == true)) {
+01313:                 this.Adapter.SelectCommand.Parameters[4].Value = ((System.DateTime)(TargetDateTimeTo.Value));
+01314:             }
+01315:             else {
+01316:                 this.Adapter.SelectCommand.Parameters[4].Value = global::System.DBNull.Value;
+01317:             }
+01318:             FaceMeUsageDataDataSet.GetFaceMeUsageDataDataTable dataTable = new FaceMeUsageDataDataSet.GetFaceMeUsageDataDataTable();
+01319:             this.Adapter.Fill(dataTable);
+01320:             return dataTable;
+01321:         }
+01322:     }
+01323:   <br />
+01324:     /// <summary>
+01325:     ///TableAdapterManager is used to coordinate TableAdapters in the dataset to enable Hierarchical Update scenarios
+01326:     ///</summary>
+01327:     [global::System.ComponentModel.DesignerCategoryAttribute("code")]
+01328:     [global::System.ComponentModel.ToolboxItem(true)]
+01329:     [global::System.ComponentModel.DesignerAttribute("Microsoft.VSDesigner.DataSource.Design.TableAdapterManagerDesigner, Microsoft.VSD" +
+01330:         "esigner, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a")]
+01331:     [global::System.ComponentModel.Design.HelpKeywordAttribute("vs.data.TableAdapterManager")]
+01332:     public partial class TableAdapterManager : global::System.ComponentModel.Component {
+01333:       <br />
+01334:         private UpdateOrderOption _updateOrder;
+01335:       <br />
+01336:         private bool _backupDataSetBeforeUpdate;
+01337:       <br />
+01338:         private global::System.Data.IDbConnection _connection;
+01339:       <br />
+01340:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01341:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01342:         public UpdateOrderOption UpdateOrder {
+01343:             get {
+01344:                 return this._updateOrder;
+01345:             }
+01346:             set {
+01347:                 this._updateOrder = value;
+01348:             }
+01349:         }
+01350:       <br />
+01351:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01352:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01353:         public bool BackupDataSetBeforeUpdate {
+01354:             get {
+01355:                 return this._backupDataSetBeforeUpdate;
+01356:             }
+01357:             set {
+01358:                 this._backupDataSetBeforeUpdate = value;
+01359:             }
+01360:         }
+01361:       <br />
+01362:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01363:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01364:         [global::System.ComponentModel.Browsable(false)]
+01365:         public global::System.Data.IDbConnection Connection {
+01366:             get {
+01367:                 if ((this._connection != null)) {
+01368:                     return this._connection;
+01369:                 }
+01370:                 return null;
+01371:             }
+01372:             set {
+01373:                 this._connection = value;
+01374:             }
+01375:         }
+01376:       <br />
+01377:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01378:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01379:         [global::System.ComponentModel.Browsable(false)]
+01380:         public int TableAdapterInstanceCount {
+01381:             get {
+01382:                 int count = 0;
+01383:                 return count;
+01384:             }
+01385:         }
+01386:       <br />
+01387:         /// <summary>
+01388:         ///Update rows in top-down order.
+01389:         ///</summary>
+01390:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01391:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01392:         private int UpdateUpdatedRows(FaceMeUsageDataDataSet dataSet, global::System.Collections.Generic.List<global::System.Data.DataRow> allChangedRows, global::System.Collections.Generic.List<global::System.Data.DataRow> allAddedRows) {
+01393:             int result = 0;
+01394:             return result;
+01395:         }
+01396:       <br />
+01397:         /// <summary>
+01398:         ///Insert rows in top-down order.
+01399:         ///</summary>
+01400:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01401:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01402:         private int UpdateInsertedRows(FaceMeUsageDataDataSet dataSet, global::System.Collections.Generic.List<global::System.Data.DataRow> allAddedRows) {
+01403:             int result = 0;
+01404:             return result;
+01405:         }
+01406:       <br />
+01407:         /// <summary>
+01408:         ///Delete rows in bottom-up order.
+01409:         ///</summary>
+01410:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01411:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01412:         private int UpdateDeletedRows(FaceMeUsageDataDataSet dataSet, global::System.Collections.Generic.List<global::System.Data.DataRow> allChangedRows) {
+01413:             int result = 0;
+01414:             return result;
+01415:         }
+01416:       <br />
+01417:         /// <summary>
+01418:         ///Remove inserted rows that become updated rows after calling TableAdapter.Update(inserted rows) first
+01419:         ///</summary>
+01420:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01421:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01422:         private global::System.Data.DataRow[] GetRealUpdatedRows(global::System.Data.DataRow[] updatedRows, global::System.Collections.Generic.List<global::System.Data.DataRow> allAddedRows) {
+01423:             if (((updatedRows == null) 
+01424:                         || (updatedRows.Length &lt; 1))) {
+01425:                 return updatedRows;
+01426:             }
+01427:             if (((allAddedRows == null) 
+01428:                         || (allAddedRows.Count &lt; 1))) {
+01429:                 return updatedRows;
+01430:             }
+01431:             global::System.Collections.Generic.List<global::System.Data.DataRow> realUpdatedRows = new global::System.Collections.Generic.List<global::System.Data.DataRow>();
+01432:             for (int i = 0; (i &lt; updatedRows.Length); i = (i + 1)) {
+01433:                 global::System.Data.DataRow row = updatedRows[i];
+01434:                 if ((allAddedRows.Contains(row) == false)) {
+01435:                     realUpdatedRows.Add(row);
+01436:                 }
+01437:             }
+01438:             return realUpdatedRows.ToArray();
+01439:         }
+01440:       <br />
+01441:         /// <summary>
+01442:         ///Update all changes to the dataset.
+01443:         ///</summary>
+01444:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01445:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01446:         public virtual int UpdateAll(FaceMeUsageDataDataSet dataSet) {
+01447:             if ((dataSet == null)) {
+01448:                 throw new global::System.ArgumentNullException("dataSet");
+01449:             }
+01450:             if ((dataSet.HasChanges() == false)) {
+01451:                 return 0;
+01452:             }
+01453:             global::System.Data.IDbConnection workConnection = this.Connection;
+01454:             if ((workConnection == null)) {
+01455:                 throw new global::System.ApplicationException("TableAdapterManager には接続情報がありません。それぞれの TableAdapterManager TableAdapter プロパティを有効な" +
+01456:                         " TableAdapter インスタンスに設定してください。");
+01457:             }
+01458:             bool workConnOpened = false;
+01459:             if (((workConnection.State &amp; global::System.Data.ConnectionState.Broken) 
+01460:                         == global::System.Data.ConnectionState.Broken)) {
+01461:                 workConnection.Close();
+01462:             }
+01463:             if ((workConnection.State == global::System.Data.ConnectionState.Closed)) {
+01464:                 workConnection.Open();
+01465:                 workConnOpened = true;
+01466:             }
+01467:             global::System.Data.IDbTransaction workTransaction = workConnection.BeginTransaction();
+01468:             if ((workTransaction == null)) {
+01469:                 throw new global::System.ApplicationException("トランザクションを開始できません。現在のデータ接続がトランザクションをサポートしていないか、または現在の状態がトランザクションの開始を許可していません。");
+01470:             }
+01471:             global::System.Collections.Generic.List<global::System.Data.DataRow> allChangedRows = new global::System.Collections.Generic.List<global::System.Data.DataRow>();
+01472:             global::System.Collections.Generic.List<global::System.Data.DataRow> allAddedRows = new global::System.Collections.Generic.List<global::System.Data.DataRow>();
+01473:             global::System.Collections.Generic.List<global::System.Data.Common.DataAdapter> adaptersWithAcceptChangesDuringUpdate = new global::System.Collections.Generic.List<global::System.Data.Common.DataAdapter>();
+01474:             global::System.Collections.Generic.Dictionary<object, global::System.Data.IDbConnection> revertConnections = new global::System.Collections.Generic.Dictionary<object, global::System.Data.IDbConnection>();
+01475:             int result = 0;
+01476:             global::System.Data.DataSet backupDataSet = null;
+01477:             if (this.BackupDataSetBeforeUpdate) {
+01478:                 backupDataSet = new global::System.Data.DataSet();
+01479:                 backupDataSet.Merge(dataSet);
+01480:             }
+01481:             try {
+01482:                 // ---- Prepare for update -----------
+01483:                 //
+01484:                 // 
+01485:                 //---- Perform updates -----------
+01486:                 //
+01487:                 if ((this.UpdateOrder == UpdateOrderOption.UpdateInsertDelete)) {
+01488:                     result = (result + this.UpdateUpdatedRows(dataSet, allChangedRows, allAddedRows));
+01489:                     result = (result + this.UpdateInsertedRows(dataSet, allAddedRows));
+01490:                 }
+01491:                 else {
+01492:                     result = (result + this.UpdateInsertedRows(dataSet, allAddedRows));
+01493:                     result = (result + this.UpdateUpdatedRows(dataSet, allChangedRows, allAddedRows));
+01494:                 }
+01495:                 result = (result + this.UpdateDeletedRows(dataSet, allChangedRows));
+01496:                 // 
+01497:                 //---- Commit updates -----------
+01498:                 //
+01499:                 workTransaction.Commit();
+01500:                 if ((0 &lt; allAddedRows.Count)) {
+01501:                     global::System.Data.DataRow[] rows = new System.Data.DataRow[allAddedRows.Count];
+01502:                     allAddedRows.CopyTo(rows);
+01503:                     for (int i = 0; (i &lt; rows.Length); i = (i + 1)) {
+01504:                         global::System.Data.DataRow row = rows[i];
+01505:                         row.AcceptChanges();
+01506:                     }
+01507:                 }
+01508:                 if ((0 &lt; allChangedRows.Count)) {
+01509:                     global::System.Data.DataRow[] rows = new System.Data.DataRow[allChangedRows.Count];
+01510:                     allChangedRows.CopyTo(rows);
+01511:                     for (int i = 0; (i &lt; rows.Length); i = (i + 1)) {
+01512:                         global::System.Data.DataRow row = rows[i];
+01513:                         row.AcceptChanges();
+01514:                     }
+01515:                 }
+01516:             }
+01517:             catch (global::System.Exception ex) {
+01518:                 workTransaction.Rollback();
+01519:                 // ---- Restore the dataset -----------
+01520:                 if (this.BackupDataSetBeforeUpdate) {
+01521:                     global::System.Diagnostics.Debug.Assert((backupDataSet != null));
+01522:                     dataSet.Clear();
+01523:                     dataSet.Merge(backupDataSet);
+01524:                 }
+01525:                 else {
+01526:                     if ((0 &lt; allAddedRows.Count)) {
+01527:                         global::System.Data.DataRow[] rows = new System.Data.DataRow[allAddedRows.Count];
+01528:                         allAddedRows.CopyTo(rows);
+01529:                         for (int i = 0; (i &lt; rows.Length); i = (i + 1)) {
+01530:                             global::System.Data.DataRow row = rows[i];
+01531:                             row.AcceptChanges();
+01532:                             row.SetAdded();
+01533:                         }
+01534:                     }
+01535:                 }
+01536:                 throw ex;
+01537:             }
+01538:             finally {
+01539:                 if (workConnOpened) {
+01540:                     workConnection.Close();
+01541:                 }
+01542:                 if ((0 &lt; adaptersWithAcceptChangesDuringUpdate.Count)) {
+01543:                     global::System.Data.Common.DataAdapter[] adapters = new System.Data.Common.DataAdapter[adaptersWithAcceptChangesDuringUpdate.Count];
+01544:                     adaptersWithAcceptChangesDuringUpdate.CopyTo(adapters);
+01545:                     for (int i = 0; (i &lt; adapters.Length); i = (i + 1)) {
+01546:                         global::System.Data.Common.DataAdapter adapter = adapters[i];
+01547:                         adapter.AcceptChangesDuringUpdate = true;
+01548:                     }
+01549:                 }
+01550:             }
+01551:             return result;
+01552:         }
+01553:       <br />
+01554:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01555:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01556:         protected virtual void SortSelfReferenceRows(global::System.Data.DataRow[] rows, global::System.Data.DataRelation relation, bool childFirst) {
+01557:             global::System.Array.Sort<global::System.Data.DataRow>(rows, new SelfReferenceComparer(relation, childFirst));
+01558:         }
+01559:       <br />
+01560:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01561:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01562:         protected virtual bool MatchTableAdapterConnection(global::System.Data.IDbConnection inputConnection) {
+01563:             if ((this._connection != null)) {
+01564:                 return true;
+01565:             }
+01566:             if (((this.Connection == null) 
+01567:                         || (inputConnection == null))) {
+01568:                 return true;
+01569:             }
+01570:             if (string.Equals(this.Connection.ConnectionString, inputConnection.ConnectionString, global::System.StringComparison.Ordinal)) {
+01571:                 return true;
+01572:             }
+01573:             return false;
+01574:         }
+01575:       <br />
+01576:         /// <summary>
+01577:         ///Update Order Option
+01578:         ///</summary>
+01579:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01580:         public enum UpdateOrderOption {
+01581:           <br />
+01582:             InsertUpdateDelete = 0,
+01583:           <br />
+01584:             UpdateInsertDelete = 1,
+01585:         }
+01586:       <br />
+01587:         /// <summary>
+01588:         ///Used to sort self-referenced table's rows
+01589:         ///</summary>
+01590:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01591:         private class SelfReferenceComparer : object, global::System.Collections.Generic.IComparer<global::System.Data.DataRow> {
+01592:           <br />
+01593:             private global::System.Data.DataRelation _relation;
+01594:           <br />
+01595:             private int _childFirst;
+01596:           <br />
+01597:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01598:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01599:             internal SelfReferenceComparer(global::System.Data.DataRelation relation, bool childFirst) {
+01600:                 this._relation = relation;
+01601:                 if (childFirst) {
+01602:                     this._childFirst = -1;
+01603:                 }
+01604:                 else {
+01605:                     this._childFirst = 1;
+01606:                 }
+01607:             }
+01608:           <br />
+01609:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01610:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01611:             private global::System.Data.DataRow GetRoot(global::System.Data.DataRow row, out int distance) {
+01612:                 global::System.Diagnostics.Debug.Assert((row != null));
+01613:                 global::System.Data.DataRow root = row;
+01614:                 distance = 0;
+01615: 
+01616:                 global::System.Collections.Generic.IDictionary<global::System.Data.DataRow, global::System.Data.DataRow> traversedRows = new global::System.Collections.Generic.Dictionary<global::System.Data.DataRow, global::System.Data.DataRow>();
+01617:                 traversedRows[row] = row;
+01618: 
+01619:                 global::System.Data.DataRow parent = row.GetParentRow(this._relation, global::System.Data.DataRowVersion.Default);
+01620:                 for (
+01621:                 ; ((parent != null) 
+01622:                             &amp;&amp; (traversedRows.ContainsKey(parent) == false)); 
+01623:                 ) {
+01624:                     distance = (distance + 1);
+01625:                     root = parent;
+01626:                     traversedRows[parent] = parent;
+01627:                     parent = parent.GetParentRow(this._relation, global::System.Data.DataRowVersion.Default);
+01628:                 }
+01629: 
+01630:                 if ((distance == 0)) {
+01631:                     traversedRows.Clear();
+01632:                     traversedRows[row] = row;
+01633:                     parent = row.GetParentRow(this._relation, global::System.Data.DataRowVersion.Original);
+01634:                     for (
+01635:                     ; ((parent != null) 
+01636:                                 &amp;&amp; (traversedRows.ContainsKey(parent) == false)); 
+01637:                     ) {
+01638:                         distance = (distance + 1);
+01639:                         root = parent;
+01640:                         traversedRows[parent] = parent;
+01641:                         parent = parent.GetParentRow(this._relation, global::System.Data.DataRowVersion.Original);
+01642:                     }
+01643:                 }
+01644: 
+01645:                 return root;
+01646:             }
+01647:           <br />
+01648:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01649:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01650:             public int Compare(global::System.Data.DataRow row1, global::System.Data.DataRow row2) {
+01651:                 if (object.ReferenceEquals(row1, row2)) {
+01652:                     return 0;
+01653:                 }
+01654:                 if ((row1 == null)) {
+01655:                     return -1;
+01656:                 }
+01657:                 if ((row2 == null)) {
+01658:                     return 1;
+01659:                 }
+01660: 
+01661:                 int distance1 = 0;
+01662:                 global::System.Data.DataRow root1 = this.GetRoot(row1, out distance1);
+01663: 
+01664:                 int distance2 = 0;
+01665:                 global::System.Data.DataRow root2 = this.GetRoot(row2, out distance2);
+01666: 
+01667:                 if (object.ReferenceEquals(root1, root2)) {
+01668:                     return (this._childFirst * distance1.CompareTo(distance2));
+01669:                 }
+01670:                 else {
+01671:                     global::System.Diagnostics.Debug.Assert(((root1.Table != null) 
+01672:                                     &amp;&amp; (root2.Table != null)));
+01673:                     if ((root1.Table.Rows.IndexOf(root1) &lt; root2.Table.Rows.IndexOf(root2))) {
+01674:                         return -1;
+01675:                     }
+01676:                     else {
+01677:                         return 1;
+01678:                     }
+01679:                 }
+01680:             }
+01681:         }
+01682:     }
+01683: }
+01684: 
+01685: #pragma warning restore 1591</p>
+<p>END ORIGINAL PROMPT</p></div></a><div class="index-item-stats">
+<div class="index-item-long-text"><div class="truncatable"><div class="truncatable-content"><div class="index-item-long-text-content"><h1>文件级源码笔记：large_file_background_service_facemeusagedatadataset_designer_cs</h1>
+<h2>Batch 信息</h2>
+<ul>
+<li>Batch ID: batch_049</li>
+<li>Batch Name: large_file_background_service_facemeusagedatadataset_designer_cs</li>
+<li>Module: background_service</li>
+<li>Purpose: 解释后台服务、同步任务、Windows Service 和定时处理</li>
+</ul>
+<hr />
+<h2>文件：Source/POS4UBackground/Data/Background.Data.BackgroundContainer/FaceMeUsageDataDataSet.Designer.cs</h2>
+<h3>1. 文件定位</h3>
+<p>该文件是 .NET Typed DataSet 工具（<code>System.Data.Design.TypedDataSetGenerator</code>，v15.0.0.0）自动生成的代码文件（第 33–24 行声明为 <code>auto-generated</code>）。它属于后台服务模块的 <code>Background.Data.BackgroundContainer</code> 组件，职责是为 <strong>FaceMe 使用量数据</strong> 提供强类型的 DataSet 访问层。</p>
+<p>具体业务场景：后台服务通过调用存储过程 <code>dbo.usp_GetFaceMeUsageData</code>（第 42 行）查询 FaceMe 人脸识别服务的用量数据，包括交易信息、取消状态、支付类型、年龄确认等字段。该 DataSet 是后台服务中 <strong>数据查询结果的类型化载体</strong>，本身不包含业务逻辑。</p>
+<h3>2. 对外暴露内容</h3>
+<h4>2.1 类型化 DataSet</h4>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>文件路径 + 行号</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>FaceMeUsageDataDataSet</code></td>
+<td>第 25 行，命名空间 <code>ForYouApplications.POS4U.Background.Data.Container</code></td>
+<td>继承 <code>System.Data.DataSet</code> 的强类型 DataSet，包含一个名为 <code>GetFaceMeUsageData</code> 的 DataTable。支持 XML 序列化（<code>XmlSchemaProviderAttribute</code>，第 22–23 行）和 Visual Studio 设计器集成（<code>Design.HelpKeywordAttribute</code>，第 24 行）</td>
+</tr>
+</tbody>
+</table>
+<h4>2.2 类型化 DataTable</h4>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>文件路径 + 行号</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GetFaceMeUsageDataDataTable</code></td>
+<td>第 80 行，<code>FaceMeUsageDataDataSet</code> 的内部类</td>
+<td>继承 <code>TypedTableBase&lt;GetFaceMeUsageDataRow&gt;</code>，包含 17 个类型化列。支持行级事件（Changing/Changed/Deleting/Deleted，第 503–512 行）</td>
+</tr>
+</tbody>
+</table>
+<h4>2.3 类型化 DataRow</h4>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>文件路径 + 行号</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GetFaceMeUsageDataRow</code></td>
+<td>第 800 行，<code>FaceMeUsageDataDataSet</code> 的内部类</td>
+<td>继承 <code>System.Data.DataRow</code>，提供 17 个强类型属性，以及 <code>Is*Null()</code> / <code>Set*Null()</code> 方法处理可空列</td>
+</tr>
+</tbody>
+</table>
+<h4>2.4 Row 事件参数</h4>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>文件路径 + 行号</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GetFaceMeUsageDataRowChangeEvent</code></td>
+<td>第 54 行</td>
+<td>行变更事件参数，包含 <code>Row</code> 和 <code>Action</code> 属性</td>
+</tr>
+</tbody>
+</table>
+<h4>2.5 委托</h4>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>文件路径 + 行号</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GetFaceMeUsageDataRowChangeEventHandler</code></td>
+<td>第 73 行</td>
+<td>行变更事件处理委托</td>
+</tr>
+</tbody>
+</table>
+<h4>2.6 TableAdapter（数据访问器）</h4>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>文件路径 + 行号</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GetFaceMeUsageDataTableAdapter</code></td>
+<td>第 1097 行，命名空间 <code>ForYouApplications.POS4U.Background.Data.Container.FaceMeUsageDataDataSetTableAdapters</code></td>
+<td>继承 <code>System.ComponentModel.Component</code>，封装 ADO.NET 连接、适配器、命令，提供 <code>Fill()</code> 和 <code>GetData()</code> 方法执行 <code>dbo.usp_GetFaceMeUsageData</code> 存储过程</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong><code>Fill()</code></strong> — 第 1255 行，<code>public virtual int Fill(FaceMeUsageDataDataSet.GetFaceMeUsageDataDataTable dataTable, string CompanyCode, string StoreCode, global::System.Nullable&lt;global::System.DateTime&gt; TargetDateTimeFrom, global::System.Nullable&lt;global::System.DateTime&gt; TargetDateTimeTo)</code>。用查询结果填充已有 DataTable，返回受影响行数。</li>
+<li><strong><code>GetData()</code></strong> — 第 1292 行，<code>public virtual FaceMeUsageDataDataSet.GetFaceMeUsageDataDataTable GetData(string CompanyCode, string StoreCode, global::System.Nullable&lt;global::System.DateTime&gt; TargetDateTimeFrom, global::System.Nullable&lt;global::System.DateTime&gt; TargetDateTimeTo)</code>。创建新 DataTable 并填充后返回。</li>
+</ul>
+<h4>2.7 TableAdapterManager（事务协调器）</h4>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>文件路径 + 行号</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TableAdapterManager</code></td>
+<td>第 32 行，<code>FaceMeUsageDataDataSetTableAdapters</code> 命名空间</td>
+<td>用于协调 DataSet 层次化更新的组件。支持 <code>UpdateOrderOption</code>（InsertUpdateDelete / UpdateInsertDelete）、备份还原、事务提交/回滚</td>
+</tr>
+</tbody>
+</table>
+<h4>2.8 辅助类型</h4>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>文件路径 + 行号</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>UpdateOrderOption</code> 枚举</td>
+<td>第 80 行</td>
+<td><code>InsertUpdateDelete = 0</code>，<code>UpdateInsertDelete = 1</code></td>
+</tr>
+<tr>
+<td><code>SelfReferenceComparer</code></td>
+<td>第 91 行</td>
+<td>用于自引用关系行的排序比较器</td>
+</tr>
+</tbody>
+</table>
+<h3>3. 关键逻辑 walkthrough</h3>
+<h4>3.1 DataSet 构造与初始化</h4>
+<p>运行时通过 <strong>无参构造</strong> 创建实例时（第 33–40 行）：
+1. <code>BeginInit()</code> 开始初始化
+2. <code>InitClass()</code> 创建 <code>GetFaceMeUsageDataDataTable</code> 实例并加入 <code>Tables</code> 集合（第 201–209 行），设置 DataSet 名称、命名空间、约束（<code>EnforceConstraints = true</code>）
+3. 注册 <code>SchemaChanged</code> 事件处理，监听表和关系的集合变更（第 36–38 行）
+4. <code>EndInit()</code> 结束初始化</p>
+<p><strong>序列化构造</strong>（第 44–76 行）处理两种模式：
+- 二进制序列化（<code>IsBinarySerialized</code> 为 true）：直接 <code>InitVars(false)</code> 后注册监听器
+- 包含 Schema 的 XML 序列化：反序列化 schema 后新建 DataTable 并合并数据
+- 仅数据 XML 序列化：直接 <code>ReadXmlSchema</code> + <code>ReadXml</code></p>
+<h4>3.2 表初始化（InitVars）</h4>
+<p>第 184–197 行有两种模式：
+- <strong><code>InitVars()</code></strong>（无参，第 184 行）：等价于 <code>InitVars(true)</code>
+- <strong><code>InitVars(bool initTable)</code></strong>（第 190 行）：从 <code>base.Tables</code> 集合中查找表名 <code>"GetFaceMeUsageData"</code> 并赋值给 <code>this.tableGetFaceMeUsageData</code> 字段。当 <code>initTable</code> 为 true 且表不为 null 时，递归调用该表的 <code>InitVars()</code>（第 591–608 行），将所有列字段绑定到真实列引用</p>
+<h4>3.3 列定义（InitClass）</h4>
+<p>第 613–670 行定义了 17 个列的详细类型信息：
+- 每个列通过 <code>new DataColumn(...)</code> 创建，指定名称、CLR 类型、无表达式、<code>MappingType.Element</code>
+- 复合主键约束：<code>CompanyCode + StoreCode + TerminalNo + TransactionNo + ManagedNo</code>（第 648–653 行，<code>UniqueConstraint</code>）
+- 非空约束：除 <code>PointCardNo</code>、<code>RemoteAgeConfirmEndDateTime</code>、<code>RemoteAgeConfirmCount</code> 外均为 <code>AllowDBNull = false</code>
+- 字符串长度限制：<code>CompanyCode</code> 和 <code>StoreCode</code> 最大 10 字符（第 654–657 行），<code>PointCardNo</code> 最大 30 字符（第 661 行）</p>
+<h4>3.4 DataRow 访问器</h4>
+<p>第 800–1048 行，每个列属性内部的 getter 通过索引器 <code>this[columnXxxColumn]</code> 访问。其中三列因允许 DBNull，带有异常捕获：
+- <code>PointCardNo</code>（第 868–876 行）
+- <code>RemoteAgeConfirmEndDateTime</code>（第 983–991 行）
+- <code>RemoteAgeConfirmCount</code>（第 999–1007 行）</p>
+<p>如果实际值为 DBNull，抛出 <code>StrongTypingException</code>，日文错误消息："テーブル 'GetFaceMeUsageData' にある列 'Xxx' の値は DBNull です。"</p>
+<p>相应地，<code>Is*Null()</code> 和 <code>Set*Null()</code> 方法只对这三列生成（第 15–1047 行）。</p>
+<h4>3.5 TableAdapter — Fill 方法执行流程</h4>
+<p>运行时调用 <code>Fill()</code>（第 1255–1286 行）或 <code>GetData()</code>（第 1292–1321 行）时：
+1. 设置 <code>Adapter.SelectCommand</code> 为命令集合中的存储过程命令（索引 0）
+2. 处理 4 个参数：
+   - <code>@CompanyCode</code>（参数下标 1，第 1257–1262 行）：如果传入 <code>null</code>，映射为 <code>DBNull.Value</code>
+   - <code>@StoreCode</code>（参数下标 2，第 1263–1268 行）：同上
+   - <code>@TargetDateTimeFrom</code>（参数下标 3，第 1269–1274 行）：如果 <code>Nullable&lt;DateTime&gt;.HasValue == true</code> 传入实际值，否则 <code>DBNull</code>
+   - <code>@TargetDateTimeTo</code>（参数下标 4，第 1275–1280 行）：同上
+3. 如果 <code>ClearBeforeFill == true</code>（默认值 true，第 12 行构造函数设置），先清空目标 DataTable（第 1281–1283 行）
+4. 调用 <code>Adapter.Fill(dataTable)</code> 执行 SQL（第 1284 行）
+5. 返回受影响的记录行数</p>
+<p><code>GetData()</code> 与 <code>Fill()</code> 的区别仅在于内部创建新表并返回（第 1318–1320 行）。</p>
+<h4>3.6 InitAdapter — 列映射</h4>
+<p>第 204–1227 行设置 <code>SqlDataAdapter</code> 的 <code>TableMappings</code>，将存储过程返回的列名映射到 DataSet 列名（17 列一一对应，来源到目标的列名相同）。</p>
+<h4>3.7 InitCommandCollection — 存储过程注册</h4>
+<p>第 238–1249 行：
+- 创建一个 <code>SqlCommand</code> 数组，长度 1
+- 命令文本设为 <code>"dbo.usp_GetFaceMeUsageData"</code>，类型为 <code>CommandType.StoredProcedure</code>
+- 添加 5 个参数：<code>@RETURN_VALUE</code>（ReturnValue，Int），<code>@CompanyCode</code>（Input，NVarChar 10），<code>@StoreCode</code>（Input，NVarChar 10），<code>@TargetDateTimeFrom</code>（Input，DateTime2），<code>@TargetDateTimeTo</code>（Input，DateTime2）</p>
+<h4>3.8 TableAdapterManager — 批量更新事务逻辑</h4>
+<p><code>UpdateAll()</code>（第 46–1552 行）是一个完整的通用事务管理器：
+1. 参数校验：DataSet 为 null 抛出 <code>ArgumentNullException</code>；没有变更直接返回 0（第 147–152 行）
+2. 连接管理：使用 <code>this.Connection</code>，如果连接已断开则关闭再打开（第 53–66 行）
+3. 事务开始（第 67 行）
+4. 根据 <code>UpdateOrder</code> 策略执行 <code>UpdateUpdatedRows</code> / <code>UpdateInsertedRows</code> / <code>UpdateDeletedRows</code>——但实际这三个方法在模板中都是空实现（第 392–415 行，直接 <code>return result</code>），因为该 DataSet 只有 Select 操作
+5. 提交事务（第 99 行），调用 <code>AcceptChanges</code>
+6. 异常回滚：如果 <code>BackupDataSetBeforeUpdate</code> 为 true 则恢复数据（第 17–36 行）</p>
+<p><strong>注意</strong>：对于只读 FaceMeUsageData DataSet，Manager 的更新方法均为空，实际不会执行任何 INSERT/UPDATE/DELETE。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<h4>4.1 <code>FaceMeUsageDataDataSet</code> 类</h4>
+<ul>
+<li><strong>位置</strong>：第 25 行</li>
+<li><strong>继承</strong>：<code>System.Data.DataSet</code></li>
+<li><strong>输入</strong>：无参/序列化信息</li>
+<li><strong>输出</strong>：强类型 DataSet 实例</li>
+<li><strong>副作用</strong>：构造时创建表结构</li>
+<li><strong>调用关系</strong>：被后台服务的业务代码实例化，通过 <code>GetFaceMeUsageData</code> 属性获取 DataTable</li>
+<li><strong>边界情况</strong>：序列化构造分支处理了两种序列化模式（IncludeSchema vs. 纯数据），以及二进制 vs. XML 序列化</li>
+</ul>
+<h4>4.2 <code>GetFaceMeUsageDataTableAdapter.Fill()</code> 方法</h4>
+<ul>
+<li><strong>位置</strong>：第 1255 行</li>
+<li><strong>输入</strong>：<code>dataTable</code>（待填充表）、<code>CompanyCode</code>（string?）、<code>StoreCode</code>（string?）、<code>TargetDateTimeFrom</code>（DateTime?）、<code>TargetDateTimeTo</code>（DateTime?）</li>
+<li><strong>输出</strong>：<code>int</code> — 查询返回行数</li>
+<li><strong>副作用</strong>：填充 DataTable，可能清空原有数据</li>
+<li><strong>调用关系</strong>：调用 <code>this.Adapter.Fill(dataTable)</code> → ADO.NET → SQL Server（<code>dbo.usp_GetFaceMeUsageData</code>）</li>
+<li><strong>边界情况</strong>：CompanyCode/StoreCode 为 null 时传 DBNull；TargetDateTimeFrom/To 为无值时传 DBNull</li>
+<li><strong>可能的坑</strong>：</li>
+<li><code>ClearBeforeFill</code> 默认 true，调用时会清空之前的数据</li>
+<li>参数下标从 1 开始（参数 0 是 <code>@RETURN_VALUE</code>），取参数时需注意硬编码下标</li>
+</ul>
+<h4>4.3 <code>GetFaceMeUsageDataTableAdapter.GetData()</code> 方法</h4>
+<ul>
+<li><strong>位置</strong>：第 1292 行</li>
+<li><strong>输入</strong>：同 <code>Fill()</code> 但不需要传 DataTable</li>
+<li><strong>输出</strong>：<code>GetFaceMeUsageDataDataTable</code> — 新建并填充的表</li>
+<li><strong>副作用</strong>：创建新 DataTable</li>
+<li><strong>调用关系</strong>：内部调用 <code>this.Adapter.Fill(dataTable)</code></li>
+</ul>
+<h4>4.4 <code>TableAdapterManager.UpdateAll()</code> 方法</h4>
+<ul>
+<li><strong>位置</strong>：第 46 行</li>
+<li><strong>输入</strong>：<code>dataSet</code>（FaceMeUsageDataDataSet）</li>
+<li><strong>输出</strong>：<code>int</code> — 受影响行数</li>
+<li><strong>副作用</strong>：打开连接、启动事务，异常时回滚</li>
+<li><strong>调用关系</strong>：仅在整个 DataSet 有变更时执行</li>
+<li><strong>边界情况</strong>：无效连接时抛出 ApplicationException（第 54–57 行）；事务启动失败时抛出 ApplicationException（第 68–70 行）；事务回滚后可选择恢复备份</li>
+</ul>
+<h4>4.5 <code>GetFaceMeUsageDataDataTable.InitClass()</code> 方法</h4>
+<ul>
+<li><strong>位置</strong>：第 613 行</li>
+<li><strong>用途</strong>：初始化 17 个列的结构，添加复合主键约束，设置 AllowDBNull 和 MaxLength。这是理解 FaceMe 数据模式的核心定义</li>
+</ul>
+<h3>5. 依赖关系</h3>
+<table>
+<thead>
+<tr>
+<th>依赖类型</th>
+<th>名称</th>
+<th>路径/来源</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>类型继承</strong></td>
+<td><code>System.Data.DataSet</code></td>
+<td>.NET Framework</td>
+<td>类型化 DataSet 基类</td>
+</tr>
+<tr>
+<td><strong>类型继承</strong></td>
+<td><code>TypedTableBase&lt;GetFaceMeUsageDataRow&gt;</code></td>
+<td>.NET Framework</td>
+<td>类型化 DataTable 基类</td>
+</tr>
+<tr>
+<td><strong>类型继承</strong></td>
+<td><code>System.Data.DataRow</code></td>
+<td>.NET Framework</td>
+<td>类型化数据行</td>
+</tr>
+<tr>
+<td><strong>ADO.NET</strong></td>
+<td><code>System.Data.SqlClient.SqlDataAdapter</code></td>
+<td>.NET Framework</td>
+<td>数据适配器，执行 SQL 并填充 DataTable</td>
+</tr>
+<tr>
+<td><strong>ADO.NET</strong></td>
+<td><code>System.Data.SqlClient.SqlConnection</code></td>
+<td>.NET Framework</td>
+<td>SQL Server 连接</td>
+</tr>
+<tr>
+<td><strong>ADO.NET</strong></td>
+<td><code>System.Data.SqlClient.SqlCommand</code></td>
+<td>.NET Framework</td>
+<td>SQL 命令对象</td>
+</tr>
+<tr>
+<td><strong>存储过程</strong></td>
+<td><code>dbo.usp_GetFaceMeUsageData</code></td>
+<td>SQL Server</td>
+<td>业务查询逻辑（<strong>需结合该存储过程定义确认列名和查询逻辑</strong>）</td>
+</tr>
+<tr>
+<td><strong>配置</strong></td>
+<td><code>POS4U_Trial_TranConnectionString</code></td>
+<td><code>Settings.Default</code> 中的连接字符串（第 233 行）</td>
+<td>数据库连接配置（<strong>需查看 Settings 文件确认具体连接串</strong>）</td>
+</tr>
+<tr>
+<td><strong>配置</strong></td>
+<td><code>Properties.Settings</code></td>
+<td>项目 Settings 文件</td>
+<td>连接字符串来源（第 233 行，<code>global::ForYouApplications.POS4U.Background.Data.Container.Properties.Settings.Default.POS4U_Trial_TranConnectionString</code>）</td>
+</tr>
+</tbody>
+</table>
+<h3>6. 错误处理与边界情况</h3>
+<h4>6.1 显式错误处理</h4>
+<ul>
+<li><strong>参数为 null 的 DBNull 映射</strong>：<code>Fill()</code>（第 1257–1280 行）和 <code>GetData()</code>（第 1294–1317 行）对 <code>CompanyCode</code>、<code>StoreCode</code>、<code>TargetDateTimeFrom</code>、<code>TargetDateTimeTo</code> 都做了 null → DBNull 的空安全处理</li>
+<li><strong>DataRow 中 DBNull 访问保护</strong>：<code>PointCardNo</code>（第 870–875 行）、<code>RemoteAgeConfirmEndDateTime</code>（第 985–990 行）、<code>RemoteAgeConfirmCount</code>（第 1001–1006 行）三个可空列的 getter 捕获 <code>InvalidCastException</code> 并包装为 <code>StrongTypingException</code></li>
+<li><strong>TableAdapterManager 异常处理</strong>：</li>
+<li>参数校验：DataSet 为 null 抛出 <code>ArgumentNullException</code>（第 147–149 行）</li>
+<li>连接校验：<code>workConnection</code> 为 null 抛出 <code>ApplicationException</code>（第 54–57 行）</li>
+<li>事务校验：无法启动事务时抛出 <code>ApplicationException</code>（第 68–70 行）</li>
+<li>总体回滚：<code>catch (global::System.Exception ex)</code> 笼统捕获所有异常（第 17 行），回滚事务并根据 <code>BackupDataSetBeforeUpdate</code> 决定是否还原数据</li>
+<li><strong>连接状态恢复</strong>：<code>finally</code> 块中关闭连接（第 39–41 行），恢复 <code>AcceptChangesDuringUpdate</code>（第 42–49 行）</li>
+</ul>
+<h4>6.2 隐式/无错误处理</h4>
+<ul>
+<li><strong>存储过程不存在或参数不匹配</strong>：没有专门的 try-catch，异常由 ADO.NET 向上冒泡到调用方</li>
+<li><strong>连接失败/超时</strong>：没有重试逻辑，异常直接冒泡</li>
+<li><strong>DataTable 行查找（FindBy）</strong>：第 566–573 行，如果主键值组合不存在返回 <code>null</code>，调用方需要自行判空</li>
+<li><strong>空表/无数据返回</strong>：<code>Fill()</code> 返回 0，<code>GetData()</code> 返回空表，不抛异常，调用方应检查 <code>dataTable.Count</code> 或 Rows 集合</li>
+</ul>
+<h3>7. 测试相关</h3>
+<p><strong>当前输入中不包含该文件的测试文件。</strong></p>
+<h4>7.1 应该如何测试</h4>
+<p>由于该文件是自动生成的，核心测试应围绕 <strong>TableAdapter 与存储过程的集成</strong> 展开：</p>
+<ol>
+<li><strong>TableAdapter 参数传输测试</strong>：验证 <code>Fill()</code> / <code>GetData()</code> 在不同参数组合下是否正确传递了参数值（null → DBNull，DateTime? 有值 → 实际值等）</li>
+<li>测试 <code>CompanyCode = null</code> 时 <code>@CompanyCode</code> 被设为 DBNull</li>
+<li>测试 <code>TargetDateTimeFrom = null</code> 时 <code>@TargetDateTimeFrom</code> 被设为 DBNull</li>
+<li>
+<p>测试所有参数有值时正常传递</p>
+</li>
+<li>
+<p><strong>存储过程集成测试</strong>（需要真实/模拟数据库）：</p>
+</li>
+<li>测试有数据返回时 TableAdapter 正确填充 17 列</li>
+<li>测试空结果集返回 0 行</li>
+<li>
+<p>测试复合主键约束：重复主键行插入会触发约束异常</p>
+</li>
+<li>
+<p><strong>可空列边界测试</strong>：</p>
+</li>
+<li>验证当 <code>PointCardNo</code> / <code>RemoteAgeConfirmEndDateTime</code> / <code>RemoteAgeConfirmCount</code> 为 NULL 时，<code>Is*Null()</code> 返回 true</li>
+<li>
+<p>验证读取 NULL 值属性时抛出 <code>StrongTypingException</code></p>
+</li>
+<li>
+<p><strong>DataSet 序列化/反序列化测试</strong>：</p>
+</li>
+<li>XML 序列化后反序列化，验证数据完整</li>
+<li>二进制序列化测试</li>
+</ol>
+<h3>8. 新人阅读建议</h3>
+<ol>
+<li>
+<p><strong>先定位业务上下文</strong>：理解这个文件首先要理解 FaceMe 的业务——这是后台服务中用于 <strong>查询 FaceMe 人脸识别使用统计数据</strong> 的数据访问层。不要被大量代码迷惑，它本质上是 .NET 工具自动生成的 DataSet 胶水代码。</p>
+</li>
+<li>
+<p><strong>重点看三个位置</strong>：</p>
+</li>
+<li><strong>第 613–670 行（<code>InitClass</code>）</strong>：这是数据模式定义，告诉你 FaceMe 用量数据有 17 个列、主键组合和约束，是理解业务数据结构最快的地方</li>
+<li><strong>第 238–1249 行（<code>InitCommandCollection</code>）</strong>：这里定义了调用的存储过程名和参数，是连接代码和数据库的关键</li>
+<li>
+<p><strong>第 1255–1321 行（<code>Fill</code> / <code>GetData</code>）</strong>：这是实际被业务代码调用的入口方法</p>
+</li>
+<li>
+<p><strong>理解 DataSet 设计模式</strong>：这个文件是 .NET 传统 Typed DataSet 模式的产物——DataSet 容器 + DataTable + DataRow + DataAdapter == 强类型数据库访问。虽然是旧技术（v15.0.0.0 生成器），但在 POS4U 这类企业项目中仍然常见。</p>
+</li>
+<li>
+<p><strong>忽略模板代码</strong>：<code>ShouldSerializeXxx()</code> 返回 false（第 38–45 行、第 213–215 行）是设计器规范，不影响运行时；<code>SchemaChanged</code>（第 219–223 行）只是在表被移除时重新初始化；<code>Clone()</code>（第 129–134 行）的标准实现不需要深究。</p>
+</li>
+<li>
+<p><strong>关注第二个命名空间</strong>（第 1085 行起）的 <code>TableAdapter</code> 和 <code>TableAdapterManager</code>，这是实际与数据库交互的部分，比第一个命名空间的 DataSet 容器更值得关注。</p>
+</li>
+</ol>
+<h3>9. 不确定点</h3>
+<ol>
+<li>
+<p><strong>存储过程 <code>dbo.usp_GetFaceMeUsageData</code> 的定义不可见</strong>：无法确认该存储过程实际 SQL 查询逻辑、WHERE 条件、排序方式、JOIN 的表。当前从参数推断是按公司代码、门店代码和时间范围筛选。需要结合 <code>usp_GetFaceMeUsageData.sql</code> 确认。</p>
+</li>
+<li>
+<p><strong>Settings 文件中 <code>POS4U_Trial_TranConnectionString</code> 的值不可见</strong>（第 233 行）：无法确认实际数据库服务器、库名、认证方式。需要结合 <code>Settings.settings</code> 或 <code>app.config</code> 确认。</p>
+</li>
+<li>
+<p><strong>TableAdapterManager 的实际使用场景不可见</strong>：由于该 DataSet 只有 Select 操作（没有 Insert/Update/Delete 命令），<code>TableAdapterManager</code> 可能从未被实际用于更新。需要结合后台服务调用端代码确认。</p>
+</li>
+<li>
+<p><strong><code>Fill()</code> 的 <code>ClearBeforeFill</code> 默认 true 的副作用</strong>：如果业务代码需要增量追加数据而不是替换，默认行为会导致数据丢失。需要结合业务调用方确认预期行为。</p>
+</li>
+<li>
+<p><strong>列值语义不清楚</strong>：<code>UseFaceMeType</code>（int）、<code>PaymentType</code>（int）、<code>AgeConfirmType</code>（int）、<code>AgeConfirmSpan</code>（int）是枚举还是 flag？<code>ManagedNo</code> 的含义是什么？<code>RemoteAgeConfirmEndDateTime</code> / <code>RemoteAgeConfirmCount</code> 的远程确认机制是什么？这些需要结合业务文档或枚举定义确认。</p>
+</li>
+<li>
+<p><strong>没有找到 <code>.xsd</code> 文件对应</strong>：Typed DataSet 通常由 <code>.xsd</code> 设计器文件生成（<code>.Designer.cs</code> 是同名 <code>.xsd</code> 文件的代码后置）。本 batch 未包含 <code>FaceMeUsageDataDataSet.xsd</code>。</p>
+</li>
+<li>
+<p><strong>命名空间尾部 <code>FaceMeUsageDataDataSetTableAdapters</code></strong>（第 1085 行）包含类型名 <code>FaceMeUsageDataDataSet</code>，是工具生成的嵌套命名空间，非人为设计。</p>
+</li>
+</ol>
+<hr />
+<h2>本批覆盖确认</h2>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>覆盖状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Source/POS4UBackground/Data/Background.Data.BackgroundContainer/FaceMeUsageDataDataSet.Designer.cs</code></td>
+<td>已详细讲解</td>
+<td>自动生成的 Typed DataSet 文件，包含 DataSet 容器（17 列定义、复合主键）、DataTable（行事件）、DataRow（可空列保护）、TableAdapter（存储过程 <code>usp_GetFaceMeUsageData</code> 调用）和 TableAdapterManager（事务协调器）。所有关键段落均已覆盖行号引用。唯一不确定点集中在存储过程定义、连接字符串配置和业务列语义需要其他文件补充</td>
+</tr>
+</tbody>
+</table></div></div><button class="expand-btn">Show more</button></div></div>
+</div></div>
+        
+
+<div class="pagination">
+<span class="current">Index</span>
+<span class="disabled">&larr; Prev</span>
+<a href="page-001.html">1</a>
+<a href="page-001.html">Next &rarr;</a>
+</div>
+
+
+        <dialog id="search-modal">
+            <div class="search-modal-header">
+                <input type="text" id="modal-search-input" placeholder="Search..." aria-label="Search transcripts">
+                <button id="modal-search-btn" type="button" aria-label="Search">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+                </button>
+                <button id="modal-close-btn" type="button" aria-label="Close">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+                </button>
+            </div>
+            <div id="search-status"></div>
+            <div id="search-results"></div>
+        </dialog>
+        <script>
+(function() {
+    var totalPages = 1;
+    var searchBox = document.getElementById('search-box');
+    var searchInput = document.getElementById('search-input');
+    var searchBtn = document.getElementById('search-btn');
+    var modal = document.getElementById('search-modal');
+    var modalInput = document.getElementById('modal-search-input');
+    var modalSearchBtn = document.getElementById('modal-search-btn');
+    var modalCloseBtn = document.getElementById('modal-close-btn');
+    var searchStatus = document.getElementById('search-status');
+    var searchResults = document.getElementById('search-results');
+
+    if (!searchBox || !modal) return;
+
+    // Hide search on file:// protocol (doesn't work due to CORS restrictions)
+    if (window.location.protocol === 'file:') return;
+
+    // Show search box (progressive enhancement)
+    searchBox.style.display = 'flex';
+
+    // Gist preview support - detect if we're on gisthost.github.io or gistpreview.github.io
+    var hostname = window.location.hostname;
+    var isGistPreview = hostname === 'gisthost.github.io' || hostname === 'gistpreview.github.io';
+    var gistId = null;
+    var gistOwner = null;
+    var gistInfoLoaded = false;
+
+    if (isGistPreview) {
+        // Extract gist ID from URL query string like ?78a436a8a9e7a2e603738b8193b95410/index.html
+        var queryMatch = window.location.search.match(/^\?([a-f0-9]+)/i);
+        if (queryMatch) {
+            gistId = queryMatch[1];
+        }
+    }
+
+    async function loadGistInfo() {
+        if (!isGistPreview || !gistId || gistInfoLoaded) return;
+        try {
+            var response = await fetch('https://api.github.com/gists/' + gistId);
+            if (response.ok) {
+                var info = await response.json();
+                gistOwner = info.owner.login;
+                gistInfoLoaded = true;
+            }
+        } catch (e) {
+            console.error('Failed to load gist info:', e);
+        }
+    }
+
+    function getPageFetchUrl(pageFile) {
+        if (isGistPreview && gistOwner && gistId) {
+            // Use raw gist URL for fetching content
+            return 'https://gist.githubusercontent.com/' + gistOwner + '/' + gistId + '/raw/' + pageFile;
+        }
+        return pageFile;
+    }
+
+    function getPageLinkUrl(pageFile) {
+        if (isGistPreview && gistId) {
+            // Use gistpreview URL format for navigation links
+            return '?' + gistId + '/' + pageFile;
+        }
+        return pageFile;
+    }
+
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function escapeRegex(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function openModal(query) {
+        modalInput.value = query || '';
+        searchResults.innerHTML = '';
+        searchStatus.textContent = '';
+        modal.showModal();
+        modalInput.focus();
+        if (query) {
+            performSearch(query);
+        }
+    }
+
+    function closeModal() {
+        modal.close();
+        // Update URL to remove search fragment, preserving path and query string
+        if (window.location.hash.startsWith('#search=')) {
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+    }
+
+    function updateUrlHash(query) {
+        if (query) {
+            // Preserve path and query string when adding hash
+            history.replaceState(null, '', window.location.pathname + window.location.search + '#search=' + encodeURIComponent(query));
+        }
+    }
+
+    function highlightTextNodes(element, searchTerm) {
+        var walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
+        var nodesToReplace = [];
+
+        while (walker.nextNode()) {
+            var node = walker.currentNode;
+            if (node.nodeValue.toLowerCase().indexOf(searchTerm.toLowerCase()) !== -1) {
+                nodesToReplace.push(node);
+            }
+        }
+
+        nodesToReplace.forEach(function(node) {
+            var text = node.nodeValue;
+            var regex = new RegExp('(' + escapeRegex(searchTerm) + ')', 'gi');
+            var parts = text.split(regex);
+            if (parts.length > 1) {
+                var span = document.createElement('span');
+                parts.forEach(function(part) {
+                    if (part.toLowerCase() === searchTerm.toLowerCase()) {
+                        var mark = document.createElement('mark');
+                        mark.textContent = part;
+                        span.appendChild(mark);
+                    } else {
+                        span.appendChild(document.createTextNode(part));
+                    }
+                });
+                node.parentNode.replaceChild(span, node);
+            }
+        });
+    }
+
+    function fixInternalLinks(element, pageFile) {
+        // Update all internal anchor links to include the page file
+        var links = element.querySelectorAll('a[href^="#"]');
+        links.forEach(function(link) {
+            var href = link.getAttribute('href');
+            link.setAttribute('href', pageFile + href);
+        });
+    }
+
+    function processPage(pageFile, html, query) {
+        var parser = new DOMParser();
+        var doc = parser.parseFromString(html, 'text/html');
+        var resultsFromPage = 0;
+
+        // Find all message blocks
+        var messages = doc.querySelectorAll('.message');
+        messages.forEach(function(msg) {
+            var text = msg.textContent || '';
+            if (text.toLowerCase().indexOf(query.toLowerCase()) !== -1) {
+                resultsFromPage++;
+
+                // Get the message ID for linking
+                var msgId = msg.id || '';
+                var pageLinkUrl = getPageLinkUrl(pageFile);
+                var link = pageLinkUrl + (msgId ? '#' + msgId : '');
+
+                // Clone the message HTML and highlight matches
+                var clone = msg.cloneNode(true);
+                // Fix internal links to include the page file
+                fixInternalLinks(clone, pageLinkUrl);
+                highlightTextNodes(clone, query);
+
+                var resultDiv = document.createElement('div');
+                resultDiv.className = 'search-result';
+                resultDiv.innerHTML = '<a href="' + link + '">' +
+                    '<div class="search-result-page">' + escapeHtml(pageFile) + '</div>' +
+                    '<div class="search-result-content">' + clone.innerHTML + '</div>' +
+                    '</a>';
+                searchResults.appendChild(resultDiv);
+            }
+        });
+
+        return resultsFromPage;
+    }
+
+    async function performSearch(query) {
+        if (!query.trim()) {
+            searchStatus.textContent = 'Enter a search term';
+            return;
+        }
+
+        updateUrlHash(query);
+        searchResults.innerHTML = '';
+        searchStatus.textContent = 'Searching...';
+
+        // Load gist info if on gistpreview (needed for constructing URLs)
+        if (isGistPreview && !gistInfoLoaded) {
+            searchStatus.textContent = 'Loading gist info...';
+            await loadGistInfo();
+            if (!gistOwner) {
+                searchStatus.textContent = 'Failed to load gist info. Search unavailable.';
+                return;
+            }
+        }
+
+        var resultsFound = 0;
+        var pagesSearched = 0;
+
+        // Build list of pages to fetch
+        var pagesToFetch = [];
+        for (var i = 1; i <= totalPages; i++) {
+            pagesToFetch.push('page-' + String(i).padStart(3, '0') + '.html');
+        }
+
+        searchStatus.textContent = 'Searching...';
+
+        // Process pages in batches of 3, but show results immediately as each completes
+        var batchSize = 3;
+        for (var i = 0; i < pagesToFetch.length; i += batchSize) {
+            var batch = pagesToFetch.slice(i, i + batchSize);
+
+            // Create promises that process results immediately when each fetch completes
+            var promises = batch.map(function(pageFile) {
+                return fetch(getPageFetchUrl(pageFile))
+                    .then(function(response) {
+                        if (!response.ok) throw new Error('Failed to fetch');
+                        return response.text();
+                    })
+                    .then(function(html) {
+                        // Process and display results immediately
+                        var count = processPage(pageFile, html, query);
+                        resultsFound += count;
+                        pagesSearched++;
+                        searchStatus.textContent = 'Found ' + resultsFound + ' result(s) in ' + pagesSearched + '/' + totalPages + ' pages...';
+                    })
+                    .catch(function() {
+                        pagesSearched++;
+                        searchStatus.textContent = 'Found ' + resultsFound + ' result(s) in ' + pagesSearched + '/' + totalPages + ' pages...';
+                    });
+            });
+
+            // Wait for this batch to complete before starting the next
+            await Promise.all(promises);
+        }
+
+        searchStatus.textContent = 'Found ' + resultsFound + ' result(s) in ' + totalPages + ' pages';
+    }
+
+    // Event listeners
+    searchBtn.addEventListener('click', function() {
+        openModal(searchInput.value);
+    });
+
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            openModal(searchInput.value);
+        }
+    });
+
+    modalSearchBtn.addEventListener('click', function() {
+        performSearch(modalInput.value);
+    });
+
+    modalInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            performSearch(modalInput.value);
+        }
+    });
+
+    modalCloseBtn.addEventListener('click', closeModal);
+
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+
+    // Check for #search= in URL on page load
+    if (window.location.hash.startsWith('#search=')) {
+        var query = decodeURIComponent(window.location.hash.substring(8));
+        if (query) {
+            searchInput.value = query;
+            openModal(query);
+        }
+    }
+})();
+        </script>
+    </div>
+    <script>
+document.querySelectorAll('time[data-timestamp]').forEach(function(el) {
+    const timestamp = el.getAttribute('data-timestamp');
+    const date = new Date(timestamp);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    if (isToday) { el.textContent = timeStr; }
+    else { el.textContent = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + timeStr; }
+});
+document.querySelectorAll('pre.json').forEach(function(el) {
+    let text = el.textContent;
+    text = text.replace(/"([^"]+)":/g, '<span style="color: #ce93d8">"$1"</span>:');
+    text = text.replace(/: "([^"]*)"/g, ': <span style="color: #81d4fa">"$1"</span>');
+    text = text.replace(/: (\d+)/g, ': <span style="color: #ffcc80">$1</span>');
+    text = text.replace(/: (true|false|null)/g, ': <span style="color: #f48fb1">$1</span>');
+    el.innerHTML = text;
+});
+document.querySelectorAll('.truncatable').forEach(function(wrapper) {
+    const content = wrapper.querySelector('.truncatable-content');
+    const btn = wrapper.querySelector('.expand-btn');
+    if (content.scrollHeight > 250) {
+        wrapper.classList.add('truncated');
+        btn.addEventListener('click', function() {
+            if (wrapper.classList.contains('truncated')) { wrapper.classList.remove('truncated'); wrapper.classList.add('expanded'); btn.textContent = 'Show less'; }
+            else { wrapper.classList.remove('expanded'); wrapper.classList.add('truncated'); btn.textContent = 'Show more'; }
+        });
+    }
+});
+</script>
+</body>
+</html>

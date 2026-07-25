@@ -1,0 +1,1629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code transcript - Index</title>
+    <style>
+:root { --bg-color: #f5f5f5; --card-bg: #ffffff; --user-bg: #e3f2fd; --user-border: #1976d2; --assistant-bg: #f5f5f5; --assistant-border: #9e9e9e; --thinking-bg: #fff8e1; --thinking-border: #ffc107; --thinking-text: #666; --tool-bg: #f3e5f5; --tool-border: #9c27b0; --tool-result-bg: #e8f5e9; --tool-error-bg: #ffebee; --text-color: #212121; --text-muted: #757575; --code-bg: #263238; --code-text: #aed581; }
+* { box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 16px; line-height: 1.6; }
+.container { max-width: 800px; margin: 0 auto; }
+h1 { font-size: 1.5rem; margin-bottom: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--user-border); }
+.header-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 2px solid var(--user-border); padding-bottom: 8px; margin-bottom: 24px; }
+.header-row h1 { border-bottom: none; padding-bottom: 0; margin-bottom: 0; flex: 1; min-width: 200px; }
+.message { margin-bottom: 16px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.message.user { background: var(--user-bg); border-left: 4px solid var(--user-border); }
+.message.assistant { background: var(--card-bg); border-left: 4px solid var(--assistant-border); }
+.message.tool-reply { background: #fff8e1; border-left: 4px solid #ff9800; }
+.tool-reply .role-label { color: #e65100; }
+.tool-reply .tool-result { background: transparent; padding: 0; margin: 0; }
+.tool-reply .tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff8e1); }
+.message-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: rgba(0,0,0,0.03); font-size: 0.85rem; }
+.role-label { font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.user .role-label { color: var(--user-border); }
+time { color: var(--text-muted); font-size: 0.8rem; }
+.timestamp-link { color: inherit; text-decoration: none; }
+.timestamp-link:hover { text-decoration: underline; }
+.message:target { animation: highlight 2s ease-out; }
+@keyframes highlight { 0% { background-color: rgba(25, 118, 210, 0.2); } 100% { background-color: transparent; } }
+.message-content { padding: 16px; }
+.message-content p { margin: 0 0 12px 0; }
+.message-content p:last-child { margin-bottom: 0; }
+.thinking { background: var(--thinking-bg); border: 1px solid var(--thinking-border); border-radius: 8px; padding: 12px; margin: 12px 0; font-size: 0.9rem; color: var(--thinking-text); }
+.thinking-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #f57c00; margin-bottom: 8px; }
+.thinking p { margin: 8px 0; }
+.assistant-text { margin: 8px 0; }
+.tool-use { background: var(--tool-bg); border: 1px solid var(--tool-border); border-radius: 8px; padding: 12px; margin: 12px 0; }
+.tool-header { font-weight: 600; color: var(--tool-border); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.tool-icon { font-size: 1.1rem; }
+.tool-description { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 8px; font-style: italic; }
+.tool-result { background: var(--tool-result-bg); border-radius: 8px; padding: 12px; margin: 12px 0; }
+.tool-result.tool-error { background: var(--tool-error-bg); }
+.file-tool { border-radius: 8px; padding: 12px; margin: 12px 0; }
+.write-tool { background: linear-gradient(135deg, #e3f2fd 0%, #e8f5e9 100%); border: 1px solid #4caf50; }
+.edit-tool { background: linear-gradient(135deg, #fff3e0 0%, #fce4ec 100%); border: 1px solid #ff9800; }
+.file-tool-header { font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.write-header { color: #2e7d32; }
+.edit-header { color: #e65100; }
+.file-tool-icon { font-size: 1rem; }
+.file-tool-path { font-family: monospace; background: rgba(0,0,0,0.08); padding: 2px 8px; border-radius: 4px; }
+.file-tool-fullpath { font-family: monospace; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px; word-break: break-all; }
+.file-content { margin: 0; }
+.edit-section { display: flex; margin: 4px 0; border-radius: 4px; overflow: hidden; }
+.edit-label { padding: 8px 12px; font-weight: bold; font-family: monospace; display: flex; align-items: flex-start; }
+.edit-old { background: #fce4ec; }
+.edit-old .edit-label { color: #b71c1c; background: #f8bbd9; }
+.edit-old .edit-content { color: #880e4f; }
+.edit-new { background: #e8f5e9; }
+.edit-new .edit-label { color: #1b5e20; background: #a5d6a7; }
+.edit-new .edit-content { color: #1b5e20; }
+.edit-content { margin: 0; flex: 1; background: transparent; font-size: 0.85rem; }
+.edit-replace-all { font-size: 0.75rem; font-weight: normal; color: var(--text-muted); }
+.write-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #e6f4ea); }
+.edit-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff0e5); }
+.todo-list { background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); border: 1px solid #81c784; border-radius: 8px; padding: 12px; margin: 12px 0; }
+.todo-header { font-weight: 600; color: #2e7d32; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.todo-items { list-style: none; margin: 0; padding: 0; }
+.todo-item { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.06); font-size: 0.9rem; }
+.todo-item:last-child { border-bottom: none; }
+.todo-icon { flex-shrink: 0; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 50%; }
+.todo-completed .todo-icon { color: #2e7d32; background: rgba(46, 125, 50, 0.15); }
+.todo-completed .todo-content { color: #558b2f; text-decoration: line-through; }
+.todo-in-progress .todo-icon { color: #f57c00; background: rgba(245, 124, 0, 0.15); }
+.todo-in-progress .todo-content { color: #e65100; font-weight: 500; }
+.todo-pending .todo-icon { color: #757575; background: rgba(0,0,0,0.05); }
+.todo-pending .todo-content { color: #616161; }
+pre { background: var(--code-bg); color: var(--code-text); padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; line-height: 1.5; margin: 8px 0; white-space: pre-wrap; word-wrap: break-word; }
+pre.json { color: #e0e0e0; }
+code { background: rgba(0,0,0,0.08); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+pre code { background: none; padding: 0; }
+.user-content { margin: 0; }
+.truncatable { position: relative; }
+.truncatable.truncated .truncatable-content { max-height: 200px; overflow: hidden; }
+.truncatable.truncated::after { content: ''; position: absolute; bottom: 32px; left: 0; right: 0; height: 60px; background: linear-gradient(to bottom, transparent, var(--card-bg)); pointer-events: none; }
+.message.user .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--user-bg)); }
+.message.tool-reply .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff8e1); }
+.tool-use .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-bg)); }
+.tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-result-bg)); }
+.expand-btn { display: none; width: 100%; padding: 8px 16px; margin-top: 4px; background: rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; cursor: pointer; font-size: 0.85rem; color: var(--text-muted); }
+.expand-btn:hover { background: rgba(0,0,0,0.1); }
+.truncatable.truncated .expand-btn, .truncatable.expanded .expand-btn { display: block; }
+.pagination { display: flex; justify-content: center; gap: 8px; margin: 24px 0; flex-wrap: wrap; }
+.pagination a, .pagination span { padding: 5px 10px; border-radius: 6px; text-decoration: none; font-size: 0.85rem; }
+.pagination a { background: var(--card-bg); color: var(--user-border); border: 1px solid var(--user-border); }
+.pagination a:hover { background: var(--user-bg); }
+.pagination .current { background: var(--user-border); color: white; }
+.pagination .disabled { color: var(--text-muted); border: 1px solid #ddd; }
+.pagination .index-link { background: var(--user-border); color: white; }
+details.continuation { margin-bottom: 16px; }
+details.continuation summary { cursor: pointer; padding: 12px 16px; background: var(--user-bg); border-left: 4px solid var(--user-border); border-radius: 12px; font-weight: 500; color: var(--text-muted); }
+details.continuation summary:hover { background: rgba(25, 118, 210, 0.15); }
+details.continuation[open] summary { border-radius: 12px 12px 0 0; margin-bottom: 0; }
+.index-item { margin-bottom: 16px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); background: var(--user-bg); border-left: 4px solid var(--user-border); }
+.index-item a { display: block; text-decoration: none; color: inherit; }
+.index-item a:hover { background: rgba(25, 118, 210, 0.1); }
+.index-item-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: rgba(0,0,0,0.03); font-size: 0.85rem; }
+.index-item-number { font-weight: 600; color: var(--user-border); }
+.index-item-content { padding: 16px; }
+.index-item-stats { padding: 8px 16px 12px 32px; font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid rgba(0,0,0,0.06); }
+.index-item-commit { margin-top: 6px; padding: 4px 8px; background: #fff3e0; border-radius: 4px; font-size: 0.85rem; color: #e65100; }
+.index-item-commit code { background: rgba(0,0,0,0.08); padding: 1px 4px; border-radius: 3px; font-size: 0.8rem; margin-right: 6px; }
+.commit-card { margin: 8px 0; padding: 10px 14px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 6px; }
+.commit-card a { text-decoration: none; color: #5d4037; display: block; }
+.commit-card a:hover { color: #e65100; }
+.commit-card-hash { font-family: monospace; color: #e65100; font-weight: 600; margin-right: 8px; }
+.index-commit { margin-bottom: 12px; padding: 10px 16px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+.index-commit a { display: block; text-decoration: none; color: inherit; }
+.index-commit a:hover { background: rgba(255, 152, 0, 0.1); margin: -10px -16px; padding: 10px 16px; border-radius: 8px; }
+.index-commit-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; margin-bottom: 4px; }
+.index-commit-hash { font-family: monospace; color: #e65100; font-weight: 600; }
+.index-commit-msg { color: #5d4037; }
+.index-item-long-text { margin-top: 8px; padding: 12px; background: var(--card-bg); border-radius: 8px; border-left: 3px solid var(--assistant-border); }
+.index-item-long-text .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--card-bg)); }
+.index-item-long-text-content { color: var(--text-color); }
+#search-box { display: none; align-items: center; gap: 8px; }
+#search-box input { padding: 6px 12px; border: 1px solid var(--assistant-border); border-radius: 6px; font-size: 16px; width: 180px; }
+#search-box button, #modal-search-btn, #modal-close-btn { background: var(--user-border); color: white; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+#search-box button:hover, #modal-search-btn:hover { background: #1565c0; }
+#modal-close-btn { background: var(--text-muted); margin-left: 8px; }
+#modal-close-btn:hover { background: #616161; }
+#search-modal[open] { border: none; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.2); padding: 0; width: 90vw; max-width: 900px; height: 80vh; max-height: 80vh; display: flex; flex-direction: column; }
+#search-modal::backdrop { background: rgba(0,0,0,0.5); }
+.search-modal-header { display: flex; align-items: center; gap: 8px; padding: 16px; border-bottom: 1px solid var(--assistant-border); background: var(--bg-color); border-radius: 12px 12px 0 0; }
+.search-modal-header input { flex: 1; padding: 8px 12px; border: 1px solid var(--assistant-border); border-radius: 6px; font-size: 16px; }
+#search-status { padding: 8px 16px; font-size: 0.85rem; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); }
+#search-results { flex: 1; overflow-y: auto; padding: 16px; }
+.search-result { margin-bottom: 16px; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.search-result a { display: block; text-decoration: none; color: inherit; }
+.search-result a:hover { background: rgba(25, 118, 210, 0.05); }
+.search-result-page { padding: 6px 12px; background: rgba(0,0,0,0.03); font-size: 0.8rem; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); }
+.search-result-content { padding: 12px; }
+.search-result mark { background: #fff59d; padding: 1px 2px; border-radius: 2px; }
+@media (max-width: 600px) { body { padding: 8px; } .message, .index-item { border-radius: 8px; } .message-content, .index-item-content { padding: 12px; } pre { font-size: 0.8rem; padding: 8px; } #search-box input { width: 120px; } #search-modal[open] { width: 95vw; height: 90vh; } }
+</style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-row">
+            <h1>Claude Code transcript</h1>
+            <div id="search-box">
+                <input type="text" id="search-input" placeholder="Search..." aria-label="Search transcripts">
+                <button id="search-btn" type="button" aria-label="Search">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+                </button>
+            </div>
+        </div>
+        
+
+<div class="pagination">
+<span class="current">Index</span>
+<span class="disabled">&larr; Prev</span>
+<a href="page-001.html">1</a>
+<a href="page-001.html">Next &rarr;</a>
+</div>
+
+        <p style="color: var(--text-muted); margin-bottom: 24px;">5 prompts · 75 messages · 23 tool calls · 0 commits · 1 pages</p>
+        
+<div class="index-item"><a href="page-001.html#msg-2026-07-07T00-28-58-649Z"><div class="index-item-header"><span class="index-item-number">#1</span><time datetime="2026-07-07T00:28:58.649Z" data-timestamp="2026-07-07T00:28:58.649Z">2026-07-07T00:28:58.649Z</time></div><div class="index-item-content"><p><command-message>code-investigation</command-message>
+<command-name>/code-investigation</command-name>
+<command-args>关于本项目，本项目组的最高领导要找我谈话，这个领导是个日本人，他对于本系统的理解非常的深刻，是一位资深的开发人员成长起来的领导，貌似性格比较刻薄，其中可能会问我很多问题，包括但不限于：
+对pos4u了解了多少
+对mvc了解多少
+对项目了解了多少
+对项目的理解，好在哪，不好在哪，觉得有没有要改的地方，怎么改
+生词一个创建skill的提示词，用于本项目模仿领导会问我什么问题</command-args></p></div></a></div>
+<div class="index-item"><a href="page-001.html#msg-2026-07-07T00-28-58-649Z"><div class="index-item-header"><span class="index-item-number">#2</span><time datetime="2026-07-07T00:28:58.649Z" data-timestamp="2026-07-07T00:28:58.649Z">2026-07-07T00:28:58.649Z</time></div><div class="index-item-content"><p>Base directory for this skill: d:\POJ\NodeMaster.claude\skills\code-investigation</p>
+<h1>代码调查规则</h1>
+<p>本项目（<code>D:/POJ/NodeMaster</code>）是一个大型 C# POS 系统，已经用 codebase-memory-mcp 构建了知识图谱：<strong>13 万+ 节点、32 万+ 边</strong>。图谱里已经编码好了函数定义、调用关系（CALLS）、数据流（DATA_FLOWS）、类继承、跨服务 HTTP/异步调用等结构信息——这些正是调查代码时最常需要的东西。</p>
+<h2>为什么优先用图谱，而不是 grep / 逐文件读</h2>
+<p>这个仓库太大。grep 一个常见名字会返回成百上千条噪音命中（注释、字符串、同名变量），逐文件 Read 会迅速吃掉上下文还看不到整体关系。图谱工具是针对"定位 + 关系"专门优化过的：一次查询就拿到去重后的函数、它的调用方/被调用方、参数数据流，比手工翻文件快几个数量级而且更准。所以调查代码的默认入口是图谱，不是 grep。</p>
+<h2>工具选择：按目的选工具</h2>
+<table>
+<thead>
+<tr>
+<th>你的目的</th>
+<th>用这个工具</th>
+<th>为什么用它而不是 grep/读文件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>定位函数 / 类 / 变量定义</td>
+<td><code>search_graph</code></td>
+<td>BM25 + 语义检索 + 结构加权，命中真正的定义而不是注释或字符串里的同名词</td>
+</tr>
+<tr>
+<td>理解调用关系（谁调用了 X / X 调用了谁）</td>
+<td><code>trace_path</code></td>
+<td>直接沿 CALLS 边遍历，一次拿到多跳调用链，不用手动逐个追</td>
+</tr>
+<tr>
+<td>追踪数据如何流动</td>
+<td><code>trace_path</code>（mode=data_flow）</td>
+<td>沿 DATA_FLOWS 边传播，看参数在不同函数之间怎么传</td>
+</tr>
+<tr>
+<td>评估一次改动的波及范围</td>
+<td><code>detect_changes</code></td>
+<td>基于 diff 算出受影响的下游节点</td>
+</tr>
+<tr>
+<td>复杂 / 多跳关系查询</td>
+<td><code>query_graph</code>（Cypher）</td>
+<td>任意图模式，例如"找所有调用 A 且被 B 调用的函数"</td>
+</tr>
+<tr>
+<td>看整体架构、模块边界</td>
+<td><code>get_architecture</code></td>
+<td>高层包/服务/依赖 + Leiden 社区聚类，一眼看清真实的模块划分</td>
+</tr>
+<tr>
+<td>看某段函数的具体源码</td>
+<td><code>get_code_snippet</code></td>
+<td>已经定位到具体符号后，再读它的实现细节</td>
+</tr>
+</tbody>
+</table>
+<h2>调查流程</h2>
+<ol>
+<li><strong>确认索引</strong>：先 <code>list_projects</code>，确认 <code>D-POJ-NodeMaster</code> 已索引。如果没索引，提醒用户先 <code>index_repository</code>，不要在没图谱的情况下退回 grep。</li>
+<li><strong>不确定图里有什么时</strong>：<code>get_graph_schema</code> 看节点标签和边类型，避免写出查不到东西的查询。</li>
+<li><strong>定位目标</strong>：<code>search_graph</code> 找到具体的函数/类，拿到 <code>qualified_name</code>。</li>
+<li><strong>展开关系</strong>：用拿到的 <code>qualified_name</code> 调 <code>trace_path</code> 追踪调用链 / 数据流。</li>
+<li><strong>需要源码细节时</strong>：才用 <code>get_code_snippet</code> 读具体实现。</li>
+</ol>
+<blockquote>
+<p>分工原则：<strong>图谱负责"定位 + 关系"，源码负责"细节"</strong>。不要用图谱去看一段函数怎么写的，也不要用读文件去找一个函数在哪定义。</p>
+</blockquote>
+<h2>什么时候读文件 / 用 grep 是合理的</h2>
+<p>读源码本身是必要的，关键是<strong>顺序</strong>：先用图谱定位，再按需读细节。以下情况直接读文件没问题：</p>
+<ul>
+<li><code>get_code_snippet</code> 已告诉你函数在哪个文件，但你需要看它的完整上下文（周围的字段定义、相邻方法、整个类的结构）。</li>
+<li>改动<strong>非代码</strong>文件：配置、<code>.bat</code>、<code>.xml</code>、<code>.txt</code>、文档——图谱只索引代码，这些必须直接读。</li>
+<li>确认某个非常局部、不涉及调用关系的事实（比如一个常量的具体值、一行配置）。</li>
+</ul>
+<p><strong>要避免的模式</strong>：在还没查图谱的情况下，凭直觉 <code>Glob</code> / <code>Grep</code> 一堆文件、然后逐个 <code>Read</code> 去回答"X 在哪定义"或"谁调用了 X"——这正是图谱已经替你做完的事，手工做既慢又容易漏。</p>
+<h2>一个示例</h2>
+<p>用户问："<code>BuildOrderSortTool</code> 这个工具是谁在调用？我想知道改它会影响哪里。"</p>
+<p>❌ 错误做法：<code>grep BuildOrderSortTool</code> → 几十个文件命中 → 逐个 Read 排查调用点。</p>
+<p>✅ 正确做法：
+1. <code>search_graph</code>（query="BuildOrderSortTool"）→ 拿到该工具节点和 <code>qualified_name</code>。
+2. <code>trace_path</code>（function_name=..., direction=inbound）→ 拿到全部调用方。
+3. 评估改动影响：<code>detect_changes</code>。
+4. 只在需要确认某处调用的具体写法时，才 <code>get_code_snippet</code> 读那一段。</p>
+<p>ARGUMENTS: 关于本项目，本项目组的最高领导要找我谈话，这个领导是个日本人，他对于本系统的理解非常的深刻，是一位资深的开发人员成长起来的领导，貌似性格比较刻薄，其中可能会问我很多问题，包括但不限于：
+对pos4u了解了多少
+对mvc了解多少
+对项目了解了多少
+对项目的理解，好在哪，不好在哪，觉得有没有要改的地方，怎么改
+生词一个创建skill的提示词，用于本项目模仿领导会问我什么问题</p></div></a><div class="index-item-stats"><span>6 mcp__codebase-memory-mcp__search_graph · 4 mcp__codebase-memory-mcp__query_graph · 3 todo · 1 mcp__codebase-memory-mcp__list_projects · 1 mcp__codebase-memory-mcp__get_graph_schema · 1 mcp__codebase-memory-mcp__get_architecture · 1 bash · 1 askuserquestion · 1 write</span>
+<div class="index-item-long-text"><div class="truncatable"><div class="truncatable-content"><div class="index-item-long-text-content"><p>Base directory for this skill: d:\POJ\NodeMaster.claude\skills\code-investigation</p>
+<h1>代码调查规则</h1>
+<p>本项目（<code>D:/POJ/NodeMaster</code>）是一个大型 C# POS 系统，已经用 codebase-memory-mcp 构建了知识图谱：<strong>13 万+ 节点、32 万+ 边</strong>。图谱里已经编码好了函数定义、调用关系（CALLS）、数据流（DATA_FLOWS）、类继承、跨服务 HTTP/异步调用等结构信息——这些正是调查代码时最常需要的东西。</p>
+<h2>为什么优先用图谱，而不是 grep / 逐文件读</h2>
+<p>这个仓库太大。grep 一个常见名字会返回成百上千条噪音命中（注释、字符串、同名变量），逐文件 Read 会迅速吃掉上下文还看不到整体关系。图谱工具是针对"定位 + 关系"专门优化过的：一次查询就拿到去重后的函数、它的调用方/被调用方、参数数据流，比手工翻文件快几个数量级而且更准。所以调查代码的默认入口是图谱，不是 grep。</p>
+<h2>工具选择：按目的选工具</h2>
+<table>
+<thead>
+<tr>
+<th>你的目的</th>
+<th>用这个工具</th>
+<th>为什么用它而不是 grep/读文件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>定位函数 / 类 / 变量定义</td>
+<td><code>search_graph</code></td>
+<td>BM25 + 语义检索 + 结构加权，命中真正的定义而不是注释或字符串里的同名词</td>
+</tr>
+<tr>
+<td>理解调用关系（谁调用了 X / X 调用了谁）</td>
+<td><code>trace_path</code></td>
+<td>直接沿 CALLS 边遍历，一次拿到多跳调用链，不用手动逐个追</td>
+</tr>
+<tr>
+<td>追踪数据如何流动</td>
+<td><code>trace_path</code>（mode=data_flow）</td>
+<td>沿 DATA_FLOWS 边传播，看参数在不同函数之间怎么传</td>
+</tr>
+<tr>
+<td>评估一次改动的波及范围</td>
+<td><code>detect_changes</code></td>
+<td>基于 diff 算出受影响的下游节点</td>
+</tr>
+<tr>
+<td>复杂 / 多跳关系查询</td>
+<td><code>query_graph</code>（Cypher）</td>
+<td>任意图模式，例如"找所有调用 A 且被 B 调用的函数"</td>
+</tr>
+<tr>
+<td>看整体架构、模块边界</td>
+<td><code>get_architecture</code></td>
+<td>高层包/服务/依赖 + Leiden 社区聚类，一眼看清真实的模块划分</td>
+</tr>
+<tr>
+<td>看某段函数的具体源码</td>
+<td><code>get_code_snippet</code></td>
+<td>已经定位到具体符号后，再读它的实现细节</td>
+</tr>
+</tbody>
+</table>
+<h2>调查流程</h2>
+<ol>
+<li><strong>确认索引</strong>：先 <code>list_projects</code>，确认 <code>D-POJ-NodeMaster</code> 已索引。如果没索引，提醒用户先 <code>index_repository</code>，不要在没图谱的情况下退回 grep。</li>
+<li><strong>不确定图里有什么时</strong>：<code>get_graph_schema</code> 看节点标签和边类型，避免写出查不到东西的查询。</li>
+<li><strong>定位目标</strong>：<code>search_graph</code> 找到具体的函数/类，拿到 <code>qualified_name</code>。</li>
+<li><strong>展开关系</strong>：用拿到的 <code>qualified_name</code> 调 <code>trace_path</code> 追踪调用链 / 数据流。</li>
+<li><strong>需要源码细节时</strong>：才用 <code>get_code_snippet</code> 读具体实现。</li>
+</ol>
+<blockquote>
+<p>分工原则：<strong>图谱负责"定位 + 关系"，源码负责"细节"</strong>。不要用图谱去看一段函数怎么写的，也不要用读文件去找一个函数在哪定义。</p>
+</blockquote>
+<h2>什么时候读文件 / 用 grep 是合理的</h2>
+<p>读源码本身是必要的，关键是<strong>顺序</strong>：先用图谱定位，再按需读细节。以下情况直接读文件没问题：</p>
+<ul>
+<li><code>get_code_snippet</code> 已告诉你函数在哪个文件，但你需要看它的完整上下文（周围的字段定义、相邻方法、整个类的结构）。</li>
+<li>改动<strong>非代码</strong>文件：配置、<code>.bat</code>、<code>.xml</code>、<code>.txt</code>、文档——图谱只索引代码，这些必须直接读。</li>
+<li>确认某个非常局部、不涉及调用关系的事实（比如一个常量的具体值、一行配置）。</li>
+</ul>
+<p><strong>要避免的模式</strong>：在还没查图谱的情况下，凭直觉 <code>Glob</code> / <code>Grep</code> 一堆文件、然后逐个 <code>Read</code> 去回答"X 在哪定义"或"谁调用了 X"——这正是图谱已经替你做完的事，手工做既慢又容易漏。</p>
+<h2>一个示例</h2>
+<p>用户问："<code>BuildOrderSortTool</code> 这个工具是谁在调用？我想知道改它会影响哪里。"</p>
+<p>❌ 错误做法：<code>grep BuildOrderSortTool</code> → 几十个文件命中 → 逐个 Read 排查调用点。</p>
+<p>✅ 正确做法：
+1. <code>search_graph</code>（query="BuildOrderSortTool"）→ 拿到该工具节点和 <code>qualified_name</code>。
+2. <code>trace_path</code>（function_name=..., direction=inbound）→ 拿到全部调用方。
+3. 评估改动影响：<code>detect_changes</code>。
+4. 只在需要确认某处调用的具体写法时，才 <code>get_code_snippet</code> 读那一段。</p>
+<p>ARGUMENTS: 关于本项目，本项目组的最高领导要找我谈话，这个领导是个日本人，他对于本系统的理解非常的深刻，是一位资深的开发人员成长起来的领导，貌似性格比较刻薄，其中可能会问我很多问题，包括但不限于：
+对pos4u了解了多少
+对mvc了解多少
+对项目了解了多少
+对项目的理解，好在哪，不好在哪，觉得有没有要改的地方，怎么改
+生词一个创建skill的提示词，用于本项目模仿领导会问我什么问题</p></div></div><button class="expand-btn">Show more</button></div></div>
+<div class="index-item-long-text"><div class="truncatable"><div class="truncatable-content"><div class="index-item-long-text-content"><p>关键发现已经浮现：<strong>POS4U 是一套基于 .NET/WPF 的 POS（销售终端/收银）系统</strong>，不是单一程序，而是一组：</p>
+<ul>
+<li><code>Source/POS4U/</code> — WPF 收银主程序（<code>App.xaml.cs</code>）</li>
+<li><code>Source/POS4UTwoOperatorsCH/</code> — 双操作员版本</li>
+<li><code>Source/POS4UBackground/</code> — 后台：<code>MasterSync</code>（主从同步控制台）、<code>VersionUp</code>（版本升级控制台）、<code>WindowsService.Administrator</code>（管理服务）</li>
+<li><code>NodeMaster</code> — 节点主控（门店服务器层）</li>
+</ul>
+<p>图谱里还有 <code>Route</code>(25)、<code>GRPC_CALLS</code>(59)、<code>INHERITS</code>(1702)，说明有 Web/gRPC 跨服务通信。现在读架构总览 + 定位 MVC + 看跨服务调用。</p></div></div><button class="expand-btn">Show more</button></div></div>
+<div class="index-item-long-text"><div class="truncatable"><div class="truncatable-content"><div class="index-item-long-text-content"><p>非常清晰了。这是一个<strong>典型的日本零售 POS 系统架构</strong>，技术全貌已浮现：</p>
+<ul>
+<li><strong>技术栈</strong>：C# 4088 文件 + SQL 1316 文件（180+ 表）+ 少量 JS/HTML/CSS；<strong>gRPC</strong> 做跨服务通信（LogicService/DataService）</li>
+<li><strong>包结构</strong>：<code>EPOSEventSender</code>(3.5万节点，最大)、<code>Data</code>、<code>Device</code>(外设)、<code>WinPOS</code>、<code>POS4UBackground</code>、<code>Business</code>、<code>CESettingTool</code> V4/V5（历史版本）、<code>Azure</code>(云)</li>
+<li><strong>关键线索</strong>：<code>Controller</code> 是 Windows Service 调度器（Start/Stop/RefleshModule），不是 ASP.NET MVC；WPF 主程序用 <code>MainWindowViewModel</code> → <strong>MVVM</strong> 模式；有 CAFIS（日本信用卡网络）、EJournal（电子日记，日本合规标配）、SelfFraudDetection（自助防欺诈）</li>
+</ul>
+<p>"MVC" 这点很关键——需要确认 POS4U 到底是 MVC 还是 MVVM。再深挖 4 个方向：MVVM 规模、最大模块 EPOSEventSender、数据库业务表、动态模块机制。</p></div></div><button class="expand-btn">Show more</button></div></div>
+<div class="index-item-long-text"><div class="truncatable"><div class="truncatable-content"><div class="index-item-long-text-content"><p>信息已经非常充分。业务域全貌清晰了——这是个<strong>领域建模极深的日本零售/餐饮 POS</strong>（折扣引擎、积分体系、现金面额对账、EJournal 合规、CAFIS 信用卡、FaceMe 人脸、各种外设 Simulator）。也看到了几个明显的技术债信号（CESettingTool V4/V5 并存且命名空间错乱、WinForms+WPF 混用、Designer.cs、<code>Administorator</code> 拼写错误固化、EPOSEventSender 巨型模块）。</p>
+<p>最后确认两个关键点：POS4U 到底有没有传统 MVC（BO 后台可能是）、以及 EPOSEventSender 这个占 1/4 项目的巨型模块是什么。</p></div></div><button class="expand-btn">Show more</button></div></div>
+<div class="index-item-long-text"><div class="truncatable"><div class="truncatable-content"><div class="index-item-long-text-content"><p>调研完成,最后一块拼图也确认了:</p>
+<ul>
+<li><strong>没有 <code>.cshtml</code>/<code>.aspx</code>(0 个)</strong> → POS4U <strong>不是经典 ASP.NET MVC</strong>。主程序是 WPF + <strong>MVVM</strong>(有 <code>ViewModel</code>/<code>OnPropertyChanged</code>/<code>ICommand</code>);后台服务的 <code>Controller</code> 是 Windows Service 生命周期控制器(Init/Start/Stop/StartAll),不是 MVC 的 Controller。</li>
+<li><strong>TRAN4U</strong> = 交易处理后台服务(<code>TRAN4UController</code> + gRPC <code>TranRemoteControllerService/StartAll,StopAll</code> 被远程启停)。</li>
+<li><strong>EPOSEventSender</strong> 是 <code>Tools/</code> 下的<strong>交易日志上报测试工具</strong>(解析 TransactionLog XML 发往总部),节点多是因为测试用例 XML 膨胀,不是运行时核心。</li>
+</ul>
+<p>更新进度,先把调研结论交付给你(这也是你应对谈话的直接弹药),再澄清 skill 的几个设计点。</p></div></div><button class="expand-btn">Show more</button></div></div>
+<div class="index-item-long-text"><div class="truncatable"><div class="truncatable-content"><div class="index-item-long-text-content"><h2>我对项目的理解(应对谈话的弹药)</h2>
+<p><strong>POS4U 是什么</strong> — 一套面向日本零售/餐饮业的<strong>新一代 POS(销售终端)系统族</strong>,不是单个程序:</p>
+<table>
+<thead>
+<tr>
+<th>组件</th>
+<th>角色</th>
+<th>关键文件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>POS4U</strong></td>
+<td>WPF 收银前台(操作员用)</td>
+<td><a href="Source/POS4U/App.xaml.cs">App.xaml.cs</a></td>
+</tr>
+<tr>
+<td><strong>TRAN4U</strong></td>
+<td>交易处理后台服务(gRPC 远程启停)</td>
+<td><a href="Source/TRAN4U/TRAN4UController.cs">TRAN4UController.cs</a></td>
+</tr>
+<tr>
+<td><strong>WinPOS</strong></td>
+<td>另一套 POS(旧版/特定设备,通过 Batch 代理控制 TRAN4U)</td>
+<td><a href="Source/WinPOS/">Source/WinPOS/</a></td>
+</tr>
+<tr>
+<td><strong>POS4UBackground</strong></td>
+<td>门店后台:MasterSync 主从同步 / TranLogService 交易日志 / Transfer 数据传输 / Administrator 模块管理</td>
+<td><a href="Source/POS4UBackground/">Source/POS4UBackground/</a></td>
+</tr>
+<tr>
+<td><strong>CESettingTool V4/V5</strong></td>
+<td>终端设置工具(嵌入式 CE 版)</td>
+<td><a href="Tools/CESettingToolV5/">Tools/CESettingToolV5/</a></td>
+</tr>
+</tbody>
+</table>
+<p><strong>技术栈</strong>:C#(.NET) 为主 + 1316 个 SQL 文件(180+ 表)+ gRPC 跨服务通信 + Azure Blob(云存储)+ 少量 JS/HTML。设备层极其丰富:CAFIS(日本信用卡)、TEC 磁条读卡器、FaceMe 人脸、CashChanger 找零机、PointInfinity 积分、SalaryDeduction 工资扣款,每个都带 Simulator。</p>
+<p><strong>"MVC" 的真相</strong>(领导大概率会挖这个坑):本项目<strong>主程序是 WPF + MVVM</strong>,不是 ASP.NET MVC——0 个 <code>.cshtml</code>/<code>.aspx</code>。<code>Controller</code> 是 Windows Service 调度器。所以若被问"对 MVC 了解多少",要分两层答:① 模式本身(Model/View/Controller/ViewModel/MVP 的职责与区别);② 本项目实际用的是 MVVM + 服务控制器,要能说清为什么(桌面端数据绑定驱动、而非 Web 请求驱动)。</p>
+<p><strong>好在哪(可主动讲,显深度)</strong>:
+- <strong>领域建模极深</strong>:多维折扣引擎(MixMatch/Group/SubTotal/Manual/Auto/MDHierarchy)、积分体系(Rank/Stage/ECoupon/Rate + <strong>离线容错</strong> PointOffline)、现金面额对账、<strong>EJournal 电子日记</strong>(7 张表,满足日本电子取引法合规)
+- <strong>主从同步 + 模块热更新</strong>:总部→全门店批量下发(NotifyAllStoreMasterDownloadCompleted)、<code>CheckNewModule</code>/<code>RefleshModule</code> 动态加载,运维友好
+- <strong>设备抽象 + Simulator</strong>:无真机也能开发测试</p>
+<p><strong>不好在哪 / 怎么改(领导爱听你敢说真话)</strong>:
+- <strong>版本碎片化</strong>:<a href="Tools/CESettingTool/">CESettingTool</a> / V4 / V5 三套并存,且 V5 命名空间还叫 <code>CESettingToolV4</code>(复制粘贴遗留)→ 应收敛为单版本 + 配置分支
+- <strong>UI 技术栈不统一</strong>:WinForms(<code>Form1</code>、各种 Simulator)与 WPF(MVVM)混用 → 逐步统一到 WPF
+- <strong>数据访问老旧</strong>:<code>*.Designer.cs</code> 强类型 DataSet/TableAdapter(非 EF)→ 迁移现代 ORM
+- <strong>巨型模块/拼写固化</strong>:<code>AdministoratorModuleManagement</code>(Administrator 拼错,已成表名不敢改)、EPOSEventSender 测试 XML 膨胀 → 建模块边界 + 渐进式重命名
+- <strong>业务逻辑沉到 SQL</strong>:1316 个 SQL 文件,DB 与代码耦合 → 抽数据访问层</p>
+<hr />
+<p>下面 3 个设计选择会显著影响提示词质量,确认后我直接产出:</p></div></div><button class="expand-btn">Show more</button></div></div>
+<div class="index-item-long-text"><div class="truncatable"><div class="truncatable-content"><div class="index-item-long-text-content"><p>提示词已生成并保存:<a href="日本领导谈话模拟_skill提示词.md">日本领导谈话模拟_skill提示词.md</a></p>
+<h2>提示词结构(8 节,已内置真实项目事实)</h2>
+<table>
+<thead>
+<tr>
+<th>节</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>① 元信息</td>
+<td>skill 名 <code>pos4u-leader-grill</code>、触发条件、目标</td>
+</tr>
+<tr>
+<td>② 领导人设</td>
+<td>资深开发出身、抓细节抓矛盾、不容不懂装懂、中日混合口吻 + 红线(只施专业压力不羞辱)</td>
+</tr>
+<tr>
+<td>③ 项目知识包</td>
+<td><strong>判分依据</strong>——系统族/技术栈/MVC真相/业务域/优缺点,全部来自图谱调研</td>
+</tr>
+<tr>
+<td>④ 问题库</td>
+<td>4 维度 × 6–8 题,共约 28 题,标【坑】【钻】</td>
+</tr>
+<tr>
+<td>⑤ 运行流程</td>
+<td>开场→一题一问→评分→追问→参考答案→结束雷达图</td>
+</tr>
+<tr>
+<td>⑥ 评分规则</td>
+<td>四维 0–4 分 + 单题反馈格式 + 压力话术示例</td>
+</tr>
+<tr>
+<td>⑦ 输出约束</td>
+<td>领导用中日混合、评分表用中文、点真实符号名</td>
+</tr>
+<tr>
+<td>⑧ 工具提示</td>
+<td>可选:判分前用 <code>search_graph</code> 实时核对用户回答</td>
+</tr>
+</tbody>
+</table>
+<p><strong>质量亮点</strong>——问题全是基于真实代码节点的高杀伤力题,例如:
+- 「POS4U 用的是 MVC 吗?」(坑:是 MVVM,0 个 cshtml)
+- 「CESettingToolV5 的命名空间为什么还叫 CESettingToolV4?」(复制粘贴遗留)
+- 「<code>AdministoratorModuleManagement</code> 表名拼错了,你会改吗?改的话怎么改才安全?」
+- 「MasterSync 同步到一半断网,下次怎么续传?MasterUpdateLog 起什么作用?」</p>
+<h2>怎么用这份提示词</h2>
+<ol>
+<li><strong>直接喂 skill-creator</strong>: 跟我说「用这份提示词创建 skill」,我会用 <code>skill-creator</code> 把它落成 <code>.claude/skills/pos4u-leader-grill/SKILL.md</code>。</li>
+<li><strong>手动创建</strong>: 复制文件全文到 <code>.claude/skills/pos4u-leader-grill/SKILL.md</code> 即可。</li>
+<li><strong>先试跑一轮</strong>: 跟我说「现在用这个模拟器问我」,我直接扮演领导开问——你先感受下杀伤力和节奏,再决定要不要微调(比如更狠、或加某类问题)。</li>
+</ol>
+<p>要我现在<strong>就用它扮演领导、跟你跑一轮模拟谈话</strong>吗?还是先把 skill 创建出来?</p></div></div><button class="expand-btn">Show more</button></div></div>
+</div></div>
+<div class="index-item"><a href="page-001.html#msg-2026-07-07T00-37-33-513Z"><div class="index-item-header"><span class="index-item-number">#3</span><time datetime="2026-07-07T00:37:33.513Z" data-timestamp="2026-07-07T00:37:33.513Z">2026-07-07T00:37:33.513Z</time></div><div class="index-item-content"><p><command-message>skill-creator:skill-creator</command-message>
+<command-name>/skill-creator:skill-creator</command-name>
+<command-args>用这份提示词创建 skill</command-args></p></div></a></div>
+<div class="index-item"><a href="page-001.html#msg-2026-07-07T00-37-33-513Z"><div class="index-item-header"><span class="index-item-number">#4</span><time datetime="2026-07-07T00:37:33.513Z" data-timestamp="2026-07-07T00:37:33.513Z">2026-07-07T00:37:33.513Z</time></div><div class="index-item-content"><p>Base directory for this skill: C:\Users\kashidashi01.claude\plugins\cache\claude-plugins-official\skill-creator\cd3ca5bd4a4b\skills\skill-creator</p>
+<h1>Skill Creator</h1>
+<p>A skill for creating new skills and iteratively improving them.</p>
+<p>At a high level, the process of creating a skill goes like this:</p>
+<ul>
+<li>Decide what you want the skill to do and roughly how it should do it</li>
+<li>Write a draft of the skill</li>
+<li>Create a few test prompts and run claude-with-access-to-the-skill on them</li>
+<li>Help the user evaluate the results both qualitatively and quantitatively</li>
+<li>While the runs happen in the background, draft some quantitative evals if there aren't any (if there are some, you can either use as is or modify if you feel something needs to change about them). Then explain them to the user (or if they already existed, explain the ones that already exist)</li>
+<li>Use the <code>eval-viewer/generate_review.py</code> script to show the user the results for them to look at, and also let them look at the quantitative metrics</li>
+<li>Rewrite the skill based on feedback from the user's evaluation of the results (and also if there are any glaring flaws that become apparent from the quantitative benchmarks)</li>
+<li>Repeat until you're satisfied</li>
+<li>Expand the test set and try again at larger scale</li>
+</ul>
+<p>Your job when using this skill is to figure out where the user is in this process and then jump in and help them progress through these stages. So for instance, maybe they're like "I want to make a skill for X". You can help narrow down what they mean, write a draft, write the test cases, figure out how they want to evaluate, run all the prompts, and repeat.</p>
+<p>On the other hand, maybe they already have a draft of the skill. In this case you can go straight to the eval/iterate part of the loop.</p>
+<p>Of course, you should always be flexible and if the user is like "I don't need to run a bunch of evaluations, just vibe with me", you can do that instead.</p>
+<p>Then after the skill is done (but again, the order is flexible), you can also run the skill description improver, which we have a whole separate script for, to optimize the triggering of the skill.</p>
+<p>Cool? Cool.</p>
+<h2>Communicating with the user</h2>
+<p>The skill creator is liable to be used by people across a wide range of familiarity with coding jargon. If you haven't heard (and how could you, it's only very recently that it started), there's a trend now where the power of Claude is inspiring plumbers to open up their terminals, parents and grandparents to google "how to install npm". On the other hand, the bulk of users are probably fairly computer-literate.</p>
+<p>So please pay attention to context cues to understand how to phrase your communication! In the default case, just to give you some idea:</p>
+<ul>
+<li>"evaluation" and "benchmark" are borderline, but OK</li>
+<li>for "JSON" and "assertion" you want to see serious cues from the user that they know what those things are before using them without explaining them</li>
+</ul>
+<p>It's OK to briefly explain terms if you're in doubt, and feel free to clarify terms with a short definition if you're unsure if the user will get it.</p>
+<hr />
+<h2>Creating a skill</h2>
+<h3>Capture Intent</h3>
+<p>Start by understanding the user's intent. The current conversation might already contain a workflow the user wants to capture (e.g., they say "turn this into a skill"). If so, extract answers from the conversation history first — the tools used, the sequence of steps, corrections the user made, input/output formats observed. The user may need to fill the gaps, and should confirm before proceeding to the next step.</p>
+<ol>
+<li>What should this skill enable Claude to do?</li>
+<li>When should this skill trigger? (what user phrases/contexts)</li>
+<li>What's the expected output format?</li>
+<li>Should we set up test cases to verify the skill works? Skills with objectively verifiable outputs (file transforms, data extraction, code generation, fixed workflow steps) benefit from test cases. Skills with subjective outputs (writing style, art) often don't need them. Suggest the appropriate default based on the skill type, but let the user decide.</li>
+</ol>
+<h3>Interview and Research</h3>
+<p>Proactively ask questions about edge cases, input/output formats, example files, success criteria, and dependencies. Wait to write test prompts until you've got this part ironed out.</p>
+<p>Check available MCPs - if useful for research (searching docs, finding similar skills, looking up best practices), research in parallel via subagents if available, otherwise inline. Come prepared with context to reduce burden on the user.</p>
+<h3>Write the SKILL.md</h3>
+<p>Based on the user interview, fill in these components:</p>
+<ul>
+<li><strong>name</strong>: Skill identifier</li>
+<li><strong>description</strong>: When to trigger, what it does. This is the primary triggering mechanism - include both what the skill does AND specific contexts for when to use it. All "when to use" info goes here, not in the body. Note: currently Claude has a tendency to "undertrigger" skills -- to not use them when they'd be useful. To combat this, please make the skill descriptions a little bit "pushy". So for instance, instead of "How to build a simple fast dashboard to display internal Anthropic data.", you might write "How to build a simple fast dashboard to display internal Anthropic data. Make sure to use this skill whenever the user mentions dashboards, data visualization, internal metrics, or wants to display any kind of company data, even if they don't explicitly ask for a 'dashboard.'"</li>
+<li><strong>compatibility</strong>: Required tools, dependencies (optional, rarely needed)</li>
+<li><strong>the rest of the skill :)</strong></li>
+</ul>
+<h3>Skill Writing Guide</h3>
+<h4>Anatomy of a Skill</h4>
+<pre><code>skill-name/
+├── SKILL.md (required)
+│   ├── YAML frontmatter (name, description required)
+│   └── Markdown instructions
+└── Bundled Resources (optional)
+    ├── scripts/    - Executable code for deterministic/repetitive tasks
+    ├── references/ - Docs loaded into context as needed
+    └── assets/     - Files used in output (templates, icons, fonts)
+</code></pre>
+<h4>Progressive Disclosure</h4>
+<p>Skills use a three-level loading system:
+1. <strong>Metadata</strong> (name + description) - Always in context (~100 words)
+2. <strong>SKILL.md body</strong> - In context whenever skill triggers (&lt;500 lines ideal)
+3. <strong>Bundled resources</strong> - As needed (unlimited, scripts can execute without loading)</p>
+<p>These word counts are approximate and you can feel free to go longer if needed.</p>
+<p><strong>Key patterns:</strong>
+- Keep SKILL.md under 500 lines; if you're approaching this limit, add an additional layer of hierarchy along with clear pointers about where the model using the skill should go next to follow up.
+- Reference files clearly from SKILL.md with guidance on when to read them
+- For large reference files (&gt;300 lines), include a table of contents</p>
+<p><strong>Domain organization</strong>: When a skill supports multiple domains/frameworks, organize by variant:</p>
+<pre><code>cloud-deploy/
+├── SKILL.md (workflow + selection)
+└── references/
+    ├── aws.md
+    ├── gcp.md
+    └── azure.md
+</code></pre>
+<p>Claude reads only the relevant reference file.</p>
+<h4>Principle of Lack of Surprise</h4>
+<p>This goes without saying, but skills must not contain malware, exploit code, or any content that could compromise system security. A skill's contents should not surprise the user in their intent if described. Don't go along with requests to create misleading skills or skills designed to facilitate unauthorized access, data exfiltration, or other malicious activities. Things like a "roleplay as an XYZ" are OK though.</p>
+<h4>Writing Patterns</h4>
+<p>Prefer using the imperative form in instructions.</p>
+<p><strong>Defining output formats</strong> - You can do it like this:</p>
+<pre><code class="language-markdown">## Report structure
+ALWAYS use this exact template:
+# [Title]
+## Executive summary
+## Key findings
+## Recommendations
+</code></pre>
+<p><strong>Examples pattern</strong> - It's useful to include examples. You can format them like this (but if "Input" and "Output" are in the examples you might want to deviate a little):</p>
+<pre><code class="language-markdown">## Commit message format
+**Example 1:**
+Input: Added user authentication with JWT tokens
+Output: feat(auth): implement JWT-based authentication
+</code></pre>
+<h3>Writing Style</h3>
+<p>Try to explain to the model why things are important in lieu of heavy-handed musty MUSTs. Use theory of mind and try to make the skill general and not super-narrow to specific examples. Start by writing a draft and then look at it with fresh eyes and improve it.</p>
+<h3>Test Cases</h3>
+<p>After writing the skill draft, come up with 2-3 realistic test prompts — the kind of thing a real user would actually say. Share them with the user: [you don't have to use this exact language] "Here are a few test cases I'd like to try. Do these look right, or do you want to add more?" Then run them.</p>
+<p>Save test cases to <code>evals/evals.json</code>. Don't write assertions yet — just the prompts. You'll draft assertions in the next step while the runs are in progress.</p>
+<pre><code class="language-json">{
+  &quot;skill_name&quot;: &quot;example-skill&quot;,
+  &quot;evals&quot;: [
+    {
+      &quot;id&quot;: 1,
+      &quot;prompt&quot;: &quot;User's task prompt&quot;,
+      &quot;expected_output&quot;: &quot;Description of expected result&quot;,
+      &quot;files&quot;: []
+    }
+  ]
+}
+</code></pre>
+<p>See <code>references/schemas.md</code> for the full schema (including the <code>assertions</code> field, which you'll add later).</p>
+<h2>Running and evaluating test cases</h2>
+<p>This section is one continuous sequence — don't stop partway through. Do NOT use <code>/skill-test</code> or any other testing skill.</p>
+<p>Put results in <code>&lt;skill-name&gt;-workspace/</code> as a sibling to the skill directory. Within the workspace, organize results by iteration (<code>iteration-1/</code>, <code>iteration-2/</code>, etc.) and within that, each test case gets a directory (<code>eval-0/</code>, <code>eval-1/</code>, etc.). Don't create all of this upfront — just create directories as you go.</p>
+<h3>Step 1: Spawn all runs (with-skill AND baseline) in the same turn</h3>
+<p>For each test case, spawn two subagents in the same turn — one with the skill, one without. This is important: don't spawn the with-skill runs first and then come back for baselines later. Launch everything at once so it all finishes around the same time.</p>
+<p><strong>With-skill run:</strong></p>
+<pre><code>Execute this task:
+- Skill path: &lt;path-to-skill&gt;
+- Task: &lt;eval prompt&gt;
+- Input files: &lt;eval files if any, or &quot;none&quot;&gt;
+- Save outputs to: &lt;workspace&gt;/iteration-&lt;N&gt;/eval-&lt;ID&gt;/with_skill/outputs/
+- Outputs to save: &lt;what the user cares about — e.g., &quot;the .docx file&quot;, &quot;the final CSV&quot;&gt;
+</code></pre>
+<p><strong>Baseline run</strong> (same prompt, but the baseline depends on context):
+- <strong>Creating a new skill</strong>: no skill at all. Same prompt, no skill path, save to <code>without_skill/outputs/</code>.
+- <strong>Improving an existing skill</strong>: the old version. Before editing, snapshot the skill (<code>cp -r &lt;skill-path&gt; &lt;workspace&gt;/skill-snapshot/</code>), then point the baseline subagent at the snapshot. Save to <code>old_skill/outputs/</code>.</p>
+<p>Write an <code>eval_metadata.json</code> for each test case (assertions can be empty for now). Give each eval a descriptive name based on what it's testing — not just "eval-0". Use this name for the directory too. If this iteration uses new or modified eval prompts, create these files for each new eval directory — don't assume they carry over from previous iterations.</p>
+<pre><code class="language-json">{
+  &quot;eval_id&quot;: 0,
+  &quot;eval_name&quot;: &quot;descriptive-name-here&quot;,
+  &quot;prompt&quot;: &quot;The user's task prompt&quot;,
+  &quot;assertions&quot;: []
+}
+</code></pre>
+<h3>Step 2: While runs are in progress, draft assertions</h3>
+<p>Don't just wait for the runs to finish — you can use this time productively. Draft quantitative assertions for each test case and explain them to the user. If assertions already exist in <code>evals/evals.json</code>, review them and explain what they check.</p>
+<p>Good assertions are objectively verifiable and have descriptive names — they should read clearly in the benchmark viewer so someone glancing at the results immediately understands what each one checks. Subjective skills (writing style, design quality) are better evaluated qualitatively — don't force assertions onto things that need human judgment.</p>
+<p>Update the <code>eval_metadata.json</code> files and <code>evals/evals.json</code> with the assertions once drafted. Also explain to the user what they'll see in the viewer — both the qualitative outputs and the quantitative benchmark.</p>
+<h3>Step 3: As runs complete, capture timing data</h3>
+<p>When each subagent task completes, you receive a notification containing <code>total_tokens</code> and <code>duration_ms</code>. Save this data immediately to <code>timing.json</code> in the run directory:</p>
+<pre><code class="language-json">{
+  &quot;total_tokens&quot;: 84852,
+  &quot;duration_ms&quot;: 23332,
+  &quot;total_duration_seconds&quot;: 23.3
+}
+</code></pre>
+<p>This is the only opportunity to capture this data — it comes through the task notification and isn't persisted elsewhere. Process each notification as it arrives rather than trying to batch them.</p>
+<h3>Step 4: Grade, aggregate, and launch the viewer</h3>
+<p>Once all runs are done:</p>
+<ol>
+<li>
+<p><strong>Grade each run</strong> — spawn a grader subagent (or grade inline) that reads <code>agents/grader.md</code> and evaluates each assertion against the outputs. Save results to <code>grading.json</code> in each run directory. The grading.json expectations array must use the fields <code>text</code>, <code>passed</code>, and <code>evidence</code> (not <code>name</code>/<code>met</code>/<code>details</code> or other variants) — the viewer depends on these exact field names. For assertions that can be checked programmatically, write and run a script rather than eyeballing it — scripts are faster, more reliable, and can be reused across iterations.</p>
+</li>
+<li>
+<p><strong>Aggregate into benchmark</strong> — run the aggregation script from the skill-creator directory:
+   <code>bash
+   python -m scripts.aggregate_benchmark &lt;workspace&gt;/iteration-N --skill-name &lt;name&gt;</code>
+   This produces <code>benchmark.json</code> and <code>benchmark.md</code> with pass_rate, time, and tokens for each configuration, with mean ± stddev and the delta. If generating benchmark.json manually, see <code>references/schemas.md</code> for the exact schema the viewer expects.
+Put each with_skill version before its baseline counterpart.</p>
+</li>
+<li>
+<p><strong>Do an analyst pass</strong> — read the benchmark data and surface patterns the aggregate stats might hide. See <code>agents/analyzer.md</code> (the "Analyzing Benchmark Results" section) for what to look for — things like assertions that always pass regardless of skill (non-discriminating), high-variance evals (possibly flaky), and time/token tradeoffs.</p>
+</li>
+<li>
+<p><strong>Launch the viewer</strong> with both qualitative outputs and quantitative data:
+   <code>bash
+   nohup python &lt;skill-creator-path&gt;/eval-viewer/generate_review.py \
+     &lt;workspace&gt;/iteration-N \
+     --skill-name "my-skill" \
+     --benchmark &lt;workspace&gt;/iteration-N/benchmark.json \
+     &gt; /dev/null 2&gt;&amp;1 &amp;
+   VIEWER_PID=$!</code>
+   For iteration 2+, also pass <code>--previous-workspace &lt;workspace&gt;/iteration-&lt;N-1&gt;</code>.</p>
+</li>
+</ol>
+<p><strong>Cowork / headless environments:</strong> If <code>webbrowser.open()</code> is not available or the environment has no display, use <code>--static &lt;output_path&gt;</code> to write a standalone HTML file instead of starting a server. Feedback will be downloaded as a <code>feedback.json</code> file when the user clicks "Submit All Reviews". After download, copy <code>feedback.json</code> into the workspace directory for the next iteration to pick up.</p>
+<p>Note: please use generate_review.py to create the viewer; there's no need to write custom HTML.</p>
+<ol>
+<li><strong>Tell the user</strong> something like: "I've opened the results in your browser. There are two tabs — 'Outputs' lets you click through each test case and leave feedback, 'Benchmark' shows the quantitative comparison. When you're done, come back here and let me know."</li>
+</ol>
+<h3>What the user sees in the viewer</h3>
+<p>The "Outputs" tab shows one test case at a time:
+- <strong>Prompt</strong>: the task that was given
+- <strong>Output</strong>: the files the skill produced, rendered inline where possible
+- <strong>Previous Output</strong> (iteration 2+): collapsed section showing last iteration's output
+- <strong>Formal Grades</strong> (if grading was run): collapsed section showing assertion pass/fail
+- <strong>Feedback</strong>: a textbox that auto-saves as they type
+- <strong>Previous Feedback</strong> (iteration 2+): their comments from last time, shown below the textbox</p>
+<p>The "Benchmark" tab shows the stats summary: pass rates, timing, and token usage for each configuration, with per-eval breakdowns and analyst observations.</p>
+<p>Navigation is via prev/next buttons or arrow keys. When done, they click "Submit All Reviews" which saves all feedback to <code>feedback.json</code>.</p>
+<h3>Step 5: Read the feedback</h3>
+<p>When the user tells you they're done, read <code>feedback.json</code>:</p>
+<pre><code class="language-json">{
+  &quot;reviews&quot;: [
+    {&quot;run_id&quot;: &quot;eval-0-with_skill&quot;, &quot;feedback&quot;: &quot;the chart is missing axis labels&quot;, &quot;timestamp&quot;: &quot;...&quot;},
+    {&quot;run_id&quot;: &quot;eval-1-with_skill&quot;, &quot;feedback&quot;: &quot;&quot;, &quot;timestamp&quot;: &quot;...&quot;},
+    {&quot;run_id&quot;: &quot;eval-2-with_skill&quot;, &quot;feedback&quot;: &quot;perfect, love this&quot;, &quot;timestamp&quot;: &quot;...&quot;}
+  ],
+  &quot;status&quot;: &quot;complete&quot;
+}
+</code></pre>
+<p>Empty feedback means the user thought it was fine. Focus your improvements on the test cases where the user had specific complaints.</p>
+<p>Kill the viewer server when you're done with it:</p>
+<pre><code class="language-bash">kill $VIEWER_PID 2&gt;/dev/null
+</code></pre>
+<hr />
+<h2>Improving the skill</h2>
+<p>This is the heart of the loop. You've run the test cases, the user has reviewed the results, and now you need to make the skill better based on their feedback.</p>
+<h3>How to think about improvements</h3>
+<ol>
+<li>
+<p><strong>Generalize from the feedback.</strong> The big picture thing that's happening here is that we're trying to create skills that can be used a million times (maybe literally, maybe even more who knows) across many different prompts. Here you and the user are iterating on only a few examples over and over again because it helps move faster. The user knows these examples in and out and it's quick for them to assess new outputs. But if the skill you and the user are codeveloping works only for those examples, it's useless. Rather than put in fiddly overfitty changes, or oppressively constrictive MUSTs, if there's some stubborn issue, you might try branching out and using different metaphors, or recommending different patterns of working. It's relatively cheap to try and maybe you'll land on something great.</p>
+</li>
+<li>
+<p><strong>Keep the prompt lean.</strong> Remove things that aren't pulling their weight. Make sure to read the transcripts, not just the final outputs — if it looks like the skill is making the model waste a bunch of time doing things that are unproductive, you can try getting rid of the parts of the skill that are making it do that and seeing what happens.</p>
+</li>
+<li>
+<p><strong>Explain the why.</strong> Try hard to explain the <strong>why</strong> behind everything you're asking the model to do. Today's LLMs are <em>smart</em>. They have good theory of mind and when given a good harness can go beyond rote instructions and really make things happen. Even if the feedback from the user is terse or frustrated, try to actually understand the task and why the user is writing what they wrote, and what they actually wrote, and then transmit this understanding into the instructions. If you find yourself writing ALWAYS or NEVER in all caps, or using super rigid structures, that's a yellow flag — if possible, reframe and explain the reasoning so that the model understands why the thing you're asking for is important. That's a more humane, powerful, and effective approach.</p>
+</li>
+<li>
+<p><strong>Look for repeated work across test cases.</strong> Read the transcripts from the test runs and notice if the subagents all independently wrote similar helper scripts or took the same multi-step approach to something. If all 3 test cases resulted in the subagent writing a <code>create_docx.py</code> or a <code>build_chart.py</code>, that's a strong signal the skill should bundle that script. Write it once, put it in <code>scripts/</code>, and tell the skill to use it. This saves every future invocation from reinventing the wheel.</p>
+</li>
+</ol>
+<p>This task is pretty important (we are trying to create billions a year in economic value here!) and your thinking time is not the blocker; take your time and really mull things over. I'd suggest writing a draft revision and then looking at it anew and making improvements. Really do your best to get into the head of the user and understand what they want and need.</p>
+<h3>The iteration loop</h3>
+<p>After improving the skill:</p>
+<ol>
+<li>Apply your improvements to the skill</li>
+<li>Rerun all test cases into a new <code>iteration-&lt;N+1&gt;/</code> directory, including baseline runs. If you're creating a new skill, the baseline is always <code>without_skill</code> (no skill) — that stays the same across iterations. If you're improving an existing skill, use your judgment on what makes sense as the baseline: the original version the user came in with, or the previous iteration.</li>
+<li>Launch the reviewer with <code>--previous-workspace</code> pointing at the previous iteration</li>
+<li>Wait for the user to review and tell you they're done</li>
+<li>Read the new feedback, improve again, repeat</li>
+</ol>
+<p>Keep going until:
+- The user says they're happy
+- The feedback is all empty (everything looks good)
+- You're not making meaningful progress</p>
+<hr />
+<h2>Advanced: Blind comparison</h2>
+<p>For situations where you want a more rigorous comparison between two versions of a skill (e.g., the user asks "is the new version actually better?"), there's a blind comparison system. Read <code>agents/comparator.md</code> and <code>agents/analyzer.md</code> for the details. The basic idea is: give two outputs to an independent agent without telling it which is which, and let it judge quality. Then analyze why the winner won.</p>
+<p>This is optional, requires subagents, and most users won't need it. The human review loop is usually sufficient.</p>
+<hr />
+<h2>Description Optimization</h2>
+<p>The description field in SKILL.md frontmatter is the primary mechanism that determines whether Claude invokes a skill. After creating or improving a skill, offer to optimize the description for better triggering accuracy.</p>
+<h3>Step 1: Generate trigger eval queries</h3>
+<p>Create 20 eval queries — a mix of should-trigger and should-not-trigger. Save as JSON:</p>
+<pre><code class="language-json">[
+  {&quot;query&quot;: &quot;the user prompt&quot;, &quot;should_trigger&quot;: true},
+  {&quot;query&quot;: &quot;another prompt&quot;, &quot;should_trigger&quot;: false}
+]
+</code></pre>
+<p>The queries must be realistic and something a Claude Code or Claude.ai user would actually type. Not abstract requests, but requests that are concrete and specific and have a good amount of detail. For instance, file paths, personal context about the user's job or situation, column names and values, company names, URLs. A little bit of backstory. Some might be in lowercase or contain abbreviations or typos or casual speech. Use a mix of different lengths, and focus on edge cases rather than making them clear-cut (the user will get a chance to sign off on them).</p>
+<p>Bad: <code>"Format this data"</code>, <code>"Extract text from PDF"</code>, <code>"Create a chart"</code></p>
+<p>Good: <code>"ok so my boss just sent me this xlsx file (its in my downloads, called something like 'Q4 sales final FINAL v2.xlsx') and she wants me to add a column that shows the profit margin as a percentage. The revenue is in column C and costs are in column D i think"</code></p>
+<p>For the <strong>should-trigger</strong> queries (8-10), think about coverage. You want different phrasings of the same intent — some formal, some casual. Include cases where the user doesn't explicitly name the skill or file type but clearly needs it. Throw in some uncommon use cases and cases where this skill competes with another but should win.</p>
+<p>For the <strong>should-not-trigger</strong> queries (8-10), the most valuable ones are the near-misses — queries that share keywords or concepts with the skill but actually need something different. Think adjacent domains, ambiguous phrasing where a naive keyword match would trigger but shouldn't, and cases where the query touches on something the skill does but in a context where another tool is more appropriate.</p>
+<p>The key thing to avoid: don't make should-not-trigger queries obviously irrelevant. "Write a fibonacci function" as a negative test for a PDF skill is too easy — it doesn't test anything. The negative cases should be genuinely tricky.</p>
+<h3>Step 2: Review with user</h3>
+<p>Present the eval set to the user for review using the HTML template:</p>
+<ol>
+<li>Read the template from <code>assets/eval_review.html</code></li>
+<li>Replace the placeholders:</li>
+<li><code>__EVAL_DATA_PLACEHOLDER__</code> → the JSON array of eval items (no quotes around it — it's a JS variable assignment)</li>
+<li><code>__SKILL_NAME_PLACEHOLDER__</code> → the skill's name</li>
+<li><code>__SKILL_DESCRIPTION_PLACEHOLDER__</code> → the skill's current description</li>
+<li>Write to a temp file (e.g., <code>/tmp/eval_review_&lt;skill-name&gt;.html</code>) and open it: <code>open /tmp/eval_review_&lt;skill-name&gt;.html</code></li>
+<li>The user can edit queries, toggle should-trigger, add/remove entries, then click "Export Eval Set"</li>
+<li>The file downloads to <code>~/Downloads/eval_set.json</code> — check the Downloads folder for the most recent version in case there are multiple (e.g., <code>eval_set (1).json</code>)</li>
+</ol>
+<p>This step matters — bad eval queries lead to bad descriptions.</p>
+<h3>Step 3: Run the optimization loop</h3>
+<p>Tell the user: "This will take some time — I'll run the optimization loop in the background and check on it periodically."</p>
+<p>Save the eval set to the workspace, then run in the background:</p>
+<pre><code class="language-bash">python -m scripts.run_loop \
+  --eval-set &lt;path-to-trigger-eval.json&gt; \
+  --skill-path &lt;path-to-skill&gt; \
+  --model &lt;model-id-powering-this-session&gt; \
+  --max-iterations 5 \
+  --verbose
+</code></pre>
+<p>Use the model ID from your system prompt (the one powering the current session) so the triggering test matches what the user actually experiences.</p>
+<p>While it runs, periodically tail the output to give the user updates on which iteration it's on and what the scores look like.</p>
+<p>This handles the full optimization loop automatically. It splits the eval set into 60% train and 40% held-out test, evaluates the current description (running each query 3 times to get a reliable trigger rate), then calls Claude to propose improvements based on what failed. It re-evaluates each new description on both train and test, iterating up to 5 times. When it's done, it opens an HTML report in the browser showing the results per iteration and returns JSON with <code>best_description</code> — selected by test score rather than train score to avoid overfitting.</p>
+<h3>How skill triggering works</h3>
+<p>Understanding the triggering mechanism helps design better eval queries. Skills appear in Claude's <code>available_skills</code> list with their name + description, and Claude decides whether to consult a skill based on that description. The important thing to know is that Claude only consults skills for tasks it can't easily handle on its own — simple, one-step queries like "read this PDF" may not trigger a skill even if the description matches perfectly, because Claude can handle them directly with basic tools. Complex, multi-step, or specialized queries reliably trigger skills when the description matches.</p>
+<p>This means your eval queries should be substantive enough that Claude would actually benefit from consulting a skill. Simple queries like "read file X" are poor test cases — they won't trigger skills regardless of description quality.</p>
+<h3>Step 4: Apply the result</h3>
+<p>Take <code>best_description</code> from the JSON output and update the skill's SKILL.md frontmatter. Show the user before/after and report the scores.</p>
+<hr />
+<h3>Package and Present (only if <code>present_files</code> tool is available)</h3>
+<p>Check whether you have access to the <code>present_files</code> tool. If you don't, skip this step. If you do, package the skill and present the .skill file to the user:</p>
+<pre><code class="language-bash">python -m scripts.package_skill &lt;path/to/skill-folder&gt;
+</code></pre>
+<p>After packaging, direct the user to the resulting <code>.skill</code> file path so they can install it.</p>
+<hr />
+<h2>Claude.ai-specific instructions</h2>
+<p>In Claude.ai, the core workflow is the same (draft → test → review → improve → repeat), but because Claude.ai doesn't have subagents, some mechanics change. Here's what to adapt:</p>
+<p><strong>Running test cases</strong>: No subagents means no parallel execution. For each test case, read the skill's SKILL.md, then follow its instructions to accomplish the test prompt yourself. Do them one at a time. This is less rigorous than independent subagents (you wrote the skill and you're also running it, so you have full context), but it's a useful sanity check — and the human review step compensates. Skip the baseline runs — just use the skill to complete the task as requested.</p>
+<p><strong>Reviewing results</strong>: If you can't open a browser (e.g., Claude.ai's VM has no display, or you're on a remote server), skip the browser reviewer entirely. Instead, present results directly in the conversation. For each test case, show the prompt and the output. If the output is a file the user needs to see (like a .docx or .xlsx), save it to the filesystem and tell them where it is so they can download and inspect it. Ask for feedback inline: "How does this look? Anything you'd change?"</p>
+<p><strong>Benchmarking</strong>: Skip the quantitative benchmarking — it relies on baseline comparisons which aren't meaningful without subagents. Focus on qualitative feedback from the user.</p>
+<p><strong>The iteration loop</strong>: Same as before — improve the skill, rerun the test cases, ask for feedback — just without the browser reviewer in the middle. You can still organize results into iteration directories on the filesystem if you have one.</p>
+<p><strong>Description optimization</strong>: This section requires the <code>claude</code> CLI tool (specifically <code>claude -p</code>) which is only available in Claude Code. Skip it if you're on Claude.ai.</p>
+<p><strong>Blind comparison</strong>: Requires subagents. Skip it.</p>
+<p><strong>Packaging</strong>: The <code>package_skill.py</code> script works anywhere with Python and a filesystem. On Claude.ai, you can run it and the user can download the resulting <code>.skill</code> file.</p>
+<p><strong>Updating an existing skill</strong>: The user might be asking you to update an existing skill, not create a new one. In this case:
+- <strong>Preserve the original name.</strong> Note the skill's directory name and <code>name</code> frontmatter field -- use them unchanged. E.g., if the installed skill is <code>research-helper</code>, output <code>research-helper.skill</code> (not <code>research-helper-v2</code>).
+- <strong>Copy to a writeable location before editing.</strong> The installed skill path may be read-only. Copy to <code>/tmp/skill-name/</code>, edit there, and package from the copy.
+- <strong>If packaging manually, stage in <code>/tmp/</code> first</strong>, then copy to the output directory -- direct writes may fail due to permissions.</p>
+<hr />
+<h2>Cowork-Specific Instructions</h2>
+<p>If you're in Cowork, the main things to know are:</p>
+<ul>
+<li>You have subagents, so the main workflow (spawn test cases in parallel, run baselines, grade, etc.) all works. (However, if you run into severe problems with timeouts, it's OK to run the test prompts in series rather than parallel.)</li>
+<li>You don't have a browser or display, so when generating the eval viewer, use <code>--static &lt;output_path&gt;</code> to write a standalone HTML file instead of starting a server. Then proffer a link that the user can click to open the HTML in their browser.</li>
+<li>For whatever reason, the Cowork setup seems to disincline Claude from generating the eval viewer after running the tests, so just to reiterate: whether you're in Cowork or in Claude Code, after running tests, you should always generate the eval viewer for the human to look at examples before revising the skill yourself and trying to make corrections, using <code>generate_review.py</code> (not writing your own boutique html code). Sorry in advance but I'm gonna go all caps here: GENERATE THE EVAL VIEWER <em>BEFORE</em> evaluating inputs yourself. You want to get them in front of the human ASAP!</li>
+<li>Feedback works differently: since there's no running server, the viewer's "Submit All Reviews" button will download <code>feedback.json</code> as a file. You can then read it from there (you may have to request access first).</li>
+<li>Packaging works — <code>package_skill.py</code> just needs Python and a filesystem.</li>
+<li>Description optimization (<code>run_loop.py</code> / <code>run_eval.py</code>) should work in Cowork just fine since it uses <code>claude -p</code> via subprocess, not a browser, but please save it until you've fully finished making the skill and the user agrees it's in good shape.</li>
+<li><strong>Updating an existing skill</strong>: The user might be asking you to update an existing skill, not create a new one. Follow the update guidance in the claude.ai section above.</li>
+</ul>
+<hr />
+<h2>Reference files</h2>
+<p>The agents/ directory contains instructions for specialized subagents. Read them when you need to spawn the relevant subagent.</p>
+<ul>
+<li><code>agents/grader.md</code> — How to evaluate assertions against outputs</li>
+<li><code>agents/comparator.md</code> — How to do blind A/B comparison between two outputs</li>
+<li><code>agents/analyzer.md</code> — How to analyze why one version beat another</li>
+</ul>
+<p>The references/ directory has additional documentation:
+- <code>references/schemas.md</code> — JSON structures for evals.json, grading.json, etc.</p>
+<hr />
+<p>Repeating one more time the core loop here for emphasis:</p>
+<ul>
+<li>Figure out what the skill is about</li>
+<li>Draft or edit the skill</li>
+<li>Run claude-with-access-to-the-skill on test prompts</li>
+<li>With the user, evaluate the outputs:</li>
+<li>Create benchmark.json and run <code>eval-viewer/generate_review.py</code> to help the user review them</li>
+<li>Run quantitative evals</li>
+<li>Repeat until you and the user are satisfied</li>
+<li>Package the final skill and return it to the user.</li>
+</ul>
+<p>Please add steps to your TodoList, if you have such a thing, to make sure you don't forget. If you're in Cowork, please specifically put "Create evals JSON and run <code>eval-viewer/generate_review.py</code> so human can review test cases" in your TodoList to make sure it happens.</p>
+<p>Good luck!</p>
+<p>ARGUMENTS: 用这份提示词创建 skill</p></div></a><div class="index-item-stats"><span>4 write</span>
+<div class="index-item-long-text"><div class="truncatable"><div class="truncatable-content"><div class="index-item-long-text-content"><p>Base directory for this skill: C:\Users\kashidashi01.claude\plugins\cache\claude-plugins-official\skill-creator\cd3ca5bd4a4b\skills\skill-creator</p>
+<h1>Skill Creator</h1>
+<p>A skill for creating new skills and iteratively improving them.</p>
+<p>At a high level, the process of creating a skill goes like this:</p>
+<ul>
+<li>Decide what you want the skill to do and roughly how it should do it</li>
+<li>Write a draft of the skill</li>
+<li>Create a few test prompts and run claude-with-access-to-the-skill on them</li>
+<li>Help the user evaluate the results both qualitatively and quantitatively</li>
+<li>While the runs happen in the background, draft some quantitative evals if there aren't any (if there are some, you can either use as is or modify if you feel something needs to change about them). Then explain them to the user (or if they already existed, explain the ones that already exist)</li>
+<li>Use the <code>eval-viewer/generate_review.py</code> script to show the user the results for them to look at, and also let them look at the quantitative metrics</li>
+<li>Rewrite the skill based on feedback from the user's evaluation of the results (and also if there are any glaring flaws that become apparent from the quantitative benchmarks)</li>
+<li>Repeat until you're satisfied</li>
+<li>Expand the test set and try again at larger scale</li>
+</ul>
+<p>Your job when using this skill is to figure out where the user is in this process and then jump in and help them progress through these stages. So for instance, maybe they're like "I want to make a skill for X". You can help narrow down what they mean, write a draft, write the test cases, figure out how they want to evaluate, run all the prompts, and repeat.</p>
+<p>On the other hand, maybe they already have a draft of the skill. In this case you can go straight to the eval/iterate part of the loop.</p>
+<p>Of course, you should always be flexible and if the user is like "I don't need to run a bunch of evaluations, just vibe with me", you can do that instead.</p>
+<p>Then after the skill is done (but again, the order is flexible), you can also run the skill description improver, which we have a whole separate script for, to optimize the triggering of the skill.</p>
+<p>Cool? Cool.</p>
+<h2>Communicating with the user</h2>
+<p>The skill creator is liable to be used by people across a wide range of familiarity with coding jargon. If you haven't heard (and how could you, it's only very recently that it started), there's a trend now where the power of Claude is inspiring plumbers to open up their terminals, parents and grandparents to google "how to install npm". On the other hand, the bulk of users are probably fairly computer-literate.</p>
+<p>So please pay attention to context cues to understand how to phrase your communication! In the default case, just to give you some idea:</p>
+<ul>
+<li>"evaluation" and "benchmark" are borderline, but OK</li>
+<li>for "JSON" and "assertion" you want to see serious cues from the user that they know what those things are before using them without explaining them</li>
+</ul>
+<p>It's OK to briefly explain terms if you're in doubt, and feel free to clarify terms with a short definition if you're unsure if the user will get it.</p>
+<hr />
+<h2>Creating a skill</h2>
+<h3>Capture Intent</h3>
+<p>Start by understanding the user's intent. The current conversation might already contain a workflow the user wants to capture (e.g., they say "turn this into a skill"). If so, extract answers from the conversation history first — the tools used, the sequence of steps, corrections the user made, input/output formats observed. The user may need to fill the gaps, and should confirm before proceeding to the next step.</p>
+<ol>
+<li>What should this skill enable Claude to do?</li>
+<li>When should this skill trigger? (what user phrases/contexts)</li>
+<li>What's the expected output format?</li>
+<li>Should we set up test cases to verify the skill works? Skills with objectively verifiable outputs (file transforms, data extraction, code generation, fixed workflow steps) benefit from test cases. Skills with subjective outputs (writing style, art) often don't need them. Suggest the appropriate default based on the skill type, but let the user decide.</li>
+</ol>
+<h3>Interview and Research</h3>
+<p>Proactively ask questions about edge cases, input/output formats, example files, success criteria, and dependencies. Wait to write test prompts until you've got this part ironed out.</p>
+<p>Check available MCPs - if useful for research (searching docs, finding similar skills, looking up best practices), research in parallel via subagents if available, otherwise inline. Come prepared with context to reduce burden on the user.</p>
+<h3>Write the SKILL.md</h3>
+<p>Based on the user interview, fill in these components:</p>
+<ul>
+<li><strong>name</strong>: Skill identifier</li>
+<li><strong>description</strong>: When to trigger, what it does. This is the primary triggering mechanism - include both what the skill does AND specific contexts for when to use it. All "when to use" info goes here, not in the body. Note: currently Claude has a tendency to "undertrigger" skills -- to not use them when they'd be useful. To combat this, please make the skill descriptions a little bit "pushy". So for instance, instead of "How to build a simple fast dashboard to display internal Anthropic data.", you might write "How to build a simple fast dashboard to display internal Anthropic data. Make sure to use this skill whenever the user mentions dashboards, data visualization, internal metrics, or wants to display any kind of company data, even if they don't explicitly ask for a 'dashboard.'"</li>
+<li><strong>compatibility</strong>: Required tools, dependencies (optional, rarely needed)</li>
+<li><strong>the rest of the skill :)</strong></li>
+</ul>
+<h3>Skill Writing Guide</h3>
+<h4>Anatomy of a Skill</h4>
+<pre><code>skill-name/
+├── SKILL.md (required)
+│   ├── YAML frontmatter (name, description required)
+│   └── Markdown instructions
+└── Bundled Resources (optional)
+    ├── scripts/    - Executable code for deterministic/repetitive tasks
+    ├── references/ - Docs loaded into context as needed
+    └── assets/     - Files used in output (templates, icons, fonts)
+</code></pre>
+<h4>Progressive Disclosure</h4>
+<p>Skills use a three-level loading system:
+1. <strong>Metadata</strong> (name + description) - Always in context (~100 words)
+2. <strong>SKILL.md body</strong> - In context whenever skill triggers (&lt;500 lines ideal)
+3. <strong>Bundled resources</strong> - As needed (unlimited, scripts can execute without loading)</p>
+<p>These word counts are approximate and you can feel free to go longer if needed.</p>
+<p><strong>Key patterns:</strong>
+- Keep SKILL.md under 500 lines; if you're approaching this limit, add an additional layer of hierarchy along with clear pointers about where the model using the skill should go next to follow up.
+- Reference files clearly from SKILL.md with guidance on when to read them
+- For large reference files (&gt;300 lines), include a table of contents</p>
+<p><strong>Domain organization</strong>: When a skill supports multiple domains/frameworks, organize by variant:</p>
+<pre><code>cloud-deploy/
+├── SKILL.md (workflow + selection)
+└── references/
+    ├── aws.md
+    ├── gcp.md
+    └── azure.md
+</code></pre>
+<p>Claude reads only the relevant reference file.</p>
+<h4>Principle of Lack of Surprise</h4>
+<p>This goes without saying, but skills must not contain malware, exploit code, or any content that could compromise system security. A skill's contents should not surprise the user in their intent if described. Don't go along with requests to create misleading skills or skills designed to facilitate unauthorized access, data exfiltration, or other malicious activities. Things like a "roleplay as an XYZ" are OK though.</p>
+<h4>Writing Patterns</h4>
+<p>Prefer using the imperative form in instructions.</p>
+<p><strong>Defining output formats</strong> - You can do it like this:</p>
+<pre><code class="language-markdown">## Report structure
+ALWAYS use this exact template:
+# [Title]
+## Executive summary
+## Key findings
+## Recommendations
+</code></pre>
+<p><strong>Examples pattern</strong> - It's useful to include examples. You can format them like this (but if "Input" and "Output" are in the examples you might want to deviate a little):</p>
+<pre><code class="language-markdown">## Commit message format
+**Example 1:**
+Input: Added user authentication with JWT tokens
+Output: feat(auth): implement JWT-based authentication
+</code></pre>
+<h3>Writing Style</h3>
+<p>Try to explain to the model why things are important in lieu of heavy-handed musty MUSTs. Use theory of mind and try to make the skill general and not super-narrow to specific examples. Start by writing a draft and then look at it with fresh eyes and improve it.</p>
+<h3>Test Cases</h3>
+<p>After writing the skill draft, come up with 2-3 realistic test prompts — the kind of thing a real user would actually say. Share them with the user: [you don't have to use this exact language] "Here are a few test cases I'd like to try. Do these look right, or do you want to add more?" Then run them.</p>
+<p>Save test cases to <code>evals/evals.json</code>. Don't write assertions yet — just the prompts. You'll draft assertions in the next step while the runs are in progress.</p>
+<pre><code class="language-json">{
+  &quot;skill_name&quot;: &quot;example-skill&quot;,
+  &quot;evals&quot;: [
+    {
+      &quot;id&quot;: 1,
+      &quot;prompt&quot;: &quot;User's task prompt&quot;,
+      &quot;expected_output&quot;: &quot;Description of expected result&quot;,
+      &quot;files&quot;: []
+    }
+  ]
+}
+</code></pre>
+<p>See <code>references/schemas.md</code> for the full schema (including the <code>assertions</code> field, which you'll add later).</p>
+<h2>Running and evaluating test cases</h2>
+<p>This section is one continuous sequence — don't stop partway through. Do NOT use <code>/skill-test</code> or any other testing skill.</p>
+<p>Put results in <code>&lt;skill-name&gt;-workspace/</code> as a sibling to the skill directory. Within the workspace, organize results by iteration (<code>iteration-1/</code>, <code>iteration-2/</code>, etc.) and within that, each test case gets a directory (<code>eval-0/</code>, <code>eval-1/</code>, etc.). Don't create all of this upfront — just create directories as you go.</p>
+<h3>Step 1: Spawn all runs (with-skill AND baseline) in the same turn</h3>
+<p>For each test case, spawn two subagents in the same turn — one with the skill, one without. This is important: don't spawn the with-skill runs first and then come back for baselines later. Launch everything at once so it all finishes around the same time.</p>
+<p><strong>With-skill run:</strong></p>
+<pre><code>Execute this task:
+- Skill path: &lt;path-to-skill&gt;
+- Task: &lt;eval prompt&gt;
+- Input files: &lt;eval files if any, or &quot;none&quot;&gt;
+- Save outputs to: &lt;workspace&gt;/iteration-&lt;N&gt;/eval-&lt;ID&gt;/with_skill/outputs/
+- Outputs to save: &lt;what the user cares about — e.g., &quot;the .docx file&quot;, &quot;the final CSV&quot;&gt;
+</code></pre>
+<p><strong>Baseline run</strong> (same prompt, but the baseline depends on context):
+- <strong>Creating a new skill</strong>: no skill at all. Same prompt, no skill path, save to <code>without_skill/outputs/</code>.
+- <strong>Improving an existing skill</strong>: the old version. Before editing, snapshot the skill (<code>cp -r &lt;skill-path&gt; &lt;workspace&gt;/skill-snapshot/</code>), then point the baseline subagent at the snapshot. Save to <code>old_skill/outputs/</code>.</p>
+<p>Write an <code>eval_metadata.json</code> for each test case (assertions can be empty for now). Give each eval a descriptive name based on what it's testing — not just "eval-0". Use this name for the directory too. If this iteration uses new or modified eval prompts, create these files for each new eval directory — don't assume they carry over from previous iterations.</p>
+<pre><code class="language-json">{
+  &quot;eval_id&quot;: 0,
+  &quot;eval_name&quot;: &quot;descriptive-name-here&quot;,
+  &quot;prompt&quot;: &quot;The user's task prompt&quot;,
+  &quot;assertions&quot;: []
+}
+</code></pre>
+<h3>Step 2: While runs are in progress, draft assertions</h3>
+<p>Don't just wait for the runs to finish — you can use this time productively. Draft quantitative assertions for each test case and explain them to the user. If assertions already exist in <code>evals/evals.json</code>, review them and explain what they check.</p>
+<p>Good assertions are objectively verifiable and have descriptive names — they should read clearly in the benchmark viewer so someone glancing at the results immediately understands what each one checks. Subjective skills (writing style, design quality) are better evaluated qualitatively — don't force assertions onto things that need human judgment.</p>
+<p>Update the <code>eval_metadata.json</code> files and <code>evals/evals.json</code> with the assertions once drafted. Also explain to the user what they'll see in the viewer — both the qualitative outputs and the quantitative benchmark.</p>
+<h3>Step 3: As runs complete, capture timing data</h3>
+<p>When each subagent task completes, you receive a notification containing <code>total_tokens</code> and <code>duration_ms</code>. Save this data immediately to <code>timing.json</code> in the run directory:</p>
+<pre><code class="language-json">{
+  &quot;total_tokens&quot;: 84852,
+  &quot;duration_ms&quot;: 23332,
+  &quot;total_duration_seconds&quot;: 23.3
+}
+</code></pre>
+<p>This is the only opportunity to capture this data — it comes through the task notification and isn't persisted elsewhere. Process each notification as it arrives rather than trying to batch them.</p>
+<h3>Step 4: Grade, aggregate, and launch the viewer</h3>
+<p>Once all runs are done:</p>
+<ol>
+<li>
+<p><strong>Grade each run</strong> — spawn a grader subagent (or grade inline) that reads <code>agents/grader.md</code> and evaluates each assertion against the outputs. Save results to <code>grading.json</code> in each run directory. The grading.json expectations array must use the fields <code>text</code>, <code>passed</code>, and <code>evidence</code> (not <code>name</code>/<code>met</code>/<code>details</code> or other variants) — the viewer depends on these exact field names. For assertions that can be checked programmatically, write and run a script rather than eyeballing it — scripts are faster, more reliable, and can be reused across iterations.</p>
+</li>
+<li>
+<p><strong>Aggregate into benchmark</strong> — run the aggregation script from the skill-creator directory:
+   <code>bash
+   python -m scripts.aggregate_benchmark &lt;workspace&gt;/iteration-N --skill-name &lt;name&gt;</code>
+   This produces <code>benchmark.json</code> and <code>benchmark.md</code> with pass_rate, time, and tokens for each configuration, with mean ± stddev and the delta. If generating benchmark.json manually, see <code>references/schemas.md</code> for the exact schema the viewer expects.
+Put each with_skill version before its baseline counterpart.</p>
+</li>
+<li>
+<p><strong>Do an analyst pass</strong> — read the benchmark data and surface patterns the aggregate stats might hide. See <code>agents/analyzer.md</code> (the "Analyzing Benchmark Results" section) for what to look for — things like assertions that always pass regardless of skill (non-discriminating), high-variance evals (possibly flaky), and time/token tradeoffs.</p>
+</li>
+<li>
+<p><strong>Launch the viewer</strong> with both qualitative outputs and quantitative data:
+   <code>bash
+   nohup python &lt;skill-creator-path&gt;/eval-viewer/generate_review.py \
+     &lt;workspace&gt;/iteration-N \
+     --skill-name "my-skill" \
+     --benchmark &lt;workspace&gt;/iteration-N/benchmark.json \
+     &gt; /dev/null 2&gt;&amp;1 &amp;
+   VIEWER_PID=$!</code>
+   For iteration 2+, also pass <code>--previous-workspace &lt;workspace&gt;/iteration-&lt;N-1&gt;</code>.</p>
+</li>
+</ol>
+<p><strong>Cowork / headless environments:</strong> If <code>webbrowser.open()</code> is not available or the environment has no display, use <code>--static &lt;output_path&gt;</code> to write a standalone HTML file instead of starting a server. Feedback will be downloaded as a <code>feedback.json</code> file when the user clicks "Submit All Reviews". After download, copy <code>feedback.json</code> into the workspace directory for the next iteration to pick up.</p>
+<p>Note: please use generate_review.py to create the viewer; there's no need to write custom HTML.</p>
+<ol>
+<li><strong>Tell the user</strong> something like: "I've opened the results in your browser. There are two tabs — 'Outputs' lets you click through each test case and leave feedback, 'Benchmark' shows the quantitative comparison. When you're done, come back here and let me know."</li>
+</ol>
+<h3>What the user sees in the viewer</h3>
+<p>The "Outputs" tab shows one test case at a time:
+- <strong>Prompt</strong>: the task that was given
+- <strong>Output</strong>: the files the skill produced, rendered inline where possible
+- <strong>Previous Output</strong> (iteration 2+): collapsed section showing last iteration's output
+- <strong>Formal Grades</strong> (if grading was run): collapsed section showing assertion pass/fail
+- <strong>Feedback</strong>: a textbox that auto-saves as they type
+- <strong>Previous Feedback</strong> (iteration 2+): their comments from last time, shown below the textbox</p>
+<p>The "Benchmark" tab shows the stats summary: pass rates, timing, and token usage for each configuration, with per-eval breakdowns and analyst observations.</p>
+<p>Navigation is via prev/next buttons or arrow keys. When done, they click "Submit All Reviews" which saves all feedback to <code>feedback.json</code>.</p>
+<h3>Step 5: Read the feedback</h3>
+<p>When the user tells you they're done, read <code>feedback.json</code>:</p>
+<pre><code class="language-json">{
+  &quot;reviews&quot;: [
+    {&quot;run_id&quot;: &quot;eval-0-with_skill&quot;, &quot;feedback&quot;: &quot;the chart is missing axis labels&quot;, &quot;timestamp&quot;: &quot;...&quot;},
+    {&quot;run_id&quot;: &quot;eval-1-with_skill&quot;, &quot;feedback&quot;: &quot;&quot;, &quot;timestamp&quot;: &quot;...&quot;},
+    {&quot;run_id&quot;: &quot;eval-2-with_skill&quot;, &quot;feedback&quot;: &quot;perfect, love this&quot;, &quot;timestamp&quot;: &quot;...&quot;}
+  ],
+  &quot;status&quot;: &quot;complete&quot;
+}
+</code></pre>
+<p>Empty feedback means the user thought it was fine. Focus your improvements on the test cases where the user had specific complaints.</p>
+<p>Kill the viewer server when you're done with it:</p>
+<pre><code class="language-bash">kill $VIEWER_PID 2&gt;/dev/null
+</code></pre>
+<hr />
+<h2>Improving the skill</h2>
+<p>This is the heart of the loop. You've run the test cases, the user has reviewed the results, and now you need to make the skill better based on their feedback.</p>
+<h3>How to think about improvements</h3>
+<ol>
+<li>
+<p><strong>Generalize from the feedback.</strong> The big picture thing that's happening here is that we're trying to create skills that can be used a million times (maybe literally, maybe even more who knows) across many different prompts. Here you and the user are iterating on only a few examples over and over again because it helps move faster. The user knows these examples in and out and it's quick for them to assess new outputs. But if the skill you and the user are codeveloping works only for those examples, it's useless. Rather than put in fiddly overfitty changes, or oppressively constrictive MUSTs, if there's some stubborn issue, you might try branching out and using different metaphors, or recommending different patterns of working. It's relatively cheap to try and maybe you'll land on something great.</p>
+</li>
+<li>
+<p><strong>Keep the prompt lean.</strong> Remove things that aren't pulling their weight. Make sure to read the transcripts, not just the final outputs — if it looks like the skill is making the model waste a bunch of time doing things that are unproductive, you can try getting rid of the parts of the skill that are making it do that and seeing what happens.</p>
+</li>
+<li>
+<p><strong>Explain the why.</strong> Try hard to explain the <strong>why</strong> behind everything you're asking the model to do. Today's LLMs are <em>smart</em>. They have good theory of mind and when given a good harness can go beyond rote instructions and really make things happen. Even if the feedback from the user is terse or frustrated, try to actually understand the task and why the user is writing what they wrote, and what they actually wrote, and then transmit this understanding into the instructions. If you find yourself writing ALWAYS or NEVER in all caps, or using super rigid structures, that's a yellow flag — if possible, reframe and explain the reasoning so that the model understands why the thing you're asking for is important. That's a more humane, powerful, and effective approach.</p>
+</li>
+<li>
+<p><strong>Look for repeated work across test cases.</strong> Read the transcripts from the test runs and notice if the subagents all independently wrote similar helper scripts or took the same multi-step approach to something. If all 3 test cases resulted in the subagent writing a <code>create_docx.py</code> or a <code>build_chart.py</code>, that's a strong signal the skill should bundle that script. Write it once, put it in <code>scripts/</code>, and tell the skill to use it. This saves every future invocation from reinventing the wheel.</p>
+</li>
+</ol>
+<p>This task is pretty important (we are trying to create billions a year in economic value here!) and your thinking time is not the blocker; take your time and really mull things over. I'd suggest writing a draft revision and then looking at it anew and making improvements. Really do your best to get into the head of the user and understand what they want and need.</p>
+<h3>The iteration loop</h3>
+<p>After improving the skill:</p>
+<ol>
+<li>Apply your improvements to the skill</li>
+<li>Rerun all test cases into a new <code>iteration-&lt;N+1&gt;/</code> directory, including baseline runs. If you're creating a new skill, the baseline is always <code>without_skill</code> (no skill) — that stays the same across iterations. If you're improving an existing skill, use your judgment on what makes sense as the baseline: the original version the user came in with, or the previous iteration.</li>
+<li>Launch the reviewer with <code>--previous-workspace</code> pointing at the previous iteration</li>
+<li>Wait for the user to review and tell you they're done</li>
+<li>Read the new feedback, improve again, repeat</li>
+</ol>
+<p>Keep going until:
+- The user says they're happy
+- The feedback is all empty (everything looks good)
+- You're not making meaningful progress</p>
+<hr />
+<h2>Advanced: Blind comparison</h2>
+<p>For situations where you want a more rigorous comparison between two versions of a skill (e.g., the user asks "is the new version actually better?"), there's a blind comparison system. Read <code>agents/comparator.md</code> and <code>agents/analyzer.md</code> for the details. The basic idea is: give two outputs to an independent agent without telling it which is which, and let it judge quality. Then analyze why the winner won.</p>
+<p>This is optional, requires subagents, and most users won't need it. The human review loop is usually sufficient.</p>
+<hr />
+<h2>Description Optimization</h2>
+<p>The description field in SKILL.md frontmatter is the primary mechanism that determines whether Claude invokes a skill. After creating or improving a skill, offer to optimize the description for better triggering accuracy.</p>
+<h3>Step 1: Generate trigger eval queries</h3>
+<p>Create 20 eval queries — a mix of should-trigger and should-not-trigger. Save as JSON:</p>
+<pre><code class="language-json">[
+  {&quot;query&quot;: &quot;the user prompt&quot;, &quot;should_trigger&quot;: true},
+  {&quot;query&quot;: &quot;another prompt&quot;, &quot;should_trigger&quot;: false}
+]
+</code></pre>
+<p>The queries must be realistic and something a Claude Code or Claude.ai user would actually type. Not abstract requests, but requests that are concrete and specific and have a good amount of detail. For instance, file paths, personal context about the user's job or situation, column names and values, company names, URLs. A little bit of backstory. Some might be in lowercase or contain abbreviations or typos or casual speech. Use a mix of different lengths, and focus on edge cases rather than making them clear-cut (the user will get a chance to sign off on them).</p>
+<p>Bad: <code>"Format this data"</code>, <code>"Extract text from PDF"</code>, <code>"Create a chart"</code></p>
+<p>Good: <code>"ok so my boss just sent me this xlsx file (its in my downloads, called something like 'Q4 sales final FINAL v2.xlsx') and she wants me to add a column that shows the profit margin as a percentage. The revenue is in column C and costs are in column D i think"</code></p>
+<p>For the <strong>should-trigger</strong> queries (8-10), think about coverage. You want different phrasings of the same intent — some formal, some casual. Include cases where the user doesn't explicitly name the skill or file type but clearly needs it. Throw in some uncommon use cases and cases where this skill competes with another but should win.</p>
+<p>For the <strong>should-not-trigger</strong> queries (8-10), the most valuable ones are the near-misses — queries that share keywords or concepts with the skill but actually need something different. Think adjacent domains, ambiguous phrasing where a naive keyword match would trigger but shouldn't, and cases where the query touches on something the skill does but in a context where another tool is more appropriate.</p>
+<p>The key thing to avoid: don't make should-not-trigger queries obviously irrelevant. "Write a fibonacci function" as a negative test for a PDF skill is too easy — it doesn't test anything. The negative cases should be genuinely tricky.</p>
+<h3>Step 2: Review with user</h3>
+<p>Present the eval set to the user for review using the HTML template:</p>
+<ol>
+<li>Read the template from <code>assets/eval_review.html</code></li>
+<li>Replace the placeholders:</li>
+<li><code>__EVAL_DATA_PLACEHOLDER__</code> → the JSON array of eval items (no quotes around it — it's a JS variable assignment)</li>
+<li><code>__SKILL_NAME_PLACEHOLDER__</code> → the skill's name</li>
+<li><code>__SKILL_DESCRIPTION_PLACEHOLDER__</code> → the skill's current description</li>
+<li>Write to a temp file (e.g., <code>/tmp/eval_review_&lt;skill-name&gt;.html</code>) and open it: <code>open /tmp/eval_review_&lt;skill-name&gt;.html</code></li>
+<li>The user can edit queries, toggle should-trigger, add/remove entries, then click "Export Eval Set"</li>
+<li>The file downloads to <code>~/Downloads/eval_set.json</code> — check the Downloads folder for the most recent version in case there are multiple (e.g., <code>eval_set (1).json</code>)</li>
+</ol>
+<p>This step matters — bad eval queries lead to bad descriptions.</p>
+<h3>Step 3: Run the optimization loop</h3>
+<p>Tell the user: "This will take some time — I'll run the optimization loop in the background and check on it periodically."</p>
+<p>Save the eval set to the workspace, then run in the background:</p>
+<pre><code class="language-bash">python -m scripts.run_loop \
+  --eval-set &lt;path-to-trigger-eval.json&gt; \
+  --skill-path &lt;path-to-skill&gt; \
+  --model &lt;model-id-powering-this-session&gt; \
+  --max-iterations 5 \
+  --verbose
+</code></pre>
+<p>Use the model ID from your system prompt (the one powering the current session) so the triggering test matches what the user actually experiences.</p>
+<p>While it runs, periodically tail the output to give the user updates on which iteration it's on and what the scores look like.</p>
+<p>This handles the full optimization loop automatically. It splits the eval set into 60% train and 40% held-out test, evaluates the current description (running each query 3 times to get a reliable trigger rate), then calls Claude to propose improvements based on what failed. It re-evaluates each new description on both train and test, iterating up to 5 times. When it's done, it opens an HTML report in the browser showing the results per iteration and returns JSON with <code>best_description</code> — selected by test score rather than train score to avoid overfitting.</p>
+<h3>How skill triggering works</h3>
+<p>Understanding the triggering mechanism helps design better eval queries. Skills appear in Claude's <code>available_skills</code> list with their name + description, and Claude decides whether to consult a skill based on that description. The important thing to know is that Claude only consults skills for tasks it can't easily handle on its own — simple, one-step queries like "read this PDF" may not trigger a skill even if the description matches perfectly, because Claude can handle them directly with basic tools. Complex, multi-step, or specialized queries reliably trigger skills when the description matches.</p>
+<p>This means your eval queries should be substantive enough that Claude would actually benefit from consulting a skill. Simple queries like "read file X" are poor test cases — they won't trigger skills regardless of description quality.</p>
+<h3>Step 4: Apply the result</h3>
+<p>Take <code>best_description</code> from the JSON output and update the skill's SKILL.md frontmatter. Show the user before/after and report the scores.</p>
+<hr />
+<h3>Package and Present (only if <code>present_files</code> tool is available)</h3>
+<p>Check whether you have access to the <code>present_files</code> tool. If you don't, skip this step. If you do, package the skill and present the .skill file to the user:</p>
+<pre><code class="language-bash">python -m scripts.package_skill &lt;path/to/skill-folder&gt;
+</code></pre>
+<p>After packaging, direct the user to the resulting <code>.skill</code> file path so they can install it.</p>
+<hr />
+<h2>Claude.ai-specific instructions</h2>
+<p>In Claude.ai, the core workflow is the same (draft → test → review → improve → repeat), but because Claude.ai doesn't have subagents, some mechanics change. Here's what to adapt:</p>
+<p><strong>Running test cases</strong>: No subagents means no parallel execution. For each test case, read the skill's SKILL.md, then follow its instructions to accomplish the test prompt yourself. Do them one at a time. This is less rigorous than independent subagents (you wrote the skill and you're also running it, so you have full context), but it's a useful sanity check — and the human review step compensates. Skip the baseline runs — just use the skill to complete the task as requested.</p>
+<p><strong>Reviewing results</strong>: If you can't open a browser (e.g., Claude.ai's VM has no display, or you're on a remote server), skip the browser reviewer entirely. Instead, present results directly in the conversation. For each test case, show the prompt and the output. If the output is a file the user needs to see (like a .docx or .xlsx), save it to the filesystem and tell them where it is so they can download and inspect it. Ask for feedback inline: "How does this look? Anything you'd change?"</p>
+<p><strong>Benchmarking</strong>: Skip the quantitative benchmarking — it relies on baseline comparisons which aren't meaningful without subagents. Focus on qualitative feedback from the user.</p>
+<p><strong>The iteration loop</strong>: Same as before — improve the skill, rerun the test cases, ask for feedback — just without the browser reviewer in the middle. You can still organize results into iteration directories on the filesystem if you have one.</p>
+<p><strong>Description optimization</strong>: This section requires the <code>claude</code> CLI tool (specifically <code>claude -p</code>) which is only available in Claude Code. Skip it if you're on Claude.ai.</p>
+<p><strong>Blind comparison</strong>: Requires subagents. Skip it.</p>
+<p><strong>Packaging</strong>: The <code>package_skill.py</code> script works anywhere with Python and a filesystem. On Claude.ai, you can run it and the user can download the resulting <code>.skill</code> file.</p>
+<p><strong>Updating an existing skill</strong>: The user might be asking you to update an existing skill, not create a new one. In this case:
+- <strong>Preserve the original name.</strong> Note the skill's directory name and <code>name</code> frontmatter field -- use them unchanged. E.g., if the installed skill is <code>research-helper</code>, output <code>research-helper.skill</code> (not <code>research-helper-v2</code>).
+- <strong>Copy to a writeable location before editing.</strong> The installed skill path may be read-only. Copy to <code>/tmp/skill-name/</code>, edit there, and package from the copy.
+- <strong>If packaging manually, stage in <code>/tmp/</code> first</strong>, then copy to the output directory -- direct writes may fail due to permissions.</p>
+<hr />
+<h2>Cowork-Specific Instructions</h2>
+<p>If you're in Cowork, the main things to know are:</p>
+<ul>
+<li>You have subagents, so the main workflow (spawn test cases in parallel, run baselines, grade, etc.) all works. (However, if you run into severe problems with timeouts, it's OK to run the test prompts in series rather than parallel.)</li>
+<li>You don't have a browser or display, so when generating the eval viewer, use <code>--static &lt;output_path&gt;</code> to write a standalone HTML file instead of starting a server. Then proffer a link that the user can click to open the HTML in their browser.</li>
+<li>For whatever reason, the Cowork setup seems to disincline Claude from generating the eval viewer after running the tests, so just to reiterate: whether you're in Cowork or in Claude Code, after running tests, you should always generate the eval viewer for the human to look at examples before revising the skill yourself and trying to make corrections, using <code>generate_review.py</code> (not writing your own boutique html code). Sorry in advance but I'm gonna go all caps here: GENERATE THE EVAL VIEWER <em>BEFORE</em> evaluating inputs yourself. You want to get them in front of the human ASAP!</li>
+<li>Feedback works differently: since there's no running server, the viewer's "Submit All Reviews" button will download <code>feedback.json</code> as a file. You can then read it from there (you may have to request access first).</li>
+<li>Packaging works — <code>package_skill.py</code> just needs Python and a filesystem.</li>
+<li>Description optimization (<code>run_loop.py</code> / <code>run_eval.py</code>) should work in Cowork just fine since it uses <code>claude -p</code> via subprocess, not a browser, but please save it until you've fully finished making the skill and the user agrees it's in good shape.</li>
+<li><strong>Updating an existing skill</strong>: The user might be asking you to update an existing skill, not create a new one. Follow the update guidance in the claude.ai section above.</li>
+</ul>
+<hr />
+<h2>Reference files</h2>
+<p>The agents/ directory contains instructions for specialized subagents. Read them when you need to spawn the relevant subagent.</p>
+<ul>
+<li><code>agents/grader.md</code> — How to evaluate assertions against outputs</li>
+<li><code>agents/comparator.md</code> — How to do blind A/B comparison between two outputs</li>
+<li><code>agents/analyzer.md</code> — How to analyze why one version beat another</li>
+</ul>
+<p>The references/ directory has additional documentation:
+- <code>references/schemas.md</code> — JSON structures for evals.json, grading.json, etc.</p>
+<hr />
+<p>Repeating one more time the core loop here for emphasis:</p>
+<ul>
+<li>Figure out what the skill is about</li>
+<li>Draft or edit the skill</li>
+<li>Run claude-with-access-to-the-skill on test prompts</li>
+<li>With the user, evaluate the outputs:</li>
+<li>Create benchmark.json and run <code>eval-viewer/generate_review.py</code> to help the user review them</li>
+<li>Run quantitative evals</li>
+<li>Repeat until you and the user are satisfied</li>
+<li>Package the final skill and return it to the user.</li>
+</ul>
+<p>Please add steps to your TodoList, if you have such a thing, to make sure you don't forget. If you're in Cowork, please specifically put "Create evals JSON and run <code>eval-viewer/generate_review.py</code> so human can review test cases" in your TodoList to make sure it happens.</p>
+<p>Good luck!</p>
+<p>ARGUMENTS: 用这份提示词创建 skill</p></div></div><button class="expand-btn">Show more</button></div></div>
+<div class="index-item-long-text"><div class="truncatable"><div class="truncatable-content"><div class="index-item-long-text-content"><p>Skill 已创建并被系统识别(<code>available skills</code> 列表里已出现 <code>pos4u-leader-grill</code>)。结构如下:</p>
+<pre><code>.claude/skills/pos4u-leader-grill/
+├── SKILL.md                    主体:人设/流程/评分/风格(90行,精简)
+├── references/
+│   ├── project-facts.md        判分事实依据(系统族/技术栈/MVC真相/业务域/优缺点)
+│   └── question-bank.md        28 题问题库,四维度,标【坑】【钻】
+└── evals/
+    └── evals.json              3 个测试 prompt(记录怎么测)
+</code></pre>
+<p><a href=".claude/skills/pos4u-leader-grill/SKILL.md">SKILL.md</a> · <a href=".claude/skills/pos4u-leader-grill/references/project-facts.md">project-facts.md</a> · <a href=".claude/skills/pos4u-leader-grill/references/question-bank.md">question-bank.md</a></p>
+<p>关于测试方式:这是对话角色扮演 skill,输出主观,我没走完整量化 benchmark(收益低、还拖时间)。改成 <strong>vibe 模式</strong>——直接试跑一轮给你看手感。下面我就<strong>激活这个 skill</strong>,扮演你那位日本领导开问第一题。你随时可以喊停让我调风格(更狠/更温、日语比例、换维度)。</p>
+<hr />
+<blockquote>
+<p><em>（领导靠在椅背上,抬眼看了你一下,语气不咸不淡）</em></p>
+<p>よし、始めようか。</p>
+<p>规则先讲清楚——我问一题,你答一题。答完我给你打分,追问,必要的时候告诉你这东西在咱们项目里<strong>实际</strong>长什么样。一次一题,别急着把你会的全倒出来,我不是来听你背书的。</p>
+<p>最后我给你一张总评,告诉你正式谈话前,<strong>哪三个洞必须先补上</strong>。</p>
+<p>いい? 第一题——</p>
+<p><strong>一句话告诉我:pos4u,到底是个什么东西?它是「一个程序」吗?</strong></p>
+</blockquote></div></div><button class="expand-btn">Show more</button></div></div>
+</div></div>
+<div class="index-item"><a href="page-001.html#msg-2026-07-07T00-48-14-874Z"><div class="index-item-header"><span class="index-item-number">#5</span><time datetime="2026-07-07T00:48:14.874Z" data-timestamp="2026-07-07T00:48:14.874Z">2026-07-07T00:48:14.874Z</time></div><div class="index-item-content"><p>作为资深的开发者，这位领导最有可能问的问题都有哪些呢？</p></div></a><div class="index-item-stats">
+<div class="index-item-long-text"><div class="truncatable"><div class="truncatable-content"><div class="index-item-long-text-content"><p>先跳出刚才的角色扮演,回到梳理模式——你这个问题问得对:与其一题题模拟,不如先把"这位领导<strong>脑子里</strong>会转什么"全摸清。我从一个<strong>资深开发出身、对系统吃得很透、性格偏刻薄</strong>的领导的视角,把他的提问心智模型和最可能的问题全列出来。</p>
+<h2>先理解他的提问逻辑(懂了这个就能预判)</h2>
+<p>这种领导有 6 个固定套路,你答完一个概念他才会真正开始问:</p>
+<ol>
+<li><strong>从「是什么」秒跳到「为什么」和「如果…怎么办」</strong>——你以为答完定义就过关,这才是他提问的起点。</li>
+<li><strong>专挑边界、异常、失败场景</strong>——正常流程谁都会讲,他要看断网/并发/对账不平/合规缺失时你怎么办。</li>
+<li><strong>钉住你话里的模糊词</strong>——你说「大概」「通常」「应该」,他就追「具体的には?」。</li>
+<li><strong>逼你对历史决策表态</strong>——当年为什么这么设计、现在还对不对、<strong>你敢不敢说它烂</strong>。</li>
+<li><strong>考判断力不考知识量</strong>——给你资源你怎么动,比你知道多少 API 重要。</li>
+<li><strong>会问「你做了什么」</strong>——最致命,因为最容易露馅。</li>
+</ol>
+<hr />
+<h2>一、整体认知(高频必问 ·「你是不是真懂」)</h2>
+<ul>
+<li><strong>「pos4u 是什么?是一个程序吗?」</strong> — 答"一个收银软件"就死了。是系统族:POS4U 前台 + TRAN4U 交易服务 + POS4UBackground + WinPOS + CESettingTool。</li>
+<li><strong>「画一下整体架构,标出数据流」</strong> — 看你脑子里有没有整张图。</li>
+<li><strong>「一笔交易:从扫码 → 落库 → 上报总部,完整走一遍」</strong> — 经典链路题,讲不清调用链说明你没真正调过。</li>
+<li><strong>「POS4U、TRAN4U、WinPOS 为什么拆成三个进程,不放一起?」</strong> — 考架构权衡(隔离/崩溃域/独立升级)。</li>
+<li><strong>「这个系统最核心的 3 个模块是什么?为什么是它们?」</strong> — 考你分主次的能力。</li>
+</ul>
+<h2>二、准确性(「你说的我偏不信,证明给我看」)</h2>
+<ul>
+<li><strong>「你说用了 MVVM,证据呢?和 MVC 区别是什么?为什么是 MVVM 不是 MVC?」</strong> — 高频坑题。真相:WPF+MVVM,<strong>0 个 cshtml</strong>;代码里的 <code>Controller</code> 是 Windows Service 调度器不是 MVC Controller。</li>
+<li><strong>「gRPC 都有哪些服务?谁调谁?」</strong> — LogicService、DataService、TranRemoteControllerService。</li>
+<li><strong>「折扣/积分/EJournal 各有哪些表?」</strong> — 看你接不接触过 DB(180+ 张表)。</li>
+<li><strong>「你刚提到的 X 函数,它被谁调用?」</strong> — 当场查你说的真假。</li>
+</ul>
+<h2>三、边界 / 异常 / 失败(资深最爱,杀伤力最大)</h2>
+<ul>
+<li><strong>「MasterSync 同步到一半断网,下次怎么续传?会不会丢?MasterUpdateLog 起什么作用?」</strong></li>
+<li><strong>「离线交易怎么补传?顺序乱了怎么办?重复了怎么去重?」</strong> — PointOffline 的对账。</li>
+<li><strong>「重复支付 / 重复下单怎么防?(幂等)」</strong> — 交易系统的命门。</li>
+<li><strong>「两个操作员同时改同一笔交易 / 同一商品库存,怎么处理?」</strong> — 并发。</li>
+<li><strong>「跨日、跨时区怎么算?BusinessDate 和 DailyTimeZoneTotal 怎么定的?」</strong> — 零售业深夜班次经典坑。</li>
+<li><strong>「钱箱对账差了一分钱(CashTotal 不平),你怎么排查?」</strong> — 现场运维题。</li>
+<li><strong>「EJournal 损坏或丢失,合规上什么后果?系统怎么兜底?」</strong> — 日本电子取引法,丢数据是法律责任。</li>
+<li><strong>「VersionUp 版本升级中途失败,怎么回滚?门店开不了机谁负责?」</strong></li>
+</ul>
+<h2>四、历史决策 / 当下判断(刻薄领导的杀手锏)</h2>
+<ul>
+<li><strong>「CESettingTool 为什么 V4、V5 两个版本都在?V5 的命名空间为什么还叫 CESettingToolV4?」</strong> — 复制粘贴遗留,看你认不认账。</li>
+<li><strong>「AdministoratorModuleManagement 表名拼错了,为什么没人改?你会改吗?怎么改才安全?」</strong> — 考向后兼容(迁移脚本、双写过渡)和胆识。</li>
+<li><strong>「业务逻辑放存储过程(1316 个 SQL),当年合理吗?现在代价是什么?」</strong> — 考你能不能历史地看问题。</li>
+<li><strong>「WinPOS 和 POS4U 两套并存,能不能合并?该不该合并?」</strong></li>
+<li><strong>「强类型 DataSet 要不要换 EF?换了你会丢掉什么?」</strong> — 陷阱:换掉会丢编译期检查、Designer 自动生成维护。</li>
+<li><strong>「ReceiveBuffer.Add 被一千多处调用,这种超级方法你怎么看?」</strong></li>
+</ul>
+<h2>五、改造 / 优先级(看判断力)</h2>
+<ul>
+<li><strong>「给你半年改造这个项目,前 3 个月做什么?」</strong> — 看你能不能先观测再动手、分清主次。</li>
+<li><strong>「这么大系统,你怎么保证重构不引入回归?」</strong> — 测试覆盖、模块边界、灰度。</li>
+<li><strong>「WinForms 和 WPF 混用,你怎么定收敛策略?」</strong></li>
+<li><strong>「模块热更新(Administrator 的 CheckNewModule/RefleshModule)这么危险,安全怎么保证?」</strong> — 签名、回滚、灰度下发。</li>
+<li><strong>「现在的测试覆盖率你估计多少?怎么提?」</strong></li>
+</ul>
+<h2>六、业务领域深挖</h2>
+<ul>
+<li><strong>「折扣引擎:一笔交易同时命中 MixMatch、Manual、SubTotal,顺序谁定?互斥怎么处理?」</strong></li>
+<li><strong>「积分离线(PointOffline)怎么对账?会不会重复积分?」</strong></li>
+<li><strong>「现金面额(CashDenominationMaster)对账逻辑?」</strong></li>
+<li><strong>「CAFIS 信用卡:授权、取消、返品(退货)的流程?」</strong></li>
+<li><strong>「日本合规你了解多少?」</strong> — 电子取引法(EJournal)、適格請求書(发票制度)、消费税 8%/10% 与轻减税率——<strong>这条领导极可能问,因为是日本零售的命门,且体现你是否懂业务而不只是懂代码。</strong></li>
+</ul>
+<h2>七、你这个人(送命题,藏刀的软问题)</h2>
+<ul>
+<li><strong>「你在这个项目里,具体做了什么?」</strong> — 最致命。准备一个具体到模块/功能/数字的版本。</li>
+<li><strong>「你觉得这套系统最烂的地方是什么?」</strong> — 看你敢不敢说真话(参考第四节),也看你水平够不够评。</li>
+<li><strong>「你遇到过的最难的一个 bug / 最自豪的一块是什么?」</strong></li>
+<li><strong>「如果让你带 X 模块,头 3 个月做什么?」</strong></li>
+<li><strong>「你和日本那边怎么沟通?技术分歧怎么解决?」</strong> — 跨文化协作,日本领导尤其在意。</li>
+</ul>
+<h2>八、反直觉陷阱(你说 A 他就追 A 的反面)</h2>
+<ul>
+<li>你说 MVVM 好 → <strong>「那 Command 的 CanExecute 怎么实现?大量绑定的性能问题怎么办?」</strong></li>
+<li>你说 gRPC 好 → <strong>「proto 怎么做版本兼容?字段加减会不会炸老客户端?」</strong></li>
+<li>你说要重构 DataSet → <strong>「编译期类型检查你打算拿什么补?Designer 自动生成的代码谁来维护?」</strong></li>
+<li>你说主从同步 → <strong>「总部和门店同时改了同一条主数据,冲突谁赢?」</strong></li>
+</ul>
+<hr />
+<h2>🚨 最该提前准备的 5 道(出现概率最高、答砸最伤)</h2>
+<ol>
+<li><strong>pos4u 是什么 / 是不是一个程序</strong> — 必问的开场。</li>
+<li><strong>一笔交易的完整链路</strong> — 几乎必问,讲不清=没真做过。</li>
+<li><strong>MVVM vs MVC + 为什么</strong> — 技术深度的探针。</li>
+<li><strong>你在项目里具体做了什么</strong> — 最容易露馅,务必准备具体故事。</li>
+<li><strong>系统最烂的地方 / 怎么改</strong> — 考判断力+胆识,敢说且说得在理=加分项。</li>
+</ol>
+<hr />
+<p>要不要我把这份<strong>扩展清单(带考察点)补充进 skill</strong> 的 <code>references/question-bank.md</code>?这样以后跑模拟器时,题目库更厚、追问更狠。或者你想直接挑一类(比如「边界/异常」或「日本合规」)深练,我就用 skill 角色陪你过一轮。</p></div></div><button class="expand-btn">Show more</button></div></div>
+</div></div>
+        
+
+<div class="pagination">
+<span class="current">Index</span>
+<span class="disabled">&larr; Prev</span>
+<a href="page-001.html">1</a>
+<a href="page-001.html">Next &rarr;</a>
+</div>
+
+
+        <dialog id="search-modal">
+            <div class="search-modal-header">
+                <input type="text" id="modal-search-input" placeholder="Search..." aria-label="Search transcripts">
+                <button id="modal-search-btn" type="button" aria-label="Search">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+                </button>
+                <button id="modal-close-btn" type="button" aria-label="Close">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+                </button>
+            </div>
+            <div id="search-status"></div>
+            <div id="search-results"></div>
+        </dialog>
+        <script>
+(function() {
+    var totalPages = 1;
+    var searchBox = document.getElementById('search-box');
+    var searchInput = document.getElementById('search-input');
+    var searchBtn = document.getElementById('search-btn');
+    var modal = document.getElementById('search-modal');
+    var modalInput = document.getElementById('modal-search-input');
+    var modalSearchBtn = document.getElementById('modal-search-btn');
+    var modalCloseBtn = document.getElementById('modal-close-btn');
+    var searchStatus = document.getElementById('search-status');
+    var searchResults = document.getElementById('search-results');
+
+    if (!searchBox || !modal) return;
+
+    // Hide search on file:// protocol (doesn't work due to CORS restrictions)
+    if (window.location.protocol === 'file:') return;
+
+    // Show search box (progressive enhancement)
+    searchBox.style.display = 'flex';
+
+    // Gist preview support - detect if we're on gisthost.github.io or gistpreview.github.io
+    var hostname = window.location.hostname;
+    var isGistPreview = hostname === 'gisthost.github.io' || hostname === 'gistpreview.github.io';
+    var gistId = null;
+    var gistOwner = null;
+    var gistInfoLoaded = false;
+
+    if (isGistPreview) {
+        // Extract gist ID from URL query string like ?78a436a8a9e7a2e603738b8193b95410/index.html
+        var queryMatch = window.location.search.match(/^\?([a-f0-9]+)/i);
+        if (queryMatch) {
+            gistId = queryMatch[1];
+        }
+    }
+
+    async function loadGistInfo() {
+        if (!isGistPreview || !gistId || gistInfoLoaded) return;
+        try {
+            var response = await fetch('https://api.github.com/gists/' + gistId);
+            if (response.ok) {
+                var info = await response.json();
+                gistOwner = info.owner.login;
+                gistInfoLoaded = true;
+            }
+        } catch (e) {
+            console.error('Failed to load gist info:', e);
+        }
+    }
+
+    function getPageFetchUrl(pageFile) {
+        if (isGistPreview && gistOwner && gistId) {
+            // Use raw gist URL for fetching content
+            return 'https://gist.githubusercontent.com/' + gistOwner + '/' + gistId + '/raw/' + pageFile;
+        }
+        return pageFile;
+    }
+
+    function getPageLinkUrl(pageFile) {
+        if (isGistPreview && gistId) {
+            // Use gistpreview URL format for navigation links
+            return '?' + gistId + '/' + pageFile;
+        }
+        return pageFile;
+    }
+
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function escapeRegex(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function openModal(query) {
+        modalInput.value = query || '';
+        searchResults.innerHTML = '';
+        searchStatus.textContent = '';
+        modal.showModal();
+        modalInput.focus();
+        if (query) {
+            performSearch(query);
+        }
+    }
+
+    function closeModal() {
+        modal.close();
+        // Update URL to remove search fragment, preserving path and query string
+        if (window.location.hash.startsWith('#search=')) {
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+    }
+
+    function updateUrlHash(query) {
+        if (query) {
+            // Preserve path and query string when adding hash
+            history.replaceState(null, '', window.location.pathname + window.location.search + '#search=' + encodeURIComponent(query));
+        }
+    }
+
+    function highlightTextNodes(element, searchTerm) {
+        var walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
+        var nodesToReplace = [];
+
+        while (walker.nextNode()) {
+            var node = walker.currentNode;
+            if (node.nodeValue.toLowerCase().indexOf(searchTerm.toLowerCase()) !== -1) {
+                nodesToReplace.push(node);
+            }
+        }
+
+        nodesToReplace.forEach(function(node) {
+            var text = node.nodeValue;
+            var regex = new RegExp('(' + escapeRegex(searchTerm) + ')', 'gi');
+            var parts = text.split(regex);
+            if (parts.length > 1) {
+                var span = document.createElement('span');
+                parts.forEach(function(part) {
+                    if (part.toLowerCase() === searchTerm.toLowerCase()) {
+                        var mark = document.createElement('mark');
+                        mark.textContent = part;
+                        span.appendChild(mark);
+                    } else {
+                        span.appendChild(document.createTextNode(part));
+                    }
+                });
+                node.parentNode.replaceChild(span, node);
+            }
+        });
+    }
+
+    function fixInternalLinks(element, pageFile) {
+        // Update all internal anchor links to include the page file
+        var links = element.querySelectorAll('a[href^="#"]');
+        links.forEach(function(link) {
+            var href = link.getAttribute('href');
+            link.setAttribute('href', pageFile + href);
+        });
+    }
+
+    function processPage(pageFile, html, query) {
+        var parser = new DOMParser();
+        var doc = parser.parseFromString(html, 'text/html');
+        var resultsFromPage = 0;
+
+        // Find all message blocks
+        var messages = doc.querySelectorAll('.message');
+        messages.forEach(function(msg) {
+            var text = msg.textContent || '';
+            if (text.toLowerCase().indexOf(query.toLowerCase()) !== -1) {
+                resultsFromPage++;
+
+                // Get the message ID for linking
+                var msgId = msg.id || '';
+                var pageLinkUrl = getPageLinkUrl(pageFile);
+                var link = pageLinkUrl + (msgId ? '#' + msgId : '');
+
+                // Clone the message HTML and highlight matches
+                var clone = msg.cloneNode(true);
+                // Fix internal links to include the page file
+                fixInternalLinks(clone, pageLinkUrl);
+                highlightTextNodes(clone, query);
+
+                var resultDiv = document.createElement('div');
+                resultDiv.className = 'search-result';
+                resultDiv.innerHTML = '<a href="' + link + '">' +
+                    '<div class="search-result-page">' + escapeHtml(pageFile) + '</div>' +
+                    '<div class="search-result-content">' + clone.innerHTML + '</div>' +
+                    '</a>';
+                searchResults.appendChild(resultDiv);
+            }
+        });
+
+        return resultsFromPage;
+    }
+
+    async function performSearch(query) {
+        if (!query.trim()) {
+            searchStatus.textContent = 'Enter a search term';
+            return;
+        }
+
+        updateUrlHash(query);
+        searchResults.innerHTML = '';
+        searchStatus.textContent = 'Searching...';
+
+        // Load gist info if on gistpreview (needed for constructing URLs)
+        if (isGistPreview && !gistInfoLoaded) {
+            searchStatus.textContent = 'Loading gist info...';
+            await loadGistInfo();
+            if (!gistOwner) {
+                searchStatus.textContent = 'Failed to load gist info. Search unavailable.';
+                return;
+            }
+        }
+
+        var resultsFound = 0;
+        var pagesSearched = 0;
+
+        // Build list of pages to fetch
+        var pagesToFetch = [];
+        for (var i = 1; i <= totalPages; i++) {
+            pagesToFetch.push('page-' + String(i).padStart(3, '0') + '.html');
+        }
+
+        searchStatus.textContent = 'Searching...';
+
+        // Process pages in batches of 3, but show results immediately as each completes
+        var batchSize = 3;
+        for (var i = 0; i < pagesToFetch.length; i += batchSize) {
+            var batch = pagesToFetch.slice(i, i + batchSize);
+
+            // Create promises that process results immediately when each fetch completes
+            var promises = batch.map(function(pageFile) {
+                return fetch(getPageFetchUrl(pageFile))
+                    .then(function(response) {
+                        if (!response.ok) throw new Error('Failed to fetch');
+                        return response.text();
+                    })
+                    .then(function(html) {
+                        // Process and display results immediately
+                        var count = processPage(pageFile, html, query);
+                        resultsFound += count;
+                        pagesSearched++;
+                        searchStatus.textContent = 'Found ' + resultsFound + ' result(s) in ' + pagesSearched + '/' + totalPages + ' pages...';
+                    })
+                    .catch(function() {
+                        pagesSearched++;
+                        searchStatus.textContent = 'Found ' + resultsFound + ' result(s) in ' + pagesSearched + '/' + totalPages + ' pages...';
+                    });
+            });
+
+            // Wait for this batch to complete before starting the next
+            await Promise.all(promises);
+        }
+
+        searchStatus.textContent = 'Found ' + resultsFound + ' result(s) in ' + totalPages + ' pages';
+    }
+
+    // Event listeners
+    searchBtn.addEventListener('click', function() {
+        openModal(searchInput.value);
+    });
+
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            openModal(searchInput.value);
+        }
+    });
+
+    modalSearchBtn.addEventListener('click', function() {
+        performSearch(modalInput.value);
+    });
+
+    modalInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            performSearch(modalInput.value);
+        }
+    });
+
+    modalCloseBtn.addEventListener('click', closeModal);
+
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+
+    // Check for #search= in URL on page load
+    if (window.location.hash.startsWith('#search=')) {
+        var query = decodeURIComponent(window.location.hash.substring(8));
+        if (query) {
+            searchInput.value = query;
+            openModal(query);
+        }
+    }
+})();
+        </script>
+    </div>
+    <script>
+document.querySelectorAll('time[data-timestamp]').forEach(function(el) {
+    const timestamp = el.getAttribute('data-timestamp');
+    const date = new Date(timestamp);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    if (isToday) { el.textContent = timeStr; }
+    else { el.textContent = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + timeStr; }
+});
+document.querySelectorAll('pre.json').forEach(function(el) {
+    let text = el.textContent;
+    text = text.replace(/"([^"]+)":/g, '<span style="color: #ce93d8">"$1"</span>:');
+    text = text.replace(/: "([^"]*)"/g, ': <span style="color: #81d4fa">"$1"</span>');
+    text = text.replace(/: (\d+)/g, ': <span style="color: #ffcc80">$1</span>');
+    text = text.replace(/: (true|false|null)/g, ': <span style="color: #f48fb1">$1</span>');
+    el.innerHTML = text;
+});
+document.querySelectorAll('.truncatable').forEach(function(wrapper) {
+    const content = wrapper.querySelector('.truncatable-content');
+    const btn = wrapper.querySelector('.expand-btn');
+    if (content.scrollHeight > 250) {
+        wrapper.classList.add('truncated');
+        btn.addEventListener('click', function() {
+            if (wrapper.classList.contains('truncated')) { wrapper.classList.remove('truncated'); wrapper.classList.add('expanded'); btn.textContent = 'Show less'; }
+            else { wrapper.classList.remove('expanded'); wrapper.classList.add('truncated'); btn.textContent = 'Show more'; }
+        });
+    }
+});
+</script>
+</body>
+</html>

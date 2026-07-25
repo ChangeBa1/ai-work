@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code transcript - page 1</title>
+    <style>
+:root { --bg-color: #f5f5f5; --card-bg: #ffffff; --user-bg: #e3f2fd; --user-border: #1976d2; --assistant-bg: #f5f5f5; --assistant-border: #9e9e9e; --thinking-bg: #fff8e1; --thinking-border: #ffc107; --thinking-text: #666; --tool-bg: #f3e5f5; --tool-border: #9c27b0; --tool-result-bg: #e8f5e9; --tool-error-bg: #ffebee; --text-color: #212121; --text-muted: #757575; --code-bg: #263238; --code-text: #aed581; }
+* { box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 16px; line-height: 1.6; }
+.container { max-width: 800px; margin: 0 auto; }
+h1 { font-size: 1.5rem; margin-bottom: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--user-border); }
+.header-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 2px solid var(--user-border); padding-bottom: 8px; margin-bottom: 24px; }
+.header-row h1 { border-bottom: none; padding-bottom: 0; margin-bottom: 0; flex: 1; min-width: 200px; }
+.message { margin-bottom: 16px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.message.user { background: var(--user-bg); border-left: 4px solid var(--user-border); }
+.message.assistant { background: var(--card-bg); border-left: 4px solid var(--assistant-border); }
+.message.tool-reply { background: #fff8e1; border-left: 4px solid #ff9800; }
+.tool-reply .role-label { color: #e65100; }
+.tool-reply .tool-result { background: transparent; padding: 0; margin: 0; }
+.tool-reply .tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff8e1); }
+.message-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: rgba(0,0,0,0.03); font-size: 0.85rem; }
+.role-label { font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.user .role-label { color: var(--user-border); }
+time { color: var(--text-muted); font-size: 0.8rem; }
+.timestamp-link { color: inherit; text-decoration: none; }
+.timestamp-link:hover { text-decoration: underline; }
+.message:target { animation: highlight 2s ease-out; }
+@keyframes highlight { 0% { background-color: rgba(25, 118, 210, 0.2); } 100% { background-color: transparent; } }
+.message-content { padding: 16px; }
+.message-content p { margin: 0 0 12px 0; }
+.message-content p:last-child { margin-bottom: 0; }
+.thinking { background: var(--thinking-bg); border: 1px solid var(--thinking-border); border-radius: 8px; padding: 12px; margin: 12px 0; font-size: 0.9rem; color: var(--thinking-text); }
+.thinking-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #f57c00; margin-bottom: 8px; }
+.thinking p { margin: 8px 0; }
+.assistant-text { margin: 8px 0; }
+.tool-use { background: var(--tool-bg); border: 1px solid var(--tool-border); border-radius: 8px; padding: 12px; margin: 12px 0; }
+.tool-header { font-weight: 600; color: var(--tool-border); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.tool-icon { font-size: 1.1rem; }
+.tool-description { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 8px; font-style: italic; }
+.tool-result { background: var(--tool-result-bg); border-radius: 8px; padding: 12px; margin: 12px 0; }
+.tool-result.tool-error { background: var(--tool-error-bg); }
+.file-tool { border-radius: 8px; padding: 12px; margin: 12px 0; }
+.write-tool { background: linear-gradient(135deg, #e3f2fd 0%, #e8f5e9 100%); border: 1px solid #4caf50; }
+.edit-tool { background: linear-gradient(135deg, #fff3e0 0%, #fce4ec 100%); border: 1px solid #ff9800; }
+.file-tool-header { font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.write-header { color: #2e7d32; }
+.edit-header { color: #e65100; }
+.file-tool-icon { font-size: 1rem; }
+.file-tool-path { font-family: monospace; background: rgba(0,0,0,0.08); padding: 2px 8px; border-radius: 4px; }
+.file-tool-fullpath { font-family: monospace; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px; word-break: break-all; }
+.file-content { margin: 0; }
+.edit-section { display: flex; margin: 4px 0; border-radius: 4px; overflow: hidden; }
+.edit-label { padding: 8px 12px; font-weight: bold; font-family: monospace; display: flex; align-items: flex-start; }
+.edit-old { background: #fce4ec; }
+.edit-old .edit-label { color: #b71c1c; background: #f8bbd9; }
+.edit-old .edit-content { color: #880e4f; }
+.edit-new { background: #e8f5e9; }
+.edit-new .edit-label { color: #1b5e20; background: #a5d6a7; }
+.edit-new .edit-content { color: #1b5e20; }
+.edit-content { margin: 0; flex: 1; background: transparent; font-size: 0.85rem; }
+.edit-replace-all { font-size: 0.75rem; font-weight: normal; color: var(--text-muted); }
+.write-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #e6f4ea); }
+.edit-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff0e5); }
+.todo-list { background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); border: 1px solid #81c784; border-radius: 8px; padding: 12px; margin: 12px 0; }
+.todo-header { font-weight: 600; color: #2e7d32; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.todo-items { list-style: none; margin: 0; padding: 0; }
+.todo-item { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.06); font-size: 0.9rem; }
+.todo-item:last-child { border-bottom: none; }
+.todo-icon { flex-shrink: 0; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 50%; }
+.todo-completed .todo-icon { color: #2e7d32; background: rgba(46, 125, 50, 0.15); }
+.todo-completed .todo-content { color: #558b2f; text-decoration: line-through; }
+.todo-in-progress .todo-icon { color: #f57c00; background: rgba(245, 124, 0, 0.15); }
+.todo-in-progress .todo-content { color: #e65100; font-weight: 500; }
+.todo-pending .todo-icon { color: #757575; background: rgba(0,0,0,0.05); }
+.todo-pending .todo-content { color: #616161; }
+pre { background: var(--code-bg); color: var(--code-text); padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; line-height: 1.5; margin: 8px 0; white-space: pre-wrap; word-wrap: break-word; }
+pre.json { color: #e0e0e0; }
+code { background: rgba(0,0,0,0.08); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+pre code { background: none; padding: 0; }
+.user-content { margin: 0; }
+.truncatable { position: relative; }
+.truncatable.truncated .truncatable-content { max-height: 200px; overflow: hidden; }
+.truncatable.truncated::after { content: ''; position: absolute; bottom: 32px; left: 0; right: 0; height: 60px; background: linear-gradient(to bottom, transparent, var(--card-bg)); pointer-events: none; }
+.message.user .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--user-bg)); }
+.message.tool-reply .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff8e1); }
+.tool-use .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-bg)); }
+.tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-result-bg)); }
+.expand-btn { display: none; width: 100%; padding: 8px 16px; margin-top: 4px; background: rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; cursor: pointer; font-size: 0.85rem; color: var(--text-muted); }
+.expand-btn:hover { background: rgba(0,0,0,0.1); }
+.truncatable.truncated .expand-btn, .truncatable.expanded .expand-btn { display: block; }
+.pagination { display: flex; justify-content: center; gap: 8px; margin: 24px 0; flex-wrap: wrap; }
+.pagination a, .pagination span { padding: 5px 10px; border-radius: 6px; text-decoration: none; font-size: 0.85rem; }
+.pagination a { background: var(--card-bg); color: var(--user-border); border: 1px solid var(--user-border); }
+.pagination a:hover { background: var(--user-bg); }
+.pagination .current { background: var(--user-border); color: white; }
+.pagination .disabled { color: var(--text-muted); border: 1px solid #ddd; }
+.pagination .index-link { background: var(--user-border); color: white; }
+details.continuation { margin-bottom: 16px; }
+details.continuation summary { cursor: pointer; padding: 12px 16px; background: var(--user-bg); border-left: 4px solid var(--user-border); border-radius: 12px; font-weight: 500; color: var(--text-muted); }
+details.continuation summary:hover { background: rgba(25, 118, 210, 0.15); }
+details.continuation[open] summary { border-radius: 12px 12px 0 0; margin-bottom: 0; }
+.index-item { margin-bottom: 16px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); background: var(--user-bg); border-left: 4px solid var(--user-border); }
+.index-item a { display: block; text-decoration: none; color: inherit; }
+.index-item a:hover { background: rgba(25, 118, 210, 0.1); }
+.index-item-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: rgba(0,0,0,0.03); font-size: 0.85rem; }
+.index-item-number { font-weight: 600; color: var(--user-border); }
+.index-item-content { padding: 16px; }
+.index-item-stats { padding: 8px 16px 12px 32px; font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid rgba(0,0,0,0.06); }
+.index-item-commit { margin-top: 6px; padding: 4px 8px; background: #fff3e0; border-radius: 4px; font-size: 0.85rem; color: #e65100; }
+.index-item-commit code { background: rgba(0,0,0,0.08); padding: 1px 4px; border-radius: 3px; font-size: 0.8rem; margin-right: 6px; }
+.commit-card { margin: 8px 0; padding: 10px 14px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 6px; }
+.commit-card a { text-decoration: none; color: #5d4037; display: block; }
+.commit-card a:hover { color: #e65100; }
+.commit-card-hash { font-family: monospace; color: #e65100; font-weight: 600; margin-right: 8px; }
+.index-commit { margin-bottom: 12px; padding: 10px 16px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+.index-commit a { display: block; text-decoration: none; color: inherit; }
+.index-commit a:hover { background: rgba(255, 152, 0, 0.1); margin: -10px -16px; padding: 10px 16px; border-radius: 8px; }
+.index-commit-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; margin-bottom: 4px; }
+.index-commit-hash { font-family: monospace; color: #e65100; font-weight: 600; }
+.index-commit-msg { color: #5d4037; }
+.index-item-long-text { margin-top: 8px; padding: 12px; background: var(--card-bg); border-radius: 8px; border-left: 3px solid var(--assistant-border); }
+.index-item-long-text .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--card-bg)); }
+.index-item-long-text-content { color: var(--text-color); }
+#search-box { display: none; align-items: center; gap: 8px; }
+#search-box input { padding: 6px 12px; border: 1px solid var(--assistant-border); border-radius: 6px; font-size: 16px; width: 180px; }
+#search-box button, #modal-search-btn, #modal-close-btn { background: var(--user-border); color: white; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+#search-box button:hover, #modal-search-btn:hover { background: #1565c0; }
+#modal-close-btn { background: var(--text-muted); margin-left: 8px; }
+#modal-close-btn:hover { background: #616161; }
+#search-modal[open] { border: none; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.2); padding: 0; width: 90vw; max-width: 900px; height: 80vh; max-height: 80vh; display: flex; flex-direction: column; }
+#search-modal::backdrop { background: rgba(0,0,0,0.5); }
+.search-modal-header { display: flex; align-items: center; gap: 8px; padding: 16px; border-bottom: 1px solid var(--assistant-border); background: var(--bg-color); border-radius: 12px 12px 0 0; }
+.search-modal-header input { flex: 1; padding: 8px 12px; border: 1px solid var(--assistant-border); border-radius: 6px; font-size: 16px; }
+#search-status { padding: 8px 16px; font-size: 0.85rem; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); }
+#search-results { flex: 1; overflow-y: auto; padding: 16px; }
+.search-result { margin-bottom: 16px; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.search-result a { display: block; text-decoration: none; color: inherit; }
+.search-result a:hover { background: rgba(25, 118, 210, 0.05); }
+.search-result-page { padding: 6px 12px; background: rgba(0,0,0,0.03); font-size: 0.8rem; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); }
+.search-result-content { padding: 12px; }
+.search-result mark { background: #fff59d; padding: 1px 2px; border-radius: 2px; }
+@media (max-width: 600px) { body { padding: 8px; } .message, .index-item { border-radius: 8px; } .message-content, .index-item-content { padding: 12px; } pre { font-size: 0.8rem; padding: 8px; } #search-box input { width: 120px; } #search-modal[open] { width: 95vw; height: 90vh; } }
+</style>
+</head>
+<body>
+    <div class="container">
+        <h1><a href="index.html" style="color: inherit; text-decoration: none;">Claude Code transcript</a> - page 1/1</h1>
+        
+
+<div class="pagination"><a href="index.html" class="index-link">Index</a></div>
+
+        
+<div class="message user" id="msg-2026-07-20T01-09-08-731Z"><div class="message-header"><span class="role-label">User</span><a href="#msg-2026-07-20T01-09-08-731Z" class="timestamp-link"><time datetime="2026-07-20T01:09:08.731Z" data-timestamp="2026-07-20T01:09:08.731Z">2026-07-20T01:09:08.731Z</time></a></div><div class="message-content">
+<div class="user-content"><p>帮我安装：https://github.com/simonw/claude-code-transcripts</p></div></div></div>
+<div class="message assistant" id="msg-2026-07-20T01-09-12-756Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2026-07-20T01-09-12-756Z" class="timestamp-link"><time datetime="2026-07-20T01:09:12.756Z" data-timestamp="2026-07-20T01:09:12.756Z">2026-07-20T01:09:12.756Z</time></a></div><div class="message-content">
+<div class="thinking"><div class="thinking-label">Thinking</div></div></div></div>
+<div class="message assistant" id="msg-2026-07-20T01-09-13-676Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2026-07-20T01-09-13-676Z" class="timestamp-link"><time datetime="2026-07-20T01:09:13.676Z" data-timestamp="2026-07-20T01:09:13.676Z">2026-07-20T01:09:13.676Z</time></a></div><div class="message-content">
+<div class="assistant-text"><p>我先查看这个仓库的说明，确认正确的安装方式。</p></div></div></div>
+<div class="message assistant" id="msg-2026-07-20T01-09-13-706Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2026-07-20T01-09-13-706Z" class="timestamp-link"><time datetime="2026-07-20T01:09:13.706Z" data-timestamp="2026-07-20T01:09:13.706Z">2026-07-20T01:09:13.706Z</time></a></div><div class="message-content">
+<div class="tool-use" data-tool-id="toolu_01PEEuVGP41ez55aNCWmsF1X"><div class="tool-header"><span class="tool-icon">⚙</span> ToolSearch</div><div class="truncatable"><div class="truncatable-content"><pre class="json">{
+  &#34;query&#34;: &#34;select:WebFetch&#34;
+}</pre></div><button class="expand-btn">Show more</button></div></div></div></div>
+<div class="message tool-reply" id="msg-2026-07-20T01-09-14-510Z"><div class="message-header"><span class="role-label">Tool reply</span><a href="#msg-2026-07-20T01-09-14-510Z" class="timestamp-link"><time datetime="2026-07-20T01:09:14.510Z" data-timestamp="2026-07-20T01:09:14.510Z">2026-07-20T01:09:14.510Z</time></a></div><div class="message-content"><div class="tool-result"><div class="truncatable"><div class="truncatable-content"><pre class="json">{
+  &quot;type&quot;: &quot;tool_reference&quot;,
+  &quot;tool_name&quot;: &quot;WebFetch&quot;
+}</pre></div><button class="expand-btn">Show more</button></div></div></div></div>
+<div class="message assistant" id="msg-2026-07-20T01-09-16-933Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2026-07-20T01-09-16-933Z" class="timestamp-link"><time datetime="2026-07-20T01:09:16.933Z" data-timestamp="2026-07-20T01:09:16.933Z">2026-07-20T01:09:16.933Z</time></a></div><div class="message-content">
+<div class="tool-use bash-tool" data-tool-id="toolu_014TQznkPs8MPd6XiL2v9JBr">
+<div class="tool-header"><span class="tool-icon">$</span> Bash</div>
+<div class="tool-description">Check GitHub repo info and README</div><div class="truncatable"><div class="truncatable-content"><pre class="bash-command">gh repo view simonw/claude-code-transcripts --json description,name 2&gt;&amp;1; echo &#34;---&#34;; gh api repos/simonw/claude-code-transcripts/contents/README.md --jq &#39;.content&#39; 2&gt;&amp;1 | head -c 100</pre></div><button class="expand-btn">Show more</button></div>
+</div></div></div>
+<div class="message tool-reply" id="msg-2026-07-20T01-09-21-758Z"><div class="message-header"><span class="role-label">Tool reply</span><a href="#msg-2026-07-20T01-09-21-758Z" class="timestamp-link"><time datetime="2026-07-20T01:09:21.758Z" data-timestamp="2026-07-20T01:09:21.758Z">2026-07-20T01:09:21.758Z</time></a></div><div class="message-content"><div class="tool-result"><div class="truncatable"><div class="truncatable-content"><pre>{&quot;description&quot;:&quot;Tools for publishing transcripts for Claude Code sessions&quot;,&quot;name&quot;:&quot;claude-code-transcripts&quot;}
+---
+IyBjbGF1ZGUtY29kZS10cmFuc2NyaXB0cwoKWyFbUHlQSV0oaHR0cHM6Ly9p
+bWcuc2hpZWxkcy5pby9weXBpL3YvY2xhdWRlLWN</pre></div><button class="expand-btn">Show more</button></div></div></div></div>
+<div class="message assistant" id="msg-2026-07-20T01-09-23-497Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2026-07-20T01-09-23-497Z" class="timestamp-link"><time datetime="2026-07-20T01:09:23.497Z" data-timestamp="2026-07-20T01:09:23.497Z">2026-07-20T01:09:23.497Z</time></a></div><div class="message-content">
+<div class="thinking"><div class="thinking-label">Thinking</div></div></div></div>
+<div class="message assistant" id="msg-2026-07-20T01-09-23-952Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2026-07-20T01-09-23-952Z" class="timestamp-link"><time datetime="2026-07-20T01:09:23.952Z" data-timestamp="2026-07-20T01:09:23.952Z">2026-07-20T01:09:23.952Z</time></a></div><div class="message-content">
+<div class="tool-use bash-tool" data-tool-id="toolu_01DrVTLWBkM4DEoERitJx9tn">
+<div class="tool-header"><span class="tool-icon">$</span> Bash</div>
+<div class="tool-description">Fetch and decode README content</div><div class="truncatable"><div class="truncatable-content"><pre class="bash-command">gh api repos/simonw/claude-code-transcripts/contents/README.md --jq &#39;.content&#39; | base64 -d</pre></div><button class="expand-btn">Show more</button></div>
+</div></div></div>
+<div class="message tool-reply" id="msg-2026-07-20T01-09-25-359Z"><div class="message-header"><span class="role-label">Tool reply</span><a href="#msg-2026-07-20T01-09-25-359Z" class="timestamp-link"><time datetime="2026-07-20T01:09:25.359Z" data-timestamp="2026-07-20T01:09:25.359Z">2026-07-20T01:09:25.359Z</time></a></div><div class="message-content"><div class="tool-result"><div class="truncatable"><div class="truncatable-content"><pre># claude-code-transcripts
+
+[![PyPI](https://img.shields.io/pypi/v/claude-code-transcripts.svg)](https://pypi.org/project/claude-code-transcripts/)
+[![Changelog](https://img.shields.io/github/v/release/simonw/claude-code-transcripts?include_prereleases&amp;label=changelog)](https://github.com/simonw/claude-code-transcripts/releases)
+[![Tests](https://github.com/simonw/claude-code-transcripts/workflows/Test/badge.svg)](https://github.com/simonw/claude-code-transcripts/actions?query=workflow%3ATest)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://github.com/simonw/claude-code-transcripts/blob/main/LICENSE)
+
+Convert Claude Code session files (JSON or JSONL) to clean, mobile-friendly HTML pages with pagination.
+
+[Example transcript](https://static.simonwillison.net/static/2025/claude-code-microjs/index.html) produced using this tool.
+
+Read [A new way to extract detailed transcripts from Claude Code](https://simonwillison.net/2025/Dec/25/claude-code-transcripts/) for background on this project.
+
+&gt; [!WARNING]
+&gt;
+&gt; The `web` commands for both listing Claude Code for web sessions and converting those to a transcript are both broken right now due to changes to the unofficial and undocumented APIs that these commands were using. See [issue #77](https://github.com/simonw/claude-code-transcripts/issues/77) for details.
+
+## Installation
+
+Install this tool using `uv`:
+```bash
+uv tool install claude-code-transcripts
+```
+Or run it without installing:
+```bash
+uvx claude-code-transcripts --help
+```
+
+## Usage
+
+This tool converts Claude Code session files into browseable multi-page HTML transcripts.
+
+There are four commands available:
+
+- `local` (default) - select from local Claude Code sessions stored in `~/.claude/projects`
+- `web` - select from web sessions via the Claude API
+- `json` - convert a specific JSON or JSONL session file
+- `all` - convert all local sessions to a browsable HTML archive
+
+The quickest way to view a recent local session:
+
+```bash
+claude-code-transcripts
+```
+
+This shows an interactive picker to select a session, generates HTML, and opens it in your default browser.
+
+### Output options
+
+All commands support these options:
+
+- `-o, --output DIRECTORY` - output directory (default: writes to temp dir and opens browser)
+- `-a, --output-auto` - auto-name output subdirectory based on session ID or filename
+- `--repo OWNER/NAME` - GitHub repo for commit links (auto-detected if not specified). For `web` command, also filters the session list.
+- `--open` - open the generated `index.html` in your default browser (default if no `-o` specified)
+- `--gist` - upload the generated HTML files to a GitHub Gist and output a preview URL
+- `--json` - include the original session file in the output directory
+
+The generated output includes:
+- `index.html` - an index page with a timeline of prompts and commits
+- `page-001.html`, `page-002.html`, etc. - paginated transcript pages
+
+### Local sessions
+
+Local Claude Code sessions are stored as JSONL files in `~/.claude/projects`. Run with no arguments to select from recent sessions:
+
+```bash
+claude-code-transcripts
+# or explicitly:
+claude-code-transcripts local
+```
+
+Use `--limit` to control how many sessions are shown (default: 10):
+
+```bash
+claude-code-transcripts local --limit 20
+```
+
+### Web sessions
+
+Import sessions directly from the Claude API:
+
+```bash
+# Interactive session picker
+claude-code-transcripts web
+
+# Import a specific session by ID
+claude-code-transcripts web SESSION_ID
+
+# Import and publish to gist
+claude-code-transcripts web SESSION_ID --gist
+```
+
+The session picker displays sessions grouped by their associated GitHub repository:
+
+```
+simonw/datasette              2025-01-15T10:30:00  Fix the bug in query parser
+simonw/llm                    2025-01-14T09:00:00  Add streaming support
+(no repo)                     2025-01-13T14:22:00  General coding session
+```
+
+Use `--repo` to filter the session list to a specific repository:
+
+```bash
+claude-code-transcripts web --repo simonw/datasette
+```
+
+On macOS, API credentials are automatically retrieved from your keychain (requires being logged into Claude Code). On other platforms, provide `--token` and `--org-uuid` manually.
+
+### Publishing to GitHub Gist
+
+Use the `--gist` option to automatically upload your transcript to a GitHub Gist and get a shareable preview URL:
+
+```bash
+claude-code-transcripts --gist
+claude-code-transcripts web --gist
+claude-code-transcripts json session.json --gist
+```
+
+This will output something like:
+```
+Gist: https://gist.github.com/username/abc123def456
+Preview: https://gisthost.github.io/?abc123def456/index.html
+Files: /var/folders/.../session-id
+```
+
+The preview URL uses [gisthost.github.io](https://gisthost.github.io/) to render your HTML gist. The tool automatically injects JavaScript to fix relative links when served through gisthost.
+
+Combine with `-o` to keep a local copy:
+
+```bash
+claude-code-transcripts json session.json -o ./my-transcript --gist
+```
+
+**Requirements:** The `--gist` option requires the [GitHub CLI](https://cli.github.com/) (`gh`) to be installed and authenticated (`gh auth login`).
+
+### Auto-naming output directories
+
+Use `-a/--output-auto` to automatically create a subdirectory named after the session:
+
+```bash
+# Creates ./session_ABC123/ subdirectory
+claude-code-transcripts web SESSION_ABC123 -a
+
+# Creates ./transcripts/session_ABC123/ subdirectory
+claude-code-transcripts web SESSION_ABC123 -o ./transcripts -a
+```
+
+### Including the source file
+
+Use the `--json` option to include the original session file in the output directory:
+
+```bash
+claude-code-transcripts json session.json -o ./my-transcript --json
+```
+
+This will output:
+```
+JSON: ./my-transcript/session_ABC.json (245.3 KB)
+```
+
+This is useful for archiving the source data alongside the HTML output.
+
+### Converting from JSON/JSONL files
+
+Convert a specific session file directly:
+
+```bash
+claude-code-transcripts json session.json -o output-directory/
+claude-code-transcripts json session.jsonl --open
+```
+This works with both JSONL files in the `~/.claude/projects/` folder and JSON session files extracted from Claude Code for web.
+
+The `json` command can take a URL to a JSON or JSONL file as an alternative to a path on disk.
+
+### Converting all sessions
+
+Convert all your local Claude Code sessions to a browsable HTML archive:
+
+```bash
+claude-code-transcripts all
+```
+
+This creates a directory structure with:
+- A master index listing all projects
+- Per-project pages listing sessions
+- Individual session transcripts
+
+Options:
+
+- `-s, --source DIRECTORY` - source directory (default: `~/.claude/projects`)
+- `-o, --output DIRECTORY` - output directory (default: `./claude-archive`)
+- `--include-agents` - include agent session files (excluded by default)
+- `--dry-run` - show what would be converted without creating files
+- `--open` - open the generated archive in your default browser
+- `-q, --quiet` - suppress all output except errors
+
+Examples:
+
+```bash
+# Preview what would be converted
+claude-code-transcripts all --dry-run
+
+# Convert all sessions and open in browser
+claude-code-transcripts all --open
+
+# Convert to a specific directory
+claude-code-transcripts all -o ./my-archive
+
+# Include agent sessions
+claude-code-transcripts all --include-agents
+```
+
+## Development
+
+To contribute to this tool, first checkout the code. You can run the tests using `uv run`:
+```bash
+cd claude-code-transcripts
+uv run pytest
+```
+And run your local development copy of the tool like this:
+```bash
+uv run claude-code-transcripts --help
+```</pre></div><button class="expand-btn">Show more</button></div></div></div></div>
+<div class="message assistant" id="msg-2026-07-20T01-09-27-167Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2026-07-20T01-09-27-167Z" class="timestamp-link"><time datetime="2026-07-20T01:09:27.167Z" data-timestamp="2026-07-20T01:09:27.167Z">2026-07-20T01:09:27.167Z</time></a></div><div class="message-content">
+<div class="thinking"><div class="thinking-label">Thinking</div></div></div></div>
+<div class="message assistant" id="msg-2026-07-20T01-09-28-221Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2026-07-20T01-09-28-221Z" class="timestamp-link"><time datetime="2026-07-20T01:09:28.221Z" data-timestamp="2026-07-20T01:09:28.221Z">2026-07-20T01:09:28.221Z</time></a></div><div class="message-content">
+<div class="assistant-text"><p>这是 Simon Willison 写的一个 Python CLI 工具，用于把 Claude Code 会话转成可浏览的 HTML transcript，推荐用 <code>uv</code> 安装。我先检查环境里有没有 <code>uv</code>。</p></div></div></div>
+<div class="message assistant" id="msg-2026-07-20T01-09-28-952Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2026-07-20T01-09-28-952Z" class="timestamp-link"><time datetime="2026-07-20T01:09:28.952Z" data-timestamp="2026-07-20T01:09:28.952Z">2026-07-20T01:09:28.952Z</time></a></div><div class="message-content">
+<div class="tool-use bash-tool" data-tool-id="toolu_013UHEkVbiV8nHFZhsJq6aUQ">
+<div class="tool-header"><span class="tool-icon">$</span> Bash</div>
+<div class="tool-description">Check for uv, pipx, python availability</div><div class="truncatable"><div class="truncatable-content"><pre class="bash-command">command -v uv &amp;&amp; uv --version; echo &#34;---&#34;; command -v pipx &amp;&amp; pipx --version; echo &#34;---python---&#34;; command -v python &amp;&amp; python --version; command -v python3 &amp;&amp; python3 --version</pre></div><button class="expand-btn">Show more</button></div>
+</div></div></div>
+<div class="message tool-reply" id="msg-2026-07-20T01-09-37-115Z"><div class="message-header"><span class="role-label">Tool reply</span><a href="#msg-2026-07-20T01-09-37-115Z" class="timestamp-link"><time datetime="2026-07-20T01:09:37.115Z" data-timestamp="2026-07-20T01:09:37.115Z">2026-07-20T01:09:37.115Z</time></a></div><div class="message-content"><div class="tool-result tool-error"><div class="truncatable"><div class="truncatable-content"><pre>Exit code 49
+/c/Users/kashidashi01/AppData/Local/Programs/Python/Python312/Scripts/uv
+uv 0.11.26 (396ef7ce4 2026-06-30 x86_64-pc-windows-msvc)
+---
+---python---
+/c/Users/kashidashi01/AppData/Local/Programs/Python/Python312/python
+Python 3.12.10
+/c/Users/kashidashi01/AppData/Local/Microsoft/WindowsApps/python3</pre></div><button class="expand-btn">Show more</button></div></div></div></div>
+<div class="message assistant" id="msg-2026-07-20T01-09-38-902Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2026-07-20T01-09-38-902Z" class="timestamp-link"><time datetime="2026-07-20T01:09:38.902Z" data-timestamp="2026-07-20T01:09:38.902Z">2026-07-20T01:09:38.902Z</time></a></div><div class="message-content">
+<div class="assistant-text"><p>uv 已经安装好了，用它来装这个工具。</p></div></div></div>
+<div class="message assistant" id="msg-2026-07-20T01-09-39-180Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2026-07-20T01-09-39-180Z" class="timestamp-link"><time datetime="2026-07-20T01:09:39.180Z" data-timestamp="2026-07-20T01:09:39.180Z">2026-07-20T01:09:39.180Z</time></a></div><div class="message-content">
+<div class="tool-use bash-tool" data-tool-id="toolu_01A9JNuoqtSUegCNQ9mcgmqL">
+<div class="tool-header"><span class="tool-icon">$</span> Bash</div>
+<div class="tool-description">Install claude-code-transcripts via uv tool</div><div class="truncatable"><div class="truncatable-content"><pre class="bash-command">uv tool install claude-code-transcripts 2&gt;&amp;1</pre></div><button class="expand-btn">Show more</button></div>
+</div></div></div>
+<div class="message tool-reply" id="msg-2026-07-20T01-09-41-475Z"><div class="message-header"><span class="role-label">Tool reply</span><a href="#msg-2026-07-20T01-09-41-475Z" class="timestamp-link"><time datetime="2026-07-20T01:09:41.475Z" data-timestamp="2026-07-20T01:09:41.475Z">2026-07-20T01:09:41.475Z</time></a></div><div class="message-content"><div class="tool-result"><div class="truncatable"><div class="truncatable-content"><pre>Resolved 17 packages in 680ms
+Prepared 8 packages in 414ms
+Installed 17 packages in 230ms
+ + anyio==4.14.2
+ + certifi==2026.6.17
+ + claude-code-transcripts==0.6
+ + click==8.4.2
+ + click-default-group==1.2.4
+ + colorama==0.4.6
+ + h11==0.16.0
+ + httpcore==1.0.9
+ + httpx==0.28.1
+ + idna==3.18
+ + jinja2==3.1.6
+ + markdown==3.10.2
+ + markupsafe==3.0.3
+ + prompt-toolkit==3.0.52
+ + questionary==2.1.1
+ + typing-extensions==4.16.0
+ + wcwidth==0.8.2
+Installed 1 executable: claude-code-transcripts</pre></div><button class="expand-btn">Show more</button></div></div></div></div>
+<div class="message assistant" id="msg-2026-07-20T01-09-43-364Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2026-07-20T01-09-43-364Z" class="timestamp-link"><time datetime="2026-07-20T01:09:43.364Z" data-timestamp="2026-07-20T01:09:43.364Z">2026-07-20T01:09:43.364Z</time></a></div><div class="message-content">
+<div class="tool-use bash-tool" data-tool-id="toolu_016ApvbqbFCH4683EwSyh41b">
+<div class="tool-header"><span class="tool-icon">$</span> Bash</div>
+<div class="tool-description">Verify claude-code-transcripts installed correctly</div><div class="truncatable"><div class="truncatable-content"><pre class="bash-command">claude-code-transcripts --help 2&gt;&amp;1</pre></div><button class="expand-btn">Show more</button></div>
+</div></div></div>
+<div class="message tool-reply" id="msg-2026-07-20T01-09-52-369Z"><div class="message-header"><span class="role-label">Tool reply</span><a href="#msg-2026-07-20T01-09-52-369Z" class="timestamp-link"><time datetime="2026-07-20T01:09:52.369Z" data-timestamp="2026-07-20T01:09:52.369Z">2026-07-20T01:09:52.369Z</time></a></div><div class="message-content"><div class="tool-result"><div class="truncatable"><div class="truncatable-content"><pre>Usage: claude-code-transcripts [OPTIONS] COMMAND [ARGS]...
+
+  Convert Claude Code session JSON to mobile-friendly HTML pages.
+
+Options:
+  -v, --version  Show the version and exit.
+  --help         Show this message and exit.
+
+Commands:
+  local*  Select and convert a local Claude Code session to HTML.
+  all     Convert all local Claude Code sessions to a browsable HTML archive.
+  json    Convert a Claude Code session JSON/JSONL file or URL to HTML.
+  web     Select and convert a web session from the Claude API to HTML.</pre></div><button class="expand-btn">Show more</button></div></div></div></div>
+<div class="message assistant" id="msg-2026-07-20T01-09-56-133Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2026-07-20T01-09-56-133Z" class="timestamp-link"><time datetime="2026-07-20T01:09:56.133Z" data-timestamp="2026-07-20T01:09:56.133Z">2026-07-20T01:09:56.133Z</time></a></div><div class="message-content">
+<div class="assistant-text"><p>已成功安装 <code>claude-code-transcripts</code>（v0.6），通过 <code>uv tool install</code> 安装，命令行工具已可用。</p>
+<p>用法速览：
+- <code>claude-code-transcripts</code> — 交互式选择本地会话（存于 <code>~/.claude/projects</code>），生成 HTML 并在浏览器打开
+- <code>claude-code-transcripts all</code> — 把所有本地会话转成一个可浏览的 HTML 归档
+- <code>claude-code-transcripts json &lt;file&gt;</code> — 转换指定的 JSON/JSONL 会话文件
+- <code>claude-code-transcripts web</code> — 从 Claude API 导入网页版会话（README 提示这个子命令目前因上游 API 变更而故障中）</p>
+<p>需要我现在帮你生成一个 transcript 试试吗？</p></div></div></div>
+        
+
+<div class="pagination"><a href="index.html" class="index-link">Index</a></div>
+
+    </div>
+    <script>
+document.querySelectorAll('time[data-timestamp]').forEach(function(el) {
+    const timestamp = el.getAttribute('data-timestamp');
+    const date = new Date(timestamp);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    if (isToday) { el.textContent = timeStr; }
+    else { el.textContent = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + timeStr; }
+});
+document.querySelectorAll('pre.json').forEach(function(el) {
+    let text = el.textContent;
+    text = text.replace(/"([^"]+)":/g, '<span style="color: #ce93d8">"$1"</span>:');
+    text = text.replace(/: "([^"]*)"/g, ': <span style="color: #81d4fa">"$1"</span>');
+    text = text.replace(/: (\d+)/g, ': <span style="color: #ffcc80">$1</span>');
+    text = text.replace(/: (true|false|null)/g, ': <span style="color: #f48fb1">$1</span>');
+    el.innerHTML = text;
+});
+document.querySelectorAll('.truncatable').forEach(function(wrapper) {
+    const content = wrapper.querySelector('.truncatable-content');
+    const btn = wrapper.querySelector('.expand-btn');
+    if (content.scrollHeight > 250) {
+        wrapper.classList.add('truncated');
+        btn.addEventListener('click', function() {
+            if (wrapper.classList.contains('truncated')) { wrapper.classList.remove('truncated'); wrapper.classList.add('expanded'); btn.textContent = 'Show less'; }
+            else { wrapper.classList.remove('expanded'); wrapper.classList.add('truncated'); btn.textContent = 'Show more'; }
+        });
+    }
+});
+</script>
+</body>
+</html>

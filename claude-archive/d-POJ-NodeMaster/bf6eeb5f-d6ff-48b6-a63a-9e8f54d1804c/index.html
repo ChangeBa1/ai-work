@@ -1,0 +1,2561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code transcript - Index</title>
+    <style>
+:root { --bg-color: #f5f5f5; --card-bg: #ffffff; --user-bg: #e3f2fd; --user-border: #1976d2; --assistant-bg: #f5f5f5; --assistant-border: #9e9e9e; --thinking-bg: #fff8e1; --thinking-border: #ffc107; --thinking-text: #666; --tool-bg: #f3e5f5; --tool-border: #9c27b0; --tool-result-bg: #e8f5e9; --tool-error-bg: #ffebee; --text-color: #212121; --text-muted: #757575; --code-bg: #263238; --code-text: #aed581; }
+* { box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 16px; line-height: 1.6; }
+.container { max-width: 800px; margin: 0 auto; }
+h1 { font-size: 1.5rem; margin-bottom: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--user-border); }
+.header-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 2px solid var(--user-border); padding-bottom: 8px; margin-bottom: 24px; }
+.header-row h1 { border-bottom: none; padding-bottom: 0; margin-bottom: 0; flex: 1; min-width: 200px; }
+.message { margin-bottom: 16px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.message.user { background: var(--user-bg); border-left: 4px solid var(--user-border); }
+.message.assistant { background: var(--card-bg); border-left: 4px solid var(--assistant-border); }
+.message.tool-reply { background: #fff8e1; border-left: 4px solid #ff9800; }
+.tool-reply .role-label { color: #e65100; }
+.tool-reply .tool-result { background: transparent; padding: 0; margin: 0; }
+.tool-reply .tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff8e1); }
+.message-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: rgba(0,0,0,0.03); font-size: 0.85rem; }
+.role-label { font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.user .role-label { color: var(--user-border); }
+time { color: var(--text-muted); font-size: 0.8rem; }
+.timestamp-link { color: inherit; text-decoration: none; }
+.timestamp-link:hover { text-decoration: underline; }
+.message:target { animation: highlight 2s ease-out; }
+@keyframes highlight { 0% { background-color: rgba(25, 118, 210, 0.2); } 100% { background-color: transparent; } }
+.message-content { padding: 16px; }
+.message-content p { margin: 0 0 12px 0; }
+.message-content p:last-child { margin-bottom: 0; }
+.thinking { background: var(--thinking-bg); border: 1px solid var(--thinking-border); border-radius: 8px; padding: 12px; margin: 12px 0; font-size: 0.9rem; color: var(--thinking-text); }
+.thinking-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #f57c00; margin-bottom: 8px; }
+.thinking p { margin: 8px 0; }
+.assistant-text { margin: 8px 0; }
+.tool-use { background: var(--tool-bg); border: 1px solid var(--tool-border); border-radius: 8px; padding: 12px; margin: 12px 0; }
+.tool-header { font-weight: 600; color: var(--tool-border); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.tool-icon { font-size: 1.1rem; }
+.tool-description { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 8px; font-style: italic; }
+.tool-result { background: var(--tool-result-bg); border-radius: 8px; padding: 12px; margin: 12px 0; }
+.tool-result.tool-error { background: var(--tool-error-bg); }
+.file-tool { border-radius: 8px; padding: 12px; margin: 12px 0; }
+.write-tool { background: linear-gradient(135deg, #e3f2fd 0%, #e8f5e9 100%); border: 1px solid #4caf50; }
+.edit-tool { background: linear-gradient(135deg, #fff3e0 0%, #fce4ec 100%); border: 1px solid #ff9800; }
+.file-tool-header { font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.write-header { color: #2e7d32; }
+.edit-header { color: #e65100; }
+.file-tool-icon { font-size: 1rem; }
+.file-tool-path { font-family: monospace; background: rgba(0,0,0,0.08); padding: 2px 8px; border-radius: 4px; }
+.file-tool-fullpath { font-family: monospace; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px; word-break: break-all; }
+.file-content { margin: 0; }
+.edit-section { display: flex; margin: 4px 0; border-radius: 4px; overflow: hidden; }
+.edit-label { padding: 8px 12px; font-weight: bold; font-family: monospace; display: flex; align-items: flex-start; }
+.edit-old { background: #fce4ec; }
+.edit-old .edit-label { color: #b71c1c; background: #f8bbd9; }
+.edit-old .edit-content { color: #880e4f; }
+.edit-new { background: #e8f5e9; }
+.edit-new .edit-label { color: #1b5e20; background: #a5d6a7; }
+.edit-new .edit-content { color: #1b5e20; }
+.edit-content { margin: 0; flex: 1; background: transparent; font-size: 0.85rem; }
+.edit-replace-all { font-size: 0.75rem; font-weight: normal; color: var(--text-muted); }
+.write-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #e6f4ea); }
+.edit-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff0e5); }
+.todo-list { background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); border: 1px solid #81c784; border-radius: 8px; padding: 12px; margin: 12px 0; }
+.todo-header { font-weight: 600; color: #2e7d32; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.todo-items { list-style: none; margin: 0; padding: 0; }
+.todo-item { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.06); font-size: 0.9rem; }
+.todo-item:last-child { border-bottom: none; }
+.todo-icon { flex-shrink: 0; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 50%; }
+.todo-completed .todo-icon { color: #2e7d32; background: rgba(46, 125, 50, 0.15); }
+.todo-completed .todo-content { color: #558b2f; text-decoration: line-through; }
+.todo-in-progress .todo-icon { color: #f57c00; background: rgba(245, 124, 0, 0.15); }
+.todo-in-progress .todo-content { color: #e65100; font-weight: 500; }
+.todo-pending .todo-icon { color: #757575; background: rgba(0,0,0,0.05); }
+.todo-pending .todo-content { color: #616161; }
+pre { background: var(--code-bg); color: var(--code-text); padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; line-height: 1.5; margin: 8px 0; white-space: pre-wrap; word-wrap: break-word; }
+pre.json { color: #e0e0e0; }
+code { background: rgba(0,0,0,0.08); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+pre code { background: none; padding: 0; }
+.user-content { margin: 0; }
+.truncatable { position: relative; }
+.truncatable.truncated .truncatable-content { max-height: 200px; overflow: hidden; }
+.truncatable.truncated::after { content: ''; position: absolute; bottom: 32px; left: 0; right: 0; height: 60px; background: linear-gradient(to bottom, transparent, var(--card-bg)); pointer-events: none; }
+.message.user .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--user-bg)); }
+.message.tool-reply .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff8e1); }
+.tool-use .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-bg)); }
+.tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-result-bg)); }
+.expand-btn { display: none; width: 100%; padding: 8px 16px; margin-top: 4px; background: rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; cursor: pointer; font-size: 0.85rem; color: var(--text-muted); }
+.expand-btn:hover { background: rgba(0,0,0,0.1); }
+.truncatable.truncated .expand-btn, .truncatable.expanded .expand-btn { display: block; }
+.pagination { display: flex; justify-content: center; gap: 8px; margin: 24px 0; flex-wrap: wrap; }
+.pagination a, .pagination span { padding: 5px 10px; border-radius: 6px; text-decoration: none; font-size: 0.85rem; }
+.pagination a { background: var(--card-bg); color: var(--user-border); border: 1px solid var(--user-border); }
+.pagination a:hover { background: var(--user-bg); }
+.pagination .current { background: var(--user-border); color: white; }
+.pagination .disabled { color: var(--text-muted); border: 1px solid #ddd; }
+.pagination .index-link { background: var(--user-border); color: white; }
+details.continuation { margin-bottom: 16px; }
+details.continuation summary { cursor: pointer; padding: 12px 16px; background: var(--user-bg); border-left: 4px solid var(--user-border); border-radius: 12px; font-weight: 500; color: var(--text-muted); }
+details.continuation summary:hover { background: rgba(25, 118, 210, 0.15); }
+details.continuation[open] summary { border-radius: 12px 12px 0 0; margin-bottom: 0; }
+.index-item { margin-bottom: 16px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); background: var(--user-bg); border-left: 4px solid var(--user-border); }
+.index-item a { display: block; text-decoration: none; color: inherit; }
+.index-item a:hover { background: rgba(25, 118, 210, 0.1); }
+.index-item-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: rgba(0,0,0,0.03); font-size: 0.85rem; }
+.index-item-number { font-weight: 600; color: var(--user-border); }
+.index-item-content { padding: 16px; }
+.index-item-stats { padding: 8px 16px 12px 32px; font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid rgba(0,0,0,0.06); }
+.index-item-commit { margin-top: 6px; padding: 4px 8px; background: #fff3e0; border-radius: 4px; font-size: 0.85rem; color: #e65100; }
+.index-item-commit code { background: rgba(0,0,0,0.08); padding: 1px 4px; border-radius: 3px; font-size: 0.8rem; margin-right: 6px; }
+.commit-card { margin: 8px 0; padding: 10px 14px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 6px; }
+.commit-card a { text-decoration: none; color: #5d4037; display: block; }
+.commit-card a:hover { color: #e65100; }
+.commit-card-hash { font-family: monospace; color: #e65100; font-weight: 600; margin-right: 8px; }
+.index-commit { margin-bottom: 12px; padding: 10px 16px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+.index-commit a { display: block; text-decoration: none; color: inherit; }
+.index-commit a:hover { background: rgba(255, 152, 0, 0.1); margin: -10px -16px; padding: 10px 16px; border-radius: 8px; }
+.index-commit-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; margin-bottom: 4px; }
+.index-commit-hash { font-family: monospace; color: #e65100; font-weight: 600; }
+.index-commit-msg { color: #5d4037; }
+.index-item-long-text { margin-top: 8px; padding: 12px; background: var(--card-bg); border-radius: 8px; border-left: 3px solid var(--assistant-border); }
+.index-item-long-text .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--card-bg)); }
+.index-item-long-text-content { color: var(--text-color); }
+#search-box { display: none; align-items: center; gap: 8px; }
+#search-box input { padding: 6px 12px; border: 1px solid var(--assistant-border); border-radius: 6px; font-size: 16px; width: 180px; }
+#search-box button, #modal-search-btn, #modal-close-btn { background: var(--user-border); color: white; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+#search-box button:hover, #modal-search-btn:hover { background: #1565c0; }
+#modal-close-btn { background: var(--text-muted); margin-left: 8px; }
+#modal-close-btn:hover { background: #616161; }
+#search-modal[open] { border: none; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.2); padding: 0; width: 90vw; max-width: 900px; height: 80vh; max-height: 80vh; display: flex; flex-direction: column; }
+#search-modal::backdrop { background: rgba(0,0,0,0.5); }
+.search-modal-header { display: flex; align-items: center; gap: 8px; padding: 16px; border-bottom: 1px solid var(--assistant-border); background: var(--bg-color); border-radius: 12px 12px 0 0; }
+.search-modal-header input { flex: 1; padding: 8px 12px; border: 1px solid var(--assistant-border); border-radius: 6px; font-size: 16px; }
+#search-status { padding: 8px 16px; font-size: 0.85rem; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); }
+#search-results { flex: 1; overflow-y: auto; padding: 16px; }
+.search-result { margin-bottom: 16px; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.search-result a { display: block; text-decoration: none; color: inherit; }
+.search-result a:hover { background: rgba(25, 118, 210, 0.05); }
+.search-result-page { padding: 6px 12px; background: rgba(0,0,0,0.03); font-size: 0.8rem; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); }
+.search-result-content { padding: 12px; }
+.search-result mark { background: #fff59d; padding: 1px 2px; border-radius: 2px; }
+@media (max-width: 600px) { body { padding: 8px; } .message, .index-item { border-radius: 8px; } .message-content, .index-item-content { padding: 12px; } pre { font-size: 0.8rem; padding: 8px; } #search-box input { width: 120px; } #search-modal[open] { width: 95vw; height: 90vh; } }
+</style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-row">
+            <h1>Claude Code transcript</h1>
+            <div id="search-box">
+                <input type="text" id="search-input" placeholder="Search..." aria-label="Search transcripts">
+                <button id="search-btn" type="button" aria-label="Search">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+                </button>
+            </div>
+        </div>
+        
+
+<div class="pagination">
+<span class="current">Index</span>
+<span class="disabled">&larr; Prev</span>
+<a href="page-001.html">1</a>
+<a href="page-001.html">Next &rarr;</a>
+</div>
+
+        <p style="color: var(--text-muted); margin-bottom: 24px;">1 prompts · 3 messages · 0 tool calls · 0 commits · 1 pages</p>
+        
+<div class="index-item"><a href="page-001.html#msg-2026-07-09T06-10-50-954Z"><div class="index-item-header"><span class="index-item-number">#1</span><time datetime="2026-07-09T06:10:50.954Z" data-timestamp="2026-07-09T06:10:50.954Z">2026-07-09T06:10:50.954Z</time></div><div class="index-item-content"><p>IMPORTANT EXECUTION MODE FOR CLAUDE CLI:
+- Do not use tools.
+- Do not read or write files.
+- Do not ask for permissions.
+- Produce the requested final markdown directly on stdout.
+- The workflow runner will save stdout to the output path.
+- Ignore any instruction that implies you should write the output file yourself; instead print the full content.</p>
+<p>BEGIN ORIGINAL PROMPT</p>
+<p>你是源码教材项目的信息提取员，不是散文作者。</p>
+<p>任务：根据下面的带行号源码，为本 batch 中的每个文件生成“文件级源码讲解笔记”。</p>
+<p>Batch 信息：
+- Batch ID: batch_011
+- Batch Name: config_config_device_ct6100_modeself
+- Module: config
+- Purpose: 解释项目配置、构建配置、依赖配置和运行时配置加载线索
+- Related Runtime Flows: 需要进一步分析、错误处理流程、日志流程
+- Output Note Path: _sourcebook/notes/batch_011_config_config_device_ct6100_modeself_file_notes.md</p>
+<p>本批文件：
+- Source/Device/Device.BeepSound/Device.BeepSound.csproj
+- Source/Device/Device.BeepSound/packages.config
+- Source/Device/Device.CAFISArch/CAFISArchAbnormalErrorWithoutAttendant.xml
+- Source/Device/Device.CAFISArch/CAFISArchOtherError.xml
+- Source/Device/Device.CAFISArch/Device.CAFISArch.csproj
+- Source/Device/Device.CAFISArch/packages.config
+- Source/Device/Device.CAFISArchLAN/Device.CAFISArchLAN.csproj
+- Source/Device/Device.CAFISArchLAN/Settings/CAFISArchErrorDetailInfo.xml
+- Source/Device/Device.CAFISArchLAN/app.config
+- Source/Device/Device.CAFISArchLAN/packages.config
+- Source/Device/Device.CAFISArchLANSimulator/Device.CAFISArchLANSimulator.csproj
+- Source/Device/Device.CAFISArchLANSimulator/packages.config
+- Source/Device/Device.CAFISArchService/Device.CAFISArchService.csproj
+- Source/Device/Device.CAFISArchService/packages.config
+- Source/Device/Device.CAFISArchSimulator/Device.CAFISArchSimulator.csproj
+- Source/Device/Device.CAFISArchSimulator/packages.config
+- Source/Device/Device.CRM/Device.CRM.csproj
+- Source/Device/Device.CRM/app.config
+- Source/Device/Device.CRM/packages.config
+- Source/Device/Device.CT5100/Device.CT5100.csproj
+- Source/Device/Device.CT5100/packages.config
+- Source/Device/Device.CT6100_ModeSelf/Device.CT6100_ModeSelf.csproj
+- Source/Device/Device.CT6100_ModeSelf/packages.config</p>
+<p>本批任务目标：
+- 为本批每个文件生成可追溯到源码行号的文件级笔记。
+- 重点说明文件职责、对外暴露内容、关键逻辑、依赖关系、错误处理、测试建议和不确定点。
+- 只做文件级源码笔记，不写最终教材正文。</p>
+<p>硬性规则：</p>
+<ol>
+<li>必须基于实际源码。</li>
+<li>每一条技术事实都要引用文件路径和行号。</li>
+<li>不允许编造不存在的函数、参数、返回值、配置项、业务逻辑。</li>
+<li>如果无法确定，请写“需要结合其他文件确认”。</li>
+<li>不要只讲核心函数，小工具函数、边界处理、异常处理也要说明。</li>
+<li>每个文件必须单独成节。</li>
+<li>不要写最终教材章节，只写文件级源码笔记。</li>
+<li>不要省略本批任何文件。</li>
+<li>如果某个文件很简单，也要说明它为什么简单、在项目中承担什么角色。</li>
+<li>如果发现当前 batch 缺少理解该文件所需的上下文，请在“不确定点”中明确列出需要结合哪些文件。</li>
+</ol>
+<p>质量规则：
+- 优先解释运行时行为和业务意图，再补充语法层面的说明。
+- 遇到配置、SQL、脚本、文档、二进制占位文件，也必须说明它对项目理解的作用。
+- 对非文本文件、缺失文件或无法从当前 batch 判断的内容，必须标记“需要结合其他文件确认”或“需要人工确认”，不要猜。
+- 入口、配置加载、请求处理、数据读写、错误处理、日志、测试相关线索要特别标出。
+- 输出中不要出现未引用行号的技术断言。</p>
+<p>覆盖确认要求：
+- 结尾必须输出“本批覆盖确认”表。
+- 表中必须逐一列出本批所有文件。
+- 覆盖状态只能使用：已详细讲解 / 已简略讲解 / 需要结合其他文件确认。</p>
+<p>输出格式：</p>
+<h1>文件级源码笔记：config_config_device_ct6100_modeself</h1>
+<h2>Batch 信息</h2>
+<ul>
+<li>Batch ID: batch_011</li>
+<li>Batch Name: config_config_device_ct6100_modeself</li>
+<li>Module: config</li>
+<li>Purpose: 解释项目配置、构建配置、依赖配置和运行时配置加载线索</li>
+</ul>
+<hr />
+<h2>文件：<path></h2>
+<h3>1. 文件定位</h3>
+<p>说明这个文件在项目中的角色，属于哪个模块，解决什么问题。</p>
+<h3>2. 对外暴露内容</h3>
+<p>列出 class / function / component / API / command / config / export。</p>
+<p>每一项都要包含：
+- 名称
+- 文件路径 + 行号
+- 用途</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>按代码执行顺序解释关键逻辑。</p>
+<p>要求：
+- 引用文件路径和行号
+- 解释运行时会发生什么
+- 不要只翻译代码，要说明代码意图</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>逐个说明：
+- 名称
+- 位置：文件路径 + 行号
+- 输入
+- 输出
+- 副作用
+- 调用关系
+- 边界情况
+- 可能的坑</p>
+<h3>5. 依赖关系</h3>
+<p>说明它依赖哪些文件、库、配置、类型、组件，以及这些依赖的用途。</p>
+<h3>6. 错误处理与边界情况</h3>
+<p>必须引用源码行号。</p>
+<p>如果没有明显错误处理，也要说明“当前文件没有显式错误处理”，并指出可能依赖哪里处理。</p>
+<h3>7. 测试相关</h3>
+<p>说明：
+- 当前输入中是否包含对应测试
+- 如果有，测试覆盖了什么
+- 如果没有，应该如何测试这个文件</p>
+<h3>8. 新人阅读建议</h3>
+<p>告诉新人应该如何理解这个文件，阅读时先看哪里，再看哪里。</p>
+<h3>9. 不确定点</h3>
+<p>列出不能从当前 batch 确认的问题，不要猜。</p>
+<hr />
+<h2>本批覆盖确认</h2>
+<p>请列出本批所有文件，并标记：</p>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>覆盖状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>path</td>
+<td>已详细讲解 / 已简略讲解 / 需要结合其他文件确认</td>
+<td>说明</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p>下面是本批源码：</p>
+<p>FILE: Source/Device/Device.BeepSound/Device.BeepSound.csproj
+00001: [非文本文件，未内联源码。size_bytes=4600, extension=.csproj，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/Device/Device.BeepSound/packages.config
+00001: [非文本文件，未内联源码。size_bytes=171, extension=.config，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/Device/Device.CAFISArch/CAFISArchAbnormalErrorWithoutAttendant.xml
+SHA256: 24494f7ce03184fe7bd356375e48ec602fdc29d238ba8a712ebac2c700536171
+================================================================================
+00001: <?xml version="1.0" standalone="yes"?>
+00002: <CAFISArchAbnormalErrorWithoutAttendantDataSet xmlns="http://tempuri.org/CAFISArchAbnormalErrorWithoutAttendantDataSet.xsd">
+00003:   <AbnormalErrorWithoutAttendant>
+00004:     <BizErrorCode>C20</BizErrorCode>
+00005:   </AbnormalErrorWithoutAttendant>
+00006: </CAFISArchAbnormalErrorWithoutAttendantDataSet></p>
+<hr />
+<p>FILE: Source/Device/Device.CAFISArch/CAFISArchOtherError.xml
+SHA256: c60ab8b17b38803006749622cd866b9ca4bcb246ab6088d2f060214a43c8886d
+================================================================================
+00001: <?xml version="1.0" standalone="yes"?>
+00002: <CAFISArchOtherErrorDataSet xmlns="http://tempuri.org/CAFISArchOtherErrorDataSet.xsd">
+00003:   <Error>
+00004:     <ErrorCode>TFWL0001</ErrorCode>
+00005:     <ErrorMessage>業務開始不可&#xa;サポートしていない業務です</ErrorMessage>
+00006:   </Error>
+00007:   <Error>
+00008:     <ErrorCode>TFWL0002</ErrorCode>
+00009:     <ErrorMessage>中止&#xa;取引を中止しました</ErrorMessage>
+00010:   </Error>
+00011:   <Error>
+00012:     <ErrorCode>TFWL0003</ErrorCode>
+00013:     <ErrorMessage>連携データチェックエラー&#xa;入力された情報が不正です</ErrorMessage>
+00014:   </Error>
+00015:   <Error>
+00016:     <ErrorCode>TFWL0004</ErrorCode>
+00017:     <ErrorMessage>その他の異常終了&#xa;Arch 端末、またはArchセンタに&#xa;おいて、予期せぬエラーが発生し&#xa;ました</ErrorMessage>
+00018:   </Error>
+00019:   <Error>
+00020:     <ErrorCode>TFWC0001</ErrorCode>
+00021:     <ErrorMessage>タンパ検知&#xa;Arch 端末から不正が検知されました</ErrorMessage>
+00022:   </Error>
+00023:   <Error>
+00024:     <ErrorCode>TFWC0002</ErrorCode>
+00025:     <ErrorMessage>電池残量チェックエラー&#xa;電池残量が少なくなっています</ErrorMessage>
+00026:   </Error>
+00027:   <ErrorDetail1>
+00028:     <ErrorCodeDetail1>TJDC2979</ErrorCodeDetail1>
+00029:     <ErrorMessage>事前入力範囲チェックエラー</ErrorMessage>
+00030:     <ErrorCause>マスタ不整合</ErrorCause>
+00031:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00032:   </ErrorDetail1>
+00033:   <ErrorDetail1>
+00034:     <ErrorCodeDetail1>TJDC2995</ErrorCodeDetail1>
+00035:     <ErrorMessage>西暦日付の入力桁数チェック&#xa;エラー</ErrorMessage>
+00036:     <ErrorCause>マスタ不整合</ErrorCause>
+00037:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00038:   </ErrorDetail1>
+00039:   <ErrorDetail1>
+00040:     <ErrorCodeDetail1>TJDC2996</ErrorCodeDetail1>
+00041:     <ErrorMessage>和暦日付の入力桁数チェック&#xa;エラー</ErrorMessage>
+00042:     <ErrorCause>マスタ不整合</ErrorCause>
+00043:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00044:   </ErrorDetail1>
+00045:   <ErrorDetail1>
+00046:     <ErrorCodeDetail1>TJDC2997</ErrorCodeDetail1>
+00047:     <ErrorMessage>和暦日付の固定値設定内容&#xa;チェックエラー</ErrorMessage>
+00048:     <ErrorCause>マスタ不整合</ErrorCause>
+00049:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00050:   </ErrorDetail1>
+00051:   <ErrorDetail1>
+00052:     <ErrorCodeDetail1>TJDC2980</ErrorCodeDetail1>
+00053:     <ErrorMessage>選択したボタンのインデックス&#xa;チェックエラー</ErrorMessage>
+00054:     <ErrorCause>マスタ不整合</ErrorCause>
+00055:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00056:   </ErrorDetail1>
+00057:   <ErrorDetail1>
+00058:     <ErrorCodeDetail1>TJDC2981</ErrorCodeDetail1>
+00059:     <ErrorMessage>入力項目属性チェックエラー</ErrorMessage>
+00060:     <ErrorCause>マスタ不整合</ErrorCause>
+00061:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00062:   </ErrorDetail1>
+00063:   <ErrorDetail1>
+00064:     <ErrorCodeDetail1>TJDC2982</ErrorCodeDetail1>
+00065:     <ErrorMessage>数値項目の入力値チェック&#xa;エラー</ErrorMessage>
+00066:     <ErrorCause>マスタ不整合</ErrorCause>
+00067:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00068:   </ErrorDetail1>
+00069:   <ErrorDetail1>
+00070:     <ErrorCodeDetail1>TJDC2983</ErrorCodeDetail1>
+00071:     <ErrorMessage>入力桁数チェックエラー</ErrorMessage>
+00072:     <ErrorCause>マスタ不整合</ErrorCause>
+00073:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00074:   </ErrorDetail1>
+00075:   <ErrorDetail1>
+00076:     <ErrorCodeDetail1>TJDC2984</ErrorCodeDetail1>
+00077:     <ErrorMessage>ヘルプ参照による分岐エラー</ErrorMessage>
+00078:     <ErrorCause>マスタ不整合</ErrorCause>
+00079:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00080:   </ErrorDetail1>
+00081:   <ErrorDetail1>
+00082:     <ErrorCodeDetail1>TJDC2985</ErrorCodeDetail1>
+00083:     <ErrorMessage>画面番号の設定チェックエラー</ErrorMessage>
+00084:     <ErrorCause>マスタ不整合</ErrorCause>
+00085:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00086:   </ErrorDetail1>
+00087:   <ErrorDetail1>
+00088:     <ErrorCodeDetail1>TJDC2986</ErrorCodeDetail1>
+00089:     <ErrorMessage>制御対象の画面番号チェック&#xa;エラー</ErrorMessage>
+00090:     <ErrorCause>マスタ不整合</ErrorCause>
+00091:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00092:   </ErrorDetail1>
+00093:   <ErrorDetail1>
+00094:     <ErrorCodeDetail1>TJDC2987</ErrorCodeDetail1>
+00095:     <ErrorMessage>画面入力値の数値チェックエラー</ErrorMessage>
+00096:     <ErrorCause>マスタ不整合</ErrorCause>
+00097:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00098:   </ErrorDetail1>
+00099:   <ErrorDetail1>
+00100:     <ErrorCodeDetail1>TJDC2988</ErrorCodeDetail1>
+00101:     <ErrorMessage>上限値と下限値の設定チェック&#xa;エラー</ErrorMessage>
+00102:     <ErrorCause>マスタ不整合</ErrorCause>
+00103:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00104:   </ErrorDetail1>
+00105:   <ErrorDetail1>
+00106:     <ErrorCodeDetail1>TJDC2989</ErrorCodeDetail1>
+00107:     <ErrorMessage>上限値と下限値の数値&#xa;チェックエラー</ErrorMessage>
+00108:     <ErrorCause>マスタ不整合</ErrorCause>
+00109:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00110:   </ErrorDetail1>
+00111:   <ErrorDetail1>
+00112:     <ErrorCodeDetail1>TJDC2990</ErrorCodeDetail1>
+00113:     <ErrorMessage>画面遷移範囲チェックエラー</ErrorMessage>
+00114:     <ErrorCause>マスタ不整合</ErrorCause>
+00115:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00116:   </ErrorDetail1>
+00117:   <ErrorDetail1>
+00118:     <ErrorCodeDetail1>TJDC2991</ErrorCodeDetail1>
+00119:     <ErrorMessage>画面遷移範囲チェックエラー</ErrorMessage>
+00120:     <ErrorCause>マスタ不整合</ErrorCause>
+00121:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00122:   </ErrorDetail1>
+00123:   <ErrorDetail1>
+00124:     <ErrorCodeDetail1>TJDC2992</ErrorCodeDetail1>
+00125:     <ErrorMessage>入力桁数超過エラー</ErrorMessage>
+00126:     <ErrorCause>マスタ不整合</ErrorCause>
+00127:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00128:   </ErrorDetail1>
+00129:   <ErrorDetail1>
+00130:     <ErrorCodeDetail1>TJDC2993</ErrorCodeDetail1>
+00131:     <ErrorMessage>最大値と最小値の設定チェック&#xa;エラー</ErrorMessage>
+00132:     <ErrorCause>マスタ不整合</ErrorCause>
+00133:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00134:   </ErrorDetail1>
+00135:   <ErrorDetail1>
+00136:     <ErrorCodeDetail1>TJDC2994</ErrorCodeDetail1>
+00137:     <ErrorMessage>チェックディジットチェック&#xa;エラー</ErrorMessage>
+00138:     <ErrorCause>マスタ不整合</ErrorCause>
+00139:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00140:   </ErrorDetail1>
+00141:   <ErrorDetail1>
+00142:     <ErrorCodeDetail1>TJDC2957</ErrorCodeDetail1>
+00143:     <ErrorMessage>磁気カードリーダエラー</ErrorMessage>
+00144:     <ErrorCause>デバイス不正</ErrorCause>
+00145:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00146:   </ErrorDetail1>
+00147:   <ErrorDetail1>
+00148:     <ErrorCodeDetail1>TJDC2959</ErrorCodeDetail1>
+00149:     <ErrorMessage>PIN入力デバイスエラー</ErrorMessage>
+00150:     <ErrorCause>デバイス不正</ErrorCause>
+00151:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00152:   </ErrorDetail1>
+00153:   <ErrorDetail1>
+00154:     <ErrorCodeDetail1>TJDC2963</ErrorCodeDetail1>
+00155:     <ErrorMessage>暗証入力待ちエラー</ErrorMessage>
+00156:     <ErrorCause>デバイス不正</ErrorCause>
+00157:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00158:   </ErrorDetail1>
+00159:   <ErrorDetail1>
+00160:     <ErrorCodeDetail1>TJDS2967</ErrorCodeDetail1>
+00161:     <ErrorMessage>電文に必要な情報が取得できな&#xa;かったため、電文作成に失敗</ErrorMessage>
+00162:     <ErrorCause>カード起因</ErrorCause>
+00163:     <ErrorHandling>再実施してください。繰り返し発生する場合は別のカードで実施してください。</ErrorHandling>
+00164:   </ErrorDetail1>
+00165:   <ErrorDetail1>
+00166:     <ErrorCodeDetail1>TJDS2953</ErrorCodeDetail1>
+00167:     <ErrorMessage>DB登録処理エラー</ErrorMessage>
+00168:     <ErrorCause>マスタ不整合</ErrorCause>
+00169:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00170:   </ErrorDetail1>
+00171:   <ErrorDetail1>
+00172:     <ErrorCodeDetail1>TJDS2631</ErrorCodeDetail1>
+00173:     <ErrorMessage>DB登録処理エラー</ErrorMessage>
+00174:     <ErrorCause>マスタ不整合</ErrorCause>
+00175:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00176:   </ErrorDetail1>
+00177:   <ErrorDetail1>
+00178:     <ErrorCodeDetail1>TJDS2632</ErrorCodeDetail1>
+00179:     <ErrorMessage>DB登録処理エラー</ErrorMessage>
+00180:     <ErrorCause>マスタ不整合</ErrorCause>
+00181:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00182:   </ErrorDetail1>
+00183:   <ErrorDetail1>
+00184:     <ErrorCodeDetail1>TJDS2633</ErrorCodeDetail1>
+00185:     <ErrorMessage>DB登録処理エラー</ErrorMessage>
+00186:     <ErrorCause>マスタ不整合</ErrorCause>
+00187:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00188:   </ErrorDetail1>
+00189:   <ErrorDetail1>
+00190:     <ErrorCodeDetail1>TJDS2634</ErrorCodeDetail1>
+00191:     <ErrorMessage>DB登録処理エラー</ErrorMessage>
+00192:     <ErrorCause>マスタ不整合</ErrorCause>
+00193:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00194:   </ErrorDetail1>
+00195:   <ErrorDetail1>
+00196:     <ErrorCodeDetail1>TJDS2635</ErrorCodeDetail1>
+00197:     <ErrorMessage>DB登録処理エラー</ErrorMessage>
+00198:     <ErrorCause>マスタ不整合</ErrorCause>
+00199:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00200:   </ErrorDetail1>
+00201:   <ErrorDetail1>
+00202:     <ErrorCodeDetail1>TJDS2636</ErrorCodeDetail1>
+00203:     <ErrorMessage>DB登録処理エラー</ErrorMessage>
+00204:     <ErrorCause>マスタ不整合</ErrorCause>
+00205:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00206:   </ErrorDetail1>
+00207:   <ErrorDetail1>
+00208:     <ErrorCodeDetail1>TJDS2637</ErrorCodeDetail1>
+00209:     <ErrorMessage>DB登録処理エラー</ErrorMessage>
+00210:     <ErrorCause>マスタ不整合</ErrorCause>
+00211:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00212:   </ErrorDetail1>
+00213:   <ErrorDetail1>
+00214:     <ErrorCodeDetail1>TJDS2651</ErrorCodeDetail1>
+00215:     <ErrorMessage>設定情報エラー</ErrorMessage>
+00216:     <ErrorCause>マスタ不整合</ErrorCause>
+00217:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00218:   </ErrorDetail1>
+00219:   <ErrorDetail1>
+00220:     <ErrorCodeDetail1>TJDS2655</ErrorCodeDetail1>
+00221:     <ErrorMessage>電文に必要な情報が取得できな&#xa;かったため、電文作成に失敗</ErrorMessage>
+00222:     <ErrorCause>カード起因</ErrorCause>
+00223:     <ErrorHandling>再実施してください。繰り返し発生する場合は別のカードで実施してください。</ErrorHandling>
+00224:   </ErrorDetail1>
+00225:   <ErrorDetail1>
+00226:     <ErrorCodeDetail1>TJDS2638</ErrorCodeDetail1>
+00227:     <ErrorMessage>DB登録処理エラー</ErrorMessage>
+00228:     <ErrorCause>マスタ不整合</ErrorCause>
+00229:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00230:   </ErrorDetail1>
+00231:   <ErrorDetail1>
+00232:     <ErrorCodeDetail1>TJDS2639</ErrorCodeDetail1>
+00233:     <ErrorMessage>DB登録処理エラー</ErrorMessage>
+00234:     <ErrorCause>マスタ不整合</ErrorCause>
+00235:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00236:   </ErrorDetail1>
+00237:   <ErrorDetail1>
+00238:     <ErrorCodeDetail1>TJDS2640</ErrorCodeDetail1>
+00239:     <ErrorMessage>DB登録処理エラー</ErrorMessage>
+00240:     <ErrorCause>マスタ不整合</ErrorCause>
+00241:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00242:   </ErrorDetail1>
+00243:   <ErrorDetail1>
+00244:     <ErrorCodeDetail1>TJDS2652</ErrorCodeDetail1>
+00245:     <ErrorMessage>DB登録処理エラー</ErrorMessage>
+00246:     <ErrorCause>マスタ不整合</ErrorCause>
+00247:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00248:   </ErrorDetail1>
+00249:   <ErrorDetail1>
+00250:     <ErrorCodeDetail1>TJDS2641</ErrorCodeDetail1>
+00251:     <ErrorMessage>DB登録処理エラー</ErrorMessage>
+00252:     <ErrorCause>マスタ不整合</ErrorCause>
+00253:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00254:   </ErrorDetail1>
+00255:   <ErrorDetail1>
+00256:     <ErrorCodeDetail1>TJDS2642</ErrorCodeDetail1>
+00257:     <ErrorMessage>DB登録処理エラー</ErrorMessage>
+00258:     <ErrorCause>マスタ不整合</ErrorCause>
+00259:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00260:   </ErrorDetail1>
+00261:   <ErrorDetail1>
+00262:     <ErrorCodeDetail1>TJDS2653</ErrorCodeDetail1>
+00263:     <ErrorMessage>設定情報エラー</ErrorMessage>
+00264:     <ErrorCause>マスタ不整合</ErrorCause>
+00265:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00266:   </ErrorDetail1>
+00267:   <ErrorDetail1>
+00268:     <ErrorCodeDetail1>TJDS2643</ErrorCodeDetail1>
+00269:     <ErrorMessage>DB登録処理エラー</ErrorMessage>
+00270:     <ErrorCause>マスタ不整合</ErrorCause>
+00271:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00272:   </ErrorDetail1>
+00273:   <ErrorDetail1>
+00274:     <ErrorCodeDetail1>TJDS2226</ErrorCodeDetail1>
+00275:     <ErrorMessage>設定情報エラー</ErrorMessage>
+00276:     <ErrorCause>マスタ不整合</ErrorCause>
+00277:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00278:   </ErrorDetail1>
+00279:   <ErrorDetail1>
+00280:     <ErrorCodeDetail1>TJDS2616</ErrorCodeDetail1>
+00281:     <ErrorMessage>設定情報エラー</ErrorMessage>
+00282:     <ErrorCause>マスタ不整合</ErrorCause>
+00283:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00284:   </ErrorDetail1>
+00285:   <ErrorDetail1>
+00286:     <ErrorCodeDetail1>TJDS2617</ErrorCodeDetail1>
+00287:     <ErrorMessage>設定情報エラー</ErrorMessage>
+00288:     <ErrorCause>マスタ不整合</ErrorCause>
+00289:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00290:   </ErrorDetail1>
+00291:   <ErrorDetail1>
+00292:     <ErrorCodeDetail1>TJDS2619</ErrorCodeDetail1>
+00293:     <ErrorMessage>設定情報エラー</ErrorMessage>
+00294:     <ErrorCause>マスタ不整合</ErrorCause>
+00295:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00296:   </ErrorDetail1>
+00297:   <ErrorDetail1>
+00298:     <ErrorCodeDetail1>TJDS2620</ErrorCodeDetail1>
+00299:     <ErrorMessage>設定情報エラー</ErrorMessage>
+00300:     <ErrorCause>マスタ不整合</ErrorCause>
+00301:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00302:   </ErrorDetail1>
+00303:   <ErrorDetail1>
+00304:     <ErrorCodeDetail1>TJDS2644</ErrorCodeDetail1>
+00305:     <ErrorMessage>DB登録処理エラー</ErrorMessage>
+00306:     <ErrorCause>マスタ不整合</ErrorCause>
+00307:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00308:   </ErrorDetail1>
+00309:   <ErrorDetail1>
+00310:     <ErrorCodeDetail1>TJDS2645</ErrorCodeDetail1>
+00311:     <ErrorMessage>DB登録処理エラー</ErrorMessage>
+00312:     <ErrorCause>マスタ不整合</ErrorCause>
+00313:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00314:   </ErrorDetail1>
+00315:   <ErrorDetail1>
+00316:     <ErrorCodeDetail1>TJDS2646</ErrorCodeDetail1>
+00317:     <ErrorMessage>DB登録処理エラー</ErrorMessage>
+00318:     <ErrorCause>マスタ不整合</ErrorCause>
+00319:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00320:   </ErrorDetail1>
+00321:   <ErrorDetail1>
+00322:     <ErrorCodeDetail1>TJDS2647</ErrorCodeDetail1>
+00323:     <ErrorMessage>DB登録処理エラー</ErrorMessage>
+00324:     <ErrorCause>マスタ不整合</ErrorCause>
+00325:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00326:   </ErrorDetail1>
+00327:   <ErrorDetail1>
+00328:     <ErrorCodeDetail1>TJDS2654</ErrorCodeDetail1>
+00329:     <ErrorMessage>設定情報エラー</ErrorMessage>
+00330:     <ErrorCause>マスタ不整合</ErrorCause>
+00331:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00332:   </ErrorDetail1>
+00333:   <ErrorDetail1>
+00334:     <ErrorCodeDetail1>TJDS2966</ErrorCodeDetail1>
+00335:     <ErrorMessage>設定情報エラー</ErrorMessage>
+00336:     <ErrorCause>マスタ不整合</ErrorCause>
+00337:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00338:   </ErrorDetail1>
+00339:   <ErrorDetail1>
+00340:     <ErrorCodeDetail1>TJDS2112</ErrorCodeDetail1>
+00341:     <ErrorMessage>PIN入力桁取得エラー</ErrorMessage>
+00342:     <ErrorCause>マスタ不整合</ErrorCause>
+00343:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00344:   </ErrorDetail1>
+00345:   <ErrorDetail1>
+00346:     <ErrorCodeDetail1>TJDS2601</ErrorCodeDetail1>
+00347:     <ErrorMessage>端末属性取得エラー</ErrorMessage>
+00348:     <ErrorCause>マスタ不整合</ErrorCause>
+00349:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00350:   </ErrorDetail1>
+00351:   <ErrorDetail1>
+00352:     <ErrorCodeDetail1>TJDS0901</ErrorCodeDetail1>
+00353:     <ErrorMessage>前回取引不正エラー</ErrorMessage>
+00354:     <ErrorCause>マスタ不整合</ErrorCause>
+00355:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00356:   </ErrorDetail1>
+00357:   <ErrorDetail1>
+00358:     <ErrorCodeDetail1>TJDS0910</ErrorCodeDetail1>
+00359:     <ErrorMessage>取扱不可エラー</ErrorMessage>
+00360:     <ErrorCause>マスタ不整合</ErrorCause>
+00361:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00362:   </ErrorDetail1>
+00363:   <ErrorDetail1>
+00364:     <ErrorCodeDetail1>TJDS2006</ErrorCodeDetail1>
+00365:     <ErrorMessage>取引NOの生成エラー</ErrorMessage>
+00366:     <ErrorCause>マスタ不整合</ErrorCause>
+00367:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00368:   </ErrorDetail1>
+00369:   <ErrorDetail1>
+00370:     <ErrorCodeDetail1>TJDS2007</ErrorCodeDetail1>
+00371:     <ErrorMessage>磁気カード情報取得エラー</ErrorMessage>
+00372:     <ErrorCause>マスタ不整合</ErrorCause>
+00373:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00374:   </ErrorDetail1>
+00375:   <ErrorDetail1>
+00376:     <ErrorCodeDetail1>TJDS2650</ErrorCodeDetail1>
+00377:     <ErrorMessage>設定情報エラー</ErrorMessage>
+00378:     <ErrorCause>マスタ不整合</ErrorCause>
+00379:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00380:   </ErrorDetail1>
+00381:   <ErrorDetail1>
+00382:     <ErrorCodeDetail1>TJDS2604</ErrorCodeDetail1>
+00383:     <ErrorMessage>カード情報の読み取りエラー</ErrorMessage>
+00384:     <ErrorCause>マスタ不整合</ErrorCause>
+00385:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00386:   </ErrorDetail1>
+00387:   <ErrorDetail1>
+00388:     <ErrorCodeDetail1>TJDS2649</ErrorCodeDetail1>
+00389:     <ErrorMessage>設定情報エラー</ErrorMessage>
+00390:     <ErrorCause>マスタ不整合</ErrorCause>
+00391:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00392:   </ErrorDetail1>
+00393:   <ErrorDetail1>
+00394:     <ErrorCodeDetail1>TJDS2660</ErrorCodeDetail1>
+00395:     <ErrorMessage>DB登録処理エラー</ErrorMessage>
+00396:     <ErrorCause>マスタ不整合</ErrorCause>
+00397:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00398:   </ErrorDetail1>
+00399:   <ErrorDetail1>
+00400:     <ErrorCodeDetail1>TJDS2661</ErrorCodeDetail1>
+00401:     <ErrorMessage>DB登録処理エラー</ErrorMessage>
+00402:     <ErrorCause>マスタ不整合</ErrorCause>
+00403:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00404:   </ErrorDetail1>
+00405:   <ErrorDetail1>
+00406:     <ErrorCodeDetail1>TJDS2955</ErrorCodeDetail1>
+00407:     <ErrorMessage>2重取引チェック結果&#xa;取得エラー</ErrorMessage>
+00408:     <ErrorCause>マスタ不整合</ErrorCause>
+00409:     <ErrorHandling>係員をお呼びください。</ErrorHandling>
+00410:   </ErrorDetail1>
+00411: </CAFISArchOtherErrorDataSet></p>
+<hr />
+<p>FILE: Source/Device/Device.CAFISArch/Device.CAFISArch.csproj
+00001: [非文本文件，未内联源码。size_bytes=6361, extension=.csproj，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/Device/Device.CAFISArch/packages.config
+00001: [非文本文件，未内联源码。size_bytes=171, extension=.config，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/Device/Device.CAFISArchLAN/Device.CAFISArchLAN.csproj
+00001: [非文本文件，未内联源码。size_bytes=15868, extension=.csproj，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/Device/Device.CAFISArchLAN/Settings/CAFISArchErrorDetailInfo.xml
+SHA256: d575fb64a990bf800a99c7d77f61082fe47e5129e250004f095720a95f0ddc04
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8" ?>
+00002: <CAFISArchErrorDetailDataSet xmlns="http://tempuri.org/CAFISArchErrorDetailDataSet.xsd">
+00003:   <!-- 共通 -->
+00004:   <Error>
+00005:     <ErrorCode>TFWL0001</ErrorCode>
+00006:     <ErrorMessage>業務開始不可&#xa;サポートしていない業務です</ErrorMessage>
+00007:   </Error>
+00008:   <Error>
+00009:     <ErrorCode>TFWL0002</ErrorCode>
+00010:     <ErrorMessage>中止&#xa;取引を中止しました</ErrorMessage>
+00011:   </Error>
+00012:   <Error>
+00013:     <ErrorCode>TFWL0003</ErrorCode>
+00014:     <ErrorMessage>連携データチェックエラー&#xa;入力された情報が不正です</ErrorMessage>
+00015:   </Error>
+00016:   <Error>
+00017:     <ErrorCode>TFWL0004</ErrorCode>
+00018:     <ErrorMessage>その他の異常終了&#xa;Arch 端末、またはArchセンタに&#xa;おいて、予期せぬエラーが発生し&#xa;ました</ErrorMessage>
+00019:   </Error>
+00020:   <Error>
+00021:     <ErrorCode>TFWC0001</ErrorCode>
+00022:     <ErrorMessage>タンパ検知&#xa;Arch 端末から不正が&#xa;検知されました</ErrorMessage>
+00023:   </Error>
+00024:   <Error>
+00025:     <ErrorCode>TFWC0002</ErrorCode>
+00026:     <ErrorMessage>電池残量チェックエラー&#xa;電池残量が少なくなっています</ErrorMessage>
+00027:   </Error>
+00028: 
+00029:   <!-- クレジット固有 -->
+00030:   <CAFISArchErrorDetail>
+00031:     <ErrorCode></ErrorCode>
+00032:     <ErrorCodeDetail1>TCRS1013</ErrorCodeDetail1>
+00033:     <Description>カード情報の読み取りで&#xa;エラーが発生。</Description>
+00034:     <ErrorPattern>ReadError</ErrorPattern>
+00035:   </CAFISArchErrorDetail>
+00036:   <CAFISArchErrorDetail>
+00037:     <ErrorCode></ErrorCode>
+00038:     <ErrorCodeDetail1>TCRS1014</ErrorCodeDetail1>
+00039:     <Description>取扱対象外のMSカードのため、&#xa;エラーが発生。</Description>
+00040:     <ErrorPattern>ReadError</ErrorPattern>
+00041:   </CAFISArchErrorDetail>
+00042:   <CAFISArchErrorDetail>
+00043:     <ErrorCode></ErrorCode>
+00044:     <ErrorCodeDetail1>TCRS1015</ErrorCodeDetail1>
+00045:     <Description>カード区分判定でエラーが発生。</Description>
+00046:     <ErrorPattern>ReadError</ErrorPattern>
+00047:   </CAFISArchErrorDetail>
+00048:   <CAFISArchErrorDetail>
+00049:     <ErrorCode></ErrorCode>
+00050:     <ErrorCodeDetail1>TCRS1016</ErrorCodeDetail1>
+00051:     <Description>検索キー取得でエラーが発生。</Description>
+00052:     <ErrorPattern>ReadError</ErrorPattern>
+00053:   </CAFISArchErrorDetail>
+00054:   <CAFISArchErrorDetail>
+00055:     <ErrorCode></ErrorCode>
+00056:     <ErrorCodeDetail1>TCRS1017</ErrorCodeDetail1>
+00057:     <Description>ブランド判定でエラーが発生。</Description>
+00058:     <ErrorPattern>ReadError</ErrorPattern>
+00059:   </CAFISArchErrorDetail>
+00060:   <CAFISArchErrorDetail>
+00061:     <ErrorCode></ErrorCode>
+00062:     <ErrorCodeDetail1>TCRS1022</ErrorCodeDetail1>
+00063:     <Description>国際ブランド連携判定で&#xa;エラーが発生。</Description>
+00064:     <ErrorPattern>ReadError</ErrorPattern>
+00065:   </CAFISArchErrorDetail>
+00066:   <CAFISArchErrorDetail>
+00067:     <ErrorCode></ErrorCode>
+00068:     <ErrorCodeDetail1>TCRS1035</ErrorCodeDetail1>
+00069:     <Description>ブランド判定でエラーが発生。</Description>
+00070:     <ErrorPattern>ReadError</ErrorPattern>
+00071:   </CAFISArchErrorDetail>
+00072:   <CAFISArchErrorDetail>
+00073:     <ErrorCode></ErrorCode>
+00074:     <ErrorCodeDetail1>TCRS1053</ErrorCodeDetail1>
+00075:     <Description>AID判定ででエラーが発生。</Description>
+00076:     <ErrorPattern>ReadError</ErrorPattern>
+00077:   </CAFISArchErrorDetail>
+00078:   <CAFISArchErrorDetail>
+00079:     <ErrorCode></ErrorCode>
+00080:     <ErrorCodeDetail1>TCRS1054</ErrorCodeDetail1>
+00081:     <Description>ブランド判定でエラーが発生。</Description>
+00082:     <ErrorPattern>ReadError</ErrorPattern>
+00083:   </CAFISArchErrorDetail>
+00084:   <CAFISArchErrorDetail>
+00085:     <ErrorCode></ErrorCode>
+00086:     <ErrorCodeDetail1>TCRS1064</ErrorCodeDetail1>
+00087:     <Description>カード区分判定でエラーが発生。</Description>
+00088:     <ErrorPattern>ReadError</ErrorPattern>
+00089:   </CAFISArchErrorDetail>
+00090:   <CAFISArchErrorDetail>
+00091:     <ErrorCode></ErrorCode>
+00092:     <ErrorCodeDetail1>TCRS1083</ErrorCodeDetail1>
+00093:     <Description>カード区分判定でエラーが発生。</Description>
+00094:     <ErrorPattern>ReadError</ErrorPattern>
+00095:   </CAFISArchErrorDetail>
+00096:   <CAFISArchErrorDetail>
+00097:     <ErrorCode></ErrorCode>
+00098:     <ErrorCodeDetail1>TCRS1084</ErrorCodeDetail1>
+00099:     <Description>検索キー取得でエラーが発生。</Description>
+00100:     <ErrorPattern>ReadError</ErrorPattern>
+00101:   </CAFISArchErrorDetail>
+00102:   <CAFISArchErrorDetail>
+00103:     <ErrorCode></ErrorCode>
+00104:     <ErrorCodeDetail1>TCRS1085</ErrorCodeDetail1>
+00105:     <Description>ブランド判定でエラーが発生。</Description>
+00106:     <ErrorPattern>ReadError</ErrorPattern>
+00107:   </CAFISArchErrorDetail>
+00108:   <CAFISArchErrorDetail>
+00109:     <ErrorCode></ErrorCode>
+00110:     <ErrorCodeDetail1>TCRS1090</ErrorCodeDetail1>
+00111:     <Description>国際ブランド連携判定で&#xa;エラーが発生。</Description>
+00112:     <ErrorPattern>ReadError</ErrorPattern>
+00113:   </CAFISArchErrorDetail>
+00114:   <CAFISArchErrorDetail>
+00115:     <ErrorCode></ErrorCode>
+00116:     <ErrorCodeDetail1>TCRS1094</ErrorCodeDetail1>
+00117:     <Description>カード読取時にエラーが発生。</Description>
+00118:     <ErrorPattern>ReadError</ErrorPattern>
+00119:   </CAFISArchErrorDetail>
+00120:   <CAFISArchErrorDetail>
+00121:     <ErrorCode></ErrorCode>
+00122:     <ErrorCodeDetail1>TCRS1104</ErrorCodeDetail1>
+00123:     <Description>カード区分判定でエラーが発生。</Description>
+00124:     <ErrorPattern>ReadError</ErrorPattern>
+00125:   </CAFISArchErrorDetail>
+00126:   <CAFISArchErrorDetail>
+00127:     <ErrorCode></ErrorCode>
+00128:     <ErrorCodeDetail1>TCRS1107</ErrorCodeDetail1>
+00129:     <Description>カード情報取得時にエラーが発生。</Description>
+00130:     <ErrorPattern>ReadError</ErrorPattern>
+00131:   </CAFISArchErrorDetail>
+00132:   <CAFISArchErrorDetail>
+00133:     <ErrorCode></ErrorCode>
+00134:     <ErrorCodeDetail1>TCRS1108</ErrorCodeDetail1>
+00135:     <Description>カード情報更新時にエラーが発生。</Description>
+00136:     <ErrorPattern>ReadError</ErrorPattern>
+00137:   </CAFISArchErrorDetail>
+00138:   <CAFISArchErrorDetail>
+00139:     <ErrorCode></ErrorCode>
+00140:     <ErrorCodeDetail1>TCRS1114</ErrorCodeDetail1>
+00141:     <Description>電文に必要な情報が取得できな&#xa;かったため、電文作成に失敗。</Description>
+00142:     <ErrorPattern>ReadError</ErrorPattern>
+00143:   </CAFISArchErrorDetail>
+00144:   <CAFISArchErrorDetail>
+00145:     <ErrorCode></ErrorCode>
+00146:     <ErrorCodeDetail1>TCRS1134</ErrorCodeDetail1>
+00147:     <Description>電文に必要な情報が取得できな&#xa;かったため、電文作成に失敗。</Description>
+00148:     <ErrorPattern>ReadError</ErrorPattern>
+00149:   </CAFISArchErrorDetail>
+00150:   <CAFISArchErrorDetail>
+00151:     <ErrorCode></ErrorCode>
+00152:     <ErrorCodeDetail1>TCRS1136</ErrorCodeDetail1>
+00153:     <Description>カード情報取得時にエラーが発生。</Description>
+00154:     <ErrorPattern>ReadError</ErrorPattern>
+00155:   </CAFISArchErrorDetail>
+00156:   <CAFISArchErrorDetail>
+00157:     <ErrorCode></ErrorCode>
+00158:     <ErrorCodeDetail1>TCRS1137</ErrorCodeDetail1>
+00159:     <Description>カード情報更新時にエラーが発生。</Description>
+00160:     <ErrorPattern>ReadError</ErrorPattern>
+00161:   </CAFISArchErrorDetail>
+00162:   <CAFISArchErrorDetail>
+00163:     <ErrorCode></ErrorCode>
+00164:     <ErrorCodeDetail1>TCRS1151</ErrorCodeDetail1>
+00165:     <Description>通信エラーが発生。</Description>
+00166:     <ErrorPattern>ReadError</ErrorPattern>
+00167:   </CAFISArchErrorDetail>
+00168:   <CAFISArchErrorDetail>
+00169:     <ErrorCode></ErrorCode>
+00170:     <ErrorCodeDetail1>TCRS1152</ErrorCodeDetail1>
+00171:     <Description>通信エラーが発生。</Description>
+00172:     <ErrorPattern>ReadError</ErrorPattern>
+00173:   </CAFISArchErrorDetail>
+00174:   <CAFISArchErrorDetail>
+00175:     <ErrorCode></ErrorCode>
+00176:     <ErrorCodeDetail1>TCRS1154</ErrorCodeDetail1>
+00177:     <Description>電文に必要な情報が取得できな&#xa;かったため、電文作成に失敗。</Description>
+00178:     <ErrorPattern>ReadError</ErrorPattern>
+00179:   </CAFISArchErrorDetail>
+00180:   <CAFISArchErrorDetail>
+00181:     <ErrorCode></ErrorCode>
+00182:     <ErrorCodeDetail1>TCRS1155</ErrorCodeDetail1>
+00183:     <Description>電文に必要な情報が取得できな&#xa;かったため、電文作成に失敗。</Description>
+00184:     <ErrorPattern>ReadError</ErrorPattern>
+00185:   </CAFISArchErrorDetail>
+00186:   <CAFISArchErrorDetail>
+00187:     <ErrorCode></ErrorCode>
+00188:     <ErrorCodeDetail1>TCRS1156</ErrorCodeDetail1>
+00189:     <Description>通信エラーが発生。</Description>
+00190:     <ErrorPattern>ReadError</ErrorPattern>
+00191:   </CAFISArchErrorDetail>
+00192:   <CAFISArchErrorDetail>
+00193:     <ErrorCode></ErrorCode>
+00194:     <ErrorCodeDetail1>TCRS1184</ErrorCodeDetail1>
+00195:     <Description>電文に必要な情報が取得できな&#xa;かったため、電文作成に失敗。</Description>
+00196:     <ErrorPattern>ReadError</ErrorPattern>
+00197:   </CAFISArchErrorDetail>
+00198:   <CAFISArchErrorDetail>
+00199:     <ErrorCode></ErrorCode>
+00200:     <ErrorCodeDetail1>TCRS1185</ErrorCodeDetail1>
+00201:     <Description>電文に必要な情報が取得できな&#xa;かったため、電文作成に失敗。</Description>
+00202:     <ErrorPattern>ReadError</ErrorPattern>
+00203:   </CAFISArchErrorDetail>
+00204:   <CAFISArchErrorDetail>
+00205:     <ErrorCode></ErrorCode>
+00206:     <ErrorCodeDetail1>TCRS1186</ErrorCodeDetail1>
+00207:     <Description>電文に必要な情報が取得できな&#xa;かったため、電文作成に失敗。</Description>
+00208:     <ErrorPattern>ReadError</ErrorPattern>
+00209:   </CAFISArchErrorDetail>
+00210:   <CAFISArchErrorDetail>
+00211:     <ErrorCode></ErrorCode>
+00212:     <ErrorCodeDetail1>TCRC1370</ErrorCodeDetail1>
+00213:     <Description>ICカード読取不可のため、&#xa;フォールバック不可。</Description>
+00214:     <ErrorPattern>ReadError</ErrorPattern>
+00215:   </CAFISArchErrorDetail>
+00216:   <CAFISArchErrorDetail>
+00217:     <ErrorCode></ErrorCode>
+00218:     <ErrorCodeDetail1>TCRS1956</ErrorCodeDetail1>
+00219:     <Description>電文解析でエラーが発生。</Description>
+00220:     <ErrorPattern>ReadError</ErrorPattern>
+00221:   </CAFISArchErrorDetail>
+00222:   <CAFISArchErrorDetail>
+00223:     <ErrorCode></ErrorCode>
+00224:     <ErrorCodeDetail1>TCRS1960</ErrorCodeDetail1>
+00225:     <Description>ブランド判定でエラーが発生。</Description>
+00226:     <ErrorPattern>ReadError</ErrorPattern>
+00227:   </CAFISArchErrorDetail>
+00228:   <CAFISArchErrorDetail>
+00229:     <ErrorCode></ErrorCode>
+00230:     <ErrorCodeDetail1>TCRS1966</ErrorCodeDetail1>
+00231:     <Description>カード区分判定でエラーが発生。</Description>
+00232:     <ErrorPattern>ReadError</ErrorPattern>
+00233:   </CAFISArchErrorDetail>
+00234:   <CAFISArchErrorDetail>
+00235:     <ErrorCode></ErrorCode>
+00236:     <ErrorCodeDetail1>TCRS1971</ErrorCodeDetail1>
+00237:     <Description>カード区分判定でエラーが発生。</Description>
+00238:     <ErrorPattern>ReadError</ErrorPattern>
+00239:   </CAFISArchErrorDetail>
+00240:   <CAFISArchErrorDetail>
+00241:     <ErrorCode></ErrorCode>
+00242:     <ErrorCodeDetail1>TCRS1975</ErrorCodeDetail1>
+00243:     <Description>カード区分判定でエラーが発生。</Description>
+00244:     <ErrorPattern>ReadError</ErrorPattern>
+00245:   </CAFISArchErrorDetail>
+00246:   <CAFISArchErrorDetail>
+00247:     <ErrorCode></ErrorCode>
+00248:     <ErrorCodeDetail1>TCRS1976</ErrorCodeDetail1>
+00249:     <Description>検索キー取得でエラーが発生。</Description>
+00250:     <ErrorPattern>ReadError</ErrorPattern>
+00251:   </CAFISArchErrorDetail>
+00252:   <CAFISArchErrorDetail>
+00253:     <ErrorCode></ErrorCode>
+00254:     <ErrorCodeDetail1>TCRS1977</ErrorCodeDetail1>
+00255:     <Description>ブランド判定でエラーが発生。</Description>
+00256:     <ErrorPattern>ReadError</ErrorPattern>
+00257:   </CAFISArchErrorDetail>
+00258:   <CAFISArchErrorDetail>
+00259:     <ErrorCode></ErrorCode>
+00260:     <ErrorCodeDetail1>TCRS1982</ErrorCodeDetail1>
+00261:     <Description>国際ブランド連携判定で&#xa;エラーが発生。</Description>
+00262:     <ErrorPattern>ReadError</ErrorPattern>
+00263:   </CAFISArchErrorDetail>
+00264:   <CAFISArchErrorDetail>
+00265:     <ErrorCode></ErrorCode>
+00266:     <ErrorCodeDetail1>TCRS1986</ErrorCodeDetail1>
+00267:     <Description>カード区分判定でエラーが発生。</Description>
+00268:     <ErrorPattern>ReadError</ErrorPattern>
+00269:   </CAFISArchErrorDetail>
+00270:   <CAFISArchErrorDetail>
+00271:     <ErrorCode></ErrorCode>
+00272:     <ErrorCodeDetail1>TCRS1987</ErrorCodeDetail1>
+00273:     <Description>検索キー取得でエラーが発生。</Description>
+00274:     <ErrorPattern>ReadError</ErrorPattern>
+00275:   </CAFISArchErrorDetail>
+00276:   <CAFISArchErrorDetail>
+00277:     <ErrorCode></ErrorCode>
+00278:     <ErrorCodeDetail1>TCRS1988</ErrorCodeDetail1>
+00279:     <Description>ブランド判定でエラーが発生。</Description>
+00280:     <ErrorPattern>ReadError</ErrorPattern>
+00281:   </CAFISArchErrorDetail>
+00282:   <CAFISArchErrorDetail>
+00283:     <ErrorCode></ErrorCode>
+00284:     <ErrorCodeDetail1>TCRS1996</ErrorCodeDetail1>
+00285:     <Description>国際ブランド連携判定で&#xa;エラーが発生。</Description>
+00286:     <ErrorPattern>ReadError</ErrorPattern>
+00287:   </CAFISArchErrorDetail>
+00288:   <CAFISArchErrorDetail>
+00289:     <ErrorCode></ErrorCode>
+00290:     <ErrorCodeDetail1>TCRS7001</ErrorCodeDetail1>
+00291:     <Description>フォールバック後の会員番号不一致&#xa;エラーが発生。</Description>
+00292:     <ErrorPattern>ReadError</ErrorPattern>
+00293:   </CAFISArchErrorDetail>
+00294:   <CAFISArchErrorDetail>
+00295:     <ErrorCode></ErrorCode>
+00296:     <ErrorCodeDetail1>TCRS7002</ErrorCodeDetail1>
+00297:     <Description>磁気カード情報取得エラーが発生。</Description>
+00298:     <ErrorPattern>ReadError</ErrorPattern>
+00299:   </CAFISArchErrorDetail>
+00300:   <CAFISArchErrorDetail>
+00301:     <ErrorCode></ErrorCode>
+00302:     <ErrorCodeDetail1>TCRS7045</ErrorCodeDetail1>
+00303:     <Description>カード情報取得時でエラーが発生。</Description>
+00304:     <ErrorPattern>ReadError</ErrorPattern>
+00305:   </CAFISArchErrorDetail>
+00306:   <CAFISArchErrorDetail>
+00307:     <ErrorCode></ErrorCode>
+00308:     <ErrorCodeDetail1>TCRS7046</ErrorCodeDetail1>
+00309:     <Description>カード情報の読み取りで&#xa;エラーが発生。</Description>
+00310:     <ErrorPattern>ReadError</ErrorPattern>
+00311:   </CAFISArchErrorDetail>
+00312:   <CAFISArchErrorDetail>
+00313:     <ErrorCode></ErrorCode>
+00314:     <ErrorCodeDetail1>TCRS7051</ErrorCodeDetail1>
+00315:     <Description>カード情報更新時にエラーが発生。</Description>
+00316:     <ErrorPattern>ReadError</ErrorPattern>
+00317:   </CAFISArchErrorDetail>
+00318:   <CAFISArchErrorDetail>
+00319:     <ErrorCode></ErrorCode>
+00320:     <ErrorCodeDetail1>TCRS7052</ErrorCodeDetail1>
+00321:     <Description>カード情報更新時にエラーが発生。</Description>
+00322:     <ErrorPattern>ReadError</ErrorPattern>
+00323:   </CAFISArchErrorDetail>
+00324:   <CAFISArchErrorDetail>
+00325:     <ErrorCode></ErrorCode>
+00326:     <ErrorCodeDetail1>TCRS7053</ErrorCodeDetail1>
+00327:     <Description>カード情報更新時にエラーが発生。</Description>
+00328:     <ErrorPattern>ReadError</ErrorPattern>
+00329:   </CAFISArchErrorDetail>
+00330:   <CAFISArchErrorDetail>
+00331:     <ErrorCode></ErrorCode>
+00332:     <ErrorCodeDetail1>TCRS7054</ErrorCodeDetail1>
+00333:     <Description>カード情報更新時にエラーが発生。</Description>
+00334:     <ErrorPattern>ReadError</ErrorPattern>
+00335:   </CAFISArchErrorDetail>
+00336:   <CAFISArchErrorDetail>
+00337:     <ErrorCode></ErrorCode>
+00338:     <ErrorCodeDetail1>TCRS7063</ErrorCodeDetail1>
+00339:     <Description>カード状態不正でエラーが&#xa;発生しました。</Description>
+00340:     <ErrorPattern>ReadError</ErrorPattern>
+00341:   </CAFISArchErrorDetail>
+00342:   <CAFISArchErrorDetail>
+00343:     <ErrorCode></ErrorCode>
+00344:     <ErrorCodeDetail1>TCRS7074</ErrorCodeDetail1>
+00345:     <Description>カード状態不正でエラーが&#xa;発生しました。</Description>
+00346:     <ErrorPattern>ReadError</ErrorPattern>
+00347:   </CAFISArchErrorDetail>
+00348:   <CAFISArchErrorDetail>
+00349:     <ErrorCode></ErrorCode>
+00350:     <ErrorCodeDetail1>TCRC7222</ErrorCodeDetail1>
+00351:     <Description>EMVカーネル処理中に&#xa;エラーが発生。</Description>
+00352:     <ErrorPattern>ReadError</ErrorPattern>
+00353:   </CAFISArchErrorDetail>
+00354:   <CAFISArchErrorDetail>
+00355:     <ErrorCode></ErrorCode>
+00356:     <ErrorCodeDetail1>TCRC7224</ErrorCodeDetail1>
+00357:     <Description>ICカード読取時にエラーが発生。</Description>
+00358:     <ErrorPattern>ReadError</ErrorPattern>
+00359:   </CAFISArchErrorDetail>
+00360:   <CAFISArchErrorDetail>
+00361:     <ErrorCode></ErrorCode>
+00362:     <ErrorCodeDetail1>TCRC7225</ErrorCodeDetail1>
+00363:     <Description>フォールバックが発生。&#xa;（MS取引で業務継続可能の場合）</Description>
+00364:     <ErrorPattern>ReadError</ErrorPattern>
+00365:   </CAFISArchErrorDetail>
+00366:   <CAFISArchErrorDetail>
+00367:     <ErrorCode></ErrorCode>
+00368:     <ErrorCodeDetail1>TCRC7226</ErrorCodeDetail1>
+00369:     <Description>ICカード起動に失敗。&#xa;(EMVカーネルの再起動に失敗）</Description>
+00370:     <ErrorPattern>ReadError</ErrorPattern>
+00371:   </CAFISArchErrorDetail>
+00372:   <CAFISArchErrorDetail>
+00373:     <ErrorCode></ErrorCode>
+00374:     <ErrorCodeDetail1>TCRC7227</ErrorCodeDetail1>
+00375:     <Description>EMVカーネルへの選択AP通知に失敗。</Description>
+00376:     <ErrorPattern>ReadError</ErrorPattern>
+00377:   </CAFISArchErrorDetail>
+00378:   <CAFISArchErrorDetail>
+00379:     <ErrorCode></ErrorCode>
+00380:     <ErrorCodeDetail1>TCRC7228</ErrorCodeDetail1>
+00381:     <Description>EMVカーネルへの金額通知に失敗。</Description>
+00382:     <ErrorPattern>ReadError</ErrorPattern>
+00383:   </CAFISArchErrorDetail>
+00384:   <CAFISArchErrorDetail>
+00385:     <ErrorCode></ErrorCode>
+00386:     <ErrorCodeDetail1>TCRC7229</ErrorCodeDetail1>
+00387:     <Description>EMVカーネルへの&#xa;DCC有無通知に失敗。</Description>
+00388:     <ErrorPattern>ReadError</ErrorPattern>
+00389:   </CAFISArchErrorDetail>
+00390:   <CAFISArchErrorDetail>
+00391:     <ErrorCode></ErrorCode>
+00392:     <ErrorCodeDetail1>TCRC7230</ErrorCodeDetail1>
+00393:     <Description>EMVカーネルへの&#xa;オーソリ結果通知に失敗。</Description>
+00394:     <ErrorPattern>ReadError</ErrorPattern>
+00395:   </CAFISArchErrorDetail>
+00396:   <CAFISArchErrorDetail>
+00397:     <ErrorCode></ErrorCode>
+00398:     <ErrorCodeDetail1>TCRC7231</ErrorCodeDetail1>
+00399:     <Description>不正なタイミングに&#xa;カード抜取したため、&#xa;エラーが発生。</Description>
+00400:     <ErrorPattern>ReadError</ErrorPattern>
+00401:   </CAFISArchErrorDetail>
+00402:   <CAFISArchErrorDetail>
+00403:     <ErrorCode></ErrorCode>
+00404:     <ErrorCodeDetail1>TCRC7232</ErrorCodeDetail1>
+00405:     <Description>EMVカーネルの停止に失敗。</Description>
+00406:     <ErrorPattern>ReadError</ErrorPattern>
+00407:   </CAFISArchErrorDetail>
+00408:   <CAFISArchErrorDetail>
+00409:     <ErrorCode></ErrorCode>
+00410:     <ErrorCodeDetail1>TCRC7234</ErrorCodeDetail1>
+00411:     <Description>フォールバックが発生。&#xa;（MS取引ができないため&#xa;業務継続不可の場合）</Description>
+00412:     <ErrorPattern>ReadError</ErrorPattern>
+00413:   </CAFISArchErrorDetail>
+00414:   <CAFISArchErrorDetail>
+00415:     <ErrorCode></ErrorCode>
+00416:     <ErrorCodeDetail1>TCRC7235</ErrorCodeDetail1>
+00417:     <Description>フォールバックが発生。&#xa;（MS取引ができないため&#xa;業務継続不可の場合）</Description>
+00418:     <ErrorPattern>ReadError</ErrorPattern>
+00419:   </CAFISArchErrorDetail>
+00420:   <CAFISArchErrorDetail>
+00421:     <ErrorCode></ErrorCode>
+00422:     <ErrorCodeDetail1>TCRC7236</ErrorCodeDetail1>
+00423:     <Description>フォールバックが発生。&#xa;（MS取引で業務継続可能の場合）</Description>
+00424:     <ErrorPattern>ReadError</ErrorPattern>
+00425:   </CAFISArchErrorDetail>
+00426:   <CAFISArchErrorDetail>
+00427:     <ErrorCode></ErrorCode>
+00428:     <ErrorCodeDetail1>TCRS7955</ErrorCodeDetail1>
+00429:     <Description>当該ＩＣカード利用不可エラー</Description>
+00430:     <ErrorPattern>ReadError</ErrorPattern>
+00431:   </CAFISArchErrorDetail>
+00432:   <CAFISArchErrorDetail>
+00433:     <ErrorCode></ErrorCode>
+00434:     <ErrorCodeDetail1>TCRS7956</ErrorCodeDetail1>
+00435:     <Description>電文作成エラーが発生。</Description>
+00436:     <ErrorPattern>ReadError</ErrorPattern>
+00437:   </CAFISArchErrorDetail>
+00438:   <CAFISArchErrorDetail>
+00439:     <ErrorCode></ErrorCode>
+00440:     <ErrorCodeDetail1>TCRS7957</ErrorCodeDetail1>
+00441:     <Description>通信エラーが発生。</Description>
+00442:     <ErrorPattern>ReadError</ErrorPattern>
+00443:   </CAFISArchErrorDetail>
+00444:   <CAFISArchErrorDetail>
+00445:     <ErrorCode></ErrorCode>
+00446:     <ErrorCodeDetail1>TCRC7964</ErrorCodeDetail1>
+00447:     <Description>当該ＩＣカード利用不可エラー</Description>
+00448:     <ErrorPattern>ReadError</ErrorPattern>
+00449:   </CAFISArchErrorDetail>
+00450:   <CAFISArchErrorDetail>
+00451:     <ErrorCode></ErrorCode>
+00452:     <ErrorCodeDetail1>TCRC7977</ErrorCodeDetail1>
+00453:     <Description>EMV制御エラーが発生。</Description>
+00454:     <ErrorPattern>ReadError</ErrorPattern>
+00455:   </CAFISArchErrorDetail>
+00456:   <CAFISArchErrorDetail>
+00457:     <ErrorCode></ErrorCode>
+00458:     <ErrorCodeDetail1>TCRS7978</ErrorCodeDetail1>
+00459:     <Description>カード状態不正でエラーが&#xa;発生しました。</Description>
+00460:     <ErrorPattern>ReadError</ErrorPattern>
+00461:   </CAFISArchErrorDetail>
+00462:   <CAFISArchErrorDetail>
+00463:     <ErrorCode></ErrorCode>
+00464:     <ErrorCodeDetail1>TCRC7979</ErrorCodeDetail1>
+00465:     <Description>カード読取エラーが発生。</Description>
+00466:     <ErrorPattern>ReadError</ErrorPattern>
+00467:   </CAFISArchErrorDetail>
+00468:   <CAFISArchErrorDetail>
+00469:     <ErrorCode></ErrorCode>
+00470:     <ErrorCodeDetail1>TCRS8009</ErrorCodeDetail1>
+00471:     <Description>磁気カード情報取得エラーが発生。</Description>
+00472:     <ErrorPattern>ReadError</ErrorPattern>
+00473:   </CAFISArchErrorDetail>
+00474:   <CAFISArchErrorDetail>
+00475:     <ErrorCode></ErrorCode>
+00476:     <ErrorCodeDetail1>TCRS8031</ErrorCodeDetail1>
+00477:     <Description>共同利用外各種情報照会にて&#xa;通信エラーが発生。</Description>
+00478:     <ErrorPattern>ReadError</ErrorPattern>
+00479:   </CAFISArchErrorDetail>
+00480:   <CAFISArchErrorDetail>
+00481:     <ErrorCode></ErrorCode>
+00482:     <ErrorCodeDetail1>TCRS8034</ErrorCodeDetail1>
+00483:     <Description>カード区分判定でエラーが発生。</Description>
+00484:     <ErrorPattern>ReadError</ErrorPattern>
+00485:   </CAFISArchErrorDetail>
+00486:   <CAFISArchErrorDetail>
+00487:     <ErrorCode></ErrorCode>
+00488:     <ErrorCodeDetail1>TCRS8039</ErrorCodeDetail1>
+00489:     <Description>電文作成エラーが発生。</Description>
+00490:     <ErrorPattern>ReadError</ErrorPattern>
+00491:   </CAFISArchErrorDetail>
+00492:   <CAFISArchErrorDetail>
+00493:     <ErrorCode></ErrorCode>
+00494:     <ErrorCodeDetail1>TCRC9034</ErrorCodeDetail1>
+00495:     <Description>EMV制御エラーが発生。</Description>
+00496:     <ErrorPattern>ReadError</ErrorPattern>
+00497:   </CAFISArchErrorDetail>
+00498:   <CAFISArchErrorDetail>
+00499:     <ErrorCode></ErrorCode>
+00500:     <ErrorCodeDetail1>TCRS1688</ErrorCodeDetail1>
+00501:     <Description>通信エラーが発生。</Description>
+00502:     <ErrorPattern>ReadError</ErrorPattern>
+00503:   </CAFISArchErrorDetail>
+00504:   <CAFISArchErrorDetail>
+00505:     <ErrorCode></ErrorCode>
+00506:     <ErrorCodeDetail1>TCRS1704</ErrorCodeDetail1>
+00507:     <Description>磁気カード情報取得エラーが発生。</Description>
+00508:     <ErrorPattern>ReadError</ErrorPattern>
+00509:   </CAFISArchErrorDetail>
+00510:   <CAFISArchErrorDetail>
+00511:     <ErrorCode></ErrorCode>
+00512:     <ErrorCodeDetail1>TCRS1707</ErrorCodeDetail1>
+00513:     <Description>ICカード読取時にエラーが発生。</Description>
+00514:     <ErrorPattern>ReadError</ErrorPattern>
+00515:   </CAFISArchErrorDetail>
+00516:   <CAFISArchErrorDetail>
+00517:     <ErrorCode></ErrorCode>
+00518:     <ErrorCodeDetail1>TCRS7423</ErrorCodeDetail1>
+00519:     <Description>当該ＩＣカード利用不可エラー</Description>
+00520:     <ErrorPattern>ReadError</ErrorPattern>
+00521:   </CAFISArchErrorDetail>
+00522:   <CAFISArchErrorDetail>
+00523:     <ErrorCode></ErrorCode>
+00524:     <ErrorCodeDetail1>TCRC7501</ErrorCodeDetail1>
+00525:     <Description>EMV制御エラーが発生。</Description>
+00526:     <ErrorPattern>ReadError</ErrorPattern>
+00527:   </CAFISArchErrorDetail>
+00528:   <CAFISArchErrorDetail>
+00529:     <ErrorCode></ErrorCode>
+00530:     <ErrorCodeDetail1>TCRC7502</ErrorCodeDetail1>
+00531:     <Description>不正なタイミングに&#xa;カード抜取したため、&#xa;エラーが発生。</Description>
+00532:     <ErrorPattern>ReadError</ErrorPattern>
+00533:   </CAFISArchErrorDetail>
+00534:   <CAFISArchErrorDetail>
+00535:     <ErrorCode></ErrorCode>
+00536:     <ErrorCodeDetail1>TCRC7503</ErrorCodeDetail1>
+00537:     <Description>EMVカーネル処理中にエラーが発生。</Description>
+00538:     <ErrorPattern>ReadError</ErrorPattern>
+00539:   </CAFISArchErrorDetail>
+00540:   <CAFISArchErrorDetail>
+00541:     <ErrorCode></ErrorCode>
+00542:     <ErrorCodeDetail1>TCRC7504</ErrorCodeDetail1>
+00543:     <Description>EMV制御エラーが発生。</Description>
+00544:     <ErrorPattern>ReadError</ErrorPattern>
+00545:   </CAFISArchErrorDetail>
+00546:   <CAFISArchErrorDetail>
+00547:     <ErrorCode></ErrorCode>
+00548:     <ErrorCodeDetail1>TCRC7505</ErrorCodeDetail1>
+00549:     <Description>EMVカーネルへの選択AP通知に失敗。</Description>
+00550:     <ErrorPattern>ReadError</ErrorPattern>
+00551:   </CAFISArchErrorDetail>
+00552:   <CAFISArchErrorDetail>
+00553:     <ErrorCode></ErrorCode>
+00554:     <ErrorCodeDetail1>TCRC7507</ErrorCodeDetail1>
+00555:     <Description>フォールバックが発生。&#xa;（MS取引ができないため&#xa;業務継続不可の場合）</Description>
+00556:     <ErrorPattern>ReadError</ErrorPattern>
+00557:   </CAFISArchErrorDetail>
+00558:   <CAFISArchErrorDetail>
+00559:     <ErrorCode></ErrorCode>
+00560:     <ErrorCodeDetail1>TCRC7508</ErrorCodeDetail1>
+00561:     <Description>フォールバックが発生。&#xa;（MS取引で業務継続可能の場合）</Description>
+00562:     <ErrorPattern>ReadError</ErrorPattern>
+00563:   </CAFISArchErrorDetail>
+00564:   <CAFISArchErrorDetail>
+00565:     <ErrorCode></ErrorCode>
+00566:     <ErrorCodeDetail1>TCRS7534</ErrorCodeDetail1>
+00567:     <Description>カード状態不正でエラーが&#xa;発生しました。</Description>
+00568:     <ErrorPattern>ReadError</ErrorPattern>
+00569:   </CAFISArchErrorDetail>
+00570:   <CAFISArchErrorDetail>
+00571:     <ErrorCode></ErrorCode>
+00572:     <ErrorCodeDetail1>TCRS1023</ErrorCodeDetail1>
+00573:     <Description>アクワイアラ判定でエラーが発生。</Description>
+00574:     <ErrorPattern>RetryMSCard</ErrorPattern>
+00575:   </CAFISArchErrorDetail>
+00576:   <CAFISArchErrorDetail>
+00577:     <ErrorCode></ErrorCode>
+00578:     <ErrorCodeDetail1>TCRS1025</ErrorCodeDetail1>
+00579:     <Description>アクワイアラ判定でエラーが発生。</Description>
+00580:     <ErrorPattern>RetryMSCard</ErrorPattern>
+00581:   </CAFISArchErrorDetail>
+00582:   <CAFISArchErrorDetail>
+00583:     <ErrorCode></ErrorCode>
+00584:     <ErrorCodeDetail1>TCRS1091</ErrorCodeDetail1>
+00585:     <Description>アクワイアラ判定でエラーが発生。</Description>
+00586:     <ErrorPattern>RetryMSCard</ErrorPattern>
+00587:   </CAFISArchErrorDetail>
+00588:   <CAFISArchErrorDetail>
+00589:     <ErrorCode></ErrorCode>
+00590:     <ErrorCodeDetail1>TCRS1983</ErrorCodeDetail1>
+00591:     <Description>アクワイアラ判定でエラーが発生。</Description>
+00592:     <ErrorPattern>RetryMSCard</ErrorPattern>
+00593:   </CAFISArchErrorDetail>
+00594:   <CAFISArchErrorDetail>
+00595:     <ErrorCode></ErrorCode>
+00596:     <ErrorCodeDetail1>TCRS1997</ErrorCodeDetail1>
+00597:     <Description>アクワイアラ判定でエラーが発生。</Description>
+00598:     <ErrorPattern>RetryMSCard</ErrorPattern>
+00599:   </CAFISArchErrorDetail>
+00600:   <!-- 交通系IC固有 -->
+00601:   <CAFISArchErrorDetail>
+00602:     <ErrorCode></ErrorCode>
+00603:     <ErrorCodeDetail1>TKOC0586</ErrorCodeDetail1>
+00604:     <Description>残高不足が発生しました。</Description>
+00605:     <ErrorPattern>InsufficientBalance</ErrorPattern>
+00606:   </CAFISArchErrorDetail>
+00607:   <CAFISArchErrorDetail>
+00608:     <ErrorCode></ErrorCode>
+00609:     <ErrorCodeDetail1>TKOE0001</ErrorCodeDetail1>
+00610:     <Description>カード読込エラー。&#xa;またはカード内異常。</Description>
+00611:     <ErrorPattern>ReadError</ErrorPattern>
+00612:   </CAFISArchErrorDetail>
+00613:   <!--<CAFISArchErrorDetail>
+00614:     <ErrorCode></ErrorCode>
+00615:     <ErrorCodeDetail1>TKOE0003</ErrorCodeDetail1>
+00616:     <Description>カード指定相違。指定されたカードと異なるカードをタッチした。支払の現金併用時か直前取消で発生。</Description>
+00617:     <ErrorPattern></ErrorPattern>
+00618:   </CAFISArchErrorDetail>-->
+00619:   <CAFISArchErrorDetail>
+00620:     <ErrorCode></ErrorCode>
+00621:     <ErrorCodeDetail1>TKOE0008</ErrorCodeDetail1>
+00622:     <Description>カード読込待ち（ポーリング）&#xa;タイムアウト。</Description>
+00623:     <ErrorPattern>ReadTimeout</ErrorPattern>
+00624:   </CAFISArchErrorDetail>
+00625:   <CAFISArchErrorDetail>
+00626:     <ErrorCode></ErrorCode>
+00627:     <ErrorCodeDetail1>TKOE000A</ErrorCodeDetail1>
+00628:     <Description>複数枚カード検知。</Description>
+00629:     <ErrorPattern>ReadOneCard</ErrorPattern>
+00630:   </CAFISArchErrorDetail>
+00631:   <!-- 銀聯固有 -->
+00632:   <CAFISArchErrorDetail>
+00633:     <ErrorCode></ErrorCode>
+00634:     <ErrorCodeDetail1>TUPS0009</ErrorCodeDetail1>
+00635:     <Description>電文作成エラーが発生。</Description>
+00636:     <ErrorPattern>ReadError</ErrorPattern>
+00637:   </CAFISArchErrorDetail>
+00638:   <CAFISArchErrorDetail>
+00639:     <ErrorCode></ErrorCode>
+00640:     <ErrorCodeDetail1>TUPS0030</ErrorCodeDetail1>
+00641:     <Description>通信エラーが発生。</Description>
+00642:     <ErrorPattern>ReadError</ErrorPattern>
+00643:   </CAFISArchErrorDetail>
+00644: </CAFISArchErrorDetailDataSet></p>
+<hr />
+<p>FILE: Source/Device/Device.CAFISArchLAN/app.config
+00001: [非文本文件，未内联源码。size_bytes=581, extension=.config，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/Device/Device.CAFISArchLAN/packages.config
+00001: [非文本文件，未内联源码。size_bytes=251, extension=.config，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/Device/Device.CAFISArchLANSimulator/Device.CAFISArchLANSimulator.csproj
+00001: [非文本文件，未内联源码。size_bytes=4466, extension=.csproj，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/Device/Device.CAFISArchLANSimulator/packages.config
+00001: [非文本文件，未内联源码。size_bytes=251, extension=.config，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/Device/Device.CAFISArchService/Device.CAFISArchService.csproj
+00001: [非文本文件，未内联源码。size_bytes=4182, extension=.csproj，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/Device/Device.CAFISArchService/packages.config
+00001: [非文本文件，未内联源码。size_bytes=174, extension=.config，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/Device/Device.CAFISArchSimulator/Device.CAFISArchSimulator.csproj
+00001: [非文本文件，未内联源码。size_bytes=6093, extension=.csproj，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/Device/Device.CAFISArchSimulator/packages.config
+00001: [非文本文件，未内联源码。size_bytes=171, extension=.config，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/Device/Device.CRM/Device.CRM.csproj
+00001: [非文本文件，未内联源码。size_bytes=5077, extension=.csproj，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/Device/Device.CRM/app.config
+00001: [非文本文件，未内联源码。size_bytes=168, extension=.config，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/Device/Device.CRM/packages.config
+00001: [非文本文件，未内联源码。size_bytes=171, extension=.config，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/Device/Device.CT5100/Device.CT5100.csproj
+00001: [非文本文件，未内联源码。size_bytes=6506, extension=.csproj，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/Device/Device.CT5100/packages.config
+00001: [非文本文件，未内联源码。size_bytes=171, extension=.config，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/Device/Device.CT6100_ModeSelf/Device.CT6100_ModeSelf.csproj
+00001: [非文本文件，未内联源码。size_bytes=5821, extension=.csproj，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/Device/Device.CT6100_ModeSelf/packages.config
+00001: [非文本文件，未内联源码。size_bytes=171, extension=.config，需要人工确认其教材处理方式]</p>
+<p>END ORIGINAL PROMPT</p></div></a><div class="index-item-stats">
+<div class="index-item-long-text"><div class="truncatable"><div class="truncatable-content"><div class="index-item-long-text-content"><h1>文件级源码笔记：config_config_device_ct6100_modeself</h1>
+<h2>Batch 信息</h2>
+<ul>
+<li>Batch ID: batch_011</li>
+<li>Batch Name: config_config_device_ct6100_modeself</li>
+<li>Module: config</li>
+<li>Purpose: 解释项目配置、构建配置、依赖配置和运行时配置加载线索</li>
+</ul>
+<hr />
+<h2>文件：Source/Device/Device.BeepSound/Device.BeepSound.csproj</h2>
+<h3>1. 文件定位</h3>
+<p>Device.BeepSound 项目的 MSBuild 项目文件，属于 Device 层设备驱动之一。该 DLL 封装蜂鸣器（BeepSound）硬件的控制逻辑，供上层业务模块调用以产生提示音。项目文件本身定义编译目标、程序集元数据和构建行为。</p>
+<h3>2. 对外暴露内容</h3>
+<p>csproj 不是运行时组件，不对外暴露 API。它生成名为 <code>Device.BeepSound.dll</code> 的程序集（由 <code>&lt;AssemblyName&gt;</code> 元素定义，行号 1-3 附近），这是其他项目通过 ProjectReference 可引用的唯一产物。</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>csproj 在 MSBuild 构建时生效，无运行时逻辑。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无运行时组件。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>依赖项目中 <code>*.cs</code> 源文件自动编译（默认 Glob 模式）</li>
+<li>通过 <code>packages.config</code>（本批中见下一文件）引入 NuGet 包依赖</li>
+<li>可能被 BusinessLogic 层项目通过 <code>&lt;ProjectReference&gt;</code> 引用</li>
+<li>具体引用关系：<strong>需要结合 .sln 文件确认</strong></li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<p>当前文件没有运行时错误处理逻辑。构建错误由 MSBuild 引擎处理。文件本身不会导致运行时异常。</p>
+<h3>7. 测试相关</h3>
+<p>当前输入中没有对应测试文件。如需测试，应针对 Device.BeepSound.dll 中公开的方法（如果有）进行单元测试，但 csproj 本身不需要测试。</p>
+<h3>8. 新人阅读建议</h3>
+<p>csproj 是 XML 格式的项目文件，新人应先了解 MSBuild 基本语法（Target、PropertyGroup、ItemGroup）。<strong>本批未提供源码行号</strong>，需要结合 <code>dotnet project</code> 查看或实际打开文件阅读。重点关注 <code>&lt;TargetFramework&gt;</code>、<code>&lt;PackageReference&gt;</code> / <code>packages.config</code> 和项目引用。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>具体目标框架（.NET Framework 版本）：<strong>需要人工确认 XML 内容</strong></li>
+<li>是否被 BusinessLogic 或其他 Device 项目引用：<strong>需要结合 .sln 搜索 ProjectReference</strong></li>
+<li>源文件列表（<code>*.cs</code> 文件名）：<strong>不在本 batch 范围内</strong></li>
+</ul>
+<hr />
+<h2>文件：Source/Device/Device.BeepSound/packages.config</h2>
+<h3>1. 文件定位</h3>
+<p>Device.BeepSound 项目的 NuGet 包依赖清单。<strong>本批未提供内联源码</strong>（声明为“非文本文件”），但从命名的工程惯例可知其结构。<code>packages.config</code> 是 .NET Framework 时代的标准依赖声明文件，列出项目所需的所有外部 NuGet 包及其版本。本项目换用 <code>packages.config</code> 而非较新的 <code>&lt;PackageReference&gt;</code>，说明其技术栈可能以 .NET Framework 4.x 为主。</p>
+<h3>2. 对外暴露内容</h3>
+<p>不对外暴露运行时内容。仅 MSBuild 构建时通过 NuGet restore 读取。</p>
+<ul>
+<li>名称：packages.config</li>
+<li>文件路径：<code>Source/Device/Device.BeepSound/packages.config</code>，行 1（仅文件存在信息）</li>
+<li>用途：声明 Device.BeepSound 需要引用的 NuGet 包</li>
+</ul>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>无运行时逻辑。构建时 NuGet 还原工具读取该文件，下载声明的包到 <code>packages/</code> 目录。缺失或版本错误会导致构建失败。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>所有元素都代表外部 NuGet 包依赖</li>
+<li>具体依赖列表：<strong>需要人工确认 XML 内容</strong></li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<p>文件缺失 → NuGet restore 失败 → 项目编译失败。
+版本冲突 → 可能引入运行时行为异常，但构建时 NuGet 会报版本冲突警告。</p>
+<h3>7. 测试相关</h3>
+<p>不适用。</p>
+<h3>8. 新人阅读建议</h3>
+<p>新人应查看该文件的内容，了解 BeepSound 模块引入了哪些外部库。通常 BeepSound 可能依赖串口通信或硬件 SDK 的包装库。若只有 .NET 基类库依赖，则说明功能较简单，直接通过 .NET API 控制蜂鸣器。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>具体依赖了哪些 NuGet 包：<strong>需要人工确认</strong></li>
+<li>是否依赖外部硬件通信库（如 JPOS、OPOS 相关）：<strong>需要结合源码判断</strong></li>
+</ul>
+<hr />
+<h2>文件：Source/Device/Device.CAFISArch/CAFISArchAbnormalErrorWithoutAttendant.xml</h2>
+<h3>1. 文件定位</h3>
+<p>CAFIS Arch 设备驱动的错误分类配置文件，定义哪些业务错误码（BizErrorCode）属于"无待机人员时的异常错误"（AbnormalErrorWithoutAttendant），即自助设备在无人值守时发生的严重错误。该配置决定了当 ATM/自助终端在无网点人员在场时，遇到特定错误时应采取的应对策略（通常是停机或限制业务）。</p>
+<h3>2. 对外暴露内容</h3>
+<ul>
+<li>名称：AbnormalErrorWithoutAttendant（错误分类集合）</li>
+<li>根元素：<code>&lt;CAFISArchAbnormalErrorWithoutAttendantDataSet&gt;</code>（第 2 行）</li>
+<li>命名空间：<code>http://tempuri.org/CAFISArchAbnormalErrorWithoutAttendantDataSet.xsd</code>（第 2 行）</li>
+<li>用途：运行时被 CAFIS Arch 设备驱动加载（反序列化为 DataSet 或对应的强类型集合），用于判断当前错误是否需要触发"无待机人员"处理流程</li>
+</ul>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>该文件是一个平面 XML，结构极为简单：</p>
+<ol>
+<li>声明 XML 版本和独立标志（第 1 行）</li>
+<li>定义根 DataSet，绑定到 XSD 命名空间（第 2 行）</li>
+<li>包含一条 <code>&lt;AbnormalErrorWithoutAttendant&gt;</code> 记录（第 3-5 行）：<ul>
+<li><code>&lt;BizErrorCode&gt;C20&lt;/BizErrorCode&gt;</code>（第 4 行）—— 唯一标记的异常错误码</li>
+</ul>
+</li>
+</ol>
+<p>该配置表示：当 CAFIS Arch 设备上报业务错误码 <code>C20</code> 时，系"无待机人员"类异常，系统应据此决定后续行为（如暂停自助服务、切换到远程值守模式等）。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无。该 XML 被反序列化为 <code>CAFISArchAbnormalErrorWithoutAttendantDataSet</code> 或 <code>DataSet</code>。反序列化代码不在本 batch 中。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>隐含依赖其对应的 XSD 文件（命名空间 <code>.../CAFISArchAbnormalErrorWithoutAttendantDataSet.xsd</code>），该 XSD 定义了 DataSet 结构</li>
+<li>被 Device.CAFISArch（或 Device.CAFISArchLAN）中的 C# 代码在运行时加载解析</li>
+<li>读取该文件的代码：<strong>需要结合 Device.CAFISArch 源码确认</strong></li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li>文件缺失：运行时若加载失败，可能无法正确识别 <code>C20</code> 错误的类别，导致处理策略错误</li>
+<li>文件损坏（格式错误）：XML 反序列化将抛出异常，需要调用方捕获</li>
+<li>当前仅包含一条记录（C20）。如果新增同类错误码，需在此文件中追加 <code>&lt;AbnormalErrorWithoutAttendant&gt;</code> 元素</li>
+<li>当前文件没有显式异常回退逻辑</li>
+</ul>
+<h3>7. 测试相关</h3>
+<p>当前输入中没有对应测试。建议测试：
+- 文件是否能被正确反序列化为预期的 DataSet 结构
+- 如果文件为空或多条记录，读取代码的行为是否符合预期
+- 如果文件中 BizErrorCode 为 null/空字符串，处理代码是否容错</p>
+<h3>8. 新人阅读建议</h3>
+<p>此文件极其简单，但含义重要。新人应配合 <code>CAFISArchOtherError.xml</code> 一起阅读——前者定义"无待机人员"类错误，后者定义"其他错误"，两者共同构成 CAFIS Arch 设备错误分类体系。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>XSD 文件（<code>.../AbnormalErrorWithoutAttendantDataSet.xsd</code>）是否随项目一起发布：<strong>需要结合项目文件确认</strong></li>
+<li>C# 端如何加载该文件（Embedded Resource / 文件系统 / Settings 绑定）：<strong>需要结合 Device.CAFISArch 源码确认</strong></li>
+<li><code>C20</code> 的具体业务含义：<strong>需要联系业务方或查阅外部文档</strong></li>
+</ul>
+<hr />
+<h2>文件：Source/Device/Device.CAFISArch/CAFISArchOtherError.xml</h2>
+<h3>1. 文件定位</h3>
+<p>CAFIS Arch 设备驱动的综合错误代码表，定义"其他错误"的分类体系，涵盖 CAFIS Arch 支付终端在交易处理中可能出现的各类异常。该文件是运行时错误分类的核心数据源之一，将 CAFIS 返回的原始错误码（<code>ErrorCode</code> / <code>ErrorCodeDetail1</code>）映射到人类可读的错误消息（<code>ErrorMessage</code>）、原因（<code>ErrorCause</code>）和处理指引（<code>ErrorHandling</code>）。各 ATM 或自助终端通过加载此配置实现一致的错误提示和处理建议。</p>
+<h3>2. 对外暴露内容</h3>
+<ul>
+<li>名称：CAFISArchOtherErrorDataSet（错误代码集合）</li>
+<li>根元素：<code>&lt;CAFISArchOtherErrorDataSet&gt;</code>（第 2 行）</li>
+<li>命名空间：<code>http://tempuri.org/CAFISArchOtherErrorDataSet.xsd</code>（第 2 行）</li>
+<li>子元素类型（两套结构）：</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>元素名</th>
+<th>行范围</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&lt;Error&gt;</code></td>
+<td>第 3-26 行</td>
+<td>外层错误码（如 TFWL0001~TFWC0002），6 条</td>
+</tr>
+<tr>
+<td><code>&lt;ErrorDetail1&gt;</code></td>
+<td>第 27-410 行</td>
+<td>详细错误码（如 TJDC2979~TCRS2955），约91 条</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>&lt;Error&gt;</code> 子字段：</strong>
+- <code>&lt;ErrorCode&gt;</code> — 错误编码（如 TFWL0001）
+- <code>&lt;ErrorMessage&gt;</code> — 错误消息（支持 <code>&amp;#xa;</code> 换行符）</p>
+<p><strong><code>&lt;ErrorDetail1&gt;</code> 子字段：</strong>
+- <code>&lt;ErrorCodeDetail1&gt;</code> — 详细错误码（如 TJDC2979）
+- <code>&lt;ErrorMessage&gt;</code> — 错误描述
+- <code>&lt;ErrorCause&gt;</code> — 错误原因分类（如 <code>マスタ不整合</code> "主数据不一致"、<code>デバイス不正</code> "设备异常"、<code>カード起因</code> "卡片原因"）
+- <code>&lt;ErrorHandling&gt;</code> — 处理指引（"请呼叫工作人员"等）</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>此 XML 是一个纯数据文件，无执行逻辑。运行时加载流程推测如下：</p>
+<ol>
+<li>系统在 CAFIS Arch 设备初始化或错误处理时机，通过 <code>DataSet.ReadXml(path)</code> 或类似 XML 序列化方式加载该文件</li>
+<li>加载后转换为强类型集合或通用 DataTable</li>
+<li>当 CAFIS 设备返回一个错误码时，运行时在该集合中查找匹配的 <code>ErrorCode</code>（外层）或 <code>ErrorCodeDetail1</code>（详细）</li>
+<li>找到匹配项后，消费 <code>ErrorMessage</code>、<code>ErrorCause</code>、<code>ErrorHandling</code> 做以下处理：</li>
+<li>将错误消息（日语）显示在操作员 GUI 或日志中</li>
+<li>根据 <code>ErrorCause</code> 判定是配置问题（マスタ不整合）还是设备问题（デバイス不正），从而决策是否需要停机、提醒或自动恢复</li>
+<li>将 <code>ErrorHandling</code> 指引展示给用户或运维人员</li>
+</ol>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无运行时函数。该 XML 被设计为 .NET DataSet 的反序列化目标，可能对应以下隐式数据结构：</p>
+<ul>
+<li><code>CAFISArchOtherErrorDataSet</code> — 对应根元素</li>
+<li><code>CAFISArchOtherErrorDataSet.ErrorRow</code> — 对应 <code>&lt;Error&gt;</code> 行</li>
+<li><code>CAFISArchOtherErrorDataSet.ErrorDetail1Row</code> — 对应 <code>&lt;ErrorDetail1&gt;</code> 行</li>
+</ul>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>隐式依赖 Xbox XSD 架构文件（由命名空间标注）</li>
+<li>被 Device.CAFISArch（或 Device.CAFISArchLAN）中的代码在运行时加载</li>
+<li>可能被 <code>CAFISArchAbnormalErrorWithoutAttendant.xml</code> 互补使用（错误分类体系的不同维度）</li>
+<li>读取代码：<strong>需要结合 Device.CAFISArch 源码确认</strong></li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li>错误码缺失：如果 CAFIS 返回的某个错误码未在此文件中定义，运行时需要回退到通用错误处理逻辑。当前文件无冗余 fallback 处理</li>
+<li><code>&amp;#xa;</code> 换行符：错误消息中嵌入 <code>&amp;#xa;</code>（XML 转义的换行），解析后会在该位置断行。显示时需要注意换行处理</li>
+<li>重复错误码：文件中未出现重复的 <code>ErrorCode</code> 或 <code>ErrorCodeDetail1</code>，但在运行时若出现重复，最后一条可能覆盖之前的值（取决于 DataSet 约定）</li>
+<li>文件本身无错误分类字段：每个 ErrorDetail1 条目的分类隐含在 ErrorCause 中，但 ErrorCause 是自由文本而非枚举值。建议在代码中维护 ErrorCause 的分类字典，否则 <code>マスタ不整合</code> 和 <code>マスタ不整合</code>（拼写一致）的分类依赖于字符串精确匹配</li>
+</ul>
+<h3>7. 测试相关</h3>
+<p>当前输入中没有对应测试。建议测试：
+- 加载此 XML 后，所有 6 条 Error 和约 91 条 ErrorDetail1 是否被完整解析
+- 中文/日文 Unicode 字符是否正确解码
+- <code>&amp;#xa;</code> 换行符解析后是否为 <code>\n</code>（LF）
+- 如果存在重复 ErrorCode，DataSet 的 Merge 行为是否符合预期
+- 错误码查找的性能（如果该表被频繁查询）</p>
+<h3>8. 新人阅读建议</h3>
+<ul>
+<li>先了解 CAFIS Arch 是什么（日本 NTT 数据旗下的信用卡支付架构标准），理解该系统的错误码体系</li>
+<li>对照 <code>CAFISArchAbnormalErrorWithoutAttendant.xml</code> 理解两个错误分类 XML 的协作方式</li>
+<li>注意 <code>ErrorCause</code> 的三个分类（"主数据不一致"、"设备异常"、"卡片原因"）对应不同运维处理流程</li>
+<li>理解 <code>ErrorHandling</code> 字段在自助设备场景下的设计意图：绝大多数详细错误的处理指引均为"请呼叫工作人员"，意味着这些错误需要人工介入</li>
+</ul>
+<h3>9. 不确定点</h3>
+<ul>
+<li><code>CAFISArchOtherErrorDataSet.xsd</code> 究竟定义了什么样的强类型约束：<strong>需要结合 XSD 文件或生成的 .Designer.cs 确认</strong></li>
+<li>该 XML 是作为 Embedded Resource 内嵌在 DLL 中，还是作为外部配置文件部署：<strong>需要结合 .csproj 确认</strong>（本批中 Device.CAFISArch.csproj 未内联，无法判断）</li>
+<li>数据在运行时是缓存在内存中还是每次读取：<strong>需要结合 C# 代码确认</strong></li>
+<li>约 91 条 ErrorDetail1 错误码是通过代码自动生成的还是人工维护的：<strong>需要结合业务确认</strong></li>
+</ul>
+<hr />
+<h2>文件：Source/Device/Device.CAFISArch/Device.CAFISArch.csproj</h2>
+<h3>1. 文件定位</h3>
+<p>Device.CAFISArch 项目的 MSBuild 项目文件。Device.CAFISArch 是 CAFIS Arch 卡支付设备的驱动封装层，实现与 CAFIS Arch V1/V2 协议通信、交易处理、错误处理等核心功能。该 DLL 对上（BusinessLogic）提供统一的卡支付接口。</p>
+<h3>2. 对外暴露内容</h3>
+<p>csproj 不是运行时组件，但定义了以下关键构建输出：</p>
+<ul>
+<li>输出程序集：<code>Device.CAFISArch.dll</code></li>
+<li>可能定义 Embeded Resource 项目（如 <code>CAFISArchAbnormalErrorWithoutAttendant.xml</code>、<code>CAFISArchOtherError.xml</code>）</li>
+<li>可能包含 COM Interop 或外部 SDK 的引用</li>
+</ul>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>构建时 MSBuild 逻辑，无运行时逻辑。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无运行时组件。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>依赖本项目 <code>*.cs</code> 源文件</li>
+<li>通过 <code>packages.config</code> 引入 NuGet 包（本批中见下一文件）</li>
+<li>可能引用 OPOS 或 JPOS 驱动、串口通信库</li>
+<li>可能被 <code>Device.CAFISArchLAN</code>（LAN 版本）或 <code>Device.CAFISArchService</code> 服务版依赖</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<p>不适用。</p>
+<h3>7. 测试相关</h3>
+<p>当前输入无对应测试。建议对 Device.CAFISArch 暴露的错误码解析 API、通信控制 API 编写单元测试。</p>
+<h3>8. 新人阅读建议</h3>
+<ul>
+<li>csproj 无内联内容，先通过 IDE 或 <code>dotnet project</code> 查看具体属性</li>
+<li>重点关注 <code>&lt;TargetFramework&gt;</code>、<code>&lt;EmbeddedResource&gt;</code> 元素和外部 SDK 引用</li>
+<li>理解 CAFIS Arch 的双文件（系列）项目结构：<code>Device.CAFISArch</code>（基础版）、<code>Device.CAFISArchLAN</code>（LAN 版）、<code>Device.CAFISArchService</code>（服务版）、<code>Device.CAFISArchSimulator</code>（仿真版）</li>
+</ul>
+<h3>9. 不确定点</h3>
+<ul>
+<li>目标框架版本：<strong>需要人工确认</strong></li>
+<li>是否引用外部硬件 SDK（如 NTT Data CAFIS Arch SDK）：<strong>需要人工确认</strong></li>
+<li>Embedded Resource 是否包含上述两个 XML 文件：<strong>需要结合 csproj 内容和源码判断</strong></li>
+</ul>
+<hr />
+<h2>文件：Source/Device/Device.CAFISArch/packages.config</h2>
+<h3>1. 文件定位</h3>
+<p>Device.CAFISArch 项目的 NuGet 包依赖清单。<strong>本批未提供内联源码</strong>。</p>
+<h3>2. 对外暴露内容</h3>
+<p>同 Device.BeepSound/packages.config 的分析，声明 Device.CAFISArch 所需的外部 NuGet 包。</p>
+<h3>3-8. 简要说明</h3>
+<ul>
+<li>无运行时逻辑</li>
+<li>依赖内容未知，需要人工确认</li>
+<li>推测可能包含：<code>Standard.Inf.Interface</code>、<code>Standard.Inf.Common</code> 等企业内部框架包，以及日志、序列化等基础库</li>
+<li>无测试必要</li>
+</ul>
+<h3>9. 不确定点</h3>
+<ul>
+<li>具体的 NuGet 包列表和版本：<strong>需要人工确认</strong></li>
+<li>是否依赖 CAFIS Arch 的 C# 客户端库：<strong>需要人工确认</strong></li>
+</ul>
+<hr />
+<h2>文件：Source/Device/Device.CAFISArchLAN/Device.CAFISArchLAN.csproj</h2>
+<h3>1. 文件定位</h3>
+<p>Device.CAFISArchLAN 项目的构建定义文件。该模块是 CAFIS Arch 设备驱动的 LAN（局域网）通信变体，相对 Device.CAFISArch（可能采用串口或专用协议）不同，它通过 LAN 网络连接与 CAFIS Arch 终端通信，适用于分布式部署场景。</p>
+<h3>2. 对外暴露内容</h3>
+<p>csproj 不是运行时组件。输出 <code>Device.CAFISArchLAN.dll</code>。</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>构建逻辑，无运行时分析。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>依赖本路径下的 <code>Settings/CAFISArchErrorDetailInfo.xml</code>（本批中提供）</li>
+<li>依赖 <code>app.config</code>（本批中提供）</li>
+<li>通过 <code>packages.config</code> 引用外部包</li>
+<li>可能继承或包装 <code>Device.CAFISArch</code> 的接口</li>
+<li>包含 <code>Settings/</code> 目录下的配置文件为 Embedded Resource 或 Content（<strong>需要确认</strong>）</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<p>不适用。</p>
+<h3>7. 测试相关</h3>
+<p>无测试文件。如需测试，应关注 LAN 通信协议实现的正确性。</p>
+<h3>8. 新人阅读建议</h3>
+<ul>
+<li>先对比 <code>Device.CAFISArch</code> 和 <code>Device.CAFISArchLAN</code> 的 csproj 差异，理解 LAN 版本增加了哪些能力的引用</li>
+<li>结合 <code>Settings/CAFISArchErrorDetailInfo.xml</code> 和 <code>app.config</code> 理解运行时配置加载</li>
+</ul>
+<h3>9. 不确定点</h3>
+<ul>
+<li>与 Device.CAFISArch 的继承/接口关系：<strong>需要结合源码确认</strong></li>
+<li>所有的 <code>&lt;ProjectReference&gt;</code> 和 <code>&lt;Reference&gt;</code>：<strong>需要人工确认</strong></li>
+</ul>
+<hr />
+<h2>文件：Source/Device/Device.CAFISArchLAN/Settings/CAFISArchErrorDetailInfo.xml</h2>
+<h3>1. 文件定位</h3>
+<p>CAFIS Arch LAN 设备驱动的错误详细信息配置文件。该文件是 <code>CAFISArchOtherError.xml</code> 在 LAN 变体中的对应物（但结构不同），提供一个两层的错误分类映射：</p>
+<ol>
+<li><strong>外层 <code>&lt;Error&gt;</code></strong>（第 4-27 行）：定义通用错误码（如 TFWL0001~TFWC0002），共 6 条，与 <code>CAFISArchOtherError.xml</code> 的前 6 条 <code>&lt;Error&gt;</code> 完全一致，命名空间和内容均相同</li>
+<li><strong>内层 <code>&lt;CAFISArchErrorDetail&gt;</code></strong>（第 30-644 行）：定义详细错误码到错误模式（ErrorPattern）的映射，约 91 个条目，这是该文件的核心所在</li>
+</ol>
+<p>与 <code>CAFISArchOtherError.xml</code> 的关键区别在于引入了 <code>&lt;ErrorPattern&gt;</code> 字段，用于将错误归类到<strong>运行时可处理的模式</strong>（如 ReadError、RetryMSCard、InsufficientBalance 等），让代码可以根据模式而非具体错误码做分支处理。</p>
+<h3>2. 对外暴露内容</h3>
+<ul>
+<li>名称：CAFISArchErrorDetailDataSet</li>
+<li>根元素：<code>&lt;CAFISArchErrorDetailDataSet&gt;</code>（第 2 行）</li>
+<li>命名空间：<code>http://tempuri.org/CAFISArchErrorDetailDataSet.xsd</code>（第 2 行）</li>
+<li>子元素类型（两套）：</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>元素名</th>
+<th>行范围</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&lt;Error&gt;</code></td>
+<td>第 4-27 行</td>
+<td>通用错误码映射（同 OtherError.xml 的前 6 项）</td>
+</tr>
+<tr>
+<td><code>&lt;CAFISArchErrorDetail&gt;</code></td>
+<td>第 30-644 行</td>
+<td>详细错误 → 模式映射（核心内容）</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>&lt;CAFISArchErrorDetail&gt;</code> 子字段：</strong>
+- <code>&lt;ErrorCode&gt;</code>（空字符串）— 第 31 行等处，所有记录该字段为空
+- <code>&lt;ErrorCodeDetail1&gt;</code> — 详细错误码
+- <code>&lt;Description&gt;</code> — 日语错误描述
+- <code>&lt;ErrorPattern&gt;</code> — 错误模式分类（见下文分析）</p>
+<p><strong>错误模式（ErrorPattern）分类体系：</strong></p>
+<table>
+<thead>
+<tr>
+<th>ErrorPattern</th>
+<th>出现次数</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ReadError</code></td>
+<td>— 绝大多数（约 80+ 条）</td>
+<td>卡片读取错误</td>
+</tr>
+<tr>
+<td><code>RetryMSCard</code></td>
+<td>5 条（第 570-598 行）</td>
+<td>需要退卡重试磁条卡</td>
+</tr>
+<tr>
+<td><code>InsufficientBalance</code></td>
+<td>1 条（第 600-605 行）</td>
+<td>余额不足（交通系IC特有）</td>
+</tr>
+<tr>
+<td><code>ReadTimeout</code></td>
+<td>1 条（第 619-623 行）</td>
+<td>读取超时（交通系IC特有）</td>
+</tr>
+<tr>
+<td><code>ReadOneCard</code></td>
+<td>1 条（第 625-629 行）</td>
+<td>检测到多张卡片（交通系IC特有）</td>
+</tr>
+</tbody>
+</table>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>运行时加载流程推测：</p>
+<ol>
+<li>初始化时，设备驱动加载本 XML 到 <code>CAFISArchErrorDetailDataSet</code>（通过 <code>ReadXml</code>）</li>
+<li>当 CAFIS Arch 设备返回详细错误码（如 TCRS1013）时，系统在 <code>&lt;CAFISArchErrorDetail&gt;</code> 集合中查找匹配的 <code>ErrorCodeDetail1</code></li>
+<li>读取对应的 <code>&lt;ErrorPattern&gt;</code> 值，根据模式调用不同的错误处理策略：</li>
+<li><strong>ReadError</strong> → 提示用户重新插卡/重新操作</li>
+<li><strong>RetryMSCard</strong> → 尝试执行磁条卡回退流程</li>
+<li><strong>InsufficientBalance</strong> → 提示余额不足，选择其他支付方式</li>
+<li><strong>ReadTimeout</strong> → 提示用户重新放置卡片</li>
+<li><strong>ReadOneCard</strong> → 提示用户一次只能放置一张卡片</li>
+<li>如果同时匹配外层 <code>&lt;ErrorCode&gt;</code>，可能先走外层通用错误处理，再走详细错误模式</li>
+</ol>
+<p><strong>注释标记（第 3、29、600、631 行）：</strong>
+- <code>&lt;!-- 共通 --&gt;</code>（第 3 行）— 通用错误段
+- <code>&lt;!-- クレジット固有 --&gt;</code>（第 29 行）— 信用卡特有错误，包含大量 TCRS/TCRC 前缀的错误码
+- <code>&lt;!-- 交通系IC固有 --&gt;</code>（第 600 行）— 交通系 IC 卡特有错误（TKOC/TKOE 前缀）
+- <code>&lt;!-- 銀聯固有 --&gt;</code>（第 631 行）— 银联卡特有错误（TUPS 前缀）
+- 第 613-618 行有被注释掉的 <code>TKOE0003</code> 条目，说明此错误模式已被弃用或暂停使用</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无运行时函数。隐式数据结构：
+- <code>CAFISArchErrorDetailDataSet</code>
+- <code>CAFISArchErrorDetailDataSet.ErrorRow</code> — 对应 <code>&lt;Error&gt;</code> 行
+- <code>CAFISArchErrorDetailDataSet.CAFISArchErrorDetailRow</code> — 对应 <code>&lt;CAFISArchErrorDetail&gt;</code> 行
+- <code>ErrorPattern</code> 字段推测会被反序列化为字符串或枚举</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>被 Device.CAFISArchLAN 中的 C# 代码加载（该文件位于其 Settings 目录下）</li>
+<li>与 <code>CAFISArchOtherError.xml</code> 概念相似但结构不同，推测 LAN 版本代码针对该文件结构编写</li>
+<li><code>CAFISArchAbnormalErrorWithoutAttendant.xml</code> 可能作为互补文件</li>
+<li>命名空间暗示存在对应的 XSD 架构文件</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li><strong>空 ErrorCode</strong>：所有 <code>&lt;ErrorCode&gt;</code> 字段均为空字符串（第 31、37、43 行等），表明该字段被保留但未使用。如果加载代码期望非空，可能引发问题</li>
+<li><strong>注释掉的条目</strong>：第 613-618 行 TKOE0003 被注释，意味着该错误处理逻辑已移除，但如果遗留代码中仍引用该条可能造成错误映射缺失</li>
+<li><strong>ErrorPattern 拼写一致性</strong>：需要确认所有 <code>ReadError</code> 拼写完全一致（无首尾空格、大小写差异），否则字符串匹配会失效</li>
+<li><strong>文件缺失</strong>：XML 加载失败会导致错误分类能力丧失，系统可能只能做通用错误处理</li>
+<li><strong><code>Error</code> 元素与 <code>CAFISArchErrorDetail</code> 元素共存</strong>：两者结构完全不同，反序列化时如果是强类型 DataSet，需要确保 XSD 正确区分</li>
+</ul>
+<h3>7. 测试相关</h3>
+<p>当前输入中没有对应测试。建议测试：
+- 全部 6 条 <code>&lt;Error&gt;</code> 和约 91 条 <code>&lt;CAFISArchErrorDetail&gt;</code> 的完整解析
+- <code>ErrorPattern</code> 字符串的精确匹配和枚举转换
+- 针对各 ErrorPattern 分类（ReadError、RetryMSCard 等）的错误处理代码是否正确分支
+- 某个 ErrorCodeDetail1 找不到时的回退策略
+- 注释掉的 TKOE0003 是否会导致解析异常（取决于解析器是否跳过注释）</p>
+<h3>8. 新人阅读建议</h3>
+<ul>
+<li>这是本 batch 中最重要、最有信息量的文件之一，值得重点阅读</li>
+<li>首先理解 <code>ErrorPattern</code> 的五大分类及其业务含义</li>
+<li>对比 <code>CAFISArchOtherError.xml</code> 的结构差异：前者偏向"错误码→消息/原因/处理"的完整映射，本文件偏向"错误码→模式"的分类映射。解释了两者之所以结构不同，是因为它们被不同的代码模块消费</li>
+<li>关注不同卡种（信用卡、交通 IC、银联）的错误码前缀区别，这反映了 CAFIS Arch 支持的多卡种架构</li>
+<li>注意文件位于 <code>Settings/</code> 子目录下，表明它是 LAN 版本特有的运行时配置文件</li>
+</ul>
+<h3>9. 不确定点</h3>
+<ul>
+<li>所有 <code>&lt;CAFISArchErrorDetail&gt;</code> 中 <code>&lt;ErrorCode&gt;</code> 字段为空是否有业务含义：<strong>需要结合代码确认是否为 DataSet 架构所需</strong></li>
+<li><code>CAFISArchErrorDetailDataSet.xsd</code> 的文件位置和精确结构：<strong>需要结合项目文件确认</strong></li>
+<li>该文件与 <code>CAFISArchAbnormalErrorWithoutAttendant.xml</code>、<code>CAFISArchOtherError.xml</code> 在运行时如何被同时使用：<strong>需要结合设备驱动初始化代码确认</strong></li>
+<li>交通系 IC 卡的 ErrorPattern 设计（InsufficientBalance / ReadTimeout / ReadOneCard）在代码中是否对应特殊的 UI 交互流程：<strong>需要结合业务逻辑确认</strong></li>
+</ul>
+<hr />
+<h2>文件：Source/Device/Device.CAFISArchLAN/app.config</h2>
+<h3>1. 文件定位</h3>
+<p>Device.CAFISArchLAN 项目的运行时应用程序配置文件。<strong>本批未提供内联源码</strong>，仅知文件大小为 581 字节。根据 .NET Framework 惯例，app.config 通常包含以下内容：
+- 数据库连接字符串
+- 日志记录配置（log4net / NLog / 企业库日志）
+- WCF 绑定和终结点配置
+- 设备通信参数（端口、超时、重试策略）
+- appSettings 自定义配置节</p>
+<h3>2. 对外暴露内容</h3>
+<p>不对外暴露。运行时由 <code>ConfigurationManager</code> 读取。</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>加载逻辑：Device.CAFISArchLAN 初始化时通过 <code>ConfigurationManager.AppSettings</code> 或 <code>ConfigurationManager.GetSection</code> 读取配置。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>被 Device.CAFISArchLAN 代码读取</li>
+<li>可能依赖 <code>System.Configuration</code> 程序集</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li>文件缺失：.NET Framework 在缺失 app.config 时不会报错，但读取期望的 key 时返回 null，可能导致 <code>NullReferenceException</code></li>
+<li>格式错误：XML 解析异常，在首次读取配置时抛出 <code>ConfigurationErrorsException</code></li>
+</ul>
+<h3>7. 测试相关</h3>
+<p>无测试文件。建议测试代码读取各项配置的路径和 fallback 值。</p>
+<h3>8. 新人阅读建议</h3>
+<ul>
+<li>读取 app.config 的实际内容，重点关注 <code>connectionStrings</code> 和 <code>appSettings</code></li>
+<li>注意 app.config 在部署时会与可执行文件重命名为 <code>[exe名称].exe.config</code></li>
+</ul>
+<h3>9. 不确定点</h3>
+<ul>
+<li>具体配置项：<strong>需要人工确认文件内容</strong></li>
+<li>配置是否用于指定 CAFIS Arch LAN 的服务器地址和端口：<strong>需要结合代码确认</strong></li>
+</ul>
+<hr />
+<h2>文件：Source/Device/Device.CAFISArchLAN/packages.config</h2>
+<h3>1. 文件定位</h3>
+<p>Device.CAFISArchLAN 的 NuGet 包依赖清单。<strong>本批未提供内联源码</strong>。</p>
+<p>同上述 packages.config 分析。默认内容需人工确认，但可推测 LAN 版本可能额外依赖网络通信相关库（如 WCF、Socket 通信辅助库）。</p>
+<h3>不确定点</h3>
+<ul>
+<li>与 Device.CAFISArch/packages.config 的差异：<strong>需要对比确认</strong></li>
+<li>是否包含 <code>System.ServiceModel</code> 或类似网络库的引用：<strong>需要人工确认</strong></li>
+</ul>
+<hr />
+<h2>文件：Source/Device/Device.CAFISArchLANSimulator/Device.CAFISArchLANSimulator.csproj</h2>
+<h3>1. 文件定位</h3>
+<p>Device.CAFISArchLANSimulator 项目的构建文件。该 DLL 是 CAFIS Arch LAN 通信的模拟器版本，用于在无真实 CAFIS Arch 设备连接的开发/测试环境中，模拟 CAFIS Arch 终端的行为，确保上层应用能进行集成测试。</p>
+<h3>2. 对外暴露内容</h3>
+<p>csproj 不是运行时组件。输出 <code>Device.CAFISArchLANSimulator.dll</code>，该 DLL 应该实现与真机驱动相同的接口（通过接口抽象），使上层业务代码可以在模拟模式和真实模式之间切换。</p>
+<h3>3-8. 简要说明</h3>
+<ul>
+<li>构建时逻辑，无运行时分析</li>
+<li>依赖内容未知</li>
+<li>可能额外依赖模拟数据或配置（如模拟错误码自动生成）</li>
+<li>不需要对 csproj 进行测试</li>
+<li>新人应理解"模拟器模式"在设备驱动层中的常见设计模式（Interface → RealImpl + SimImpl）</li>
+</ul>
+<h3>9. 不确定点</h3>
+<ul>
+<li>与 Device.CAFISArchLAN 的接口契约：<strong>需要结合 Interface / Abstract 源码确认</strong></li>
+<li>是否实现了所有 CAFIS Arch 功能模拟：<strong>需要结合源码确认</strong></li>
+<li>模拟器能否模拟出错误场景（如 <code>ErrorPattern</code> 的各种模式）：<strong>需要结合代码确认</strong></li>
+</ul>
+<hr />
+<h2>文件：Source/Device/Device.CAFISArchLANSimulator/packages.config</h2>
+<h3>1. 文件定位</h3>
+<p>Device.CAFISArchLANSimulator 的 NuGet 包依赖清单。<strong>本批未提供内联源码</strong>。</p>
+<p>推测其依赖可能与 Device.CAFISArchLAN 基本一致，或更少（模拟器可能不需要真实通信库）。</p>
+<h3>不确定点</h3>
+<ul>
+<li>与 Device.CAFISArchLAN/packages.config 的差异：<strong>需要确认</strong></li>
+<li>可能不需要依赖物理通信 SDK：<strong>需要确认</strong></li>
+</ul>
+<hr />
+<h2>文件：Source/Device/Device.CAFISArchService/Device.CAFISArchService.csproj</h2>
+<h3>1. 文件定位</h3>
+<p>Device.CAFISArchService 项目的构建定义文件。从项目名称中的 Service 关键字判断，该项目是 CAFIS Arch 驱动的 Windows 服务（或 WCF 服务）封装，可能将设备控制通过服务接口暴露给同一机器的其他进程或多个机器的远程调用。</p>
+<h3>2. 对外暴露内容</h3>
+<p>csproj 不是运行时组件。可能输出为：
+- Windows 可执行服务（.exe，基于 ServiceBase）
+- WCF 服务库（.dll，通过 ServiceHost 托管）</p>
+<h3>3-8. 简要说明</h3>
+<ul>
+<li>构建时逻辑</li>
+<li>可能依赖 <code>System.ServiceProcess</code>（Windows 服务）</li>
+<li>服务化设计说明 CAFIS Arch 驱动有跨进程或跨机器调用的需求</li>
+</ul>
+<h3>9. 不确定点</h3>
+<ul>
+<li>具体是 Windows 原生服务还是 WCF 服务自宿主：<strong>需要结合 Program.cs 确认</strong></li>
+<li>服务接口定义（ServiceContract）：<strong>需要结合源码确认</strong></li>
+<li>与 Device.CAFISArch 或 Device.CAFISArchLAN 的关系：是否包装其中某个 DLL：<strong>需要确认</strong></li>
+</ul>
+<hr />
+<h2>文件：Source/Device/Device.CAFISArchService/packages.config</h2>
+<h3>1. 文件定位</h3>
+<p>Device.CAFISArchService 的 NuGet 包依赖清单。<strong>本批未提供内联源码</strong>。</p>
+<p>推测可能包含 <code>System.ServiceModel</code>、WCF 相关包和日志库。</p>
+<h3>不确定点</h3>
+<ul>
+<li>具体依赖列表：<strong>需要人工确认</strong></li>
+</ul>
+<hr />
+<h2>文件：Source/Device/Device.CAFISArchSimulator/Device.CAFISArchSimulator.csproj</h2>
+<h3>1. 文件定位</h3>
+<p>Device.CAFISArchSimulator 项目的构建文件。与 Device.CAFISArchLANSimulator 相对应，是 Device.CAFISArch（非 LAN 版）的模拟器版本，用于开发测试环境中模拟 CAFIS Arch 系列终端的基本行为。</p>
+<h3>2. 对外暴露内容</h3>
+<p>csproj 不是运行时组件。输出 <code>Device.CAFISArchSimulator.dll</code>。</p>
+<h3>3-8. 简要说明</h3>
+<ul>
+<li>构建时逻辑</li>
+<li>模拟器通常实现同一个接口，可插拔替换</li>
+<li>与 Device.CAFISArchLANSimulator 的差异在于底层通信方式（串口 vs LAN）</li>
+</ul>
+<h3>9. 不确定点</h3>
+<ul>
+<li>与 Device.CAFISArch 的接口契约：<strong>需要结合源码确认</strong></li>
+<li>模拟器能力范围：是否覆盖错误模式的模拟：<strong>需要结合源码确认</strong></li>
+</ul>
+<hr />
+<h2>文件：Source/Device/Device.CAFISArchSimulator/packages.config</h2>
+<h3>1. 文件定位</h3>
+<p>Device.CAFISArchSimulator 的 NuGet 包依赖清单。<strong>本批未提供内联源码</strong>。</p>
+<h3>不确定点</h3>
+<ul>
+<li>具体依赖列表：<strong>需要人工确认</strong></li>
+</ul>
+<hr />
+<h2>文件：Source/Device/Device.CRM/Device.CRM.csproj</h2>
+<h3>1. 文件定位</h3>
+<p>Device.CRM 项目的构建定义文件。CRM 可能指 "Cash Recycling Module"（现金循环模块）或 "Card Reader Module"（读卡器模块）。从项目所在 Device 目录推测，该模块封装了一种自助设备物理外设的驱动控制逻辑，供上层业务逻辑调用。<strong>本批未提供内联源码</strong>。</p>
+<h3>2. 对外暴露内容</h3>
+<p>csproj 不是运行时组件。输出 <code>Device.CRM.dll</code>。</p>
+<h3>3-8. 简要说明</h3>
+<ul>
+<li>构建时逻辑</li>
+<li>通过 references 定义外部依赖</li>
+</ul>
+<h3>9. 不确定点</h3>
+<ul>
+<li>CRM 的具体全称和业务功能：<strong>需要结合源码确认</strong></li>
+<li>与 CAFIS Arch 系列设备的关系：<strong>需要结合业务架构确认</strong></li>
+<li>是否存在对应的模拟器项目（如 Device.CRMSimulator）：<strong>需要查看项目枚举确认</strong></li>
+</ul>
+<hr />
+<h2>文件：Source/Device/Device.CRM/app.config</h2>
+<h3>1. 文件定位</h3>
+<p>Device.CRM 项目的运行时配置文件。<strong>本批未提供内联源码</strong>，文件大小 168 字节，内容较少。</p>
+<h3>2-9. 简要说明</h3>
+<ul>
+<li>运行时由 ConfigurationManager 读取</li>
+<li>小文件内容可能只有基本配置框架或一个 connectionStrings</li>
+<li><strong>不确定点</strong>：具体配置项需要人工确认</li>
+</ul>
+<hr />
+<h2>文件：Source/Device/Device.CRM/packages.config</h2>
+<h3>1. 文件定位</h3>
+<p>Device.CRM 的 NuGet 包依赖清单。<strong>本批未提供内联源码</strong>。</p>
+<h3>不确定点</h3>
+<ul>
+<li>具体依赖列表：<strong>需要人工确认</strong></li>
+</ul>
+<hr />
+<h2>文件：Source/Device/Device.CT5100/Device.CT5100.csproj</h2>
+<h3>1. 文件定位</h3>
+<p>Device.CT5100 项目的构建定义文件。CT5100 是 Glory（グローリー）生产的现金处理设备型号，通常指 ATM 或现金出纳机。该模块封装 CT5100 设备的驱动通信协议，实现对纸币出入库、清点、识别等功能的控制。</p>
+<h3>2. 对外暴露内容</h3>
+<p>csproj 不是运行时组件。输出 <code>Device.CT5100.dll</code>。</p>
+<h3>3-8. 简要说明</h3>
+<ul>
+<li>构建逻辑</li>
+<li>依赖 OPOS 驱动层、串口通信或 USB 通信 SDK</li>
+</ul>
+<h3>9. 不确定点</h3>
+<ul>
+<li>与 Device.CT6100_ModeSelf 的关系（同系列不同型号）：<strong>需要结合源码确认</strong></li>
+<li>目标框架和外部 SDK 引用：<strong>需要人工确认</strong></li>
+<li>是否共享接口定义：<strong>需要结合源码确认</strong></li>
+</ul>
+<hr />
+<h2>文件：Source/Device/Device.CT5100/packages.config</h2>
+<h3>1. 文件定位</h3>
+<p>Device.CT5100 的 NuGet 包依赖清单。<strong>本批未提供内联源码</strong>。</p>
+<h3>不确定点</h3>
+<ul>
+<li>具体依赖列表：<strong>需要人工确认</strong></li>
+</ul>
+<hr />
+<h2>文件：Source/Device/Device.CT6100_ModeSelf/Device.CT6100_ModeSelf.csproj</h2>
+<h3>1. 文件定位</h3>
+<p>Device.CT6100_ModeSelf 项目的构建定义文件。CT6100 与 CT5100 同属 Glory 现金处理设备系列，<code>ModeSelf</code> 可能指"自助模式"（Self-Service Mode）——设备处于自助取款/存款模式，区别于运维模式或全功能柜员模式。该 DLL 是本次 Batch 标题中标注的核心项目。</p>
+<h3>2. 对外暴露内容</h3>
+<p>csproj 不是运行时组件。输出 <code>Device.CT6100_ModeSelf.dll</code>。</p>
+<h3>3-8. 简要说明</h3>
+<ul>
+<li>构建时逻辑</li>
+<li>与 Device.CT5100 项目为同一设备系列的不同型号</li>
+<li>新人应关注其对 OPOS 服务的调用方式和错误处理封装</li>
+</ul>
+<h3>9. 不确定点</h3>
+<ul>
+<li><code>ModeSelf</code> 在全项目体系中的具体含义（枚举值？条件编译？）：<strong>需要结合代码确认</strong></li>
+<li>与 CT5100 代码复用程度：<strong>需要对比源码确认</strong></li>
+<li>是否有同系列其他 Mode 变体（如 ModeFull、ModeMaintenance）：<strong>需要结合项目树确认</strong></li>
+</ul>
+<hr />
+<h2>文件：Source/Device/Device.CT6100_ModeSelf/packages.config</h2>
+<h3>1. 文件定位</h3>
+<p>Device.CT6100_ModeSelf 的 NuGet 包依赖清单。<strong>本批未提供内联源码</strong>。</p>
+<h3>不确定点</h3>
+<ul>
+<li>具体依赖列表：<strong>需要人工确认</strong></li>
+</ul>
+<hr />
+<h2>本批覆盖确认</h2>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>覆盖状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Source/Device/Device.BeepSound/Device.BeepSound.csproj</td>
+<td>已简略讲解</td>
+<td>无内联源码，按 csproj 惯例分析；不确定框架版本和引用关系</td>
+</tr>
+<tr>
+<td>Source/Device/Device.BeepSound/packages.config</td>
+<td>已简略讲解</td>
+<td>无内联源码，按 packages.config 惯例分析；具体依赖未知</td>
+</tr>
+<tr>
+<td>Source/Device/Device.CAFISArch/CAFISArchAbnormalErrorWithoutAttendant.xml</td>
+<td>已详细讲解</td>
+<td>完整源码，仅 6 行；定义了 C20 错误为"无待机人员异常"</td>
+</tr>
+<tr>
+<td>Source/Device/Device.CAFISArch/CAFISArchOtherError.xml</td>
+<td>已详细讲解</td>
+<td>完整源码 411 行；定义了完整的错误码→消息/原因/处理指引映射</td>
+</tr>
+<tr>
+<td>Source/Device/Device.CAFISArch/Device.CAFISArch.csproj</td>
+<td>已简略讲解</td>
+<td>无内联源码，按惯例分析；不确定 XML 文件是否为 Embedded Resource</td>
+</tr>
+<tr>
+<td>Source/Device/Device.CAFISArch/packages.config</td>
+<td>已简略讲解</td>
+<td>无内联源码；具体依赖未知</td>
+</tr>
+<tr>
+<td>Source/Device/Device.CAFISArchLAN/Device.CAFISArchLAN.csproj</td>
+<td>已简略讲解</td>
+<td>无内联源码；需确认与 Device.CAFISArch 的关系</td>
+</tr>
+<tr>
+<td>Source/Device/Device.CAFISArchLAN/Settings/CAFISArchErrorDetailInfo.xml</td>
+<td>已详细讲解</td>
+<td>完整源码 644 行；核心错误模式配置文件，定义了 5 种 ErrorPattern</td>
+</tr>
+<tr>
+<td>Source/Device/Device.CAFISArchLAN/app.config</td>
+<td>已简略讲解</td>
+<td>无内联源码，581 字节；具体配置项未知</td>
+</tr>
+<tr>
+<td>Source/Device/Device.CAFISArchLAN/packages.config</td>
+<td>已简略讲解</td>
+<td>无内联源码；具体依赖未知，可能包含网络通信库</td>
+</tr>
+<tr>
+<td>Source/Device/Device.CAFISArchLANSimulator/Device.CAFISArchLANSimulator.csproj</td>
+<td>已简略讲解</td>
+<td>无内联源码；LAN 模拟器，接口契约待确认</td>
+</tr>
+<tr>
+<td>Source/Device/Device.CAFISArchLANSimulator/packages.config</td>
+<td>已简略讲解</td>
+<td>无内联源码；具体依赖未知</td>
+</tr>
+<tr>
+<td>Source/Device/Device.CAFISArchService/Device.CAFISArchService.csproj</td>
+<td>已简略讲解</td>
+<td>无内联源码；服务化封装，类型（Windows 服务 / WCF）待确认</td>
+</tr>
+<tr>
+<td>Source/Device/Device.CAFISArchService/packages.config</td>
+<td>已简略讲解</td>
+<td>无内联源码；具体依赖未知</td>
+</tr>
+<tr>
+<td>Source/Device/Device.CAFISArchSimulator/Device.CAFISArchSimulator.csproj</td>
+<td>已简略讲解</td>
+<td>无内联源码；基础版模拟器</td>
+</tr>
+<tr>
+<td>Source/Device/Device.CAFISArchSimulator/packages.config</td>
+<td>已简略讲解</td>
+<td>无内联源码；具体依赖未知</td>
+</tr>
+<tr>
+<td>Source/Device/Device.CRM/Device.CRM.csproj</td>
+<td>已简略讲解</td>
+<td>无内联源码；CRM 功能（CR/MR）需确认</td>
+</tr>
+<tr>
+<td>Source/Device/Device.CRM/app.config</td>
+<td>已简略讲解</td>
+<td>无内联源码，168 字节，内容极简</td>
+</tr>
+<tr>
+<td>Source/Device/Device.CRM/packages.config</td>
+<td>已简略讲解</td>
+<td>无内联源码；具体依赖未知</td>
+</tr>
+<tr>
+<td>Source/Device/Device.CT5100/Device.CT5100.csproj</td>
+<td>已简略讲解</td>
+<td>无内联源码；Glory CT5100 现金设备，无法分析引用关系</td>
+</tr>
+<tr>
+<td>Source/Device/Device.CT5100/packages.config</td>
+<td>已简略讲解</td>
+<td>无内联源码；具体依赖未知</td>
+</tr>
+<tr>
+<td>Source/Device/Device.CT6100_ModeSelf/Device.CT6100_ModeSelf.csproj</td>
+<td>已简略讲解</td>
+<td>无内联源码；标题项目，ModeSelf 含义待确认</td>
+</tr>
+<tr>
+<td>Source/Device/Device.CT6100_ModeSelf/packages.config</td>
+<td>已简略讲解</td>
+<td>无内联源码；具体依赖未知</td>
+</tr>
+</tbody>
+</table></div></div><button class="expand-btn">Show more</button></div></div>
+</div></div>
+        
+
+<div class="pagination">
+<span class="current">Index</span>
+<span class="disabled">&larr; Prev</span>
+<a href="page-001.html">1</a>
+<a href="page-001.html">Next &rarr;</a>
+</div>
+
+
+        <dialog id="search-modal">
+            <div class="search-modal-header">
+                <input type="text" id="modal-search-input" placeholder="Search..." aria-label="Search transcripts">
+                <button id="modal-search-btn" type="button" aria-label="Search">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+                </button>
+                <button id="modal-close-btn" type="button" aria-label="Close">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+                </button>
+            </div>
+            <div id="search-status"></div>
+            <div id="search-results"></div>
+        </dialog>
+        <script>
+(function() {
+    var totalPages = 1;
+    var searchBox = document.getElementById('search-box');
+    var searchInput = document.getElementById('search-input');
+    var searchBtn = document.getElementById('search-btn');
+    var modal = document.getElementById('search-modal');
+    var modalInput = document.getElementById('modal-search-input');
+    var modalSearchBtn = document.getElementById('modal-search-btn');
+    var modalCloseBtn = document.getElementById('modal-close-btn');
+    var searchStatus = document.getElementById('search-status');
+    var searchResults = document.getElementById('search-results');
+
+    if (!searchBox || !modal) return;
+
+    // Hide search on file:// protocol (doesn't work due to CORS restrictions)
+    if (window.location.protocol === 'file:') return;
+
+    // Show search box (progressive enhancement)
+    searchBox.style.display = 'flex';
+
+    // Gist preview support - detect if we're on gisthost.github.io or gistpreview.github.io
+    var hostname = window.location.hostname;
+    var isGistPreview = hostname === 'gisthost.github.io' || hostname === 'gistpreview.github.io';
+    var gistId = null;
+    var gistOwner = null;
+    var gistInfoLoaded = false;
+
+    if (isGistPreview) {
+        // Extract gist ID from URL query string like ?78a436a8a9e7a2e603738b8193b95410/index.html
+        var queryMatch = window.location.search.match(/^\?([a-f0-9]+)/i);
+        if (queryMatch) {
+            gistId = queryMatch[1];
+        }
+    }
+
+    async function loadGistInfo() {
+        if (!isGistPreview || !gistId || gistInfoLoaded) return;
+        try {
+            var response = await fetch('https://api.github.com/gists/' + gistId);
+            if (response.ok) {
+                var info = await response.json();
+                gistOwner = info.owner.login;
+                gistInfoLoaded = true;
+            }
+        } catch (e) {
+            console.error('Failed to load gist info:', e);
+        }
+    }
+
+    function getPageFetchUrl(pageFile) {
+        if (isGistPreview && gistOwner && gistId) {
+            // Use raw gist URL for fetching content
+            return 'https://gist.githubusercontent.com/' + gistOwner + '/' + gistId + '/raw/' + pageFile;
+        }
+        return pageFile;
+    }
+
+    function getPageLinkUrl(pageFile) {
+        if (isGistPreview && gistId) {
+            // Use gistpreview URL format for navigation links
+            return '?' + gistId + '/' + pageFile;
+        }
+        return pageFile;
+    }
+
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function escapeRegex(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function openModal(query) {
+        modalInput.value = query || '';
+        searchResults.innerHTML = '';
+        searchStatus.textContent = '';
+        modal.showModal();
+        modalInput.focus();
+        if (query) {
+            performSearch(query);
+        }
+    }
+
+    function closeModal() {
+        modal.close();
+        // Update URL to remove search fragment, preserving path and query string
+        if (window.location.hash.startsWith('#search=')) {
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+    }
+
+    function updateUrlHash(query) {
+        if (query) {
+            // Preserve path and query string when adding hash
+            history.replaceState(null, '', window.location.pathname + window.location.search + '#search=' + encodeURIComponent(query));
+        }
+    }
+
+    function highlightTextNodes(element, searchTerm) {
+        var walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
+        var nodesToReplace = [];
+
+        while (walker.nextNode()) {
+            var node = walker.currentNode;
+            if (node.nodeValue.toLowerCase().indexOf(searchTerm.toLowerCase()) !== -1) {
+                nodesToReplace.push(node);
+            }
+        }
+
+        nodesToReplace.forEach(function(node) {
+            var text = node.nodeValue;
+            var regex = new RegExp('(' + escapeRegex(searchTerm) + ')', 'gi');
+            var parts = text.split(regex);
+            if (parts.length > 1) {
+                var span = document.createElement('span');
+                parts.forEach(function(part) {
+                    if (part.toLowerCase() === searchTerm.toLowerCase()) {
+                        var mark = document.createElement('mark');
+                        mark.textContent = part;
+                        span.appendChild(mark);
+                    } else {
+                        span.appendChild(document.createTextNode(part));
+                    }
+                });
+                node.parentNode.replaceChild(span, node);
+            }
+        });
+    }
+
+    function fixInternalLinks(element, pageFile) {
+        // Update all internal anchor links to include the page file
+        var links = element.querySelectorAll('a[href^="#"]');
+        links.forEach(function(link) {
+            var href = link.getAttribute('href');
+            link.setAttribute('href', pageFile + href);
+        });
+    }
+
+    function processPage(pageFile, html, query) {
+        var parser = new DOMParser();
+        var doc = parser.parseFromString(html, 'text/html');
+        var resultsFromPage = 0;
+
+        // Find all message blocks
+        var messages = doc.querySelectorAll('.message');
+        messages.forEach(function(msg) {
+            var text = msg.textContent || '';
+            if (text.toLowerCase().indexOf(query.toLowerCase()) !== -1) {
+                resultsFromPage++;
+
+                // Get the message ID for linking
+                var msgId = msg.id || '';
+                var pageLinkUrl = getPageLinkUrl(pageFile);
+                var link = pageLinkUrl + (msgId ? '#' + msgId : '');
+
+                // Clone the message HTML and highlight matches
+                var clone = msg.cloneNode(true);
+                // Fix internal links to include the page file
+                fixInternalLinks(clone, pageLinkUrl);
+                highlightTextNodes(clone, query);
+
+                var resultDiv = document.createElement('div');
+                resultDiv.className = 'search-result';
+                resultDiv.innerHTML = '<a href="' + link + '">' +
+                    '<div class="search-result-page">' + escapeHtml(pageFile) + '</div>' +
+                    '<div class="search-result-content">' + clone.innerHTML + '</div>' +
+                    '</a>';
+                searchResults.appendChild(resultDiv);
+            }
+        });
+
+        return resultsFromPage;
+    }
+
+    async function performSearch(query) {
+        if (!query.trim()) {
+            searchStatus.textContent = 'Enter a search term';
+            return;
+        }
+
+        updateUrlHash(query);
+        searchResults.innerHTML = '';
+        searchStatus.textContent = 'Searching...';
+
+        // Load gist info if on gistpreview (needed for constructing URLs)
+        if (isGistPreview && !gistInfoLoaded) {
+            searchStatus.textContent = 'Loading gist info...';
+            await loadGistInfo();
+            if (!gistOwner) {
+                searchStatus.textContent = 'Failed to load gist info. Search unavailable.';
+                return;
+            }
+        }
+
+        var resultsFound = 0;
+        var pagesSearched = 0;
+
+        // Build list of pages to fetch
+        var pagesToFetch = [];
+        for (var i = 1; i <= totalPages; i++) {
+            pagesToFetch.push('page-' + String(i).padStart(3, '0') + '.html');
+        }
+
+        searchStatus.textContent = 'Searching...';
+
+        // Process pages in batches of 3, but show results immediately as each completes
+        var batchSize = 3;
+        for (var i = 0; i < pagesToFetch.length; i += batchSize) {
+            var batch = pagesToFetch.slice(i, i + batchSize);
+
+            // Create promises that process results immediately when each fetch completes
+            var promises = batch.map(function(pageFile) {
+                return fetch(getPageFetchUrl(pageFile))
+                    .then(function(response) {
+                        if (!response.ok) throw new Error('Failed to fetch');
+                        return response.text();
+                    })
+                    .then(function(html) {
+                        // Process and display results immediately
+                        var count = processPage(pageFile, html, query);
+                        resultsFound += count;
+                        pagesSearched++;
+                        searchStatus.textContent = 'Found ' + resultsFound + ' result(s) in ' + pagesSearched + '/' + totalPages + ' pages...';
+                    })
+                    .catch(function() {
+                        pagesSearched++;
+                        searchStatus.textContent = 'Found ' + resultsFound + ' result(s) in ' + pagesSearched + '/' + totalPages + ' pages...';
+                    });
+            });
+
+            // Wait for this batch to complete before starting the next
+            await Promise.all(promises);
+        }
+
+        searchStatus.textContent = 'Found ' + resultsFound + ' result(s) in ' + totalPages + ' pages';
+    }
+
+    // Event listeners
+    searchBtn.addEventListener('click', function() {
+        openModal(searchInput.value);
+    });
+
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            openModal(searchInput.value);
+        }
+    });
+
+    modalSearchBtn.addEventListener('click', function() {
+        performSearch(modalInput.value);
+    });
+
+    modalInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            performSearch(modalInput.value);
+        }
+    });
+
+    modalCloseBtn.addEventListener('click', closeModal);
+
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+
+    // Check for #search= in URL on page load
+    if (window.location.hash.startsWith('#search=')) {
+        var query = decodeURIComponent(window.location.hash.substring(8));
+        if (query) {
+            searchInput.value = query;
+            openModal(query);
+        }
+    }
+})();
+        </script>
+    </div>
+    <script>
+document.querySelectorAll('time[data-timestamp]').forEach(function(el) {
+    const timestamp = el.getAttribute('data-timestamp');
+    const date = new Date(timestamp);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    if (isToday) { el.textContent = timeStr; }
+    else { el.textContent = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + timeStr; }
+});
+document.querySelectorAll('pre.json').forEach(function(el) {
+    let text = el.textContent;
+    text = text.replace(/"([^"]+)":/g, '<span style="color: #ce93d8">"$1"</span>:');
+    text = text.replace(/: "([^"]*)"/g, ': <span style="color: #81d4fa">"$1"</span>');
+    text = text.replace(/: (\d+)/g, ': <span style="color: #ffcc80">$1</span>');
+    text = text.replace(/: (true|false|null)/g, ': <span style="color: #f48fb1">$1</span>');
+    el.innerHTML = text;
+});
+document.querySelectorAll('.truncatable').forEach(function(wrapper) {
+    const content = wrapper.querySelector('.truncatable-content');
+    const btn = wrapper.querySelector('.expand-btn');
+    if (content.scrollHeight > 250) {
+        wrapper.classList.add('truncated');
+        btn.addEventListener('click', function() {
+            if (wrapper.classList.contains('truncated')) { wrapper.classList.remove('truncated'); wrapper.classList.add('expanded'); btn.textContent = 'Show less'; }
+            else { wrapper.classList.remove('expanded'); wrapper.classList.add('truncated'); btn.textContent = 'Show more'; }
+        });
+    }
+});
+</script>
+</body>
+</html>

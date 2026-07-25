@@ -1,0 +1,3245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code transcript - Index</title>
+    <style>
+:root { --bg-color: #f5f5f5; --card-bg: #ffffff; --user-bg: #e3f2fd; --user-border: #1976d2; --assistant-bg: #f5f5f5; --assistant-border: #9e9e9e; --thinking-bg: #fff8e1; --thinking-border: #ffc107; --thinking-text: #666; --tool-bg: #f3e5f5; --tool-border: #9c27b0; --tool-result-bg: #e8f5e9; --tool-error-bg: #ffebee; --text-color: #212121; --text-muted: #757575; --code-bg: #263238; --code-text: #aed581; }
+* { box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 16px; line-height: 1.6; }
+.container { max-width: 800px; margin: 0 auto; }
+h1 { font-size: 1.5rem; margin-bottom: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--user-border); }
+.header-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 2px solid var(--user-border); padding-bottom: 8px; margin-bottom: 24px; }
+.header-row h1 { border-bottom: none; padding-bottom: 0; margin-bottom: 0; flex: 1; min-width: 200px; }
+.message { margin-bottom: 16px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.message.user { background: var(--user-bg); border-left: 4px solid var(--user-border); }
+.message.assistant { background: var(--card-bg); border-left: 4px solid var(--assistant-border); }
+.message.tool-reply { background: #fff8e1; border-left: 4px solid #ff9800; }
+.tool-reply .role-label { color: #e65100; }
+.tool-reply .tool-result { background: transparent; padding: 0; margin: 0; }
+.tool-reply .tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff8e1); }
+.message-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: rgba(0,0,0,0.03); font-size: 0.85rem; }
+.role-label { font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.user .role-label { color: var(--user-border); }
+time { color: var(--text-muted); font-size: 0.8rem; }
+.timestamp-link { color: inherit; text-decoration: none; }
+.timestamp-link:hover { text-decoration: underline; }
+.message:target { animation: highlight 2s ease-out; }
+@keyframes highlight { 0% { background-color: rgba(25, 118, 210, 0.2); } 100% { background-color: transparent; } }
+.message-content { padding: 16px; }
+.message-content p { margin: 0 0 12px 0; }
+.message-content p:last-child { margin-bottom: 0; }
+.thinking { background: var(--thinking-bg); border: 1px solid var(--thinking-border); border-radius: 8px; padding: 12px; margin: 12px 0; font-size: 0.9rem; color: var(--thinking-text); }
+.thinking-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #f57c00; margin-bottom: 8px; }
+.thinking p { margin: 8px 0; }
+.assistant-text { margin: 8px 0; }
+.tool-use { background: var(--tool-bg); border: 1px solid var(--tool-border); border-radius: 8px; padding: 12px; margin: 12px 0; }
+.tool-header { font-weight: 600; color: var(--tool-border); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.tool-icon { font-size: 1.1rem; }
+.tool-description { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 8px; font-style: italic; }
+.tool-result { background: var(--tool-result-bg); border-radius: 8px; padding: 12px; margin: 12px 0; }
+.tool-result.tool-error { background: var(--tool-error-bg); }
+.file-tool { border-radius: 8px; padding: 12px; margin: 12px 0; }
+.write-tool { background: linear-gradient(135deg, #e3f2fd 0%, #e8f5e9 100%); border: 1px solid #4caf50; }
+.edit-tool { background: linear-gradient(135deg, #fff3e0 0%, #fce4ec 100%); border: 1px solid #ff9800; }
+.file-tool-header { font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.write-header { color: #2e7d32; }
+.edit-header { color: #e65100; }
+.file-tool-icon { font-size: 1rem; }
+.file-tool-path { font-family: monospace; background: rgba(0,0,0,0.08); padding: 2px 8px; border-radius: 4px; }
+.file-tool-fullpath { font-family: monospace; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px; word-break: break-all; }
+.file-content { margin: 0; }
+.edit-section { display: flex; margin: 4px 0; border-radius: 4px; overflow: hidden; }
+.edit-label { padding: 8px 12px; font-weight: bold; font-family: monospace; display: flex; align-items: flex-start; }
+.edit-old { background: #fce4ec; }
+.edit-old .edit-label { color: #b71c1c; background: #f8bbd9; }
+.edit-old .edit-content { color: #880e4f; }
+.edit-new { background: #e8f5e9; }
+.edit-new .edit-label { color: #1b5e20; background: #a5d6a7; }
+.edit-new .edit-content { color: #1b5e20; }
+.edit-content { margin: 0; flex: 1; background: transparent; font-size: 0.85rem; }
+.edit-replace-all { font-size: 0.75rem; font-weight: normal; color: var(--text-muted); }
+.write-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #e6f4ea); }
+.edit-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff0e5); }
+.todo-list { background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); border: 1px solid #81c784; border-radius: 8px; padding: 12px; margin: 12px 0; }
+.todo-header { font-weight: 600; color: #2e7d32; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.todo-items { list-style: none; margin: 0; padding: 0; }
+.todo-item { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.06); font-size: 0.9rem; }
+.todo-item:last-child { border-bottom: none; }
+.todo-icon { flex-shrink: 0; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 50%; }
+.todo-completed .todo-icon { color: #2e7d32; background: rgba(46, 125, 50, 0.15); }
+.todo-completed .todo-content { color: #558b2f; text-decoration: line-through; }
+.todo-in-progress .todo-icon { color: #f57c00; background: rgba(245, 124, 0, 0.15); }
+.todo-in-progress .todo-content { color: #e65100; font-weight: 500; }
+.todo-pending .todo-icon { color: #757575; background: rgba(0,0,0,0.05); }
+.todo-pending .todo-content { color: #616161; }
+pre { background: var(--code-bg); color: var(--code-text); padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; line-height: 1.5; margin: 8px 0; white-space: pre-wrap; word-wrap: break-word; }
+pre.json { color: #e0e0e0; }
+code { background: rgba(0,0,0,0.08); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+pre code { background: none; padding: 0; }
+.user-content { margin: 0; }
+.truncatable { position: relative; }
+.truncatable.truncated .truncatable-content { max-height: 200px; overflow: hidden; }
+.truncatable.truncated::after { content: ''; position: absolute; bottom: 32px; left: 0; right: 0; height: 60px; background: linear-gradient(to bottom, transparent, var(--card-bg)); pointer-events: none; }
+.message.user .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--user-bg)); }
+.message.tool-reply .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff8e1); }
+.tool-use .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-bg)); }
+.tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-result-bg)); }
+.expand-btn { display: none; width: 100%; padding: 8px 16px; margin-top: 4px; background: rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; cursor: pointer; font-size: 0.85rem; color: var(--text-muted); }
+.expand-btn:hover { background: rgba(0,0,0,0.1); }
+.truncatable.truncated .expand-btn, .truncatable.expanded .expand-btn { display: block; }
+.pagination { display: flex; justify-content: center; gap: 8px; margin: 24px 0; flex-wrap: wrap; }
+.pagination a, .pagination span { padding: 5px 10px; border-radius: 6px; text-decoration: none; font-size: 0.85rem; }
+.pagination a { background: var(--card-bg); color: var(--user-border); border: 1px solid var(--user-border); }
+.pagination a:hover { background: var(--user-bg); }
+.pagination .current { background: var(--user-border); color: white; }
+.pagination .disabled { color: var(--text-muted); border: 1px solid #ddd; }
+.pagination .index-link { background: var(--user-border); color: white; }
+details.continuation { margin-bottom: 16px; }
+details.continuation summary { cursor: pointer; padding: 12px 16px; background: var(--user-bg); border-left: 4px solid var(--user-border); border-radius: 12px; font-weight: 500; color: var(--text-muted); }
+details.continuation summary:hover { background: rgba(25, 118, 210, 0.15); }
+details.continuation[open] summary { border-radius: 12px 12px 0 0; margin-bottom: 0; }
+.index-item { margin-bottom: 16px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); background: var(--user-bg); border-left: 4px solid var(--user-border); }
+.index-item a { display: block; text-decoration: none; color: inherit; }
+.index-item a:hover { background: rgba(25, 118, 210, 0.1); }
+.index-item-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: rgba(0,0,0,0.03); font-size: 0.85rem; }
+.index-item-number { font-weight: 600; color: var(--user-border); }
+.index-item-content { padding: 16px; }
+.index-item-stats { padding: 8px 16px 12px 32px; font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid rgba(0,0,0,0.06); }
+.index-item-commit { margin-top: 6px; padding: 4px 8px; background: #fff3e0; border-radius: 4px; font-size: 0.85rem; color: #e65100; }
+.index-item-commit code { background: rgba(0,0,0,0.08); padding: 1px 4px; border-radius: 3px; font-size: 0.8rem; margin-right: 6px; }
+.commit-card { margin: 8px 0; padding: 10px 14px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 6px; }
+.commit-card a { text-decoration: none; color: #5d4037; display: block; }
+.commit-card a:hover { color: #e65100; }
+.commit-card-hash { font-family: monospace; color: #e65100; font-weight: 600; margin-right: 8px; }
+.index-commit { margin-bottom: 12px; padding: 10px 16px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+.index-commit a { display: block; text-decoration: none; color: inherit; }
+.index-commit a:hover { background: rgba(255, 152, 0, 0.1); margin: -10px -16px; padding: 10px 16px; border-radius: 8px; }
+.index-commit-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; margin-bottom: 4px; }
+.index-commit-hash { font-family: monospace; color: #e65100; font-weight: 600; }
+.index-commit-msg { color: #5d4037; }
+.index-item-long-text { margin-top: 8px; padding: 12px; background: var(--card-bg); border-radius: 8px; border-left: 3px solid var(--assistant-border); }
+.index-item-long-text .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--card-bg)); }
+.index-item-long-text-content { color: var(--text-color); }
+#search-box { display: none; align-items: center; gap: 8px; }
+#search-box input { padding: 6px 12px; border: 1px solid var(--assistant-border); border-radius: 6px; font-size: 16px; width: 180px; }
+#search-box button, #modal-search-btn, #modal-close-btn { background: var(--user-border); color: white; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+#search-box button:hover, #modal-search-btn:hover { background: #1565c0; }
+#modal-close-btn { background: var(--text-muted); margin-left: 8px; }
+#modal-close-btn:hover { background: #616161; }
+#search-modal[open] { border: none; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.2); padding: 0; width: 90vw; max-width: 900px; height: 80vh; max-height: 80vh; display: flex; flex-direction: column; }
+#search-modal::backdrop { background: rgba(0,0,0,0.5); }
+.search-modal-header { display: flex; align-items: center; gap: 8px; padding: 16px; border-bottom: 1px solid var(--assistant-border); background: var(--bg-color); border-radius: 12px 12px 0 0; }
+.search-modal-header input { flex: 1; padding: 8px 12px; border: 1px solid var(--assistant-border); border-radius: 6px; font-size: 16px; }
+#search-status { padding: 8px 16px; font-size: 0.85rem; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); }
+#search-results { flex: 1; overflow-y: auto; padding: 16px; }
+.search-result { margin-bottom: 16px; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.search-result a { display: block; text-decoration: none; color: inherit; }
+.search-result a:hover { background: rgba(25, 118, 210, 0.05); }
+.search-result-page { padding: 6px 12px; background: rgba(0,0,0,0.03); font-size: 0.8rem; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); }
+.search-result-content { padding: 12px; }
+.search-result mark { background: #fff59d; padding: 1px 2px; border-radius: 2px; }
+@media (max-width: 600px) { body { padding: 8px; } .message, .index-item { border-radius: 8px; } .message-content, .index-item-content { padding: 12px; } pre { font-size: 0.8rem; padding: 8px; } #search-box input { width: 120px; } #search-modal[open] { width: 95vw; height: 90vh; } }
+</style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-row">
+            <h1>Claude Code transcript</h1>
+            <div id="search-box">
+                <input type="text" id="search-input" placeholder="Search..." aria-label="Search transcripts">
+                <button id="search-btn" type="button" aria-label="Search">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+                </button>
+            </div>
+        </div>
+        
+
+<div class="pagination">
+<span class="current">Index</span>
+<span class="disabled">&larr; Prev</span>
+<a href="page-001.html">1</a>
+<a href="page-001.html">Next &rarr;</a>
+</div>
+
+        <p style="color: var(--text-muted); margin-bottom: 24px;">1 prompts · 3 messages · 0 tool calls · 0 commits · 1 pages</p>
+        
+<div class="index-item"><a href="page-001.html#msg-2026-07-09T07-00-56-832Z"><div class="index-item-header"><span class="index-item-number">#1</span><time datetime="2026-07-09T07:00:56.832Z" data-timestamp="2026-07-09T07:00:56.832Z">2026-07-09T07:00:56.832Z</time></div><div class="index-item-content"><p>IMPORTANT EXECUTION MODE FOR CLAUDE CLI:
+- Do not use tools.
+- Do not read or write files.
+- Do not ask for permissions.
+- Produce the requested final markdown directly on stdout.
+- The workflow runner will save stdout to the output path.
+- Ignore any instruction that implies you should write the output file yourself; instead print the full content.</p>
+<p>BEGIN ORIGINAL PROMPT</p>
+<p>你是源码教材项目的信息提取员，不是散文作者。</p>
+<p>任务：根据下面的带行号源码，为本 batch 中的每个文件生成“文件级源码讲解笔记”。</p>
+<p>Batch 信息：
+- Batch ID: batch_053
+- Batch Name: large_file_background_service_onpremisesmachinemoduleuploadmanagementdataset_designer_cs
+- Module: background_service
+- Purpose: 解释后台服务、同步任务、Windows Service 和定时处理
+- Related Runtime Flows: 启动流程、配置加载流程
+- Output Note Path: _sourcebook/notes/batch_053_large_file_background_service_onpremisesmachinemoduleuploadmanagementdataset_designer_cs_file_notes.md</p>
+<p>本批文件：
+- Source/POS4UBackground/Data/Background.Data.BackgroundContainer/OnPremisesMachineModuleUploadManagementDataSet.Designer.cs</p>
+<p>本批任务目标：
+- 为本批每个文件生成可追溯到源码行号的文件级笔记。
+- 重点说明文件职责、对外暴露内容、关键逻辑、依赖关系、错误处理、测试建议和不确定点。
+- 只做文件级源码笔记，不写最终教材正文。</p>
+<p>硬性规则：</p>
+<ol>
+<li>必须基于实际源码。</li>
+<li>每一条技术事实都要引用文件路径和行号。</li>
+<li>不允许编造不存在的函数、参数、返回值、配置项、业务逻辑。</li>
+<li>如果无法确定，请写“需要结合其他文件确认”。</li>
+<li>不要只讲核心函数，小工具函数、边界处理、异常处理也要说明。</li>
+<li>每个文件必须单独成节。</li>
+<li>不要写最终教材章节，只写文件级源码笔记。</li>
+<li>不要省略本批任何文件。</li>
+<li>如果某个文件很简单，也要说明它为什么简单、在项目中承担什么角色。</li>
+<li>如果发现当前 batch 缺少理解该文件所需的上下文，请在“不确定点”中明确列出需要结合哪些文件。</li>
+</ol>
+<p>质量规则：
+- 优先解释运行时行为和业务意图，再补充语法层面的说明。
+- 遇到配置、SQL、脚本、文档、二进制占位文件，也必须说明它对项目理解的作用。
+- 对非文本文件、缺失文件或无法从当前 batch 判断的内容，必须标记“需要结合其他文件确认”或“需要人工确认”，不要猜。
+- 入口、配置加载、请求处理、数据读写、错误处理、日志、测试相关线索要特别标出。
+- 输出中不要出现未引用行号的技术断言。</p>
+<p>覆盖确认要求：
+- 结尾必须输出“本批覆盖确认”表。
+- 表中必须逐一列出本批所有文件。
+- 覆盖状态只能使用：已详细讲解 / 已简略讲解 / 需要结合其他文件确认。</p>
+<p>输出格式：</p>
+<h1>文件级源码笔记：large_file_background_service_onpremisesmachinemoduleuploadmanagementdataset_designer_cs</h1>
+<h2>Batch 信息</h2>
+<ul>
+<li>Batch ID: batch_053</li>
+<li>Batch Name: large_file_background_service_onpremisesmachinemoduleuploadmanagementdataset_designer_cs</li>
+<li>Module: background_service</li>
+<li>Purpose: 解释后台服务、同步任务、Windows Service 和定时处理</li>
+</ul>
+<hr />
+<h2>文件：<path></h2>
+<h3>1. 文件定位</h3>
+<p>说明这个文件在项目中的角色，属于哪个模块，解决什么问题。</p>
+<h3>2. 对外暴露内容</h3>
+<p>列出 class / function / component / API / command / config / export。</p>
+<p>每一项都要包含：
+- 名称
+- 文件路径 + 行号
+- 用途</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>按代码执行顺序解释关键逻辑。</p>
+<p>要求：
+- 引用文件路径和行号
+- 解释运行时会发生什么
+- 不要只翻译代码，要说明代码意图</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>逐个说明：
+- 名称
+- 位置：文件路径 + 行号
+- 输入
+- 输出
+- 副作用
+- 调用关系
+- 边界情况
+- 可能的坑</p>
+<h3>5. 依赖关系</h3>
+<p>说明它依赖哪些文件、库、配置、类型、组件，以及这些依赖的用途。</p>
+<h3>6. 错误处理与边界情况</h3>
+<p>必须引用源码行号。</p>
+<p>如果没有明显错误处理，也要说明“当前文件没有显式错误处理”，并指出可能依赖哪里处理。</p>
+<h3>7. 测试相关</h3>
+<p>说明：
+- 当前输入中是否包含对应测试
+- 如果有，测试覆盖了什么
+- 如果没有，应该如何测试这个文件</p>
+<h3>8. 新人阅读建议</h3>
+<p>告诉新人应该如何理解这个文件，阅读时先看哪里，再看哪里。</p>
+<h3>9. 不确定点</h3>
+<p>列出不能从当前 batch 确认的问题，不要猜。</p>
+<hr />
+<h2>本批覆盖确认</h2>
+<p>请列出本批所有文件，并标记：</p>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>覆盖状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>path</td>
+<td>已详细讲解 / 已简略讲解 / 需要结合其他文件确认</td>
+<td>说明</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p>下面是本批源码：</p>
+<p>FILE: Source/POS4UBackground/Data/Background.Data.BackgroundContainer/OnPremisesMachineModuleUploadManagementDataSet.Designer.cs
+SHA256: c447e8b05403d85431af8d05eac21363c62db66c4674e8e2c70747526d0c64c0
+================================================================================
+00001: ﻿//------------------------------------------------------------------------------
+00002: // <auto-generated>
+00003: //     このコードはツールによって生成されました。
+00004: //     ランタイム バージョン:4.0.30319.42000
+00005: //
+00006: //     このファイルへの変更は、以下の状況下で不正な動作の原因になったり、
+00007: //     コードが再生成されるときに損失したりします。
+00008: // </auto-generated>
+00009: //------------------------------------------------------------------------------
+00010: 
+00011: #pragma warning disable 1591
+00012: 
+00013: namespace ForYouApplications.POS4U.Background.Data.Container {
+00014:   <br />
+00015:   <br />
+00016:     /// <summary>
+00017:     ///Represents a strongly typed in-memory cache of data.
+00018:     ///</summary>
+00019:     [global::System.Serializable()]
+00020:     [global::System.ComponentModel.DesignerCategoryAttribute("code")]
+00021:     [global::System.ComponentModel.ToolboxItem(true)]
+00022:     [global::System.Xml.Serialization.XmlSchemaProviderAttribute("GetTypedDataSetSchema")]
+00023:     [global::System.Xml.Serialization.XmlRootAttribute("OnPremisesMachineModuleUploadManagementDataSet")]
+00024:     [global::System.ComponentModel.Design.HelpKeywordAttribute("vs.data.DataSet")]
+00025:     public partial class OnPremisesMachineModuleUploadManagementDataSet : global::System.Data.DataSet {
+00026:       <br />
+00027:         private OnPremisesMachineModuleUpdateInfoDataTable tableOnPremisesMachineModuleUpdateInfo;
+00028:       <br />
+00029:         private OnPremisesMachineModuleExsistDataTable tableOnPremisesMachineModuleExsist;
+00030:       <br />
+00031:         private global::System.Data.SchemaSerializationMode _schemaSerializationMode = global::System.Data.SchemaSerializationMode.IncludeSchema;
+00032:       <br />
+00033:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00034:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00035:         public OnPremisesMachineModuleUploadManagementDataSet() {
+00036:             this.BeginInit();
+00037:             this.InitClass();
+00038:             global::System.ComponentModel.CollectionChangeEventHandler schemaChangedHandler = new global::System.ComponentModel.CollectionChangeEventHandler(this.SchemaChanged);
+00039:             base.Tables.CollectionChanged += schemaChangedHandler;
+00040:             base.Relations.CollectionChanged += schemaChangedHandler;
+00041:             this.EndInit();
+00042:         }
+00043:       <br />
+00044:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00045:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00046:         protected OnPremisesMachineModuleUploadManagementDataSet(global::System.Runtime.Serialization.SerializationInfo info, global::System.Runtime.Serialization.StreamingContext context) : 
+00047:                 base(info, context, false) {
+00048:             if ((this.IsBinarySerialized(info, context) == true)) {
+00049:                 this.InitVars(false);
+00050:                 global::System.ComponentModel.CollectionChangeEventHandler schemaChangedHandler1 = new global::System.ComponentModel.CollectionChangeEventHandler(this.SchemaChanged);
+00051:                 this.Tables.CollectionChanged += schemaChangedHandler1;
+00052:                 this.Relations.CollectionChanged += schemaChangedHandler1;
+00053:                 return;
+00054:             }
+00055:             string strSchema = ((string)(info.GetValue("XmlSchema", typeof(string))));
+00056:             if ((this.DetermineSchemaSerializationMode(info, context) == global::System.Data.SchemaSerializationMode.IncludeSchema)) {
+00057:                 global::System.Data.DataSet ds = new global::System.Data.DataSet();
+00058:                 ds.ReadXmlSchema(new global::System.Xml.XmlTextReader(new global::System.IO.StringReader(strSchema)));
+00059:                 if ((ds.Tables["OnPremisesMachineModuleUpdateInfo"] != null)) {
+00060:                     base.Tables.Add(new OnPremisesMachineModuleUpdateInfoDataTable(ds.Tables["OnPremisesMachineModuleUpdateInfo"]));
+00061:                 }
+00062:                 if ((ds.Tables["OnPremisesMachineModuleExsist"] != null)) {
+00063:                     base.Tables.Add(new OnPremisesMachineModuleExsistDataTable(ds.Tables["OnPremisesMachineModuleExsist"]));
+00064:                 }
+00065:                 this.DataSetName = ds.DataSetName;
+00066:                 this.Prefix = ds.Prefix;
+00067:                 this.Namespace = ds.Namespace;
+00068:                 this.Locale = ds.Locale;
+00069:                 this.CaseSensitive = ds.CaseSensitive;
+00070:                 this.EnforceConstraints = ds.EnforceConstraints;
+00071:                 this.Merge(ds, false, global::System.Data.MissingSchemaAction.Add);
+00072:                 this.InitVars();
+00073:             }
+00074:             else {
+00075:                 this.ReadXmlSchema(new global::System.Xml.XmlTextReader(new global::System.IO.StringReader(strSchema)));
+00076:             }
+00077:             this.GetSerializationData(info, context);
+00078:             global::System.ComponentModel.CollectionChangeEventHandler schemaChangedHandler = new global::System.ComponentModel.CollectionChangeEventHandler(this.SchemaChanged);
+00079:             base.Tables.CollectionChanged += schemaChangedHandler;
+00080:             this.Relations.CollectionChanged += schemaChangedHandler;
+00081:         }
+00082:       <br />
+00083:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00084:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00085:         [global::System.ComponentModel.Browsable(false)]
+00086:         [global::System.ComponentModel.DesignerSerializationVisibility(global::System.ComponentModel.DesignerSerializationVisibility.Content)]
+00087:         public OnPremisesMachineModuleUpdateInfoDataTable OnPremisesMachineModuleUpdateInfo {
+00088:             get {
+00089:                 return this.tableOnPremisesMachineModuleUpdateInfo;
+00090:             }
+00091:         }
+00092:       <br />
+00093:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00094:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00095:         [global::System.ComponentModel.Browsable(false)]
+00096:         [global::System.ComponentModel.DesignerSerializationVisibility(global::System.ComponentModel.DesignerSerializationVisibility.Content)]
+00097:         public OnPremisesMachineModuleExsistDataTable OnPremisesMachineModuleExsist {
+00098:             get {
+00099:                 return this.tableOnPremisesMachineModuleExsist;
+00100:             }
+00101:         }
+00102:       <br />
+00103:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00104:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00105:         [global::System.ComponentModel.BrowsableAttribute(true)]
+00106:         [global::System.ComponentModel.DesignerSerializationVisibilityAttribute(global::System.ComponentModel.DesignerSerializationVisibility.Visible)]
+00107:         public override global::System.Data.SchemaSerializationMode SchemaSerializationMode {
+00108:             get {
+00109:                 return this._schemaSerializationMode;
+00110:             }
+00111:             set {
+00112:                 this._schemaSerializationMode = value;
+00113:             }
+00114:         }
+00115:       <br />
+00116:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00117:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00118:         [global::System.ComponentModel.DesignerSerializationVisibilityAttribute(global::System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+00119:         public new global::System.Data.DataTableCollection Tables {
+00120:             get {
+00121:                 return base.Tables;
+00122:             }
+00123:         }
+00124:       <br />
+00125:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00126:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00127:         [global::System.ComponentModel.DesignerSerializationVisibilityAttribute(global::System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+00128:         public new global::System.Data.DataRelationCollection Relations {
+00129:             get {
+00130:                 return base.Relations;
+00131:             }
+00132:         }
+00133:       <br />
+00134:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00135:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00136:         protected override void InitializeDerivedDataSet() {
+00137:             this.BeginInit();
+00138:             this.InitClass();
+00139:             this.EndInit();
+00140:         }
+00141:       <br />
+00142:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00143:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00144:         public override global::System.Data.DataSet Clone() {
+00145:             OnPremisesMachineModuleUploadManagementDataSet cln = ((OnPremisesMachineModuleUploadManagementDataSet)(base.Clone()));
+00146:             cln.InitVars();
+00147:             cln.SchemaSerializationMode = this.SchemaSerializationMode;
+00148:             return cln;
+00149:         }
+00150:       <br />
+00151:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00152:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00153:         protected override bool ShouldSerializeTables() {
+00154:             return false;
+00155:         }
+00156:       <br />
+00157:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00158:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00159:         protected override bool ShouldSerializeRelations() {
+00160:             return false;
+00161:         }
+00162:       <br />
+00163:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00164:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00165:         protected override void ReadXmlSerializable(global::System.Xml.XmlReader reader) {
+00166:             if ((this.DetermineSchemaSerializationMode(reader) == global::System.Data.SchemaSerializationMode.IncludeSchema)) {
+00167:                 this.Reset();
+00168:                 global::System.Data.DataSet ds = new global::System.Data.DataSet();
+00169:                 ds.ReadXml(reader);
+00170:                 if ((ds.Tables["OnPremisesMachineModuleUpdateInfo"] != null)) {
+00171:                     base.Tables.Add(new OnPremisesMachineModuleUpdateInfoDataTable(ds.Tables["OnPremisesMachineModuleUpdateInfo"]));
+00172:                 }
+00173:                 if ((ds.Tables["OnPremisesMachineModuleExsist"] != null)) {
+00174:                     base.Tables.Add(new OnPremisesMachineModuleExsistDataTable(ds.Tables["OnPremisesMachineModuleExsist"]));
+00175:                 }
+00176:                 this.DataSetName = ds.DataSetName;
+00177:                 this.Prefix = ds.Prefix;
+00178:                 this.Namespace = ds.Namespace;
+00179:                 this.Locale = ds.Locale;
+00180:                 this.CaseSensitive = ds.CaseSensitive;
+00181:                 this.EnforceConstraints = ds.EnforceConstraints;
+00182:                 this.Merge(ds, false, global::System.Data.MissingSchemaAction.Add);
+00183:                 this.InitVars();
+00184:             }
+00185:             else {
+00186:                 this.ReadXml(reader);
+00187:                 this.InitVars();
+00188:             }
+00189:         }
+00190:       <br />
+00191:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00192:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00193:         protected override global::System.Xml.Schema.XmlSchema GetSchemaSerializable() {
+00194:             global::System.IO.MemoryStream stream = new global::System.IO.MemoryStream();
+00195:             this.WriteXmlSchema(new global::System.Xml.XmlTextWriter(stream, null));
+00196:             stream.Position = 0;
+00197:             return global::System.Xml.Schema.XmlSchema.Read(new global::System.Xml.XmlTextReader(stream), null);
+00198:         }
+00199:       <br />
+00200:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00201:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00202:         internal void InitVars() {
+00203:             this.InitVars(true);
+00204:         }
+00205:       <br />
+00206:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00207:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00208:         internal void InitVars(bool initTable) {
+00209:             this.tableOnPremisesMachineModuleUpdateInfo = ((OnPremisesMachineModuleUpdateInfoDataTable)(base.Tables["OnPremisesMachineModuleUpdateInfo"]));
+00210:             if ((initTable == true)) {
+00211:                 if ((this.tableOnPremisesMachineModuleUpdateInfo != null)) {
+00212:                     this.tableOnPremisesMachineModuleUpdateInfo.InitVars();
+00213:                 }
+00214:             }
+00215:             this.tableOnPremisesMachineModuleExsist = ((OnPremisesMachineModuleExsistDataTable)(base.Tables["OnPremisesMachineModuleExsist"]));
+00216:             if ((initTable == true)) {
+00217:                 if ((this.tableOnPremisesMachineModuleExsist != null)) {
+00218:                     this.tableOnPremisesMachineModuleExsist.InitVars();
+00219:                 }
+00220:             }
+00221:         }
+00222:       <br />
+00223:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00224:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00225:         private void InitClass() {
+00226:             this.DataSetName = "OnPremisesMachineModuleUploadManagementDataSet";
+00227:             this.Prefix = "";
+00228:             this.Namespace = "http://tempuri.org/OnPremisesMachineModuleUploadManagementDataSet.xsd";
+00229:             this.EnforceConstraints = true;
+00230:             this.SchemaSerializationMode = global::System.Data.SchemaSerializationMode.IncludeSchema;
+00231:             this.tableOnPremisesMachineModuleUpdateInfo = new OnPremisesMachineModuleUpdateInfoDataTable();
+00232:             base.Tables.Add(this.tableOnPremisesMachineModuleUpdateInfo);
+00233:             this.tableOnPremisesMachineModuleExsist = new OnPremisesMachineModuleExsistDataTable();
+00234:             base.Tables.Add(this.tableOnPremisesMachineModuleExsist);
+00235:         }
+00236:       <br />
+00237:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00238:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00239:         private bool ShouldSerializeOnPremisesMachineModuleUpdateInfo() {
+00240:             return false;
+00241:         }
+00242:       <br />
+00243:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00244:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00245:         private bool ShouldSerializeOnPremisesMachineModuleExsist() {
+00246:             return false;
+00247:         }
+00248:       <br />
+00249:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00250:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00251:         private void SchemaChanged(object sender, global::System.ComponentModel.CollectionChangeEventArgs e) {
+00252:             if ((e.Action == global::System.ComponentModel.CollectionChangeAction.Remove)) {
+00253:                 this.InitVars();
+00254:             }
+00255:         }
+00256:       <br />
+00257:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00258:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00259:         public static global::System.Xml.Schema.XmlSchemaComplexType GetTypedDataSetSchema(global::System.Xml.Schema.XmlSchemaSet xs) {
+00260:             OnPremisesMachineModuleUploadManagementDataSet ds = new OnPremisesMachineModuleUploadManagementDataSet();
+00261:             global::System.Xml.Schema.XmlSchemaComplexType type = new global::System.Xml.Schema.XmlSchemaComplexType();
+00262:             global::System.Xml.Schema.XmlSchemaSequence sequence = new global::System.Xml.Schema.XmlSchemaSequence();
+00263:             global::System.Xml.Schema.XmlSchemaAny any = new global::System.Xml.Schema.XmlSchemaAny();
+00264:             any.Namespace = ds.Namespace;
+00265:             sequence.Items.Add(any);
+00266:             type.Particle = sequence;
+00267:             global::System.Xml.Schema.XmlSchema dsSchema = ds.GetSchemaSerializable();
+00268:             if (xs.Contains(dsSchema.TargetNamespace)) {
+00269:                 global::System.IO.MemoryStream s1 = new global::System.IO.MemoryStream();
+00270:                 global::System.IO.MemoryStream s2 = new global::System.IO.MemoryStream();
+00271:                 try {
+00272:                     global::System.Xml.Schema.XmlSchema schema = null;
+00273:                     dsSchema.Write(s1);
+00274:                     for (global::System.Collections.IEnumerator schemas = xs.Schemas(dsSchema.TargetNamespace).GetEnumerator(); schemas.MoveNext(); ) {
+00275:                         schema = ((global::System.Xml.Schema.XmlSchema)(schemas.Current));
+00276:                         s2.SetLength(0);
+00277:                         schema.Write(s2);
+00278:                         if ((s1.Length == s2.Length)) {
+00279:                             s1.Position = 0;
+00280:                             s2.Position = 0;
+00281:                             for (; ((s1.Position != s1.Length) 
+00282:                                         &amp;&amp; (s1.ReadByte() == s2.ReadByte())); ) {
+00283:                                 ;
+00284:                             }
+00285:                             if ((s1.Position == s1.Length)) {
+00286:                                 return type;
+00287:                             }
+00288:                         }
+00289:                     }
+00290:                 }
+00291:                 finally {
+00292:                     if ((s1 != null)) {
+00293:                         s1.Close();
+00294:                     }
+00295:                     if ((s2 != null)) {
+00296:                         s2.Close();
+00297:                     }
+00298:                 }
+00299:             }
+00300:             xs.Add(dsSchema);
+00301:             return type;
+00302:         }
+00303:       <br />
+00304:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00305:         public delegate void OnPremisesMachineModuleUpdateInfoRowChangeEventHandler(object sender, OnPremisesMachineModuleUpdateInfoRowChangeEvent e);
+00306:       <br />
+00307:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00308:         public delegate void OnPremisesMachineModuleExsistRowChangeEventHandler(object sender, OnPremisesMachineModuleExsistRowChangeEvent e);
+00309:       <br />
+00310:         /// <summary>
+00311:         ///Represents the strongly named DataTable class.
+00312:         ///</summary>
+00313:         [global::System.Serializable()]
+00314:         [global::System.Xml.Serialization.XmlSchemaProviderAttribute("GetTypedTableSchema")]
+00315:         public partial class OnPremisesMachineModuleUpdateInfoDataTable : global::System.Data.TypedTableBase<OnPremisesMachineModuleUpdateInfoRow> {
+00316:           <br />
+00317:             private global::System.Data.DataColumn columnCompanyCode;
+00318:           <br />
+00319:             private global::System.Data.DataColumn columnStoreCode;
+00320:           <br />
+00321:             private global::System.Data.DataColumn columnModuleVersion;
+00322:           <br />
+00323:             private global::System.Data.DataColumn columnURI;
+00324:           <br />
+00325:             private global::System.Data.DataColumn columnUpdateStartDateTime;
+00326:           <br />
+00327:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00328:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00329:             public OnPremisesMachineModuleUpdateInfoDataTable() {
+00330:                 this.TableName = "OnPremisesMachineModuleUpdateInfo";
+00331:                 this.BeginInit();
+00332:                 this.InitClass();
+00333:                 this.EndInit();
+00334:             }
+00335:           <br />
+00336:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00337:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00338:             internal OnPremisesMachineModuleUpdateInfoDataTable(global::System.Data.DataTable table) {
+00339:                 this.TableName = table.TableName;
+00340:                 if ((table.CaseSensitive != table.DataSet.CaseSensitive)) {
+00341:                     this.CaseSensitive = table.CaseSensitive;
+00342:                 }
+00343:                 if ((table.Locale.ToString() != table.DataSet.Locale.ToString())) {
+00344:                     this.Locale = table.Locale;
+00345:                 }
+00346:                 if ((table.Namespace != table.DataSet.Namespace)) {
+00347:                     this.Namespace = table.Namespace;
+00348:                 }
+00349:                 this.Prefix = table.Prefix;
+00350:                 this.MinimumCapacity = table.MinimumCapacity;
+00351:             }
+00352:           <br />
+00353:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00354:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00355:             protected OnPremisesMachineModuleUpdateInfoDataTable(global::System.Runtime.Serialization.SerializationInfo info, global::System.Runtime.Serialization.StreamingContext context) : 
+00356:                     base(info, context) {
+00357:                 this.InitVars();
+00358:             }
+00359:           <br />
+00360:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00361:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00362:             public global::System.Data.DataColumn CompanyCodeColumn {
+00363:                 get {
+00364:                     return this.columnCompanyCode;
+00365:                 }
+00366:             }
+00367:           <br />
+00368:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00369:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00370:             public global::System.Data.DataColumn StoreCodeColumn {
+00371:                 get {
+00372:                     return this.columnStoreCode;
+00373:                 }
+00374:             }
+00375:           <br />
+00376:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00377:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00378:             public global::System.Data.DataColumn ModuleVersionColumn {
+00379:                 get {
+00380:                     return this.columnModuleVersion;
+00381:                 }
+00382:             }
+00383:           <br />
+00384:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00385:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00386:             public global::System.Data.DataColumn URIColumn {
+00387:                 get {
+00388:                     return this.columnURI;
+00389:                 }
+00390:             }
+00391:           <br />
+00392:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00393:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00394:             public global::System.Data.DataColumn UpdateStartDateTimeColumn {
+00395:                 get {
+00396:                     return this.columnUpdateStartDateTime;
+00397:                 }
+00398:             }
+00399:           <br />
+00400:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00401:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00402:             [global::System.ComponentModel.Browsable(false)]
+00403:             public int Count {
+00404:                 get {
+00405:                     return this.Rows.Count;
+00406:                 }
+00407:             }
+00408:           <br />
+00409:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00410:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00411:             public OnPremisesMachineModuleUpdateInfoRow this[int index] {
+00412:                 get {
+00413:                     return ((OnPremisesMachineModuleUpdateInfoRow)(this.Rows[index]));
+00414:                 }
+00415:             }
+00416:           <br />
+00417:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00418:             public event OnPremisesMachineModuleUpdateInfoRowChangeEventHandler OnPremisesMachineModuleUpdateInfoRowChanging;
+00419:           <br />
+00420:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00421:             public event OnPremisesMachineModuleUpdateInfoRowChangeEventHandler OnPremisesMachineModuleUpdateInfoRowChanged;
+00422:           <br />
+00423:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00424:             public event OnPremisesMachineModuleUpdateInfoRowChangeEventHandler OnPremisesMachineModuleUpdateInfoRowDeleting;
+00425:           <br />
+00426:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00427:             public event OnPremisesMachineModuleUpdateInfoRowChangeEventHandler OnPremisesMachineModuleUpdateInfoRowDeleted;
+00428:           <br />
+00429:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00430:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00431:             public void AddOnPremisesMachineModuleUpdateInfoRow(OnPremisesMachineModuleUpdateInfoRow row) {
+00432:                 this.Rows.Add(row);
+00433:             }
+00434:           <br />
+00435:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00436:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00437:             public OnPremisesMachineModuleUpdateInfoRow AddOnPremisesMachineModuleUpdateInfoRow(string CompanyCode, string StoreCode, string ModuleVersion, string URI, System.DateTime UpdateStartDateTime) {
+00438:                 OnPremisesMachineModuleUpdateInfoRow rowOnPremisesMachineModuleUpdateInfoRow = ((OnPremisesMachineModuleUpdateInfoRow)(this.NewRow()));
+00439:                 object[] columnValuesArray = new object[] {
+00440:                         CompanyCode,
+00441:                         StoreCode,
+00442:                         ModuleVersion,
+00443:                         URI,
+00444:                         UpdateStartDateTime};
+00445:                 rowOnPremisesMachineModuleUpdateInfoRow.ItemArray = columnValuesArray;
+00446:                 this.Rows.Add(rowOnPremisesMachineModuleUpdateInfoRow);
+00447:                 return rowOnPremisesMachineModuleUpdateInfoRow;
+00448:             }
+00449:           <br />
+00450:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00451:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00452:             public OnPremisesMachineModuleUpdateInfoRow FindByCompanyCodeStoreCodeModuleVersion(string CompanyCode, string StoreCode, string ModuleVersion) {
+00453:                 return ((OnPremisesMachineModuleUpdateInfoRow)(this.Rows.Find(new object[] {
+00454:                             CompanyCode,
+00455:                             StoreCode,
+00456:                             ModuleVersion})));
+00457:             }
+00458:           <br />
+00459:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00460:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00461:             public override global::System.Data.DataTable Clone() {
+00462:                 OnPremisesMachineModuleUpdateInfoDataTable cln = ((OnPremisesMachineModuleUpdateInfoDataTable)(base.Clone()));
+00463:                 cln.InitVars();
+00464:                 return cln;
+00465:             }
+00466:           <br />
+00467:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00468:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00469:             protected override global::System.Data.DataTable CreateInstance() {
+00470:                 return new OnPremisesMachineModuleUpdateInfoDataTable();
+00471:             }
+00472:           <br />
+00473:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00474:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00475:             internal void InitVars() {
+00476:                 this.columnCompanyCode = base.Columns["CompanyCode"];
+00477:                 this.columnStoreCode = base.Columns["StoreCode"];
+00478:                 this.columnModuleVersion = base.Columns["ModuleVersion"];
+00479:                 this.columnURI = base.Columns["URI"];
+00480:                 this.columnUpdateStartDateTime = base.Columns["UpdateStartDateTime"];
+00481:             }
+00482:           <br />
+00483:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00484:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00485:             private void InitClass() {
+00486:                 this.columnCompanyCode = new global::System.Data.DataColumn("CompanyCode", typeof(string), null, global::System.Data.MappingType.Element);
+00487:                 base.Columns.Add(this.columnCompanyCode);
+00488:                 this.columnStoreCode = new global::System.Data.DataColumn("StoreCode", typeof(string), null, global::System.Data.MappingType.Element);
+00489:                 base.Columns.Add(this.columnStoreCode);
+00490:                 this.columnModuleVersion = new global::System.Data.DataColumn("ModuleVersion", typeof(string), null, global::System.Data.MappingType.Element);
+00491:                 base.Columns.Add(this.columnModuleVersion);
+00492:                 this.columnURI = new global::System.Data.DataColumn("URI", typeof(string), null, global::System.Data.MappingType.Element);
+00493:                 base.Columns.Add(this.columnURI);
+00494:                 this.columnUpdateStartDateTime = new global::System.Data.DataColumn("UpdateStartDateTime", typeof(global::System.DateTime), null, global::System.Data.MappingType.Element);
+00495:                 base.Columns.Add(this.columnUpdateStartDateTime);
+00496:                 this.Constraints.Add(new global::System.Data.UniqueConstraint("Constraint1", new global::System.Data.DataColumn[] {
+00497:                                 this.columnCompanyCode,
+00498:                                 this.columnStoreCode,
+00499:                                 this.columnModuleVersion}, true));
+00500:                 this.columnCompanyCode.AllowDBNull = false;
+00501:                 this.columnCompanyCode.MaxLength = 10;
+00502:                 this.columnStoreCode.AllowDBNull = false;
+00503:                 this.columnStoreCode.MaxLength = 10;
+00504:                 this.columnModuleVersion.AllowDBNull = false;
+00505:                 this.columnModuleVersion.MaxLength = 20;
+00506:                 this.columnURI.AllowDBNull = false;
+00507:                 this.columnURI.MaxLength = 260;
+00508:                 this.columnUpdateStartDateTime.AllowDBNull = false;
+00509:             }
+00510:           <br />
+00511:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00512:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00513:             public OnPremisesMachineModuleUpdateInfoRow NewOnPremisesMachineModuleUpdateInfoRow() {
+00514:                 return ((OnPremisesMachineModuleUpdateInfoRow)(this.NewRow()));
+00515:             }
+00516:           <br />
+00517:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00518:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00519:             protected override global::System.Data.DataRow NewRowFromBuilder(global::System.Data.DataRowBuilder builder) {
+00520:                 return new OnPremisesMachineModuleUpdateInfoRow(builder);
+00521:             }
+00522:           <br />
+00523:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00524:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00525:             protected override global::System.Type GetRowType() {
+00526:                 return typeof(OnPremisesMachineModuleUpdateInfoRow);
+00527:             }
+00528:           <br />
+00529:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00530:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00531:             protected override void OnRowChanged(global::System.Data.DataRowChangeEventArgs e) {
+00532:                 base.OnRowChanged(e);
+00533:                 if ((this.OnPremisesMachineModuleUpdateInfoRowChanged != null)) {
+00534:                     this.OnPremisesMachineModuleUpdateInfoRowChanged(this, new OnPremisesMachineModuleUpdateInfoRowChangeEvent(((OnPremisesMachineModuleUpdateInfoRow)(e.Row)), e.Action));
+00535:                 }
+00536:             }
+00537:           <br />
+00538:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00539:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00540:             protected override void OnRowChanging(global::System.Data.DataRowChangeEventArgs e) {
+00541:                 base.OnRowChanging(e);
+00542:                 if ((this.OnPremisesMachineModuleUpdateInfoRowChanging != null)) {
+00543:                     this.OnPremisesMachineModuleUpdateInfoRowChanging(this, new OnPremisesMachineModuleUpdateInfoRowChangeEvent(((OnPremisesMachineModuleUpdateInfoRow)(e.Row)), e.Action));
+00544:                 }
+00545:             }
+00546:           <br />
+00547:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00548:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00549:             protected override void OnRowDeleted(global::System.Data.DataRowChangeEventArgs e) {
+00550:                 base.OnRowDeleted(e);
+00551:                 if ((this.OnPremisesMachineModuleUpdateInfoRowDeleted != null)) {
+00552:                     this.OnPremisesMachineModuleUpdateInfoRowDeleted(this, new OnPremisesMachineModuleUpdateInfoRowChangeEvent(((OnPremisesMachineModuleUpdateInfoRow)(e.Row)), e.Action));
+00553:                 }
+00554:             }
+00555:           <br />
+00556:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00557:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00558:             protected override void OnRowDeleting(global::System.Data.DataRowChangeEventArgs e) {
+00559:                 base.OnRowDeleting(e);
+00560:                 if ((this.OnPremisesMachineModuleUpdateInfoRowDeleting != null)) {
+00561:                     this.OnPremisesMachineModuleUpdateInfoRowDeleting(this, new OnPremisesMachineModuleUpdateInfoRowChangeEvent(((OnPremisesMachineModuleUpdateInfoRow)(e.Row)), e.Action));
+00562:                 }
+00563:             }
+00564:           <br />
+00565:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00566:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00567:             public void RemoveOnPremisesMachineModuleUpdateInfoRow(OnPremisesMachineModuleUpdateInfoRow row) {
+00568:                 this.Rows.Remove(row);
+00569:             }
+00570:           <br />
+00571:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00572:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00573:             public static global::System.Xml.Schema.XmlSchemaComplexType GetTypedTableSchema(global::System.Xml.Schema.XmlSchemaSet xs) {
+00574:                 global::System.Xml.Schema.XmlSchemaComplexType type = new global::System.Xml.Schema.XmlSchemaComplexType();
+00575:                 global::System.Xml.Schema.XmlSchemaSequence sequence = new global::System.Xml.Schema.XmlSchemaSequence();
+00576:                 OnPremisesMachineModuleUploadManagementDataSet ds = new OnPremisesMachineModuleUploadManagementDataSet();
+00577:                 global::System.Xml.Schema.XmlSchemaAny any1 = new global::System.Xml.Schema.XmlSchemaAny();
+00578:                 any1.Namespace = "http://www.w3.org/2001/XMLSchema";
+00579:                 any1.MinOccurs = new decimal(0);
+00580:                 any1.MaxOccurs = decimal.MaxValue;
+00581:                 any1.ProcessContents = global::System.Xml.Schema.XmlSchemaContentProcessing.Lax;
+00582:                 sequence.Items.Add(any1);
+00583:                 global::System.Xml.Schema.XmlSchemaAny any2 = new global::System.Xml.Schema.XmlSchemaAny();
+00584:                 any2.Namespace = "urn:schemas-microsoft-com:xml-diffgram-v1";
+00585:                 any2.MinOccurs = new decimal(1);
+00586:                 any2.ProcessContents = global::System.Xml.Schema.XmlSchemaContentProcessing.Lax;
+00587:                 sequence.Items.Add(any2);
+00588:                 global::System.Xml.Schema.XmlSchemaAttribute attribute1 = new global::System.Xml.Schema.XmlSchemaAttribute();
+00589:                 attribute1.Name = "namespace";
+00590:                 attribute1.FixedValue = ds.Namespace;
+00591:                 type.Attributes.Add(attribute1);
+00592:                 global::System.Xml.Schema.XmlSchemaAttribute attribute2 = new global::System.Xml.Schema.XmlSchemaAttribute();
+00593:                 attribute2.Name = "tableTypeName";
+00594:                 attribute2.FixedValue = "OnPremisesMachineModuleUpdateInfoDataTable";
+00595:                 type.Attributes.Add(attribute2);
+00596:                 type.Particle = sequence;
+00597:                 global::System.Xml.Schema.XmlSchema dsSchema = ds.GetSchemaSerializable();
+00598:                 if (xs.Contains(dsSchema.TargetNamespace)) {
+00599:                     global::System.IO.MemoryStream s1 = new global::System.IO.MemoryStream();
+00600:                     global::System.IO.MemoryStream s2 = new global::System.IO.MemoryStream();
+00601:                     try {
+00602:                         global::System.Xml.Schema.XmlSchema schema = null;
+00603:                         dsSchema.Write(s1);
+00604:                         for (global::System.Collections.IEnumerator schemas = xs.Schemas(dsSchema.TargetNamespace).GetEnumerator(); schemas.MoveNext(); ) {
+00605:                             schema = ((global::System.Xml.Schema.XmlSchema)(schemas.Current));
+00606:                             s2.SetLength(0);
+00607:                             schema.Write(s2);
+00608:                             if ((s1.Length == s2.Length)) {
+00609:                                 s1.Position = 0;
+00610:                                 s2.Position = 0;
+00611:                                 for (; ((s1.Position != s1.Length) 
+00612:                                             &amp;&amp; (s1.ReadByte() == s2.ReadByte())); ) {
+00613:                                     ;
+00614:                                 }
+00615:                                 if ((s1.Position == s1.Length)) {
+00616:                                     return type;
+00617:                                 }
+00618:                             }
+00619:                         }
+00620:                     }
+00621:                     finally {
+00622:                         if ((s1 != null)) {
+00623:                             s1.Close();
+00624:                         }
+00625:                         if ((s2 != null)) {
+00626:                             s2.Close();
+00627:                         }
+00628:                     }
+00629:                 }
+00630:                 xs.Add(dsSchema);
+00631:                 return type;
+00632:             }
+00633:         }
+00634:       <br />
+00635:         /// <summary>
+00636:         ///Represents the strongly named DataTable class.
+00637:         ///</summary>
+00638:         [global::System.Serializable()]
+00639:         [global::System.Xml.Serialization.XmlSchemaProviderAttribute("GetTypedTableSchema")]
+00640:         public partial class OnPremisesMachineModuleExsistDataTable : global::System.Data.TypedTableBase<OnPremisesMachineModuleExsistRow> {
+00641:           <br />
+00642:             private global::System.Data.DataColumn columnCompanyCode;
+00643:           <br />
+00644:             private global::System.Data.DataColumn columnStoreCode;
+00645:           <br />
+00646:             private global::System.Data.DataColumn columnNewModuleVersion;
+00647:           <br />
+00648:             private global::System.Data.DataColumn columnCurrentModuleVersion;
+00649:           <br />
+00650:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00651:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00652:             public OnPremisesMachineModuleExsistDataTable() {
+00653:                 this.TableName = "OnPremisesMachineModuleExsist";
+00654:                 this.BeginInit();
+00655:                 this.InitClass();
+00656:                 this.EndInit();
+00657:             }
+00658:           <br />
+00659:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00660:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00661:             internal OnPremisesMachineModuleExsistDataTable(global::System.Data.DataTable table) {
+00662:                 this.TableName = table.TableName;
+00663:                 if ((table.CaseSensitive != table.DataSet.CaseSensitive)) {
+00664:                     this.CaseSensitive = table.CaseSensitive;
+00665:                 }
+00666:                 if ((table.Locale.ToString() != table.DataSet.Locale.ToString())) {
+00667:                     this.Locale = table.Locale;
+00668:                 }
+00669:                 if ((table.Namespace != table.DataSet.Namespace)) {
+00670:                     this.Namespace = table.Namespace;
+00671:                 }
+00672:                 this.Prefix = table.Prefix;
+00673:                 this.MinimumCapacity = table.MinimumCapacity;
+00674:             }
+00675:           <br />
+00676:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00677:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00678:             protected OnPremisesMachineModuleExsistDataTable(global::System.Runtime.Serialization.SerializationInfo info, global::System.Runtime.Serialization.StreamingContext context) : 
+00679:                     base(info, context) {
+00680:                 this.InitVars();
+00681:             }
+00682:           <br />
+00683:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00684:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00685:             public global::System.Data.DataColumn CompanyCodeColumn {
+00686:                 get {
+00687:                     return this.columnCompanyCode;
+00688:                 }
+00689:             }
+00690:           <br />
+00691:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00692:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00693:             public global::System.Data.DataColumn StoreCodeColumn {
+00694:                 get {
+00695:                     return this.columnStoreCode;
+00696:                 }
+00697:             }
+00698:           <br />
+00699:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00700:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00701:             public global::System.Data.DataColumn NewModuleVersionColumn {
+00702:                 get {
+00703:                     return this.columnNewModuleVersion;
+00704:                 }
+00705:             }
+00706:           <br />
+00707:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00708:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00709:             public global::System.Data.DataColumn CurrentModuleVersionColumn {
+00710:                 get {
+00711:                     return this.columnCurrentModuleVersion;
+00712:                 }
+00713:             }
+00714:           <br />
+00715:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00716:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00717:             [global::System.ComponentModel.Browsable(false)]
+00718:             public int Count {
+00719:                 get {
+00720:                     return this.Rows.Count;
+00721:                 }
+00722:             }
+00723:           <br />
+00724:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00725:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00726:             public OnPremisesMachineModuleExsistRow this[int index] {
+00727:                 get {
+00728:                     return ((OnPremisesMachineModuleExsistRow)(this.Rows[index]));
+00729:                 }
+00730:             }
+00731:           <br />
+00732:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00733:             public event OnPremisesMachineModuleExsistRowChangeEventHandler OnPremisesMachineModuleExsistRowChanging;
+00734:           <br />
+00735:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00736:             public event OnPremisesMachineModuleExsistRowChangeEventHandler OnPremisesMachineModuleExsistRowChanged;
+00737:           <br />
+00738:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00739:             public event OnPremisesMachineModuleExsistRowChangeEventHandler OnPremisesMachineModuleExsistRowDeleting;
+00740:           <br />
+00741:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00742:             public event OnPremisesMachineModuleExsistRowChangeEventHandler OnPremisesMachineModuleExsistRowDeleted;
+00743:           <br />
+00744:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00745:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00746:             public void AddOnPremisesMachineModuleExsistRow(OnPremisesMachineModuleExsistRow row) {
+00747:                 this.Rows.Add(row);
+00748:             }
+00749:           <br />
+00750:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00751:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00752:             public OnPremisesMachineModuleExsistRow AddOnPremisesMachineModuleExsistRow(string CompanyCode, string StoreCode, string NewModuleVersion, string CurrentModuleVersion) {
+00753:                 OnPremisesMachineModuleExsistRow rowOnPremisesMachineModuleExsistRow = ((OnPremisesMachineModuleExsistRow)(this.NewRow()));
+00754:                 object[] columnValuesArray = new object[] {
+00755:                         CompanyCode,
+00756:                         StoreCode,
+00757:                         NewModuleVersion,
+00758:                         CurrentModuleVersion};
+00759:                 rowOnPremisesMachineModuleExsistRow.ItemArray = columnValuesArray;
+00760:                 this.Rows.Add(rowOnPremisesMachineModuleExsistRow);
+00761:                 return rowOnPremisesMachineModuleExsistRow;
+00762:             }
+00763:           <br />
+00764:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00765:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00766:             public OnPremisesMachineModuleExsistRow FindByCompanyCodeStoreCodeNewModuleVersion(string CompanyCode, string StoreCode, string NewModuleVersion) {
+00767:                 return ((OnPremisesMachineModuleExsistRow)(this.Rows.Find(new object[] {
+00768:                             CompanyCode,
+00769:                             StoreCode,
+00770:                             NewModuleVersion})));
+00771:             }
+00772:           <br />
+00773:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00774:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00775:             public override global::System.Data.DataTable Clone() {
+00776:                 OnPremisesMachineModuleExsistDataTable cln = ((OnPremisesMachineModuleExsistDataTable)(base.Clone()));
+00777:                 cln.InitVars();
+00778:                 return cln;
+00779:             }
+00780:           <br />
+00781:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00782:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00783:             protected override global::System.Data.DataTable CreateInstance() {
+00784:                 return new OnPremisesMachineModuleExsistDataTable();
+00785:             }
+00786:           <br />
+00787:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00788:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00789:             internal void InitVars() {
+00790:                 this.columnCompanyCode = base.Columns["CompanyCode"];
+00791:                 this.columnStoreCode = base.Columns["StoreCode"];
+00792:                 this.columnNewModuleVersion = base.Columns["NewModuleVersion"];
+00793:                 this.columnCurrentModuleVersion = base.Columns["CurrentModuleVersion"];
+00794:             }
+00795:           <br />
+00796:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00797:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00798:             private void InitClass() {
+00799:                 this.columnCompanyCode = new global::System.Data.DataColumn("CompanyCode", typeof(string), null, global::System.Data.MappingType.Element);
+00800:                 base.Columns.Add(this.columnCompanyCode);
+00801:                 this.columnStoreCode = new global::System.Data.DataColumn("StoreCode", typeof(string), null, global::System.Data.MappingType.Element);
+00802:                 base.Columns.Add(this.columnStoreCode);
+00803:                 this.columnNewModuleVersion = new global::System.Data.DataColumn("NewModuleVersion", typeof(string), null, global::System.Data.MappingType.Element);
+00804:                 base.Columns.Add(this.columnNewModuleVersion);
+00805:                 this.columnCurrentModuleVersion = new global::System.Data.DataColumn("CurrentModuleVersion", typeof(string), null, global::System.Data.MappingType.Element);
+00806:                 base.Columns.Add(this.columnCurrentModuleVersion);
+00807:                 this.Constraints.Add(new global::System.Data.UniqueConstraint("Constraint1", new global::System.Data.DataColumn[] {
+00808:                                 this.columnCompanyCode,
+00809:                                 this.columnStoreCode,
+00810:                                 this.columnNewModuleVersion}, true));
+00811:                 this.columnCompanyCode.AllowDBNull = false;
+00812:                 this.columnCompanyCode.MaxLength = 10;
+00813:                 this.columnStoreCode.AllowDBNull = false;
+00814:                 this.columnStoreCode.MaxLength = 10;
+00815:                 this.columnNewModuleVersion.AllowDBNull = false;
+00816:                 this.columnNewModuleVersion.MaxLength = 20;
+00817:                 this.columnCurrentModuleVersion.MaxLength = 20;
+00818:             }
+00819:           <br />
+00820:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00821:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00822:             public OnPremisesMachineModuleExsistRow NewOnPremisesMachineModuleExsistRow() {
+00823:                 return ((OnPremisesMachineModuleExsistRow)(this.NewRow()));
+00824:             }
+00825:           <br />
+00826:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00827:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00828:             protected override global::System.Data.DataRow NewRowFromBuilder(global::System.Data.DataRowBuilder builder) {
+00829:                 return new OnPremisesMachineModuleExsistRow(builder);
+00830:             }
+00831:           <br />
+00832:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00833:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00834:             protected override global::System.Type GetRowType() {
+00835:                 return typeof(OnPremisesMachineModuleExsistRow);
+00836:             }
+00837:           <br />
+00838:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00839:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00840:             protected override void OnRowChanged(global::System.Data.DataRowChangeEventArgs e) {
+00841:                 base.OnRowChanged(e);
+00842:                 if ((this.OnPremisesMachineModuleExsistRowChanged != null)) {
+00843:                     this.OnPremisesMachineModuleExsistRowChanged(this, new OnPremisesMachineModuleExsistRowChangeEvent(((OnPremisesMachineModuleExsistRow)(e.Row)), e.Action));
+00844:                 }
+00845:             }
+00846:           <br />
+00847:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00848:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00849:             protected override void OnRowChanging(global::System.Data.DataRowChangeEventArgs e) {
+00850:                 base.OnRowChanging(e);
+00851:                 if ((this.OnPremisesMachineModuleExsistRowChanging != null)) {
+00852:                     this.OnPremisesMachineModuleExsistRowChanging(this, new OnPremisesMachineModuleExsistRowChangeEvent(((OnPremisesMachineModuleExsistRow)(e.Row)), e.Action));
+00853:                 }
+00854:             }
+00855:           <br />
+00856:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00857:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00858:             protected override void OnRowDeleted(global::System.Data.DataRowChangeEventArgs e) {
+00859:                 base.OnRowDeleted(e);
+00860:                 if ((this.OnPremisesMachineModuleExsistRowDeleted != null)) {
+00861:                     this.OnPremisesMachineModuleExsistRowDeleted(this, new OnPremisesMachineModuleExsistRowChangeEvent(((OnPremisesMachineModuleExsistRow)(e.Row)), e.Action));
+00862:                 }
+00863:             }
+00864:           <br />
+00865:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00866:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00867:             protected override void OnRowDeleting(global::System.Data.DataRowChangeEventArgs e) {
+00868:                 base.OnRowDeleting(e);
+00869:                 if ((this.OnPremisesMachineModuleExsistRowDeleting != null)) {
+00870:                     this.OnPremisesMachineModuleExsistRowDeleting(this, new OnPremisesMachineModuleExsistRowChangeEvent(((OnPremisesMachineModuleExsistRow)(e.Row)), e.Action));
+00871:                 }
+00872:             }
+00873:           <br />
+00874:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00875:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00876:             public void RemoveOnPremisesMachineModuleExsistRow(OnPremisesMachineModuleExsistRow row) {
+00877:                 this.Rows.Remove(row);
+00878:             }
+00879:           <br />
+00880:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00881:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00882:             public static global::System.Xml.Schema.XmlSchemaComplexType GetTypedTableSchema(global::System.Xml.Schema.XmlSchemaSet xs) {
+00883:                 global::System.Xml.Schema.XmlSchemaComplexType type = new global::System.Xml.Schema.XmlSchemaComplexType();
+00884:                 global::System.Xml.Schema.XmlSchemaSequence sequence = new global::System.Xml.Schema.XmlSchemaSequence();
+00885:                 OnPremisesMachineModuleUploadManagementDataSet ds = new OnPremisesMachineModuleUploadManagementDataSet();
+00886:                 global::System.Xml.Schema.XmlSchemaAny any1 = new global::System.Xml.Schema.XmlSchemaAny();
+00887:                 any1.Namespace = "http://www.w3.org/2001/XMLSchema";
+00888:                 any1.MinOccurs = new decimal(0);
+00889:                 any1.MaxOccurs = decimal.MaxValue;
+00890:                 any1.ProcessContents = global::System.Xml.Schema.XmlSchemaContentProcessing.Lax;
+00891:                 sequence.Items.Add(any1);
+00892:                 global::System.Xml.Schema.XmlSchemaAny any2 = new global::System.Xml.Schema.XmlSchemaAny();
+00893:                 any2.Namespace = "urn:schemas-microsoft-com:xml-diffgram-v1";
+00894:                 any2.MinOccurs = new decimal(1);
+00895:                 any2.ProcessContents = global::System.Xml.Schema.XmlSchemaContentProcessing.Lax;
+00896:                 sequence.Items.Add(any2);
+00897:                 global::System.Xml.Schema.XmlSchemaAttribute attribute1 = new global::System.Xml.Schema.XmlSchemaAttribute();
+00898:                 attribute1.Name = "namespace";
+00899:                 attribute1.FixedValue = ds.Namespace;
+00900:                 type.Attributes.Add(attribute1);
+00901:                 global::System.Xml.Schema.XmlSchemaAttribute attribute2 = new global::System.Xml.Schema.XmlSchemaAttribute();
+00902:                 attribute2.Name = "tableTypeName";
+00903:                 attribute2.FixedValue = "OnPremisesMachineModuleExsistDataTable";
+00904:                 type.Attributes.Add(attribute2);
+00905:                 type.Particle = sequence;
+00906:                 global::System.Xml.Schema.XmlSchema dsSchema = ds.GetSchemaSerializable();
+00907:                 if (xs.Contains(dsSchema.TargetNamespace)) {
+00908:                     global::System.IO.MemoryStream s1 = new global::System.IO.MemoryStream();
+00909:                     global::System.IO.MemoryStream s2 = new global::System.IO.MemoryStream();
+00910:                     try {
+00911:                         global::System.Xml.Schema.XmlSchema schema = null;
+00912:                         dsSchema.Write(s1);
+00913:                         for (global::System.Collections.IEnumerator schemas = xs.Schemas(dsSchema.TargetNamespace).GetEnumerator(); schemas.MoveNext(); ) {
+00914:                             schema = ((global::System.Xml.Schema.XmlSchema)(schemas.Current));
+00915:                             s2.SetLength(0);
+00916:                             schema.Write(s2);
+00917:                             if ((s1.Length == s2.Length)) {
+00918:                                 s1.Position = 0;
+00919:                                 s2.Position = 0;
+00920:                                 for (; ((s1.Position != s1.Length) 
+00921:                                             &amp;&amp; (s1.ReadByte() == s2.ReadByte())); ) {
+00922:                                     ;
+00923:                                 }
+00924:                                 if ((s1.Position == s1.Length)) {
+00925:                                     return type;
+00926:                                 }
+00927:                             }
+00928:                         }
+00929:                     }
+00930:                     finally {
+00931:                         if ((s1 != null)) {
+00932:                             s1.Close();
+00933:                         }
+00934:                         if ((s2 != null)) {
+00935:                             s2.Close();
+00936:                         }
+00937:                     }
+00938:                 }
+00939:                 xs.Add(dsSchema);
+00940:                 return type;
+00941:             }
+00942:         }
+00943:       <br />
+00944:         /// <summary>
+00945:         ///Represents strongly named DataRow class.
+00946:         ///</summary>
+00947:         public partial class OnPremisesMachineModuleUpdateInfoRow : global::System.Data.DataRow {
+00948:           <br />
+00949:             private OnPremisesMachineModuleUpdateInfoDataTable tableOnPremisesMachineModuleUpdateInfo;
+00950:           <br />
+00951:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00952:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00953:             internal OnPremisesMachineModuleUpdateInfoRow(global::System.Data.DataRowBuilder rb) : 
+00954:                     base(rb) {
+00955:                 this.tableOnPremisesMachineModuleUpdateInfo = ((OnPremisesMachineModuleUpdateInfoDataTable)(this.Table));
+00956:             }
+00957:           <br />
+00958:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00959:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00960:             public string CompanyCode {
+00961:                 get {
+00962:                     return ((string)(this[this.tableOnPremisesMachineModuleUpdateInfo.CompanyCodeColumn]));
+00963:                 }
+00964:                 set {
+00965:                     this[this.tableOnPremisesMachineModuleUpdateInfo.CompanyCodeColumn] = value;
+00966:                 }
+00967:             }
+00968:           <br />
+00969:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00970:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00971:             public string StoreCode {
+00972:                 get {
+00973:                     return ((string)(this[this.tableOnPremisesMachineModuleUpdateInfo.StoreCodeColumn]));
+00974:                 }
+00975:                 set {
+00976:                     this[this.tableOnPremisesMachineModuleUpdateInfo.StoreCodeColumn] = value;
+00977:                 }
+00978:             }
+00979:           <br />
+00980:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00981:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00982:             public string ModuleVersion {
+00983:                 get {
+00984:                     return ((string)(this[this.tableOnPremisesMachineModuleUpdateInfo.ModuleVersionColumn]));
+00985:                 }
+00986:                 set {
+00987:                     this[this.tableOnPremisesMachineModuleUpdateInfo.ModuleVersionColumn] = value;
+00988:                 }
+00989:             }
+00990:           <br />
+00991:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00992:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00993:             public string URI {
+00994:                 get {
+00995:                     return ((string)(this[this.tableOnPremisesMachineModuleUpdateInfo.URIColumn]));
+00996:                 }
+00997:                 set {
+00998:                     this[this.tableOnPremisesMachineModuleUpdateInfo.URIColumn] = value;
+00999:                 }
+01000:             }
+01001:           <br />
+01002:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01003:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01004:             public System.DateTime UpdateStartDateTime {
+01005:                 get {
+01006:                     return ((global::System.DateTime)(this[this.tableOnPremisesMachineModuleUpdateInfo.UpdateStartDateTimeColumn]));
+01007:                 }
+01008:                 set {
+01009:                     this[this.tableOnPremisesMachineModuleUpdateInfo.UpdateStartDateTimeColumn] = value;
+01010:                 }
+01011:             }
+01012:         }
+01013:       <br />
+01014:         /// <summary>
+01015:         ///Represents strongly named DataRow class.
+01016:         ///</summary>
+01017:         public partial class OnPremisesMachineModuleExsistRow : global::System.Data.DataRow {
+01018:           <br />
+01019:             private OnPremisesMachineModuleExsistDataTable tableOnPremisesMachineModuleExsist;
+01020:           <br />
+01021:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01022:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01023:             internal OnPremisesMachineModuleExsistRow(global::System.Data.DataRowBuilder rb) : 
+01024:                     base(rb) {
+01025:                 this.tableOnPremisesMachineModuleExsist = ((OnPremisesMachineModuleExsistDataTable)(this.Table));
+01026:             }
+01027:           <br />
+01028:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01029:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01030:             public string CompanyCode {
+01031:                 get {
+01032:                     return ((string)(this[this.tableOnPremisesMachineModuleExsist.CompanyCodeColumn]));
+01033:                 }
+01034:                 set {
+01035:                     this[this.tableOnPremisesMachineModuleExsist.CompanyCodeColumn] = value;
+01036:                 }
+01037:             }
+01038:           <br />
+01039:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01040:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01041:             public string StoreCode {
+01042:                 get {
+01043:                     return ((string)(this[this.tableOnPremisesMachineModuleExsist.StoreCodeColumn]));
+01044:                 }
+01045:                 set {
+01046:                     this[this.tableOnPremisesMachineModuleExsist.StoreCodeColumn] = value;
+01047:                 }
+01048:             }
+01049:           <br />
+01050:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01051:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01052:             public string NewModuleVersion {
+01053:                 get {
+01054:                     return ((string)(this[this.tableOnPremisesMachineModuleExsist.NewModuleVersionColumn]));
+01055:                 }
+01056:                 set {
+01057:                     this[this.tableOnPremisesMachineModuleExsist.NewModuleVersionColumn] = value;
+01058:                 }
+01059:             }
+01060:           <br />
+01061:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01062:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01063:             public string CurrentModuleVersion {
+01064:                 get {
+01065:                     try {
+01066:                         return ((string)(this[this.tableOnPremisesMachineModuleExsist.CurrentModuleVersionColumn]));
+01067:                     }
+01068:                     catch (global::System.InvalidCastException e) {
+01069:                         throw new global::System.Data.StrongTypingException("テーブル \'OnPremisesMachineModuleExsist\' にある列 \'CurrentModuleVersion\' の値は DBNull です。", e);
+01070:                     }
+01071:                 }
+01072:                 set {
+01073:                     this[this.tableOnPremisesMachineModuleExsist.CurrentModuleVersionColumn] = value;
+01074:                 }
+01075:             }
+01076:           <br />
+01077:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01078:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01079:             public bool IsCurrentModuleVersionNull() {
+01080:                 return this.IsNull(this.tableOnPremisesMachineModuleExsist.CurrentModuleVersionColumn);
+01081:             }
+01082:           <br />
+01083:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01084:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01085:             public void SetCurrentModuleVersionNull() {
+01086:                 this[this.tableOnPremisesMachineModuleExsist.CurrentModuleVersionColumn] = global::System.Convert.DBNull;
+01087:             }
+01088:         }
+01089:       <br />
+01090:         /// <summary>
+01091:         ///Row event argument class
+01092:         ///</summary>
+01093:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01094:         public class OnPremisesMachineModuleUpdateInfoRowChangeEvent : global::System.EventArgs {
+01095:           <br />
+01096:             private OnPremisesMachineModuleUpdateInfoRow eventRow;
+01097:           <br />
+01098:             private global::System.Data.DataRowAction eventAction;
+01099:           <br />
+01100:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01101:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01102:             public OnPremisesMachineModuleUpdateInfoRowChangeEvent(OnPremisesMachineModuleUpdateInfoRow row, global::System.Data.DataRowAction action) {
+01103:                 this.eventRow = row;
+01104:                 this.eventAction = action;
+01105:             }
+01106:           <br />
+01107:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01108:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01109:             public OnPremisesMachineModuleUpdateInfoRow Row {
+01110:                 get {
+01111:                     return this.eventRow;
+01112:                 }
+01113:             }
+01114:           <br />
+01115:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01116:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01117:             public global::System.Data.DataRowAction Action {
+01118:                 get {
+01119:                     return this.eventAction;
+01120:                 }
+01121:             }
+01122:         }
+01123:       <br />
+01124:         /// <summary>
+01125:         ///Row event argument class
+01126:         ///</summary>
+01127:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01128:         public class OnPremisesMachineModuleExsistRowChangeEvent : global::System.EventArgs {
+01129:           <br />
+01130:             private OnPremisesMachineModuleExsistRow eventRow;
+01131:           <br />
+01132:             private global::System.Data.DataRowAction eventAction;
+01133:           <br />
+01134:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01135:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01136:             public OnPremisesMachineModuleExsistRowChangeEvent(OnPremisesMachineModuleExsistRow row, global::System.Data.DataRowAction action) {
+01137:                 this.eventRow = row;
+01138:                 this.eventAction = action;
+01139:             }
+01140:           <br />
+01141:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01142:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01143:             public OnPremisesMachineModuleExsistRow Row {
+01144:                 get {
+01145:                     return this.eventRow;
+01146:                 }
+01147:             }
+01148:           <br />
+01149:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01150:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01151:             public global::System.Data.DataRowAction Action {
+01152:                 get {
+01153:                     return this.eventAction;
+01154:                 }
+01155:             }
+01156:         }
+01157:     }
+01158: }
+01159: namespace ForYouApplications.POS4U.Background.Data.Container.OnPremisesMachineModuleUploadManagementDataSetTableAdapters {
+01160:   <br />
+01161:   <br />
+01162:     /// <summary>
+01163:     ///Represents the connection and commands used to retrieve and save data.
+01164:     ///</summary>
+01165:     [global::System.ComponentModel.DesignerCategoryAttribute("code")]
+01166:     [global::System.ComponentModel.ToolboxItem(true)]
+01167:     [global::System.ComponentModel.DataObjectAttribute(true)]
+01168:     [global::System.ComponentModel.DesignerAttribute("Microsoft.VSDesigner.DataSource.Design.TableAdapterDesigner, Microsoft.VSDesigner" +
+01169:         ", Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a")]
+01170:     [global::System.ComponentModel.Design.HelpKeywordAttribute("vs.data.TableAdapter")]
+01171:     public partial class OnPremisesMachineModuleUpdateInfoTableAdapter : global::System.ComponentModel.Component {
+01172:       <br />
+01173:         private global::System.Data.SqlClient.SqlDataAdapter _adapter;
+01174:       <br />
+01175:         private global::System.Data.SqlClient.SqlConnection _connection;
+01176:       <br />
+01177:         private global::System.Data.SqlClient.SqlTransaction _transaction;
+01178:       <br />
+01179:         private global::System.Data.SqlClient.SqlCommand[] _commandCollection;
+01180:       <br />
+01181:         private bool _clearBeforeFill;
+01182:       <br />
+01183:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01184:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01185:         public OnPremisesMachineModuleUpdateInfoTableAdapter() {
+01186:             this.ClearBeforeFill = true;
+01187:         }
+01188:       <br />
+01189:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01190:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01191:         protected internal global::System.Data.SqlClient.SqlDataAdapter Adapter {
+01192:             get {
+01193:                 if ((this._adapter == null)) {
+01194:                     this.InitAdapter();
+01195:                 }
+01196:                 return this._adapter;
+01197:             }
+01198:         }
+01199:       <br />
+01200:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01201:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01202:         public global::System.Data.SqlClient.SqlConnection Connection {
+01203:             get {
+01204:                 if ((this._connection == null)) {
+01205:                     this.InitConnection();
+01206:                 }
+01207:                 return this._connection;
+01208:             }
+01209:             set {
+01210:                 this._connection = value;
+01211:                 if ((this.Adapter.InsertCommand != null)) {
+01212:                     this.Adapter.InsertCommand.Connection = value;
+01213:                 }
+01214:                 if ((this.Adapter.DeleteCommand != null)) {
+01215:                     this.Adapter.DeleteCommand.Connection = value;
+01216:                 }
+01217:                 if ((this.Adapter.UpdateCommand != null)) {
+01218:                     this.Adapter.UpdateCommand.Connection = value;
+01219:                 }
+01220:                 for (int i = 0; (i &lt; this.CommandCollection.Length); i = (i + 1)) {
+01221:                     if ((this.CommandCollection[i] != null)) {
+01222:                         ((global::System.Data.SqlClient.SqlCommand)(this.CommandCollection[i])).Connection = value;
+01223:                     }
+01224:                 }
+01225:             }
+01226:         }
+01227:       <br />
+01228:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01229:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01230:         internal global::System.Data.SqlClient.SqlTransaction Transaction {
+01231:             get {
+01232:                 return this._transaction;
+01233:             }
+01234:             set {
+01235:                 this._transaction = value;
+01236:                 for (int i = 0; (i &lt; this.CommandCollection.Length); i = (i + 1)) {
+01237:                     this.CommandCollection[i].Transaction = this._transaction;
+01238:                 }
+01239:                 if (((this.Adapter != null) 
+01240:                             &amp;&amp; (this.Adapter.DeleteCommand != null))) {
+01241:                     this.Adapter.DeleteCommand.Transaction = this._transaction;
+01242:                 }
+01243:                 if (((this.Adapter != null) 
+01244:                             &amp;&amp; (this.Adapter.InsertCommand != null))) {
+01245:                     this.Adapter.InsertCommand.Transaction = this._transaction;
+01246:                 }
+01247:                 if (((this.Adapter != null) 
+01248:                             &amp;&amp; (this.Adapter.UpdateCommand != null))) {
+01249:                     this.Adapter.UpdateCommand.Transaction = this._transaction;
+01250:                 }
+01251:             }
+01252:         }
+01253:       <br />
+01254:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01255:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01256:         protected global::System.Data.SqlClient.SqlCommand[] CommandCollection {
+01257:             get {
+01258:                 if ((this._commandCollection == null)) {
+01259:                     this.InitCommandCollection();
+01260:                 }
+01261:                 return this._commandCollection;
+01262:             }
+01263:         }
+01264:       <br />
+01265:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01266:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01267:         public bool ClearBeforeFill {
+01268:             get {
+01269:                 return this._clearBeforeFill;
+01270:             }
+01271:             set {
+01272:                 this._clearBeforeFill = value;
+01273:             }
+01274:         }
+01275:       <br />
+01276:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01277:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01278:         private void InitAdapter() {
+01279:             this._adapter = new global::System.Data.SqlClient.SqlDataAdapter();
+01280:             global::System.Data.Common.DataTableMapping tableMapping = new global::System.Data.Common.DataTableMapping();
+01281:             tableMapping.SourceTable = "Table";
+01282:             tableMapping.DataSetTable = "OnPremisesMachineModuleUpdateInfo";
+01283:             tableMapping.ColumnMappings.Add("CompanyCode", "CompanyCode");
+01284:             tableMapping.ColumnMappings.Add("StoreCode", "StoreCode");
+01285:             tableMapping.ColumnMappings.Add("ModuleVersion", "ModuleVersion");
+01286:             tableMapping.ColumnMappings.Add("URI", "URI");
+01287:             tableMapping.ColumnMappings.Add("UpdateStartDateTime", "UpdateStartDateTime");
+01288:             this._adapter.TableMappings.Add(tableMapping);
+01289:         }
+01290:       <br />
+01291:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01292:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01293:         private void InitConnection() {
+01294:             this._connection = new global::System.Data.SqlClient.SqlConnection();
+01295:             this._connection.ConnectionString = global::ForYouApplications.POS4U.Background.Data.Container.Properties.Settings.Default.POS4U_TrialConnectionString;
+01296:         }
+01297:       <br />
+01298:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01299:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01300:         private void InitCommandCollection() {
+01301:             this._commandCollection = new global::System.Data.SqlClient.SqlCommand[1];
+01302:             this._commandCollection[0] = new global::System.Data.SqlClient.SqlCommand();
+01303:             this._commandCollection[0].Connection = this.Connection;
+01304:             this._commandCollection[0].CommandText = "dbo.usp_GetOnPremisesMachineModuleUpdateInfo";
+01305:             this._commandCollection[0].CommandType = global::System.Data.CommandType.StoredProcedure;
+01306:             this._commandCollection[0].Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@RETURN_VALUE", global::System.Data.SqlDbType.Int, 4, global::System.Data.ParameterDirection.ReturnValue, 10, 0, null, global::System.Data.DataRowVersion.Current, false, null, "", "", ""));
+01307:             this._commandCollection[0].Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@CompanyCode", global::System.Data.SqlDbType.NVarChar, 10, global::System.Data.ParameterDirection.Input, 0, 0, null, global::System.Data.DataRowVersion.Current, false, null, "", "", ""));
+01308:             this._commandCollection[0].Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@StoreCode", global::System.Data.SqlDbType.NVarChar, 10, global::System.Data.ParameterDirection.Input, 0, 0, null, global::System.Data.DataRowVersion.Current, false, null, "", "", ""));
+01309:             this._commandCollection[0].Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@CurrentVersion", global::System.Data.SqlDbType.NVarChar, 20, global::System.Data.ParameterDirection.Input, 0, 0, null, global::System.Data.DataRowVersion.Current, false, null, "", "", ""));
+01310:             this._commandCollection[0].Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@ReferenceDateTime", global::System.Data.SqlDbType.DateTime2, 8, global::System.Data.ParameterDirection.Input, 27, 7, null, global::System.Data.DataRowVersion.Current, false, null, "", "", ""));
+01311:         }
+01312:       <br />
+01313:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01314:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01315:         [global::System.ComponentModel.Design.HelpKeywordAttribute("vs.data.TableAdapter")]
+01316:         [global::System.ComponentModel.DataObjectMethodAttribute(global::System.ComponentModel.DataObjectMethodType.Fill, true)]
+01317:         public virtual int Fill(OnPremisesMachineModuleUploadManagementDataSet.OnPremisesMachineModuleUpdateInfoDataTable dataTable, string CompanyCode, string StoreCode, string CurrentVersion, global::System.Nullable<global::System.DateTime> ReferenceDateTime) {
+01318:             this.Adapter.SelectCommand = this.CommandCollection[0];
+01319:             if ((CompanyCode == null)) {
+01320:                 this.Adapter.SelectCommand.Parameters[1].Value = global::System.DBNull.Value;
+01321:             }
+01322:             else {
+01323:                 this.Adapter.SelectCommand.Parameters[1].Value = ((string)(CompanyCode));
+01324:             }
+01325:             if ((StoreCode == null)) {
+01326:                 this.Adapter.SelectCommand.Parameters[2].Value = global::System.DBNull.Value;
+01327:             }
+01328:             else {
+01329:                 this.Adapter.SelectCommand.Parameters[2].Value = ((string)(StoreCode));
+01330:             }
+01331:             if ((CurrentVersion == null)) {
+01332:                 this.Adapter.SelectCommand.Parameters[3].Value = global::System.DBNull.Value;
+01333:             }
+01334:             else {
+01335:                 this.Adapter.SelectCommand.Parameters[3].Value = ((string)(CurrentVersion));
+01336:             }
+01337:             if ((ReferenceDateTime.HasValue == true)) {
+01338:                 this.Adapter.SelectCommand.Parameters[4].Value = ((System.DateTime)(ReferenceDateTime.Value));
+01339:             }
+01340:             else {
+01341:                 this.Adapter.SelectCommand.Parameters[4].Value = global::System.DBNull.Value;
+01342:             }
+01343:             if ((this.ClearBeforeFill == true)) {
+01344:                 dataTable.Clear();
+01345:             }
+01346:             int returnValue = this.Adapter.Fill(dataTable);
+01347:             return returnValue;
+01348:         }
+01349:       <br />
+01350:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01351:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01352:         [global::System.ComponentModel.Design.HelpKeywordAttribute("vs.data.TableAdapter")]
+01353:         [global::System.ComponentModel.DataObjectMethodAttribute(global::System.ComponentModel.DataObjectMethodType.Select, true)]
+01354:         public virtual OnPremisesMachineModuleUploadManagementDataSet.OnPremisesMachineModuleUpdateInfoDataTable GetData(string CompanyCode, string StoreCode, string CurrentVersion, global::System.Nullable<global::System.DateTime> ReferenceDateTime) {
+01355:             this.Adapter.SelectCommand = this.CommandCollection[0];
+01356:             if ((CompanyCode == null)) {
+01357:                 this.Adapter.SelectCommand.Parameters[1].Value = global::System.DBNull.Value;
+01358:             }
+01359:             else {
+01360:                 this.Adapter.SelectCommand.Parameters[1].Value = ((string)(CompanyCode));
+01361:             }
+01362:             if ((StoreCode == null)) {
+01363:                 this.Adapter.SelectCommand.Parameters[2].Value = global::System.DBNull.Value;
+01364:             }
+01365:             else {
+01366:                 this.Adapter.SelectCommand.Parameters[2].Value = ((string)(StoreCode));
+01367:             }
+01368:             if ((CurrentVersion == null)) {
+01369:                 this.Adapter.SelectCommand.Parameters[3].Value = global::System.DBNull.Value;
+01370:             }
+01371:             else {
+01372:                 this.Adapter.SelectCommand.Parameters[3].Value = ((string)(CurrentVersion));
+01373:             }
+01374:             if ((ReferenceDateTime.HasValue == true)) {
+01375:                 this.Adapter.SelectCommand.Parameters[4].Value = ((System.DateTime)(ReferenceDateTime.Value));
+01376:             }
+01377:             else {
+01378:                 this.Adapter.SelectCommand.Parameters[4].Value = global::System.DBNull.Value;
+01379:             }
+01380:             OnPremisesMachineModuleUploadManagementDataSet.OnPremisesMachineModuleUpdateInfoDataTable dataTable = new OnPremisesMachineModuleUploadManagementDataSet.OnPremisesMachineModuleUpdateInfoDataTable();
+01381:             this.Adapter.Fill(dataTable);
+01382:             return dataTable;
+01383:         }
+01384:     }
+01385:   <br />
+01386:     /// <summary>
+01387:     ///Represents the connection and commands used to retrieve and save data.
+01388:     ///</summary>
+01389:     [global::System.ComponentModel.DesignerCategoryAttribute("code")]
+01390:     [global::System.ComponentModel.ToolboxItem(true)]
+01391:     [global::System.ComponentModel.DataObjectAttribute(true)]
+01392:     [global::System.ComponentModel.DesignerAttribute("Microsoft.VSDesigner.DataSource.Design.TableAdapterDesigner, Microsoft.VSDesigner" +
+01393:         ", Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a")]
+01394:     [global::System.ComponentModel.Design.HelpKeywordAttribute("vs.data.TableAdapter")]
+01395:     public partial class OnPremisesMachineModuleExsistTableAdapter : global::System.ComponentModel.Component {
+01396:       <br />
+01397:         private global::System.Data.SqlClient.SqlDataAdapter _adapter;
+01398:       <br />
+01399:         private global::System.Data.SqlClient.SqlConnection _connection;
+01400:       <br />
+01401:         private global::System.Data.SqlClient.SqlTransaction _transaction;
+01402:       <br />
+01403:         private global::System.Data.SqlClient.SqlCommand[] _commandCollection;
+01404:       <br />
+01405:         private bool _clearBeforeFill;
+01406:       <br />
+01407:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01408:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01409:         public OnPremisesMachineModuleExsistTableAdapter() {
+01410:             this.ClearBeforeFill = true;
+01411:         }
+01412:       <br />
+01413:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01414:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01415:         protected internal global::System.Data.SqlClient.SqlDataAdapter Adapter {
+01416:             get {
+01417:                 if ((this._adapter == null)) {
+01418:                     this.InitAdapter();
+01419:                 }
+01420:                 return this._adapter;
+01421:             }
+01422:         }
+01423:       <br />
+01424:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01425:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01426:         public global::System.Data.SqlClient.SqlConnection Connection {
+01427:             get {
+01428:                 if ((this._connection == null)) {
+01429:                     this.InitConnection();
+01430:                 }
+01431:                 return this._connection;
+01432:             }
+01433:             set {
+01434:                 this._connection = value;
+01435:                 if ((this.Adapter.InsertCommand != null)) {
+01436:                     this.Adapter.InsertCommand.Connection = value;
+01437:                 }
+01438:                 if ((this.Adapter.DeleteCommand != null)) {
+01439:                     this.Adapter.DeleteCommand.Connection = value;
+01440:                 }
+01441:                 if ((this.Adapter.UpdateCommand != null)) {
+01442:                     this.Adapter.UpdateCommand.Connection = value;
+01443:                 }
+01444:                 for (int i = 0; (i &lt; this.CommandCollection.Length); i = (i + 1)) {
+01445:                     if ((this.CommandCollection[i] != null)) {
+01446:                         ((global::System.Data.SqlClient.SqlCommand)(this.CommandCollection[i])).Connection = value;
+01447:                     }
+01448:                 }
+01449:             }
+01450:         }
+01451:       <br />
+01452:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01453:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01454:         internal global::System.Data.SqlClient.SqlTransaction Transaction {
+01455:             get {
+01456:                 return this._transaction;
+01457:             }
+01458:             set {
+01459:                 this._transaction = value;
+01460:                 for (int i = 0; (i &lt; this.CommandCollection.Length); i = (i + 1)) {
+01461:                     this.CommandCollection[i].Transaction = this._transaction;
+01462:                 }
+01463:                 if (((this.Adapter != null) 
+01464:                             &amp;&amp; (this.Adapter.DeleteCommand != null))) {
+01465:                     this.Adapter.DeleteCommand.Transaction = this._transaction;
+01466:                 }
+01467:                 if (((this.Adapter != null) 
+01468:                             &amp;&amp; (this.Adapter.InsertCommand != null))) {
+01469:                     this.Adapter.InsertCommand.Transaction = this._transaction;
+01470:                 }
+01471:                 if (((this.Adapter != null) 
+01472:                             &amp;&amp; (this.Adapter.UpdateCommand != null))) {
+01473:                     this.Adapter.UpdateCommand.Transaction = this._transaction;
+01474:                 }
+01475:             }
+01476:         }
+01477:       <br />
+01478:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01479:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01480:         protected global::System.Data.SqlClient.SqlCommand[] CommandCollection {
+01481:             get {
+01482:                 if ((this._commandCollection == null)) {
+01483:                     this.InitCommandCollection();
+01484:                 }
+01485:                 return this._commandCollection;
+01486:             }
+01487:         }
+01488:       <br />
+01489:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01490:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01491:         public bool ClearBeforeFill {
+01492:             get {
+01493:                 return this._clearBeforeFill;
+01494:             }
+01495:             set {
+01496:                 this._clearBeforeFill = value;
+01497:             }
+01498:         }
+01499:       <br />
+01500:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01501:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01502:         private void InitAdapter() {
+01503:             this._adapter = new global::System.Data.SqlClient.SqlDataAdapter();
+01504:             global::System.Data.Common.DataTableMapping tableMapping = new global::System.Data.Common.DataTableMapping();
+01505:             tableMapping.SourceTable = "Table";
+01506:             tableMapping.DataSetTable = "OnPremisesMachineModuleExsist";
+01507:             tableMapping.ColumnMappings.Add("CompanyCode", "CompanyCode");
+01508:             tableMapping.ColumnMappings.Add("StoreCode", "StoreCode");
+01509:             tableMapping.ColumnMappings.Add("NewModuleVersion", "NewModuleVersion");
+01510:             tableMapping.ColumnMappings.Add("CurrentModuleVersion", "CurrentModuleVersion");
+01511:             this._adapter.TableMappings.Add(tableMapping);
+01512:         }
+01513:       <br />
+01514:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01515:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01516:         private void InitConnection() {
+01517:             this._connection = new global::System.Data.SqlClient.SqlConnection();
+01518:             this._connection.ConnectionString = global::ForYouApplications.POS4U.Background.Data.Container.Properties.Settings.Default.POS4U_TrialConnectionString;
+01519:         }
+01520:       <br />
+01521:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01522:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01523:         private void InitCommandCollection() {
+01524:             this._commandCollection = new global::System.Data.SqlClient.SqlCommand[1];
+01525:             this._commandCollection[0] = new global::System.Data.SqlClient.SqlCommand();
+01526:             this._commandCollection[0].Connection = this.Connection;
+01527:             this._commandCollection[0].CommandText = "dbo.usp_GetOnPremisesMachineModuleExsist";
+01528:             this._commandCollection[0].CommandType = global::System.Data.CommandType.StoredProcedure;
+01529:             this._commandCollection[0].Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@RETURN_VALUE", global::System.Data.SqlDbType.Int, 4, global::System.Data.ParameterDirection.ReturnValue, 10, 0, null, global::System.Data.DataRowVersion.Current, false, null, "", "", ""));
+01530:             this._commandCollection[0].Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@CompanyCode", global::System.Data.SqlDbType.NVarChar, 10, global::System.Data.ParameterDirection.Input, 0, 0, null, global::System.Data.DataRowVersion.Current, false, null, "", "", ""));
+01531:             this._commandCollection[0].Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@StoreCode", global::System.Data.SqlDbType.NVarChar, 10, global::System.Data.ParameterDirection.Input, 0, 0, null, global::System.Data.DataRowVersion.Current, false, null, "", "", ""));
+01532:             this._commandCollection[0].Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@ReferenceDateTime", global::System.Data.SqlDbType.DateTime2, 8, global::System.Data.ParameterDirection.Input, 27, 7, null, global::System.Data.DataRowVersion.Current, false, null, "", "", ""));
+01533:         }
+01534:       <br />
+01535:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01536:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01537:         [global::System.ComponentModel.Design.HelpKeywordAttribute("vs.data.TableAdapter")]
+01538:         [global::System.ComponentModel.DataObjectMethodAttribute(global::System.ComponentModel.DataObjectMethodType.Fill, true)]
+01539:         public virtual int Fill(OnPremisesMachineModuleUploadManagementDataSet.OnPremisesMachineModuleExsistDataTable dataTable, string CompanyCode, string StoreCode, global::System.Nullable<global::System.DateTime> ReferenceDateTime) {
+01540:             this.Adapter.SelectCommand = this.CommandCollection[0];
+01541:             if ((CompanyCode == null)) {
+01542:                 this.Adapter.SelectCommand.Parameters[1].Value = global::System.DBNull.Value;
+01543:             }
+01544:             else {
+01545:                 this.Adapter.SelectCommand.Parameters[1].Value = ((string)(CompanyCode));
+01546:             }
+01547:             if ((StoreCode == null)) {
+01548:                 this.Adapter.SelectCommand.Parameters[2].Value = global::System.DBNull.Value;
+01549:             }
+01550:             else {
+01551:                 this.Adapter.SelectCommand.Parameters[2].Value = ((string)(StoreCode));
+01552:             }
+01553:             if ((ReferenceDateTime.HasValue == true)) {
+01554:                 this.Adapter.SelectCommand.Parameters[3].Value = ((System.DateTime)(ReferenceDateTime.Value));
+01555:             }
+01556:             else {
+01557:                 this.Adapter.SelectCommand.Parameters[3].Value = global::System.DBNull.Value;
+01558:             }
+01559:             if ((this.ClearBeforeFill == true)) {
+01560:                 dataTable.Clear();
+01561:             }
+01562:             int returnValue = this.Adapter.Fill(dataTable);
+01563:             return returnValue;
+01564:         }
+01565:       <br />
+01566:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01567:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01568:         [global::System.ComponentModel.Design.HelpKeywordAttribute("vs.data.TableAdapter")]
+01569:         [global::System.ComponentModel.DataObjectMethodAttribute(global::System.ComponentModel.DataObjectMethodType.Select, true)]
+01570:         public virtual OnPremisesMachineModuleUploadManagementDataSet.OnPremisesMachineModuleExsistDataTable GetData(string CompanyCode, string StoreCode, global::System.Nullable<global::System.DateTime> ReferenceDateTime) {
+01571:             this.Adapter.SelectCommand = this.CommandCollection[0];
+01572:             if ((CompanyCode == null)) {
+01573:                 this.Adapter.SelectCommand.Parameters[1].Value = global::System.DBNull.Value;
+01574:             }
+01575:             else {
+01576:                 this.Adapter.SelectCommand.Parameters[1].Value = ((string)(CompanyCode));
+01577:             }
+01578:             if ((StoreCode == null)) {
+01579:                 this.Adapter.SelectCommand.Parameters[2].Value = global::System.DBNull.Value;
+01580:             }
+01581:             else {
+01582:                 this.Adapter.SelectCommand.Parameters[2].Value = ((string)(StoreCode));
+01583:             }
+01584:             if ((ReferenceDateTime.HasValue == true)) {
+01585:                 this.Adapter.SelectCommand.Parameters[3].Value = ((System.DateTime)(ReferenceDateTime.Value));
+01586:             }
+01587:             else {
+01588:                 this.Adapter.SelectCommand.Parameters[3].Value = global::System.DBNull.Value;
+01589:             }
+01590:             OnPremisesMachineModuleUploadManagementDataSet.OnPremisesMachineModuleExsistDataTable dataTable = new OnPremisesMachineModuleUploadManagementDataSet.OnPremisesMachineModuleExsistDataTable();
+01591:             this.Adapter.Fill(dataTable);
+01592:             return dataTable;
+01593:         }
+01594:     }
+01595:   <br />
+01596:     /// <summary>
+01597:     ///TableAdapterManager is used to coordinate TableAdapters in the dataset to enable Hierarchical Update scenarios
+01598:     ///</summary>
+01599:     [global::System.ComponentModel.DesignerCategoryAttribute("code")]
+01600:     [global::System.ComponentModel.ToolboxItem(true)]
+01601:     [global::System.ComponentModel.DesignerAttribute("Microsoft.VSDesigner.DataSource.Design.TableAdapterManagerDesigner, Microsoft.VSD" +
+01602:         "esigner, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a")]
+01603:     [global::System.ComponentModel.Design.HelpKeywordAttribute("vs.data.TableAdapterManager")]
+01604:     public partial class TableAdapterManager : global::System.ComponentModel.Component {
+01605:       <br />
+01606:         private UpdateOrderOption _updateOrder;
+01607:       <br />
+01608:         private bool _backupDataSetBeforeUpdate;
+01609:       <br />
+01610:         private global::System.Data.IDbConnection _connection;
+01611:       <br />
+01612:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01613:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01614:         public UpdateOrderOption UpdateOrder {
+01615:             get {
+01616:                 return this._updateOrder;
+01617:             }
+01618:             set {
+01619:                 this._updateOrder = value;
+01620:             }
+01621:         }
+01622:       <br />
+01623:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01624:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01625:         public bool BackupDataSetBeforeUpdate {
+01626:             get {
+01627:                 return this._backupDataSetBeforeUpdate;
+01628:             }
+01629:             set {
+01630:                 this._backupDataSetBeforeUpdate = value;
+01631:             }
+01632:         }
+01633:       <br />
+01634:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01635:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01636:         [global::System.ComponentModel.Browsable(false)]
+01637:         public global::System.Data.IDbConnection Connection {
+01638:             get {
+01639:                 if ((this._connection != null)) {
+01640:                     return this._connection;
+01641:                 }
+01642:                 return null;
+01643:             }
+01644:             set {
+01645:                 this._connection = value;
+01646:             }
+01647:         }
+01648:       <br />
+01649:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01650:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01651:         [global::System.ComponentModel.Browsable(false)]
+01652:         public int TableAdapterInstanceCount {
+01653:             get {
+01654:                 int count = 0;
+01655:                 return count;
+01656:             }
+01657:         }
+01658:       <br />
+01659:         /// <summary>
+01660:         ///Update rows in top-down order.
+01661:         ///</summary>
+01662:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01663:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01664:         private int UpdateUpdatedRows(OnPremisesMachineModuleUploadManagementDataSet dataSet, global::System.Collections.Generic.List<global::System.Data.DataRow> allChangedRows, global::System.Collections.Generic.List<global::System.Data.DataRow> allAddedRows) {
+01665:             int result = 0;
+01666:             return result;
+01667:         }
+01668:       <br />
+01669:         /// <summary>
+01670:         ///Insert rows in top-down order.
+01671:         ///</summary>
+01672:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01673:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01674:         private int UpdateInsertedRows(OnPremisesMachineModuleUploadManagementDataSet dataSet, global::System.Collections.Generic.List<global::System.Data.DataRow> allAddedRows) {
+01675:             int result = 0;
+01676:             return result;
+01677:         }
+01678:       <br />
+01679:         /// <summary>
+01680:         ///Delete rows in bottom-up order.
+01681:         ///</summary>
+01682:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01683:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01684:         private int UpdateDeletedRows(OnPremisesMachineModuleUploadManagementDataSet dataSet, global::System.Collections.Generic.List<global::System.Data.DataRow> allChangedRows) {
+01685:             int result = 0;
+01686:             return result;
+01687:         }
+01688:       <br />
+01689:         /// <summary>
+01690:         ///Remove inserted rows that become updated rows after calling TableAdapter.Update(inserted rows) first
+01691:         ///</summary>
+01692:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01693:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01694:         private global::System.Data.DataRow[] GetRealUpdatedRows(global::System.Data.DataRow[] updatedRows, global::System.Collections.Generic.List<global::System.Data.DataRow> allAddedRows) {
+01695:             if (((updatedRows == null) 
+01696:                         || (updatedRows.Length &lt; 1))) {
+01697:                 return updatedRows;
+01698:             }
+01699:             if (((allAddedRows == null) 
+01700:                         || (allAddedRows.Count &lt; 1))) {
+01701:                 return updatedRows;
+01702:             }
+01703:             global::System.Collections.Generic.List<global::System.Data.DataRow> realUpdatedRows = new global::System.Collections.Generic.List<global::System.Data.DataRow>();
+01704:             for (int i = 0; (i &lt; updatedRows.Length); i = (i + 1)) {
+01705:                 global::System.Data.DataRow row = updatedRows[i];
+01706:                 if ((allAddedRows.Contains(row) == false)) {
+01707:                     realUpdatedRows.Add(row);
+01708:                 }
+01709:             }
+01710:             return realUpdatedRows.ToArray();
+01711:         }
+01712:       <br />
+01713:         /// <summary>
+01714:         ///Update all changes to the dataset.
+01715:         ///</summary>
+01716:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01717:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01718:         public virtual int UpdateAll(OnPremisesMachineModuleUploadManagementDataSet dataSet) {
+01719:             if ((dataSet == null)) {
+01720:                 throw new global::System.ArgumentNullException("dataSet");
+01721:             }
+01722:             if ((dataSet.HasChanges() == false)) {
+01723:                 return 0;
+01724:             }
+01725:             global::System.Data.IDbConnection workConnection = this.Connection;
+01726:             if ((workConnection == null)) {
+01727:                 throw new global::System.ApplicationException("TableAdapterManager には接続情報がありません。それぞれの TableAdapterManager TableAdapter プロパティを有効な" +
+01728:                         " TableAdapter インスタンスに設定してください。");
+01729:             }
+01730:             bool workConnOpened = false;
+01731:             if (((workConnection.State &amp; global::System.Data.ConnectionState.Broken) 
+01732:                         == global::System.Data.ConnectionState.Broken)) {
+01733:                 workConnection.Close();
+01734:             }
+01735:             if ((workConnection.State == global::System.Data.ConnectionState.Closed)) {
+01736:                 workConnection.Open();
+01737:                 workConnOpened = true;
+01738:             }
+01739:             global::System.Data.IDbTransaction workTransaction = workConnection.BeginTransaction();
+01740:             if ((workTransaction == null)) {
+01741:                 throw new global::System.ApplicationException("トランザクションを開始できません。現在のデータ接続がトランザクションをサポートしていないか、または現在の状態がトランザクションの開始を許可していません。");
+01742:             }
+01743:             global::System.Collections.Generic.List<global::System.Data.DataRow> allChangedRows = new global::System.Collections.Generic.List<global::System.Data.DataRow>();
+01744:             global::System.Collections.Generic.List<global::System.Data.DataRow> allAddedRows = new global::System.Collections.Generic.List<global::System.Data.DataRow>();
+01745:             global::System.Collections.Generic.List<global::System.Data.Common.DataAdapter> adaptersWithAcceptChangesDuringUpdate = new global::System.Collections.Generic.List<global::System.Data.Common.DataAdapter>();
+01746:             global::System.Collections.Generic.Dictionary<object, global::System.Data.IDbConnection> revertConnections = new global::System.Collections.Generic.Dictionary<object, global::System.Data.IDbConnection>();
+01747:             int result = 0;
+01748:             global::System.Data.DataSet backupDataSet = null;
+01749:             if (this.BackupDataSetBeforeUpdate) {
+01750:                 backupDataSet = new global::System.Data.DataSet();
+01751:                 backupDataSet.Merge(dataSet);
+01752:             }
+01753:             try {
+01754:                 // ---- Prepare for update -----------
+01755:                 //
+01756:                 // 
+01757:                 //---- Perform updates -----------
+01758:                 //
+01759:                 if ((this.UpdateOrder == UpdateOrderOption.UpdateInsertDelete)) {
+01760:                     result = (result + this.UpdateUpdatedRows(dataSet, allChangedRows, allAddedRows));
+01761:                     result = (result + this.UpdateInsertedRows(dataSet, allAddedRows));
+01762:                 }
+01763:                 else {
+01764:                     result = (result + this.UpdateInsertedRows(dataSet, allAddedRows));
+01765:                     result = (result + this.UpdateUpdatedRows(dataSet, allChangedRows, allAddedRows));
+01766:                 }
+01767:                 result = (result + this.UpdateDeletedRows(dataSet, allChangedRows));
+01768:                 // 
+01769:                 //---- Commit updates -----------
+01770:                 //
+01771:                 workTransaction.Commit();
+01772:                 if ((0 &lt; allAddedRows.Count)) {
+01773:                     global::System.Data.DataRow[] rows = new System.Data.DataRow[allAddedRows.Count];
+01774:                     allAddedRows.CopyTo(rows);
+01775:                     for (int i = 0; (i &lt; rows.Length); i = (i + 1)) {
+01776:                         global::System.Data.DataRow row = rows[i];
+01777:                         row.AcceptChanges();
+01778:                     }
+01779:                 }
+01780:                 if ((0 &lt; allChangedRows.Count)) {
+01781:                     global::System.Data.DataRow[] rows = new System.Data.DataRow[allChangedRows.Count];
+01782:                     allChangedRows.CopyTo(rows);
+01783:                     for (int i = 0; (i &lt; rows.Length); i = (i + 1)) {
+01784:                         global::System.Data.DataRow row = rows[i];
+01785:                         row.AcceptChanges();
+01786:                     }
+01787:                 }
+01788:             }
+01789:             catch (global::System.Exception ex) {
+01790:                 workTransaction.Rollback();
+01791:                 // ---- Restore the dataset -----------
+01792:                 if (this.BackupDataSetBeforeUpdate) {
+01793:                     global::System.Diagnostics.Debug.Assert((backupDataSet != null));
+01794:                     dataSet.Clear();
+01795:                     dataSet.Merge(backupDataSet);
+01796:                 }
+01797:                 else {
+01798:                     if ((0 &lt; allAddedRows.Count)) {
+01799:                         global::System.Data.DataRow[] rows = new System.Data.DataRow[allAddedRows.Count];
+01800:                         allAddedRows.CopyTo(rows);
+01801:                         for (int i = 0; (i &lt; rows.Length); i = (i + 1)) {
+01802:                             global::System.Data.DataRow row = rows[i];
+01803:                             row.AcceptChanges();
+01804:                             row.SetAdded();
+01805:                         }
+01806:                     }
+01807:                 }
+01808:                 throw ex;
+01809:             }
+01810:             finally {
+01811:                 if (workConnOpened) {
+01812:                     workConnection.Close();
+01813:                 }
+01814:                 if ((0 &lt; adaptersWithAcceptChangesDuringUpdate.Count)) {
+01815:                     global::System.Data.Common.DataAdapter[] adapters = new System.Data.Common.DataAdapter[adaptersWithAcceptChangesDuringUpdate.Count];
+01816:                     adaptersWithAcceptChangesDuringUpdate.CopyTo(adapters);
+01817:                     for (int i = 0; (i &lt; adapters.Length); i = (i + 1)) {
+01818:                         global::System.Data.Common.DataAdapter adapter = adapters[i];
+01819:                         adapter.AcceptChangesDuringUpdate = true;
+01820:                     }
+01821:                 }
+01822:             }
+01823:             return result;
+01824:         }
+01825:       <br />
+01826:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01827:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01828:         protected virtual void SortSelfReferenceRows(global::System.Data.DataRow[] rows, global::System.Data.DataRelation relation, bool childFirst) {
+01829:             global::System.Array.Sort<global::System.Data.DataRow>(rows, new SelfReferenceComparer(relation, childFirst));
+01830:         }
+01831:       <br />
+01832:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01833:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01834:         protected virtual bool MatchTableAdapterConnection(global::System.Data.IDbConnection inputConnection) {
+01835:             if ((this._connection != null)) {
+01836:                 return true;
+01837:             }
+01838:             if (((this.Connection == null) 
+01839:                         || (inputConnection == null))) {
+01840:                 return true;
+01841:             }
+01842:             if (string.Equals(this.Connection.ConnectionString, inputConnection.ConnectionString, global::System.StringComparison.Ordinal)) {
+01843:                 return true;
+01844:             }
+01845:             return false;
+01846:         }
+01847:       <br />
+01848:         /// <summary>
+01849:         ///Update Order Option
+01850:         ///</summary>
+01851:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01852:         public enum UpdateOrderOption {
+01853:           <br />
+01854:             InsertUpdateDelete = 0,
+01855:           <br />
+01856:             UpdateInsertDelete = 1,
+01857:         }
+01858:       <br />
+01859:         /// <summary>
+01860:         ///Used to sort self-referenced table's rows
+01861:         ///</summary>
+01862:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01863:         private class SelfReferenceComparer : object, global::System.Collections.Generic.IComparer<global::System.Data.DataRow> {
+01864:           <br />
+01865:             private global::System.Data.DataRelation _relation;
+01866:           <br />
+01867:             private int _childFirst;
+01868:           <br />
+01869:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01870:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01871:             internal SelfReferenceComparer(global::System.Data.DataRelation relation, bool childFirst) {
+01872:                 this._relation = relation;
+01873:                 if (childFirst) {
+01874:                     this._childFirst = -1;
+01875:                 }
+01876:                 else {
+01877:                     this._childFirst = 1;
+01878:                 }
+01879:             }
+01880:           <br />
+01881:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01882:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01883:             private global::System.Data.DataRow GetRoot(global::System.Data.DataRow row, out int distance) {
+01884:                 global::System.Diagnostics.Debug.Assert((row != null));
+01885:                 global::System.Data.DataRow root = row;
+01886:                 distance = 0;
+01887: 
+01888:                 global::System.Collections.Generic.IDictionary<global::System.Data.DataRow, global::System.Data.DataRow> traversedRows = new global::System.Collections.Generic.Dictionary<global::System.Data.DataRow, global::System.Data.DataRow>();
+01889:                 traversedRows[row] = row;
+01890: 
+01891:                 global::System.Data.DataRow parent = row.GetParentRow(this._relation, global::System.Data.DataRowVersion.Default);
+01892:                 for (
+01893:                 ; ((parent != null) 
+01894:                             &amp;&amp; (traversedRows.ContainsKey(parent) == false)); 
+01895:                 ) {
+01896:                     distance = (distance + 1);
+01897:                     root = parent;
+01898:                     traversedRows[parent] = parent;
+01899:                     parent = parent.GetParentRow(this._relation, global::System.Data.DataRowVersion.Default);
+01900:                 }
+01901: 
+01902:                 if ((distance == 0)) {
+01903:                     traversedRows.Clear();
+01904:                     traversedRows[row] = row;
+01905:                     parent = row.GetParentRow(this._relation, global::System.Data.DataRowVersion.Original);
+01906:                     for (
+01907:                     ; ((parent != null) 
+01908:                                 &amp;&amp; (traversedRows.ContainsKey(parent) == false)); 
+01909:                     ) {
+01910:                         distance = (distance + 1);
+01911:                         root = parent;
+01912:                         traversedRows[parent] = parent;
+01913:                         parent = parent.GetParentRow(this._relation, global::System.Data.DataRowVersion.Original);
+01914:                     }
+01915:                 }
+01916: 
+01917:                 return root;
+01918:             }
+01919:           <br />
+01920:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01921:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01922:             public int Compare(global::System.Data.DataRow row1, global::System.Data.DataRow row2) {
+01923:                 if (object.ReferenceEquals(row1, row2)) {
+01924:                     return 0;
+01925:                 }
+01926:                 if ((row1 == null)) {
+01927:                     return -1;
+01928:                 }
+01929:                 if ((row2 == null)) {
+01930:                     return 1;
+01931:                 }
+01932: 
+01933:                 int distance1 = 0;
+01934:                 global::System.Data.DataRow root1 = this.GetRoot(row1, out distance1);
+01935: 
+01936:                 int distance2 = 0;
+01937:                 global::System.Data.DataRow root2 = this.GetRoot(row2, out distance2);
+01938: 
+01939:                 if (object.ReferenceEquals(root1, root2)) {
+01940:                     return (this._childFirst * distance1.CompareTo(distance2));
+01941:                 }
+01942:                 else {
+01943:                     global::System.Diagnostics.Debug.Assert(((root1.Table != null) 
+01944:                                     &amp;&amp; (root2.Table != null)));
+01945:                     if ((root1.Table.Rows.IndexOf(root1) &lt; root2.Table.Rows.IndexOf(root2))) {
+01946:                         return -1;
+01947:                     }
+01948:                     else {
+01949:                         return 1;
+01950:                     }
+01951:                 }
+01952:             }
+01953:         }
+01954:     }
+01955: }
+01956: 
+01957: #pragma warning restore 1591</p>
+<p>END ORIGINAL PROMPT</p></div></a><div class="index-item-stats">
+<div class="index-item-long-text"><div class="truncatable"><div class="truncatable-content"><div class="index-item-long-text-content"><h1>文件级源码笔记：large_file_background_service_onpremisesmachinemoduleuploadmanagementdataset_designer_cs</h1>
+<h2>Batch 信息</h2>
+<ul>
+<li>Batch ID: batch_053</li>
+<li>Batch Name: large_file_background_service_onpremisesmachinemoduleuploadmanagementdataset_designer_cs</li>
+<li>Module: background_service</li>
+<li>Purpose: 解释后台服务、同步任务、Windows Service 和定时处理</li>
+</ul>
+<hr />
+<h2>文件：Source/POS4UBackground/Data/Background.Data.BackgroundContainer/OnPremisesMachineModuleUploadManagementDataSet.Designer.cs</h2>
+<h3>1. 文件定位</h3>
+<p>此文件是 Visual Studio 的 Typed DataSet 设计器自动生成的代码文件（行 2-8 的 <code>auto-generated</code> 注释）。它位于 <code>ForYouApplications.POS4U.Background.Data.Container</code> 命名空间（行 13），属于后台服务模块的数据访问层。</p>
+<p>该文件定义了 <strong>机内模块上传管理</strong> 的强类型 DataSet，用于在内存中缓存和传输 <strong>模块更新信息</strong> 和 <strong>模块存在性信息</strong> 的数据，并通过 TableAdapter 与 SQL Server 数据库交互（调用存储过程）。它解决了以下问题：</p>
+<ul>
+<li>将原始 <code>DataTable</code> 操作包装为强类型 API，编译时即可发现列名/类型错误</li>
+<li>为后台服务提供从数据库查询模块上传信息的统一数据通道</li>
+</ul>
+<p>由于它是 <code>.Designer.cs</code> 后缀（自动生成），开发者通常不直接编辑此文件，而是通过 Visual Studio 的 DataSet 设计器修改对应的 <code>.xsd</code> 文件后重新生成。</p>
+<h3>2. 对外暴露内容</h3>
+<h4>类型声明</h4>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>位置（行号）</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>OnPremisesMachineModuleUploadManagementDataSet</code></td>
+<td>行 25-1157</td>
+<td>主 DataSet 类，包含两个 DataTable 和两个 DataRow 类型</td>
+</tr>
+<tr>
+<td><code>OnPremisesMachineModuleUpdateInfoDataTable</code></td>
+<td>行 315-633</td>
+<td>模块更新信息表，5 列</td>
+</tr>
+<tr>
+<td><code>OnPremisesMachineModuleExsistDataTable</code></td>
+<td>行 640-942</td>
+<td>模块存在性检查表，4 列（注意命名拼写：Exsist 应为 Exist）</td>
+</tr>
+<tr>
+<td><code>OnPremisesMachineModuleUpdateInfoRow</code></td>
+<td>行 947-1012</td>
+<td>对应 <code>UpdateInfo</code> 表的强类型行</td>
+</tr>
+<tr>
+<td><code>OnPremisesMachineModuleExsistRow</code></td>
+<td>行 1017-1088</td>
+<td>对应 <code>Exsist</code> 表的强类型行</td>
+</tr>
+<tr>
+<td><code>OnPremisesMachineModuleUpdateInfoRowChangeEvent</code></td>
+<td>行 1094-1122</td>
+<td>UpdateInfo 行变更事件参数</td>
+</tr>
+<tr>
+<td><code>OnPremisesMachineModuleExsistRowChangeEvent</code></td>
+<td>行 1128-1156</td>
+<td>Exsist 行变更事件参数</td>
+</tr>
+<tr>
+<td><code>OnPremisesMachineModuleUpdateInfoTableAdapter</code></td>
+<td>行 1171-1384</td>
+<td>调用 <code>usp_GetOnPremisesMachineModuleUpdateInfo</code> 存储过程的数据适配器</td>
+</tr>
+<tr>
+<td><code>OnPremisesMachineModuleExsistTableAdapter</code></td>
+<td>行 1395-1593</td>
+<td>调用 <code>usp_GetOnPremisesMachineModuleExsist</code> 存储过程的数据适配器</td>
+</tr>
+<tr>
+<td><code>TableAdapterManager</code></td>
+<td>行 1604-1954</td>
+<td>协调两个 TableAdapter 的更新管理器，支持事务和分层更新</td>
+</tr>
+</tbody>
+</table>
+<h4>公开方法</h4>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>位置（行号）</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>OnPremisesMachineModuleUpdateInfoTableAdapter.Fill()</code></td>
+<td>行 1317-1348</td>
+<td>填充已有的 <code>OnPremisesMachineModuleUpdateInfoDataTable</code></td>
+</tr>
+<tr>
+<td><code>OnPremisesMachineModuleUpdateInfoTableAdapter.GetData()</code></td>
+<td>行 1354-1383</td>
+<td>创建并返回新的 <code>OnPremisesMachineModuleUpdateInfoDataTable</code></td>
+</tr>
+<tr>
+<td><code>OnPremisesMachineModuleExsistTableAdapter.Fill()</code></td>
+<td>行 1539-1564</td>
+<td>填充已有的 <code>OnPremisesMachineModuleExsistDataTable</code></td>
+</tr>
+<tr>
+<td><code>OnPremisesMachineModuleExsistTableAdapter.GetData()</code></td>
+<td>行 1570-1593</td>
+<td>创建并返回新的 <code>OnPremisesMachineModuleExsistDataTable</code></td>
+</tr>
+<tr>
+<td><code>TableAdapterManager.UpdateAll()</code></td>
+<td>行 1718-1824</td>
+<td>提交所有更改到数据库，含事务回滚和备份还原逻辑</td>
+</tr>
+</tbody>
+</table>
+<h3>3. 关键逻辑 walkthrough</h3>
+<h4>3.1 DataSet 初始化（行 35-42）</h4>
+<p>默认构造函数 <code>OnPremisesMachineModuleUploadManagementDataSet()</code> 执行：</p>
+<ol>
+<li><code>BeginInit()</code> → <code>InitClass()</code> 初始化架构（行 36-37）</li>
+<li>注册 <code>SchemaChanged</code> 事件处理器，监听 Tables 和 Relations 集合的变更（行 38-40）</li>
+<li><code>EndInit()</code> 结束初始化（行 41）</li>
+</ol>
+<p><strong>运行时行为</strong>：当 DataSet 被创建时，自动创建两个空的 DataTable 实例并注册到 Tables 集合中（行 231-234）。</p>
+<h4>3.2 序列化/反序列化支持（行 44-81, 行 165-189）</h4>
+<p>两个序列化构造函数和 <code>ReadXmlSerializable</code> 方法支持二进制和 XML 两种序列化模式：</p>
+<ul>
+<li><strong>二进制模式</strong>（行 48）：直接调用 <code>InitVars(false)</code> 恢复表引用</li>
+<li><strong>IncludeSchema 模式</strong>（行 56-73）：从 XML Schema 字串解析表结构，重建 DataTable 实例</li>
+<li><strong>不含 Schema 模式</strong>（行 74-76）：仅读 XML 数据</li>
+</ul>
+<p><strong>运行时行为</strong>：当数据从服务端/文件序列化传输时，这两种路径确保 DataSet 的架构能被正确还原。</p>
+<h4>3.3 TableAdapter.Fill 的数据查询逻辑</h4>
+<p>以 <code>OnPremisesMachineModuleUpdateInfoTableAdapter.Fill()</code>（行 1317-1348）为例：</p>
+<ol>
+<li>将 <code>CommandCollection[0]</code> 设为 SelectCommand（行 1318），这是存储过程调用（行 1304）</li>
+<li>对四个参数依次处理 <strong>null 值</strong>（行 1319-1342）：</li>
+<li><code>@CompanyCode</code>（行 1319-1324）：若为 null 则传 <code>DBNull.Value</code></li>
+<li><code>@StoreCode</code>（行 1325-1330）：同上</li>
+<li><code>@CurrentVersion</code>（行 1331-1336）：同上</li>
+<li><code>@ReferenceDateTime</code>（行 1337-1342）：可空 DateTime，有值则传值，无值则 <code>DBNull.Value</code></li>
+<li>若 <code>ClearBeforeFill</code> 为 true，清空目标 dataTable（行 1343-1345）</li>
+<li>调用 <code>Adapter.Fill(dataTable)</code> 执行查询并填充（行 1346）</li>
+</ol>
+<p><strong>运行时行为</strong>：后台服务调用此方法时，会传入公司代码、店铺代码、当前版本和参考时间，数据库存储过程根据这些参数筛选需要更新的模块记录，返回结果集填充到 DataTable。</p>
+<h4>3.4 TableAdapterManager.UpdateAll 事务提交逻辑（行 1718-1824）</h4>
+<p>这是最复杂的业务逻辑之一：</p>
+<ol>
+<li><strong>参数检查</strong>（行 1719-1724）：dataSet 为 null 时抛出 <code>ArgumentNullException</code>；无变更时直接返回 0</li>
+<li><strong>连接检查</strong>（行 1725-1729）：无连接时抛出 <code>ApplicationException</code>（日文错误消息）</li>
+<li><strong>打开连接</strong>（行 1731-1738）：处理 Broken/Closed 状态</li>
+<li><strong>开启事务</strong>（行 1739-1742）：创建 <code>IDbTransaction</code></li>
+<li><strong>可选备份</strong>（行 1749-1752）：若 <code>BackupDataSetBeforeUpdate</code> 为 true，先备份 DataSet</li>
+<li><strong>按顺序执行更新</strong>（行 1759-1767）：支持两种顺序——<code>UpdateInsertDelete</code> 或 <code>InsertUpdateDelete</code></li>
+<li><strong>提交事务并 AcceptChanges</strong>（行 1771-1787）</li>
+<li><strong>异常处理</strong>（行 1789-1808）：</li>
+<li>回滚事务</li>
+<li>如果有备份则还原</li>
+<li>否则还原 Added 行的状态</li>
+<li>重新抛出异常</li>
+<li><strong>finally 块</strong>（行 1810-1822）：关闭连接，恢复 Adapter 的 AcceptChangesDuringUpdate</li>
+</ol>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<h4>4.1 <code>OnPremisesMachineModuleUpdateInfoDataTable</code> 类</h4>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>位置</strong></td>
+<td>行 315-633</td>
+</tr>
+<tr>
+<td><strong>基类</strong></td>
+<td><code>TypedTableBase&lt;OnPremisesMachineModuleUpdateInfoRow&gt;</code></td>
+</tr>
+<tr>
+<td><strong>列定义</strong></td>
+<td>CompanyCode（string, 10, NOT NULL, 行 500-501）、StoreCode（string, 10, NOT NULL, 行 502-503）、ModuleVersion（string, 20, NOT NULL, 行 504-505）、URI（string, 260, NOT NULL, 行 506-507）、UpdateStartDateTime（DateTime, NOT NULL, 行 508）</td>
+</tr>
+<tr>
+<td><strong>主键</strong></td>
+<td>复合主键 (CompanyCode, StoreCode, ModuleVersion)——行 496-499 的 <code>UniqueConstraint</code></td>
+</tr>
+<tr>
+<td><strong>Add 方法</strong></td>
+<td><code>AddOnPremisesMachineModuleUpdateInfoRow(CompanyCode, StoreCode, ModuleVersion, URI, UpdateStartDateTime)</code>——行 437-448</td>
+</tr>
+<tr>
+<td><strong>查找方法</strong></td>
+<td><code>FindByCompanyCodeStoreCodeModuleVersion(CompanyCode, StoreCode, ModuleVersion)</code>——行 452-457，基于主键的快速查找</td>
+</tr>
+<tr>
+<td><strong>事件</strong></td>
+<td>4 个 Row 级事件：Changing/Changed/Deleting/Deleted——行 418-427</td>
+</tr>
+<tr>
+<td><strong>边界情况</strong></td>
+<td><code>columnURI.MaxLength = 260</code>（行 507），超出长度的 URI 会触发异常；列全为 NOT NULL，不允许任何字段为空</td>
+</tr>
+<tr>
+<td><strong>可能的坑</strong></td>
+<td>URI 字段是普通 string 而非 <code>System.Uri</code> 类型，无 URI 格式验证</td>
+</tr>
+</tbody>
+</table>
+<h4>4.2 <code>OnPremisesMachineModuleExsistDataTable</code> 类</h4>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>位置</strong></td>
+<td>行 640-942</td>
+</tr>
+<tr>
+<td><strong>基类</strong></td>
+<td><code>TypedTableBase&lt;OnPremisesMachineModuleExsistRow&gt;</code></td>
+</tr>
+<tr>
+<td><strong>列定义</strong></td>
+<td>CompanyCode（string, 10, NOT NULL, 行 811-812）、StoreCode（string, 10, NOT NULL, 行 813-814）、NewModuleVersion（string, 20, NOT NULL, 行 815-816）、CurrentModuleVersion（string, 20, <strong>允许为 null</strong>, 行 817）</td>
+</tr>
+<tr>
+<td><strong>主键</strong></td>
+<td>复合主键 (CompanyCode, StoreCode, NewModuleVersion)——行 807-810</td>
+</tr>
+<tr>
+<td><strong>Add 方法</strong></td>
+<td><code>AddOnPremisesMachineModuleExsistRow(CompanyCode, StoreCode, NewModuleVersion, CurrentModuleVersion)</code>——行 752-762</td>
+</tr>
+<tr>
+<td><strong>查找方法</strong></td>
+<td><code>FindByCompanyCodeStoreCodeNewModuleVersion(CompanyCode, StoreCode, NewModuleVersion)</code>——行 766-771</td>
+</tr>
+<tr>
+<td><strong>注意点</strong></td>
+<td>表名 <code>Exsist</code> 为拼写错误（正确应为 <code>Exist</code>），这是自动生成遗留问题，在代码中需统一使用此拼写</td>
+</tr>
+<tr>
+<td><strong>边界情况</strong></td>
+<td><code>CurrentModuleVersion</code> 允许 DBNull（行 817 无 <code>AllowDBNull = false</code>），且 <code>MaxLength = 20</code>（行 817）；对比 <code>UpdateInfo</code> 表所有字段均为 NOT NULL，此表的设计意图是"新版本必须存在，当前版本可能为空"——对应 <strong>首次安装场景</strong></td>
+</tr>
+</tbody>
+</table>
+<h4>4.3 <code>OnPremisesMachineModuleExsistRow.CurrentModuleVersion</code> 属性</h4>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>位置</strong></td>
+<td>行 1063-1075</td>
+</tr>
+<tr>
+<td><strong>特殊处理</strong></td>
+<td>其 getter 带 try-catch（行 1065-1071），捕获 <code>InvalidCastException</code> 并重新抛出为 <code>StrongTypingException</code>，日文消息提示"列值为 DBNull"</td>
+</tr>
+<tr>
+<td><strong>辅助方法</strong></td>
+<td><code>IsCurrentModuleVersionNull()</code>（行 1079-1081）和 <code>SetCurrentModuleVersionNull()</code>（行 1085-1087）用于安全地检查和置空</td>
+</tr>
+<tr>
+<td><strong>意图</strong></td>
+<td>这是唯一一个做了 DBNull 防护的属性，其他 string 属性（CompanyCode、StoreCode 等）均无此处理，因为它们都被标记为 AllowDBNull = false</td>
+</tr>
+<tr>
+<td><strong>可能的坑</strong></td>
+<td>当 CurrentModuleVersion 为 DBNull 时直接读 getter 会抛出 <code>StrongTypingException</code>，调用方应先检查 <code>IsCurrentModuleVersionNull()</code></td>
+</tr>
+</tbody>
+</table>
+<h4>4.4 <code>OnPremisesMachineModuleUpdateInfoTableAdapter</code> 类</h4>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>位置</strong></td>
+<td>行 1171-1384</td>
+</tr>
+<tr>
+<td><strong>存储过程</strong></td>
+<td><code>dbo.usp_GetOnPremisesMachineModuleUpdateInfo</code>（行 1304）</td>
+</tr>
+<tr>
+<td><strong>参数</strong></td>
+<td><code>@CompanyCode</code> (NVarChar, 10, Input, 行 1307)、<code>@StoreCode</code> (NVarChar, 10, Input, 行 1308)、<code>@CurrentVersion</code> (NVarChar, 20, Input, 行 1309)、<code>@ReferenceDateTime</code> (DateTime2, Input, 行 1310)、<code>@RETURN_VALUE</code> (Int, ReturnValue, 行 1306)</td>
+</tr>
+<tr>
+<td><strong>连接字串来源</strong></td>
+<td><code>POS4U_TrialConnectionString</code>（行 1295），来自 <code>Properties.Settings</code></td>
+</tr>
+<tr>
+<td><strong>Fill/GetData 签名</strong></td>
+<td><code>Fill(dataTable, CompanyCode, StoreCode, CurrentVersion, ReferenceDateTime)</code>——参数全部为可空（string 接受 null，DateTime 包装为 <code>Nullable&lt;DateTime&gt;</code>，行 1317）</td>
+</tr>
+<tr>
+<td><strong>边界情况</strong></td>
+<td>四个参数均进行 null 守卫（行 1319-1342）；<code>ClearBeforeFill</code> 默认 true（行 1186）</td>
+</tr>
+<tr>
+<td><strong>注意点</strong></td>
+<td>此 TableAdapter 未生成 Insert/Update/Delete 命令（<code>InitAdapter</code> 只设置了 <code>SelectCommand</code>，行 1278-1289），仅支持查询，不支持写回</td>
+</tr>
+</tbody>
+</table>
+<h4>4.5 <code>OnPremisesMachineModuleExsistTableAdapter</code> 类</h4>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>位置</strong></td>
+<td>行 1395-1593</td>
+</tr>
+<tr>
+<td><strong>存储过程</strong></td>
+<td><code>dbo.usp_GetOnPremisesMachineModuleExsist</code>（行 1527）</td>
+</tr>
+<tr>
+<td><strong>参数</strong></td>
+<td><code>@CompanyCode</code> (NVarChar, 10, Input, 行 1530)、<code>@StoreCode</code> (NVarChar, 10, Input, 行 1531)、<code>@ReferenceDateTime</code> (DateTime2, Input, 行 1532)、<code>@RETURN_VALUE</code> (Int, ReturnValue, 行 1529)</td>
+</tr>
+<tr>
+<td><strong>与 UpdateInfo 的区别</strong></td>
+<td>接受 3 个参数而非 4 个——没有 <code>@CurrentVersion</code> 参数</td>
+</tr>
+<tr>
+<td><strong>Fill/GetData 签名</strong></td>
+<td><code>Fill(dataTable, CompanyCode, StoreCode, ReferenceDateTime)</code>（行 1539）——同样全部可空</td>
+</tr>
+<tr>
+<td><strong>边界情况</strong></td>
+<td>三个参数均进行 null 守卫（行 1541-1558）；同样仅支持查询</td>
+</tr>
+</tbody>
+</table>
+<h4>4.6 <code>TableAdapterManager</code> 类</h4>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>位置</strong></td>
+<td>行 1604-1954</td>
+</tr>
+<tr>
+<td><strong>用途</strong></td>
+<td>作为更新协调器，确保两个 TableAdapter 的更新在同一事务中提交或回滚</td>
+</tr>
+<tr>
+<td><strong>关键方法</strong></td>
+<td><code>UpdateAll(dataSet)</code>——行 1718-1824</td>
+</tr>
+<tr>
+<td><strong>备份机制</strong></td>
+<td><code>BackupDataSetBeforeUpdate</code> 属性（行 1625-1631）控制是否在更新前备份数据集</td>
+</tr>
+<tr>
+<td><strong>更新顺序</strong></td>
+<td><code>UpdateOrderOption</code> 枚举（行 1852-1857）支持两种顺序：<code>InsertUpdateDelete</code> 和 <code>UpdateInsertDelete</code></td>
+</tr>
+<tr>
+<td><strong>Inner 方法</strong></td>
+<td><code>UpdateUpdatedRows</code>（行 1664-1667）、<code>UpdateInsertedRows</code>（行 1674-1677）、<code>UpdateDeletedRows</code>（行 1684-1687）——当前均返回 0，为骨架方法，<strong>实际更新逻辑需要外部注册 TableAdapter 后生效</strong></td>
+</tr>
+<tr>
+<td><strong>自引用排序</strong></td>
+<td><code>SelfReferenceComparer</code> 内部类（行 1863-1953）用于排序自引用表的行</td>
+</tr>
+<tr>
+<td><strong>可能的坑</strong></td>
+<td><code>TableAdapterInstanceCount</code> 始终返回 0（行 1652-1656），三个 Update 方法均返回 0，此 Manager 当前是一个 <strong>基架</strong>，真正的 TableAdapter 实例未在此文件中注册，需要结合生成的 <code>OnPremisesMachineModuleUploadManagementDataSet.cs</code>（非 Designer 部分）或其他调用方代码确认完整行为</td>
+</tr>
+</tbody>
+</table>
+<h3>5. 依赖关系</h3>
+<table>
+<thead>
+<tr>
+<th>依赖类型</th>
+<th>详情</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>基类库</strong></td>
+<td><code>System.Data.DataSet</code>、<code>System.Data.TypedTableBase&lt;T&gt;</code>、<code>System.Data.DataRow</code></td>
+<td>提供强类型 DataSet 的核心功能</td>
+</tr>
+<tr>
+<td><strong>数据访问</strong></td>
+<td><code>System.Data.SqlClient.SqlDataAdapter</code>、<code>System.Data.SqlClient.SqlConnection</code>、<code>System.Data.SqlClient.SqlCommand</code>、<code>System.Data.SqlClient.SqlTransaction</code>（行 1173-1177）</td>
+<td>SQL Server 数据访问</td>
+</tr>
+<tr>
+<td><strong>序列化</strong></td>
+<td><code>System.Runtime.Serialization.SerializationInfo</code>、<code>System.Runtime.Serialization.StreamingContext</code>（行 46-47）</td>
+<td>支持 DataSet 的二进制序列化</td>
+</tr>
+<tr>
+<td><strong>XML/Schema</strong></td>
+<td><code>System.Xml.Schema.XmlSchemaComplexType</code>、<code>System.Xml.Schema.XmlSchemaSet</code>、<code>System.Xml.XmlTextReader</code>、<code>System.IO.MemoryStream</code>（行 59-76 等）</td>
+<td>XML 架构序列化与反序列化</td>
+</tr>
+<tr>
+<td><strong>配置</strong></td>
+<td><code>ForYouApplications.POS4U.Background.Data.Container.Properties.Settings.Default.POS4U_TrialConnectionString</code>（行 1295, 1518）</td>
+<td>数据库连接字符串</td>
+</tr>
+<tr>
+<td><strong>存储过程</strong></td>
+<td><code>dbo.usp_GetOnPremisesMachineModuleUpdateInfo</code>（行 1304）</td>
+<td>查询模块更新信息的存储过程，需要结合 SQL 脚本确认</td>
+</tr>
+<tr>
+<td><strong>存储过程</strong></td>
+<td><code>dbo.usp_GetOnPremisesMachineModuleExsist</code>（行 1527）</td>
+<td>查询模块存在性信息的存储过程，需要结合 SQL 脚本确认</td>
+</tr>
+<tr>
+<td><strong>关联文件</strong></td>
+<td><code>.xsd</code> 文件（本 .Designer.cs 的来源）</td>
+<td>DataSet 的架构定义源文件</td>
+</tr>
+<tr>
+<td><strong>关联文件</strong></td>
+<td><code>OnPremisesMachineModuleUploadManagementDataSet.cs</code>（partial class 的另一部分）</td>
+<td>若有用户自定义代码，应在此文件中</td>
+</tr>
+</tbody>
+</table>
+<h3>6. 错误处理与边界情况</h3>
+<table>
+<thead>
+<tr>
+<th>位置</th>
+<th>错误/边界</th>
+<th>处理方式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>行 1065-1071</td>
+<td><code>OnPremisesMachineModuleExsistRow.CurrentModuleVersion</code> 为 DBNull</td>
+<td>捕获 <code>InvalidCastException</code>，包装为 <code>StrongTypingException</code> 并附带日文错误消息</td>
+</tr>
+<tr>
+<td>行 1079-1087</td>
+<td>CurrentModuleVersion 的 null 检查和设为 null</td>
+<td>提供 <code>IsCurrentModuleVersionNull()</code> 和 <code>SetCurrentModuleVersionNull()</code> 辅助方法</td>
+</tr>
+<tr>
+<td>行 500-508</td>
+<td>所有 UpdateInfo 列为 NOT NULL</td>
+<td>为空时 ADO.NET 抛出 <code>ConstraintException</code>，非显式处理</td>
+</tr>
+<tr>
+<td>行 507</td>
+<td>URI 字段 MaxLength = 260</td>
+<td>超出长度时 <code>DataColumn</code> 内部会截断或抛异常，取决于设置</td>
+</tr>
+<tr>
+<td>行 1319-1342, 1541-1558</td>
+<td>TableAdapter 参数为 null</td>
+<td>统一转为 <code>DBNull.Value</code>，防止 SQL 参数化查询中的 null 参数错误</td>
+</tr>
+<tr>
+<td>行 1337-1342</td>
+<td><code>ReferenceDateTime</code> 为 <code>Nullable&lt;DateTime&gt;</code></td>
+<td><code>.HasValue</code> 检查后决定传值或 <code>DBNull.Value</code></td>
+</tr>
+<tr>
+<td>行 1719-1721</td>
+<td><code>UpdateAll</code> 传入 null dataSet</td>
+<td>抛出 <code>ArgumentNullException</code></td>
+</tr>
+<tr>
+<td>行 1722-1724</td>
+<td>dataSet 无更改</td>
+<td>直接返回 0，不执行任何数据库操作</td>
+</tr>
+<tr>
+<td>行 1726-1729</td>
+<td>连接未设置</td>
+<td>抛出 <code>ApplicationException</code>（日文消息）</td>
+</tr>
+<tr>
+<td>行 1731-1738</td>
+<td>连接状态为 Broken</td>
+<td>关闭后重新打开</td>
+</tr>
+<tr>
+<td>行 1740-1741</td>
+<td>无法启动事务</td>
+<td>抛出 <code>ApplicationException</code>（日文）</td>
+</tr>
+<tr>
+<td>行 1789-1808</td>
+<td>更新过程中发生异常</td>
+<td>事务回滚，若有备份则还原，否则恢复 Added 行状态，重新抛出异常</td>
+</tr>
+<tr>
+<td>行 1811-1812</td>
+<td>finally 块</td>
+<td>确保连接在打开状态被关闭</td>
+</tr>
+</tbody>
+</table>
+<p><strong>当前文件没有但在运行时可能遇到的外部错误</strong>：
+- 存储过程不存在或访问权限不足 → <code>SqlException</code> 由 Adapter 直接抛出，本文件未处理
+- 连接字串错误或数据库不可达 → 同上
+- 数据行违反列约束（如长度超限）→ <code>ConstraintException</code> 由 DataTable 本身抛出</p>
+<h3>7. 测试相关</h3>
+<p><strong>当前输入中不包含对应测试文件。</strong></p>
+<p>需要结合 storage 确认是否存在对应的单元测试或集成测试项目，例如 <code>Background.Data.Container.Tests</code> 目录。</p>
+<p><strong>建议测试策略</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>测试维度</th>
+<th>建议方案</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>单元测试</strong></td>
+<td>使用 Mock 或 Stub 隔离 <code>SqlDataAdapter</code>，验证 <code>Fill</code>/<code>GetData</code> 方法在参数为 null 时是否正确地传入了 <code>DBNull.Value</code></td>
+</tr>
+<tr>
+<td><strong>集成测试</strong></td>
+<td>使用本地 SQL Server 实例或容器，验证两个存储过程的可执行性和返回结果集的列匹配</td>
+</tr>
+<tr>
+<td><strong>DataSet 结构测试</strong></td>
+<td>验证所有列的 AllowDBNull、MaxLength、DataType 与数据库表定义一致</td>
+</tr>
+<tr>
+<td><strong>序列化测试</strong></td>
+<td>测试二进制和 XML 序列化/反序列化的往返一致性</td>
+</tr>
+<tr>
+<td><strong>DBNull 边界测试</strong></td>
+<td>验证 <code>CurrentModuleVersion</code> 为 null 时的 <code>IsNull</code> 方法和 <code>StrongTypingException</code> 行为</td>
+</tr>
+<tr>
+<td><strong>TableAdapterManager 事务测试</strong></td>
+<td>测试 <code>UpdateAll</code> 在异常时的回滚和备份还原行为</td>
+</tr>
+</tbody>
+</table>
+<h3>8. 新人阅读建议</h3>
+<ol>
+<li>
+<p><strong>先理解 Typed DataSet 的概念</strong>：这是老式 .NET Framework 的数据访问模式，将数据库表结构编译为强类型代码，便于编译时检查。虽然该模式在现代 .NET 中已不推荐，但遗留项目中仍然常见。</p>
+</li>
+<li>
+<p><strong>阅读顺序</strong>：</p>
+</li>
+<li>先看两个 DataTable 的列定义（行 486-508 和 行 799-817），理解数据结构</li>
+<li>再看两个 TableAdapter 的存储过程名和参数（行 1300-1311 和 行 1523-1533），理解查询方式</li>
+<li>
+<p>最后看 <code>TableAdapterManager.UpdateAll</code>（行 1718-1824），理解事务提交逻辑</p>
+</li>
+<li>
+<p><strong>注意拼写错误</strong>：<code>OnPremisesMachineModuleExsist</code> 中的 <code>Exsist</code> 是错误拼写（正确应为 <code>Exist</code>），这是自动生成代码的遗留问题，在全项目中搜索时要注意统一使用此拼写。</p>
+</li>
+<li>
+<p><strong>不必深究自动生成代码</strong>：<code>Clone</code>、<code>ShouldSerialize*</code>、<code>GetTypedDataSetSchema</code>、<code>SelfReferenceComparer</code> 等方法由代码生成器批量产出，阅读时只需知道它们支持标准 DataSet 功能即可。</p>
+</li>
+<li>
+<p><strong>要找业务逻辑不在本文件</strong>：本文件只负责数据结构和数据访问，调用方代码（如后台服务中的定时任务）负责组装参数、调用 <code>GetData</code>、处理返回的行。需要结合同目录下的非 Designer 文件或服务层代码理解完整流程。</p>
+</li>
+</ol>
+<h3>9. 不确定点</h3>
+<table>
+<thead>
+<tr>
+<th>不确定点</th>
+<th>需要确认的内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>存储过程定义</strong></td>
+<td><code>dbo.usp_GetOnPremisesMachineModuleUpdateInfo</code> 和 <code>dbo.usp_GetOnPremisesMachineModuleExsist</code> 的完整 SQL 逻辑，当前 batch 无法看到</td>
+</tr>
+<tr>
+<td><strong>连接字符串实际值</strong></td>
+<td><code>POS4U_TrialConnectionString</code> 实际指向哪个数据库实例，当前 batch 仅看到引用（行 1295）</td>
+</tr>
+<tr>
+<td><strong>调用方代码</strong></td>
+<td>哪些后台服务类创建并调用这两个 TableAdapter，参数如何组装（如 <code>CompanyCode</code>、<code>StoreCode</code> 的来源）</td>
+</tr>
+<tr>
+<td><strong>非 Designer partial 类</strong></td>
+<td>是否存在 <code>OnPremisesMachineModuleUploadManagementDataSet.cs</code>（无 .Designer 后缀的 partial 部分），包含自定义方法或业务逻辑</td>
+</tr>
+<tr>
+<td><strong>对应数据库表</strong></td>
+<td>SQL Server 中对应的物理表名和列定义是否与此 DataSet 完全一致</td>
+</tr>
+<tr>
+<td><strong>TableAdapter 的写操作</strong></td>
+<td>当前仅定义了 Select 命令，是否需要 Insert/Update/Delete 由谁负责（可能是存储过程内部或其他 TableAdapter）</td>
+</tr>
+<tr>
+<td><strong>使用场景</strong></td>
+<td>"模块更新信息"和"模块存在性信息"在后台服务中如何被消费——是用于判断是否需要下载新模块，还是用于上报状态</td>
+</tr>
+<tr>
+<td><strong>拼写错误的影响</strong></td>
+<td><code>OnPremisesMachineModuleExsist</code> 拼写错误是否在数据库端也存在，还是仅在此 DataSet 生成时出错</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>本批覆盖确认</h2>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>覆盖状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Source/POS4UBackground/Data/Background.Data.BackgroundContainer/OnPremisesMachineModuleUploadManagementDataSet.Designer.cs</code></td>
+<td>已详细讲解</td>
+<td>自动生成的 Typed DataSet 设计器代码，包含两个 DataTable（UpdateInfo 和 Exsist）、两个 TableAdapter（分别调用不同的存储过程）、TableAdapterManager（事务管理）。已覆盖所有类、方法、列定义、参数、序列化逻辑、错误处理和边界情况。由于是自动生成代码，部分业务意图需要结合调用方和存储过程确认</td>
+</tr>
+</tbody>
+</table></div></div><button class="expand-btn">Show more</button></div></div>
+</div></div>
+        
+
+<div class="pagination">
+<span class="current">Index</span>
+<span class="disabled">&larr; Prev</span>
+<a href="page-001.html">1</a>
+<a href="page-001.html">Next &rarr;</a>
+</div>
+
+
+        <dialog id="search-modal">
+            <div class="search-modal-header">
+                <input type="text" id="modal-search-input" placeholder="Search..." aria-label="Search transcripts">
+                <button id="modal-search-btn" type="button" aria-label="Search">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+                </button>
+                <button id="modal-close-btn" type="button" aria-label="Close">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+                </button>
+            </div>
+            <div id="search-status"></div>
+            <div id="search-results"></div>
+        </dialog>
+        <script>
+(function() {
+    var totalPages = 1;
+    var searchBox = document.getElementById('search-box');
+    var searchInput = document.getElementById('search-input');
+    var searchBtn = document.getElementById('search-btn');
+    var modal = document.getElementById('search-modal');
+    var modalInput = document.getElementById('modal-search-input');
+    var modalSearchBtn = document.getElementById('modal-search-btn');
+    var modalCloseBtn = document.getElementById('modal-close-btn');
+    var searchStatus = document.getElementById('search-status');
+    var searchResults = document.getElementById('search-results');
+
+    if (!searchBox || !modal) return;
+
+    // Hide search on file:// protocol (doesn't work due to CORS restrictions)
+    if (window.location.protocol === 'file:') return;
+
+    // Show search box (progressive enhancement)
+    searchBox.style.display = 'flex';
+
+    // Gist preview support - detect if we're on gisthost.github.io or gistpreview.github.io
+    var hostname = window.location.hostname;
+    var isGistPreview = hostname === 'gisthost.github.io' || hostname === 'gistpreview.github.io';
+    var gistId = null;
+    var gistOwner = null;
+    var gistInfoLoaded = false;
+
+    if (isGistPreview) {
+        // Extract gist ID from URL query string like ?78a436a8a9e7a2e603738b8193b95410/index.html
+        var queryMatch = window.location.search.match(/^\?([a-f0-9]+)/i);
+        if (queryMatch) {
+            gistId = queryMatch[1];
+        }
+    }
+
+    async function loadGistInfo() {
+        if (!isGistPreview || !gistId || gistInfoLoaded) return;
+        try {
+            var response = await fetch('https://api.github.com/gists/' + gistId);
+            if (response.ok) {
+                var info = await response.json();
+                gistOwner = info.owner.login;
+                gistInfoLoaded = true;
+            }
+        } catch (e) {
+            console.error('Failed to load gist info:', e);
+        }
+    }
+
+    function getPageFetchUrl(pageFile) {
+        if (isGistPreview && gistOwner && gistId) {
+            // Use raw gist URL for fetching content
+            return 'https://gist.githubusercontent.com/' + gistOwner + '/' + gistId + '/raw/' + pageFile;
+        }
+        return pageFile;
+    }
+
+    function getPageLinkUrl(pageFile) {
+        if (isGistPreview && gistId) {
+            // Use gistpreview URL format for navigation links
+            return '?' + gistId + '/' + pageFile;
+        }
+        return pageFile;
+    }
+
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function escapeRegex(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function openModal(query) {
+        modalInput.value = query || '';
+        searchResults.innerHTML = '';
+        searchStatus.textContent = '';
+        modal.showModal();
+        modalInput.focus();
+        if (query) {
+            performSearch(query);
+        }
+    }
+
+    function closeModal() {
+        modal.close();
+        // Update URL to remove search fragment, preserving path and query string
+        if (window.location.hash.startsWith('#search=')) {
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+    }
+
+    function updateUrlHash(query) {
+        if (query) {
+            // Preserve path and query string when adding hash
+            history.replaceState(null, '', window.location.pathname + window.location.search + '#search=' + encodeURIComponent(query));
+        }
+    }
+
+    function highlightTextNodes(element, searchTerm) {
+        var walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
+        var nodesToReplace = [];
+
+        while (walker.nextNode()) {
+            var node = walker.currentNode;
+            if (node.nodeValue.toLowerCase().indexOf(searchTerm.toLowerCase()) !== -1) {
+                nodesToReplace.push(node);
+            }
+        }
+
+        nodesToReplace.forEach(function(node) {
+            var text = node.nodeValue;
+            var regex = new RegExp('(' + escapeRegex(searchTerm) + ')', 'gi');
+            var parts = text.split(regex);
+            if (parts.length > 1) {
+                var span = document.createElement('span');
+                parts.forEach(function(part) {
+                    if (part.toLowerCase() === searchTerm.toLowerCase()) {
+                        var mark = document.createElement('mark');
+                        mark.textContent = part;
+                        span.appendChild(mark);
+                    } else {
+                        span.appendChild(document.createTextNode(part));
+                    }
+                });
+                node.parentNode.replaceChild(span, node);
+            }
+        });
+    }
+
+    function fixInternalLinks(element, pageFile) {
+        // Update all internal anchor links to include the page file
+        var links = element.querySelectorAll('a[href^="#"]');
+        links.forEach(function(link) {
+            var href = link.getAttribute('href');
+            link.setAttribute('href', pageFile + href);
+        });
+    }
+
+    function processPage(pageFile, html, query) {
+        var parser = new DOMParser();
+        var doc = parser.parseFromString(html, 'text/html');
+        var resultsFromPage = 0;
+
+        // Find all message blocks
+        var messages = doc.querySelectorAll('.message');
+        messages.forEach(function(msg) {
+            var text = msg.textContent || '';
+            if (text.toLowerCase().indexOf(query.toLowerCase()) !== -1) {
+                resultsFromPage++;
+
+                // Get the message ID for linking
+                var msgId = msg.id || '';
+                var pageLinkUrl = getPageLinkUrl(pageFile);
+                var link = pageLinkUrl + (msgId ? '#' + msgId : '');
+
+                // Clone the message HTML and highlight matches
+                var clone = msg.cloneNode(true);
+                // Fix internal links to include the page file
+                fixInternalLinks(clone, pageLinkUrl);
+                highlightTextNodes(clone, query);
+
+                var resultDiv = document.createElement('div');
+                resultDiv.className = 'search-result';
+                resultDiv.innerHTML = '<a href="' + link + '">' +
+                    '<div class="search-result-page">' + escapeHtml(pageFile) + '</div>' +
+                    '<div class="search-result-content">' + clone.innerHTML + '</div>' +
+                    '</a>';
+                searchResults.appendChild(resultDiv);
+            }
+        });
+
+        return resultsFromPage;
+    }
+
+    async function performSearch(query) {
+        if (!query.trim()) {
+            searchStatus.textContent = 'Enter a search term';
+            return;
+        }
+
+        updateUrlHash(query);
+        searchResults.innerHTML = '';
+        searchStatus.textContent = 'Searching...';
+
+        // Load gist info if on gistpreview (needed for constructing URLs)
+        if (isGistPreview && !gistInfoLoaded) {
+            searchStatus.textContent = 'Loading gist info...';
+            await loadGistInfo();
+            if (!gistOwner) {
+                searchStatus.textContent = 'Failed to load gist info. Search unavailable.';
+                return;
+            }
+        }
+
+        var resultsFound = 0;
+        var pagesSearched = 0;
+
+        // Build list of pages to fetch
+        var pagesToFetch = [];
+        for (var i = 1; i <= totalPages; i++) {
+            pagesToFetch.push('page-' + String(i).padStart(3, '0') + '.html');
+        }
+
+        searchStatus.textContent = 'Searching...';
+
+        // Process pages in batches of 3, but show results immediately as each completes
+        var batchSize = 3;
+        for (var i = 0; i < pagesToFetch.length; i += batchSize) {
+            var batch = pagesToFetch.slice(i, i + batchSize);
+
+            // Create promises that process results immediately when each fetch completes
+            var promises = batch.map(function(pageFile) {
+                return fetch(getPageFetchUrl(pageFile))
+                    .then(function(response) {
+                        if (!response.ok) throw new Error('Failed to fetch');
+                        return response.text();
+                    })
+                    .then(function(html) {
+                        // Process and display results immediately
+                        var count = processPage(pageFile, html, query);
+                        resultsFound += count;
+                        pagesSearched++;
+                        searchStatus.textContent = 'Found ' + resultsFound + ' result(s) in ' + pagesSearched + '/' + totalPages + ' pages...';
+                    })
+                    .catch(function() {
+                        pagesSearched++;
+                        searchStatus.textContent = 'Found ' + resultsFound + ' result(s) in ' + pagesSearched + '/' + totalPages + ' pages...';
+                    });
+            });
+
+            // Wait for this batch to complete before starting the next
+            await Promise.all(promises);
+        }
+
+        searchStatus.textContent = 'Found ' + resultsFound + ' result(s) in ' + totalPages + ' pages';
+    }
+
+    // Event listeners
+    searchBtn.addEventListener('click', function() {
+        openModal(searchInput.value);
+    });
+
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            openModal(searchInput.value);
+        }
+    });
+
+    modalSearchBtn.addEventListener('click', function() {
+        performSearch(modalInput.value);
+    });
+
+    modalInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            performSearch(modalInput.value);
+        }
+    });
+
+    modalCloseBtn.addEventListener('click', closeModal);
+
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+
+    // Check for #search= in URL on page load
+    if (window.location.hash.startsWith('#search=')) {
+        var query = decodeURIComponent(window.location.hash.substring(8));
+        if (query) {
+            searchInput.value = query;
+            openModal(query);
+        }
+    }
+})();
+        </script>
+    </div>
+    <script>
+document.querySelectorAll('time[data-timestamp]').forEach(function(el) {
+    const timestamp = el.getAttribute('data-timestamp');
+    const date = new Date(timestamp);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    if (isToday) { el.textContent = timeStr; }
+    else { el.textContent = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + timeStr; }
+});
+document.querySelectorAll('pre.json').forEach(function(el) {
+    let text = el.textContent;
+    text = text.replace(/"([^"]+)":/g, '<span style="color: #ce93d8">"$1"</span>:');
+    text = text.replace(/: "([^"]*)"/g, ': <span style="color: #81d4fa">"$1"</span>');
+    text = text.replace(/: (\d+)/g, ': <span style="color: #ffcc80">$1</span>');
+    text = text.replace(/: (true|false|null)/g, ': <span style="color: #f48fb1">$1</span>');
+    el.innerHTML = text;
+});
+document.querySelectorAll('.truncatable').forEach(function(wrapper) {
+    const content = wrapper.querySelector('.truncatable-content');
+    const btn = wrapper.querySelector('.expand-btn');
+    if (content.scrollHeight > 250) {
+        wrapper.classList.add('truncated');
+        btn.addEventListener('click', function() {
+            if (wrapper.classList.contains('truncated')) { wrapper.classList.remove('truncated'); wrapper.classList.add('expanded'); btn.textContent = 'Show less'; }
+            else { wrapper.classList.remove('expanded'); wrapper.classList.add('truncated'); btn.textContent = 'Show more'; }
+        });
+    }
+});
+</script>
+</body>
+</html>

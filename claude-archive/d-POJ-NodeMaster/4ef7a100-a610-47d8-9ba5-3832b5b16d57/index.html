@@ -1,0 +1,2901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code transcript - Index</title>
+    <style>
+:root { --bg-color: #f5f5f5; --card-bg: #ffffff; --user-bg: #e3f2fd; --user-border: #1976d2; --assistant-bg: #f5f5f5; --assistant-border: #9e9e9e; --thinking-bg: #fff8e1; --thinking-border: #ffc107; --thinking-text: #666; --tool-bg: #f3e5f5; --tool-border: #9c27b0; --tool-result-bg: #e8f5e9; --tool-error-bg: #ffebee; --text-color: #212121; --text-muted: #757575; --code-bg: #263238; --code-text: #aed581; }
+* { box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 16px; line-height: 1.6; }
+.container { max-width: 800px; margin: 0 auto; }
+h1 { font-size: 1.5rem; margin-bottom: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--user-border); }
+.header-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 2px solid var(--user-border); padding-bottom: 8px; margin-bottom: 24px; }
+.header-row h1 { border-bottom: none; padding-bottom: 0; margin-bottom: 0; flex: 1; min-width: 200px; }
+.message { margin-bottom: 16px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.message.user { background: var(--user-bg); border-left: 4px solid var(--user-border); }
+.message.assistant { background: var(--card-bg); border-left: 4px solid var(--assistant-border); }
+.message.tool-reply { background: #fff8e1; border-left: 4px solid #ff9800; }
+.tool-reply .role-label { color: #e65100; }
+.tool-reply .tool-result { background: transparent; padding: 0; margin: 0; }
+.tool-reply .tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff8e1); }
+.message-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: rgba(0,0,0,0.03); font-size: 0.85rem; }
+.role-label { font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.user .role-label { color: var(--user-border); }
+time { color: var(--text-muted); font-size: 0.8rem; }
+.timestamp-link { color: inherit; text-decoration: none; }
+.timestamp-link:hover { text-decoration: underline; }
+.message:target { animation: highlight 2s ease-out; }
+@keyframes highlight { 0% { background-color: rgba(25, 118, 210, 0.2); } 100% { background-color: transparent; } }
+.message-content { padding: 16px; }
+.message-content p { margin: 0 0 12px 0; }
+.message-content p:last-child { margin-bottom: 0; }
+.thinking { background: var(--thinking-bg); border: 1px solid var(--thinking-border); border-radius: 8px; padding: 12px; margin: 12px 0; font-size: 0.9rem; color: var(--thinking-text); }
+.thinking-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #f57c00; margin-bottom: 8px; }
+.thinking p { margin: 8px 0; }
+.assistant-text { margin: 8px 0; }
+.tool-use { background: var(--tool-bg); border: 1px solid var(--tool-border); border-radius: 8px; padding: 12px; margin: 12px 0; }
+.tool-header { font-weight: 600; color: var(--tool-border); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.tool-icon { font-size: 1.1rem; }
+.tool-description { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 8px; font-style: italic; }
+.tool-result { background: var(--tool-result-bg); border-radius: 8px; padding: 12px; margin: 12px 0; }
+.tool-result.tool-error { background: var(--tool-error-bg); }
+.file-tool { border-radius: 8px; padding: 12px; margin: 12px 0; }
+.write-tool { background: linear-gradient(135deg, #e3f2fd 0%, #e8f5e9 100%); border: 1px solid #4caf50; }
+.edit-tool { background: linear-gradient(135deg, #fff3e0 0%, #fce4ec 100%); border: 1px solid #ff9800; }
+.file-tool-header { font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.write-header { color: #2e7d32; }
+.edit-header { color: #e65100; }
+.file-tool-icon { font-size: 1rem; }
+.file-tool-path { font-family: monospace; background: rgba(0,0,0,0.08); padding: 2px 8px; border-radius: 4px; }
+.file-tool-fullpath { font-family: monospace; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px; word-break: break-all; }
+.file-content { margin: 0; }
+.edit-section { display: flex; margin: 4px 0; border-radius: 4px; overflow: hidden; }
+.edit-label { padding: 8px 12px; font-weight: bold; font-family: monospace; display: flex; align-items: flex-start; }
+.edit-old { background: #fce4ec; }
+.edit-old .edit-label { color: #b71c1c; background: #f8bbd9; }
+.edit-old .edit-content { color: #880e4f; }
+.edit-new { background: #e8f5e9; }
+.edit-new .edit-label { color: #1b5e20; background: #a5d6a7; }
+.edit-new .edit-content { color: #1b5e20; }
+.edit-content { margin: 0; flex: 1; background: transparent; font-size: 0.85rem; }
+.edit-replace-all { font-size: 0.75rem; font-weight: normal; color: var(--text-muted); }
+.write-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #e6f4ea); }
+.edit-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff0e5); }
+.todo-list { background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); border: 1px solid #81c784; border-radius: 8px; padding: 12px; margin: 12px 0; }
+.todo-header { font-weight: 600; color: #2e7d32; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.todo-items { list-style: none; margin: 0; padding: 0; }
+.todo-item { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.06); font-size: 0.9rem; }
+.todo-item:last-child { border-bottom: none; }
+.todo-icon { flex-shrink: 0; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 50%; }
+.todo-completed .todo-icon { color: #2e7d32; background: rgba(46, 125, 50, 0.15); }
+.todo-completed .todo-content { color: #558b2f; text-decoration: line-through; }
+.todo-in-progress .todo-icon { color: #f57c00; background: rgba(245, 124, 0, 0.15); }
+.todo-in-progress .todo-content { color: #e65100; font-weight: 500; }
+.todo-pending .todo-icon { color: #757575; background: rgba(0,0,0,0.05); }
+.todo-pending .todo-content { color: #616161; }
+pre { background: var(--code-bg); color: var(--code-text); padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; line-height: 1.5; margin: 8px 0; white-space: pre-wrap; word-wrap: break-word; }
+pre.json { color: #e0e0e0; }
+code { background: rgba(0,0,0,0.08); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+pre code { background: none; padding: 0; }
+.user-content { margin: 0; }
+.truncatable { position: relative; }
+.truncatable.truncated .truncatable-content { max-height: 200px; overflow: hidden; }
+.truncatable.truncated::after { content: ''; position: absolute; bottom: 32px; left: 0; right: 0; height: 60px; background: linear-gradient(to bottom, transparent, var(--card-bg)); pointer-events: none; }
+.message.user .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--user-bg)); }
+.message.tool-reply .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff8e1); }
+.tool-use .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-bg)); }
+.tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-result-bg)); }
+.expand-btn { display: none; width: 100%; padding: 8px 16px; margin-top: 4px; background: rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; cursor: pointer; font-size: 0.85rem; color: var(--text-muted); }
+.expand-btn:hover { background: rgba(0,0,0,0.1); }
+.truncatable.truncated .expand-btn, .truncatable.expanded .expand-btn { display: block; }
+.pagination { display: flex; justify-content: center; gap: 8px; margin: 24px 0; flex-wrap: wrap; }
+.pagination a, .pagination span { padding: 5px 10px; border-radius: 6px; text-decoration: none; font-size: 0.85rem; }
+.pagination a { background: var(--card-bg); color: var(--user-border); border: 1px solid var(--user-border); }
+.pagination a:hover { background: var(--user-bg); }
+.pagination .current { background: var(--user-border); color: white; }
+.pagination .disabled { color: var(--text-muted); border: 1px solid #ddd; }
+.pagination .index-link { background: var(--user-border); color: white; }
+details.continuation { margin-bottom: 16px; }
+details.continuation summary { cursor: pointer; padding: 12px 16px; background: var(--user-bg); border-left: 4px solid var(--user-border); border-radius: 12px; font-weight: 500; color: var(--text-muted); }
+details.continuation summary:hover { background: rgba(25, 118, 210, 0.15); }
+details.continuation[open] summary { border-radius: 12px 12px 0 0; margin-bottom: 0; }
+.index-item { margin-bottom: 16px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); background: var(--user-bg); border-left: 4px solid var(--user-border); }
+.index-item a { display: block; text-decoration: none; color: inherit; }
+.index-item a:hover { background: rgba(25, 118, 210, 0.1); }
+.index-item-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: rgba(0,0,0,0.03); font-size: 0.85rem; }
+.index-item-number { font-weight: 600; color: var(--user-border); }
+.index-item-content { padding: 16px; }
+.index-item-stats { padding: 8px 16px 12px 32px; font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid rgba(0,0,0,0.06); }
+.index-item-commit { margin-top: 6px; padding: 4px 8px; background: #fff3e0; border-radius: 4px; font-size: 0.85rem; color: #e65100; }
+.index-item-commit code { background: rgba(0,0,0,0.08); padding: 1px 4px; border-radius: 3px; font-size: 0.8rem; margin-right: 6px; }
+.commit-card { margin: 8px 0; padding: 10px 14px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 6px; }
+.commit-card a { text-decoration: none; color: #5d4037; display: block; }
+.commit-card a:hover { color: #e65100; }
+.commit-card-hash { font-family: monospace; color: #e65100; font-weight: 600; margin-right: 8px; }
+.index-commit { margin-bottom: 12px; padding: 10px 16px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+.index-commit a { display: block; text-decoration: none; color: inherit; }
+.index-commit a:hover { background: rgba(255, 152, 0, 0.1); margin: -10px -16px; padding: 10px 16px; border-radius: 8px; }
+.index-commit-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; margin-bottom: 4px; }
+.index-commit-hash { font-family: monospace; color: #e65100; font-weight: 600; }
+.index-commit-msg { color: #5d4037; }
+.index-item-long-text { margin-top: 8px; padding: 12px; background: var(--card-bg); border-radius: 8px; border-left: 3px solid var(--assistant-border); }
+.index-item-long-text .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--card-bg)); }
+.index-item-long-text-content { color: var(--text-color); }
+#search-box { display: none; align-items: center; gap: 8px; }
+#search-box input { padding: 6px 12px; border: 1px solid var(--assistant-border); border-radius: 6px; font-size: 16px; width: 180px; }
+#search-box button, #modal-search-btn, #modal-close-btn { background: var(--user-border); color: white; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+#search-box button:hover, #modal-search-btn:hover { background: #1565c0; }
+#modal-close-btn { background: var(--text-muted); margin-left: 8px; }
+#modal-close-btn:hover { background: #616161; }
+#search-modal[open] { border: none; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.2); padding: 0; width: 90vw; max-width: 900px; height: 80vh; max-height: 80vh; display: flex; flex-direction: column; }
+#search-modal::backdrop { background: rgba(0,0,0,0.5); }
+.search-modal-header { display: flex; align-items: center; gap: 8px; padding: 16px; border-bottom: 1px solid var(--assistant-border); background: var(--bg-color); border-radius: 12px 12px 0 0; }
+.search-modal-header input { flex: 1; padding: 8px 12px; border: 1px solid var(--assistant-border); border-radius: 6px; font-size: 16px; }
+#search-status { padding: 8px 16px; font-size: 0.85rem; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); }
+#search-results { flex: 1; overflow-y: auto; padding: 16px; }
+.search-result { margin-bottom: 16px; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.search-result a { display: block; text-decoration: none; color: inherit; }
+.search-result a:hover { background: rgba(25, 118, 210, 0.05); }
+.search-result-page { padding: 6px 12px; background: rgba(0,0,0,0.03); font-size: 0.8rem; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); }
+.search-result-content { padding: 12px; }
+.search-result mark { background: #fff59d; padding: 1px 2px; border-radius: 2px; }
+@media (max-width: 600px) { body { padding: 8px; } .message, .index-item { border-radius: 8px; } .message-content, .index-item-content { padding: 12px; } pre { font-size: 0.8rem; padding: 8px; } #search-box input { width: 120px; } #search-modal[open] { width: 95vw; height: 90vh; } }
+</style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-row">
+            <h1>Claude Code transcript</h1>
+            <div id="search-box">
+                <input type="text" id="search-input" placeholder="Search..." aria-label="Search transcripts">
+                <button id="search-btn" type="button" aria-label="Search">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+                </button>
+            </div>
+        </div>
+        
+
+<div class="pagination">
+<span class="current">Index</span>
+<span class="disabled">&larr; Prev</span>
+<a href="page-001.html">1</a>
+<a href="page-001.html">Next &rarr;</a>
+</div>
+
+        <p style="color: var(--text-muted); margin-bottom: 24px;">1 prompts · 3 messages · 0 tool calls · 0 commits · 1 pages</p>
+        
+<div class="index-item"><a href="page-001.html#msg-2026-07-09T07-01-59-190Z"><div class="index-item-header"><span class="index-item-number">#1</span><time datetime="2026-07-09T07:01:59.190Z" data-timestamp="2026-07-09T07:01:59.190Z">2026-07-09T07:01:59.190Z</time></div><div class="index-item-content"><p>IMPORTANT EXECUTION MODE FOR CLAUDE CLI:
+- Do not use tools.
+- Do not read or write files.
+- Do not ask for permissions.
+- Produce the requested final markdown directly on stdout.
+- The workflow runner will save stdout to the output path.
+- Ignore any instruction that implies you should write the output file yourself; instead print the full content.</p>
+<p>BEGIN ORIGINAL PROMPT</p>
+<p>你是源码教材项目的信息提取员，不是散文作者。</p>
+<p>任务：根据下面的带行号源码，为本 batch 中的每个文件生成“文件级源码讲解笔记”。</p>
+<p>Batch 信息：
+- Batch ID: batch_054
+- Batch Name: large_file_background_service_posterminalcapacitydataset_designer_cs
+- Module: background_service
+- Purpose: 解释后台服务、同步任务、Windows Service 和定时处理
+- Related Runtime Flows: 启动流程、配置加载流程
+- Output Note Path: _sourcebook/notes/batch_054_large_file_background_service_posterminalcapacitydataset_designer_cs_file_notes.md</p>
+<p>本批文件：
+- Source/POS4UBackground/Data/Background.Data.BackgroundContainer/PosTerminalCapacityDataSet.Designer.cs</p>
+<p>本批任务目标：
+- 为本批每个文件生成可追溯到源码行号的文件级笔记。
+- 重点说明文件职责、对外暴露内容、关键逻辑、依赖关系、错误处理、测试建议和不确定点。
+- 只做文件级源码笔记，不写最终教材正文。</p>
+<p>硬性规则：</p>
+<ol>
+<li>必须基于实际源码。</li>
+<li>每一条技术事实都要引用文件路径和行号。</li>
+<li>不允许编造不存在的函数、参数、返回值、配置项、业务逻辑。</li>
+<li>如果无法确定，请写“需要结合其他文件确认”。</li>
+<li>不要只讲核心函数，小工具函数、边界处理、异常处理也要说明。</li>
+<li>每个文件必须单独成节。</li>
+<li>不要写最终教材章节，只写文件级源码笔记。</li>
+<li>不要省略本批任何文件。</li>
+<li>如果某个文件很简单，也要说明它为什么简单、在项目中承担什么角色。</li>
+<li>如果发现当前 batch 缺少理解该文件所需的上下文，请在“不确定点”中明确列出需要结合哪些文件。</li>
+</ol>
+<p>质量规则：
+- 优先解释运行时行为和业务意图，再补充语法层面的说明。
+- 遇到配置、SQL、脚本、文档、二进制占位文件，也必须说明它对项目理解的作用。
+- 对非文本文件、缺失文件或无法从当前 batch 判断的内容，必须标记“需要结合其他文件确认”或“需要人工确认”，不要猜。
+- 入口、配置加载、请求处理、数据读写、错误处理、日志、测试相关线索要特别标出。
+- 输出中不要出现未引用行号的技术断言。</p>
+<p>覆盖确认要求：
+- 结尾必须输出“本批覆盖确认”表。
+- 表中必须逐一列出本批所有文件。
+- 覆盖状态只能使用：已详细讲解 / 已简略讲解 / 需要结合其他文件确认。</p>
+<p>输出格式：</p>
+<h1>文件级源码笔记：large_file_background_service_posterminalcapacitydataset_designer_cs</h1>
+<h2>Batch 信息</h2>
+<ul>
+<li>Batch ID: batch_054</li>
+<li>Batch Name: large_file_background_service_posterminalcapacitydataset_designer_cs</li>
+<li>Module: background_service</li>
+<li>Purpose: 解释后台服务、同步任务、Windows Service 和定时处理</li>
+</ul>
+<hr />
+<h2>文件：<path></h2>
+<h3>1. 文件定位</h3>
+<p>说明这个文件在项目中的角色，属于哪个模块，解决什么问题。</p>
+<h3>2. 对外暴露内容</h3>
+<p>列出 class / function / component / API / command / config / export。</p>
+<p>每一项都要包含：
+- 名称
+- 文件路径 + 行号
+- 用途</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>按代码执行顺序解释关键逻辑。</p>
+<p>要求：
+- 引用文件路径和行号
+- 解释运行时会发生什么
+- 不要只翻译代码，要说明代码意图</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>逐个说明：
+- 名称
+- 位置：文件路径 + 行号
+- 输入
+- 输出
+- 副作用
+- 调用关系
+- 边界情况
+- 可能的坑</p>
+<h3>5. 依赖关系</h3>
+<p>说明它依赖哪些文件、库、配置、类型、组件，以及这些依赖的用途。</p>
+<h3>6. 错误处理与边界情况</h3>
+<p>必须引用源码行号。</p>
+<p>如果没有明显错误处理，也要说明“当前文件没有显式错误处理”，并指出可能依赖哪里处理。</p>
+<h3>7. 测试相关</h3>
+<p>说明：
+- 当前输入中是否包含对应测试
+- 如果有，测试覆盖了什么
+- 如果没有，应该如何测试这个文件</p>
+<h3>8. 新人阅读建议</h3>
+<p>告诉新人应该如何理解这个文件，阅读时先看哪里，再看哪里。</p>
+<h3>9. 不确定点</h3>
+<p>列出不能从当前 batch 确认的问题，不要猜。</p>
+<hr />
+<h2>本批覆盖确认</h2>
+<p>请列出本批所有文件，并标记：</p>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>覆盖状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>path</td>
+<td>已详细讲解 / 已简略讲解 / 需要结合其他文件确认</td>
+<td>说明</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p>下面是本批源码：</p>
+<p>FILE: Source/POS4UBackground/Data/Background.Data.BackgroundContainer/PosTerminalCapacityDataSet.Designer.cs
+SHA256: d5e5b297cecbc9fd597ba18735f851d63cb84397e9ee875cdaafb1ec3488b76f
+================================================================================
+00001: ﻿//------------------------------------------------------------------------------
+00002: // <auto-generated>
+00003: //     このコードはツールによって生成されました。
+00004: //     ランタイム バージョン:4.0.30319.42000
+00005: //
+00006: //     このファイルへの変更は、以下の状況下で不正な動作の原因になったり、
+00007: //     コードが再生成されるときに損失したりします。
+00008: // </auto-generated>
+00009: //------------------------------------------------------------------------------
+00010: 
+00011: #pragma warning disable 1591
+00012: 
+00013: namespace ForYouApplications.POS4U.Background.Data.Container {
+00014:   <br />
+00015:   <br />
+00016:     /// <summary>
+00017:     ///Represents a strongly typed in-memory cache of data.
+00018:     ///</summary>
+00019:     [global::System.Serializable()]
+00020:     [global::System.ComponentModel.DesignerCategoryAttribute("code")]
+00021:     [global::System.ComponentModel.ToolboxItem(true)]
+00022:     [global::System.Xml.Serialization.XmlSchemaProviderAttribute("GetTypedDataSetSchema")]
+00023:     [global::System.Xml.Serialization.XmlRootAttribute("PosTerminalCapacityDataSet")]
+00024:     [global::System.ComponentModel.Design.HelpKeywordAttribute("vs.data.DataSet")]
+00025:     public partial class PosTerminalCapacityDataSet : global::System.Data.DataSet {
+00026:       <br />
+00027:         private PosTerminalCapacityAlertListDataTable tablePosTerminalCapacityAlertList;
+00028:       <br />
+00029:         private global::System.Data.SchemaSerializationMode _schemaSerializationMode = global::System.Data.SchemaSerializationMode.IncludeSchema;
+00030:       <br />
+00031:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00032:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00033:         public PosTerminalCapacityDataSet() {
+00034:             this.BeginInit();
+00035:             this.InitClass();
+00036:             global::System.ComponentModel.CollectionChangeEventHandler schemaChangedHandler = new global::System.ComponentModel.CollectionChangeEventHandler(this.SchemaChanged);
+00037:             base.Tables.CollectionChanged += schemaChangedHandler;
+00038:             base.Relations.CollectionChanged += schemaChangedHandler;
+00039:             this.EndInit();
+00040:         }
+00041:       <br />
+00042:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00043:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00044:         protected PosTerminalCapacityDataSet(global::System.Runtime.Serialization.SerializationInfo info, global::System.Runtime.Serialization.StreamingContext context) : 
+00045:                 base(info, context, false) {
+00046:             if ((this.IsBinarySerialized(info, context) == true)) {
+00047:                 this.InitVars(false);
+00048:                 global::System.ComponentModel.CollectionChangeEventHandler schemaChangedHandler1 = new global::System.ComponentModel.CollectionChangeEventHandler(this.SchemaChanged);
+00049:                 this.Tables.CollectionChanged += schemaChangedHandler1;
+00050:                 this.Relations.CollectionChanged += schemaChangedHandler1;
+00051:                 return;
+00052:             }
+00053:             string strSchema = ((string)(info.GetValue("XmlSchema", typeof(string))));
+00054:             if ((this.DetermineSchemaSerializationMode(info, context) == global::System.Data.SchemaSerializationMode.IncludeSchema)) {
+00055:                 global::System.Data.DataSet ds = new global::System.Data.DataSet();
+00056:                 ds.ReadXmlSchema(new global::System.Xml.XmlTextReader(new global::System.IO.StringReader(strSchema)));
+00057:                 if ((ds.Tables["PosTerminalCapacityAlertList"] != null)) {
+00058:                     base.Tables.Add(new PosTerminalCapacityAlertListDataTable(ds.Tables["PosTerminalCapacityAlertList"]));
+00059:                 }
+00060:                 this.DataSetName = ds.DataSetName;
+00061:                 this.Prefix = ds.Prefix;
+00062:                 this.Namespace = ds.Namespace;
+00063:                 this.Locale = ds.Locale;
+00064:                 this.CaseSensitive = ds.CaseSensitive;
+00065:                 this.EnforceConstraints = ds.EnforceConstraints;
+00066:                 this.Merge(ds, false, global::System.Data.MissingSchemaAction.Add);
+00067:                 this.InitVars();
+00068:             }
+00069:             else {
+00070:                 this.ReadXmlSchema(new global::System.Xml.XmlTextReader(new global::System.IO.StringReader(strSchema)));
+00071:             }
+00072:             this.GetSerializationData(info, context);
+00073:             global::System.ComponentModel.CollectionChangeEventHandler schemaChangedHandler = new global::System.ComponentModel.CollectionChangeEventHandler(this.SchemaChanged);
+00074:             base.Tables.CollectionChanged += schemaChangedHandler;
+00075:             this.Relations.CollectionChanged += schemaChangedHandler;
+00076:         }
+00077:       <br />
+00078:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00079:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00080:         [global::System.ComponentModel.Browsable(false)]
+00081:         [global::System.ComponentModel.DesignerSerializationVisibility(global::System.ComponentModel.DesignerSerializationVisibility.Content)]
+00082:         public PosTerminalCapacityAlertListDataTable PosTerminalCapacityAlertList {
+00083:             get {
+00084:                 return this.tablePosTerminalCapacityAlertList;
+00085:             }
+00086:         }
+00087:       <br />
+00088:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00089:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00090:         [global::System.ComponentModel.BrowsableAttribute(true)]
+00091:         [global::System.ComponentModel.DesignerSerializationVisibilityAttribute(global::System.ComponentModel.DesignerSerializationVisibility.Visible)]
+00092:         public override global::System.Data.SchemaSerializationMode SchemaSerializationMode {
+00093:             get {
+00094:                 return this._schemaSerializationMode;
+00095:             }
+00096:             set {
+00097:                 this._schemaSerializationMode = value;
+00098:             }
+00099:         }
+00100:       <br />
+00101:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00102:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00103:         [global::System.ComponentModel.DesignerSerializationVisibilityAttribute(global::System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+00104:         public new global::System.Data.DataTableCollection Tables {
+00105:             get {
+00106:                 return base.Tables;
+00107:             }
+00108:         }
+00109:       <br />
+00110:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00111:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00112:         [global::System.ComponentModel.DesignerSerializationVisibilityAttribute(global::System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+00113:         public new global::System.Data.DataRelationCollection Relations {
+00114:             get {
+00115:                 return base.Relations;
+00116:             }
+00117:         }
+00118:       <br />
+00119:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00120:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00121:         protected override void InitializeDerivedDataSet() {
+00122:             this.BeginInit();
+00123:             this.InitClass();
+00124:             this.EndInit();
+00125:         }
+00126:       <br />
+00127:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00128:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00129:         public override global::System.Data.DataSet Clone() {
+00130:             PosTerminalCapacityDataSet cln = ((PosTerminalCapacityDataSet)(base.Clone()));
+00131:             cln.InitVars();
+00132:             cln.SchemaSerializationMode = this.SchemaSerializationMode;
+00133:             return cln;
+00134:         }
+00135:       <br />
+00136:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00137:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00138:         protected override bool ShouldSerializeTables() {
+00139:             return false;
+00140:         }
+00141:       <br />
+00142:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00143:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00144:         protected override bool ShouldSerializeRelations() {
+00145:             return false;
+00146:         }
+00147:       <br />
+00148:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00149:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00150:         protected override void ReadXmlSerializable(global::System.Xml.XmlReader reader) {
+00151:             if ((this.DetermineSchemaSerializationMode(reader) == global::System.Data.SchemaSerializationMode.IncludeSchema)) {
+00152:                 this.Reset();
+00153:                 global::System.Data.DataSet ds = new global::System.Data.DataSet();
+00154:                 ds.ReadXml(reader);
+00155:                 if ((ds.Tables["PosTerminalCapacityAlertList"] != null)) {
+00156:                     base.Tables.Add(new PosTerminalCapacityAlertListDataTable(ds.Tables["PosTerminalCapacityAlertList"]));
+00157:                 }
+00158:                 this.DataSetName = ds.DataSetName;
+00159:                 this.Prefix = ds.Prefix;
+00160:                 this.Namespace = ds.Namespace;
+00161:                 this.Locale = ds.Locale;
+00162:                 this.CaseSensitive = ds.CaseSensitive;
+00163:                 this.EnforceConstraints = ds.EnforceConstraints;
+00164:                 this.Merge(ds, false, global::System.Data.MissingSchemaAction.Add);
+00165:                 this.InitVars();
+00166:             }
+00167:             else {
+00168:                 this.ReadXml(reader);
+00169:                 this.InitVars();
+00170:             }
+00171:         }
+00172:       <br />
+00173:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00174:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00175:         protected override global::System.Xml.Schema.XmlSchema GetSchemaSerializable() {
+00176:             global::System.IO.MemoryStream stream = new global::System.IO.MemoryStream();
+00177:             this.WriteXmlSchema(new global::System.Xml.XmlTextWriter(stream, null));
+00178:             stream.Position = 0;
+00179:             return global::System.Xml.Schema.XmlSchema.Read(new global::System.Xml.XmlTextReader(stream), null);
+00180:         }
+00181:       <br />
+00182:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00183:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00184:         internal void InitVars() {
+00185:             this.InitVars(true);
+00186:         }
+00187:       <br />
+00188:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00189:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00190:         internal void InitVars(bool initTable) {
+00191:             this.tablePosTerminalCapacityAlertList = ((PosTerminalCapacityAlertListDataTable)(base.Tables["PosTerminalCapacityAlertList"]));
+00192:             if ((initTable == true)) {
+00193:                 if ((this.tablePosTerminalCapacityAlertList != null)) {
+00194:                     this.tablePosTerminalCapacityAlertList.InitVars();
+00195:                 }
+00196:             }
+00197:         }
+00198:       <br />
+00199:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00200:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00201:         private void InitClass() {
+00202:             this.DataSetName = "PosTerminalCapacityDataSet";
+00203:             this.Prefix = "";
+00204:             this.Namespace = "http://tempuri.org/PosTerminalCapacityDataSet.xsd";
+00205:             this.EnforceConstraints = true;
+00206:             this.SchemaSerializationMode = global::System.Data.SchemaSerializationMode.IncludeSchema;
+00207:             this.tablePosTerminalCapacityAlertList = new PosTerminalCapacityAlertListDataTable();
+00208:             base.Tables.Add(this.tablePosTerminalCapacityAlertList);
+00209:         }
+00210:       <br />
+00211:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00212:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00213:         private bool ShouldSerializePosTerminalCapacityAlertList() {
+00214:             return false;
+00215:         }
+00216:       <br />
+00217:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00218:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00219:         private void SchemaChanged(object sender, global::System.ComponentModel.CollectionChangeEventArgs e) {
+00220:             if ((e.Action == global::System.ComponentModel.CollectionChangeAction.Remove)) {
+00221:                 this.InitVars();
+00222:             }
+00223:         }
+00224:       <br />
+00225:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00226:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00227:         public static global::System.Xml.Schema.XmlSchemaComplexType GetTypedDataSetSchema(global::System.Xml.Schema.XmlSchemaSet xs) {
+00228:             PosTerminalCapacityDataSet ds = new PosTerminalCapacityDataSet();
+00229:             global::System.Xml.Schema.XmlSchemaComplexType type = new global::System.Xml.Schema.XmlSchemaComplexType();
+00230:             global::System.Xml.Schema.XmlSchemaSequence sequence = new global::System.Xml.Schema.XmlSchemaSequence();
+00231:             global::System.Xml.Schema.XmlSchemaAny any = new global::System.Xml.Schema.XmlSchemaAny();
+00232:             any.Namespace = ds.Namespace;
+00233:             sequence.Items.Add(any);
+00234:             type.Particle = sequence;
+00235:             global::System.Xml.Schema.XmlSchema dsSchema = ds.GetSchemaSerializable();
+00236:             if (xs.Contains(dsSchema.TargetNamespace)) {
+00237:                 global::System.IO.MemoryStream s1 = new global::System.IO.MemoryStream();
+00238:                 global::System.IO.MemoryStream s2 = new global::System.IO.MemoryStream();
+00239:                 try {
+00240:                     global::System.Xml.Schema.XmlSchema schema = null;
+00241:                     dsSchema.Write(s1);
+00242:                     for (global::System.Collections.IEnumerator schemas = xs.Schemas(dsSchema.TargetNamespace).GetEnumerator(); schemas.MoveNext(); ) {
+00243:                         schema = ((global::System.Xml.Schema.XmlSchema)(schemas.Current));
+00244:                         s2.SetLength(0);
+00245:                         schema.Write(s2);
+00246:                         if ((s1.Length == s2.Length)) {
+00247:                             s1.Position = 0;
+00248:                             s2.Position = 0;
+00249:                             for (; ((s1.Position != s1.Length) 
+00250:                                         &amp;&amp; (s1.ReadByte() == s2.ReadByte())); ) {
+00251:                                 ;
+00252:                             }
+00253:                             if ((s1.Position == s1.Length)) {
+00254:                                 return type;
+00255:                             }
+00256:                         }
+00257:                     }
+00258:                 }
+00259:                 finally {
+00260:                     if ((s1 != null)) {
+00261:                         s1.Close();
+00262:                     }
+00263:                     if ((s2 != null)) {
+00264:                         s2.Close();
+00265:                     }
+00266:                 }
+00267:             }
+00268:             xs.Add(dsSchema);
+00269:             return type;
+00270:         }
+00271:       <br />
+00272:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00273:         public delegate void PosTerminalCapacityAlertListRowChangeEventHandler(object sender, PosTerminalCapacityAlertListRowChangeEvent e);
+00274:       <br />
+00275:         /// <summary>
+00276:         ///Represents the strongly named DataTable class.
+00277:         ///</summary>
+00278:         [global::System.Serializable()]
+00279:         [global::System.Xml.Serialization.XmlSchemaProviderAttribute("GetTypedTableSchema")]
+00280:         public partial class PosTerminalCapacityAlertListDataTable : global::System.Data.TypedTableBase<PosTerminalCapacityAlertListRow> {
+00281:           <br />
+00282:             private global::System.Data.DataColumn columnCompanyCode;
+00283:           <br />
+00284:             private global::System.Data.DataColumn columnStoreCode;
+00285:           <br />
+00286:             private global::System.Data.DataColumn columnTerminalNo;
+00287:           <br />
+00288:             private global::System.Data.DataColumn columnNodeType;
+00289:           <br />
+00290:             private global::System.Data.DataColumn columnAvaiableSpaceInC;
+00291:           <br />
+00292:             private global::System.Data.DataColumn columnAvaiableSpaceInD;
+00293:           <br />
+00294:             private global::System.Data.DataColumn columnTotalFolderSizeInLog;
+00295:           <br />
+00296:             private global::System.Data.DataColumn columnTotalFolderSizeInDBBackUp;
+00297:           <br />
+00298:             private global::System.Data.DataColumn columnDBFileSize;
+00299:           <br />
+00300:             private global::System.Data.DataColumn columnDBLogFileSize;
+00301:           <br />
+00302:             private global::System.Data.DataColumn columnThresholdAvaiableSpaceInC;
+00303:           <br />
+00304:             private global::System.Data.DataColumn columnThresholdAvaiableSpaceInD;
+00305:           <br />
+00306:             private global::System.Data.DataColumn columnThresholdTotalFolderSizeInDBBackUp;
+00307:           <br />
+00308:             private global::System.Data.DataColumn columnThresholdTotalFolderSizeInLog;
+00309:           <br />
+00310:             private global::System.Data.DataColumn columnThresholdDBFileSize;
+00311:           <br />
+00312:             private global::System.Data.DataColumn columnThresholdDBLogFileSize;
+00313:           <br />
+00314:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00315:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00316:             public PosTerminalCapacityAlertListDataTable() {
+00317:                 this.TableName = "PosTerminalCapacityAlertList";
+00318:                 this.BeginInit();
+00319:                 this.InitClass();
+00320:                 this.EndInit();
+00321:             }
+00322:           <br />
+00323:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00324:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00325:             internal PosTerminalCapacityAlertListDataTable(global::System.Data.DataTable table) {
+00326:                 this.TableName = table.TableName;
+00327:                 if ((table.CaseSensitive != table.DataSet.CaseSensitive)) {
+00328:                     this.CaseSensitive = table.CaseSensitive;
+00329:                 }
+00330:                 if ((table.Locale.ToString() != table.DataSet.Locale.ToString())) {
+00331:                     this.Locale = table.Locale;
+00332:                 }
+00333:                 if ((table.Namespace != table.DataSet.Namespace)) {
+00334:                     this.Namespace = table.Namespace;
+00335:                 }
+00336:                 this.Prefix = table.Prefix;
+00337:                 this.MinimumCapacity = table.MinimumCapacity;
+00338:             }
+00339:           <br />
+00340:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00341:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00342:             protected PosTerminalCapacityAlertListDataTable(global::System.Runtime.Serialization.SerializationInfo info, global::System.Runtime.Serialization.StreamingContext context) : 
+00343:                     base(info, context) {
+00344:                 this.InitVars();
+00345:             }
+00346:           <br />
+00347:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00348:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00349:             public global::System.Data.DataColumn CompanyCodeColumn {
+00350:                 get {
+00351:                     return this.columnCompanyCode;
+00352:                 }
+00353:             }
+00354:           <br />
+00355:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00356:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00357:             public global::System.Data.DataColumn StoreCodeColumn {
+00358:                 get {
+00359:                     return this.columnStoreCode;
+00360:                 }
+00361:             }
+00362:           <br />
+00363:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00364:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00365:             public global::System.Data.DataColumn TerminalNoColumn {
+00366:                 get {
+00367:                     return this.columnTerminalNo;
+00368:                 }
+00369:             }
+00370:           <br />
+00371:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00372:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00373:             public global::System.Data.DataColumn NodeTypeColumn {
+00374:                 get {
+00375:                     return this.columnNodeType;
+00376:                 }
+00377:             }
+00378:           <br />
+00379:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00380:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00381:             public global::System.Data.DataColumn AvaiableSpaceInCColumn {
+00382:                 get {
+00383:                     return this.columnAvaiableSpaceInC;
+00384:                 }
+00385:             }
+00386:           <br />
+00387:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00388:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00389:             public global::System.Data.DataColumn AvaiableSpaceInDColumn {
+00390:                 get {
+00391:                     return this.columnAvaiableSpaceInD;
+00392:                 }
+00393:             }
+00394:           <br />
+00395:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00396:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00397:             public global::System.Data.DataColumn TotalFolderSizeInLogColumn {
+00398:                 get {
+00399:                     return this.columnTotalFolderSizeInLog;
+00400:                 }
+00401:             }
+00402:           <br />
+00403:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00404:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00405:             public global::System.Data.DataColumn TotalFolderSizeInDBBackUpColumn {
+00406:                 get {
+00407:                     return this.columnTotalFolderSizeInDBBackUp;
+00408:                 }
+00409:             }
+00410:           <br />
+00411:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00412:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00413:             public global::System.Data.DataColumn DBFileSizeColumn {
+00414:                 get {
+00415:                     return this.columnDBFileSize;
+00416:                 }
+00417:             }
+00418:           <br />
+00419:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00420:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00421:             public global::System.Data.DataColumn DBLogFileSizeColumn {
+00422:                 get {
+00423:                     return this.columnDBLogFileSize;
+00424:                 }
+00425:             }
+00426:           <br />
+00427:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00428:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00429:             public global::System.Data.DataColumn ThresholdAvaiableSpaceInCColumn {
+00430:                 get {
+00431:                     return this.columnThresholdAvaiableSpaceInC;
+00432:                 }
+00433:             }
+00434:           <br />
+00435:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00436:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00437:             public global::System.Data.DataColumn ThresholdAvaiableSpaceInDColumn {
+00438:                 get {
+00439:                     return this.columnThresholdAvaiableSpaceInD;
+00440:                 }
+00441:             }
+00442:           <br />
+00443:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00444:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00445:             public global::System.Data.DataColumn ThresholdTotalFolderSizeInDBBackUpColumn {
+00446:                 get {
+00447:                     return this.columnThresholdTotalFolderSizeInDBBackUp;
+00448:                 }
+00449:             }
+00450:           <br />
+00451:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00452:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00453:             public global::System.Data.DataColumn ThresholdTotalFolderSizeInLogColumn {
+00454:                 get {
+00455:                     return this.columnThresholdTotalFolderSizeInLog;
+00456:                 }
+00457:             }
+00458:           <br />
+00459:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00460:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00461:             public global::System.Data.DataColumn ThresholdDBFileSizeColumn {
+00462:                 get {
+00463:                     return this.columnThresholdDBFileSize;
+00464:                 }
+00465:             }
+00466:           <br />
+00467:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00468:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00469:             public global::System.Data.DataColumn ThresholdDBLogFileSizeColumn {
+00470:                 get {
+00471:                     return this.columnThresholdDBLogFileSize;
+00472:                 }
+00473:             }
+00474:           <br />
+00475:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00476:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00477:             [global::System.ComponentModel.Browsable(false)]
+00478:             public int Count {
+00479:                 get {
+00480:                     return this.Rows.Count;
+00481:                 }
+00482:             }
+00483:           <br />
+00484:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00485:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00486:             public PosTerminalCapacityAlertListRow this[int index] {
+00487:                 get {
+00488:                     return ((PosTerminalCapacityAlertListRow)(this.Rows[index]));
+00489:                 }
+00490:             }
+00491:           <br />
+00492:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00493:             public event PosTerminalCapacityAlertListRowChangeEventHandler PosTerminalCapacityAlertListRowChanging;
+00494:           <br />
+00495:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00496:             public event PosTerminalCapacityAlertListRowChangeEventHandler PosTerminalCapacityAlertListRowChanged;
+00497:           <br />
+00498:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00499:             public event PosTerminalCapacityAlertListRowChangeEventHandler PosTerminalCapacityAlertListRowDeleting;
+00500:           <br />
+00501:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00502:             public event PosTerminalCapacityAlertListRowChangeEventHandler PosTerminalCapacityAlertListRowDeleted;
+00503:           <br />
+00504:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00505:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00506:             public void AddPosTerminalCapacityAlertListRow(PosTerminalCapacityAlertListRow row) {
+00507:                 this.Rows.Add(row);
+00508:             }
+00509:           <br />
+00510:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00511:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00512:             public PosTerminalCapacityAlertListRow AddPosTerminalCapacityAlertListRow(
+00513:                         string CompanyCode, 
+00514:                         string StoreCode, 
+00515:                         int TerminalNo, 
+00516:                         string NodeType, 
+00517:                         long AvaiableSpaceInC, 
+00518:                         long AvaiableSpaceInD, 
+00519:                         long TotalFolderSizeInLog, 
+00520:                         long TotalFolderSizeInDBBackUp, 
+00521:                         long DBFileSize, 
+00522:                         long DBLogFileSize, 
+00523:                         long ThresholdAvaiableSpaceInC, 
+00524:                         long ThresholdAvaiableSpaceInD, 
+00525:                         long ThresholdTotalFolderSizeInDBBackUp, 
+00526:                         long ThresholdTotalFolderSizeInLog, 
+00527:                         long ThresholdDBFileSize, 
+00528:                         long ThresholdDBLogFileSize) {
+00529:                 PosTerminalCapacityAlertListRow rowPosTerminalCapacityAlertListRow = ((PosTerminalCapacityAlertListRow)(this.NewRow()));
+00530:                 object[] columnValuesArray = new object[] {
+00531:                         CompanyCode,
+00532:                         StoreCode,
+00533:                         TerminalNo,
+00534:                         NodeType,
+00535:                         AvaiableSpaceInC,
+00536:                         AvaiableSpaceInD,
+00537:                         TotalFolderSizeInLog,
+00538:                         TotalFolderSizeInDBBackUp,
+00539:                         DBFileSize,
+00540:                         DBLogFileSize,
+00541:                         ThresholdAvaiableSpaceInC,
+00542:                         ThresholdAvaiableSpaceInD,
+00543:                         ThresholdTotalFolderSizeInDBBackUp,
+00544:                         ThresholdTotalFolderSizeInLog,
+00545:                         ThresholdDBFileSize,
+00546:                         ThresholdDBLogFileSize};
+00547:                 rowPosTerminalCapacityAlertListRow.ItemArray = columnValuesArray;
+00548:                 this.Rows.Add(rowPosTerminalCapacityAlertListRow);
+00549:                 return rowPosTerminalCapacityAlertListRow;
+00550:             }
+00551:           <br />
+00552:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00553:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00554:             public override global::System.Data.DataTable Clone() {
+00555:                 PosTerminalCapacityAlertListDataTable cln = ((PosTerminalCapacityAlertListDataTable)(base.Clone()));
+00556:                 cln.InitVars();
+00557:                 return cln;
+00558:             }
+00559:           <br />
+00560:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00561:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00562:             protected override global::System.Data.DataTable CreateInstance() {
+00563:                 return new PosTerminalCapacityAlertListDataTable();
+00564:             }
+00565:           <br />
+00566:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00567:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00568:             internal void InitVars() {
+00569:                 this.columnCompanyCode = base.Columns["CompanyCode"];
+00570:                 this.columnStoreCode = base.Columns["StoreCode"];
+00571:                 this.columnTerminalNo = base.Columns["TerminalNo"];
+00572:                 this.columnNodeType = base.Columns["NodeType"];
+00573:                 this.columnAvaiableSpaceInC = base.Columns["AvaiableSpaceInC"];
+00574:                 this.columnAvaiableSpaceInD = base.Columns["AvaiableSpaceInD"];
+00575:                 this.columnTotalFolderSizeInLog = base.Columns["TotalFolderSizeInLog"];
+00576:                 this.columnTotalFolderSizeInDBBackUp = base.Columns["TotalFolderSizeInDBBackUp"];
+00577:                 this.columnDBFileSize = base.Columns["DBFileSize"];
+00578:                 this.columnDBLogFileSize = base.Columns["DBLogFileSize"];
+00579:                 this.columnThresholdAvaiableSpaceInC = base.Columns["ThresholdAvaiableSpaceInC"];
+00580:                 this.columnThresholdAvaiableSpaceInD = base.Columns["ThresholdAvaiableSpaceInD"];
+00581:                 this.columnThresholdTotalFolderSizeInDBBackUp = base.Columns["ThresholdTotalFolderSizeInDBBackUp"];
+00582:                 this.columnThresholdTotalFolderSizeInLog = base.Columns["ThresholdTotalFolderSizeInLog"];
+00583:                 this.columnThresholdDBFileSize = base.Columns["ThresholdDBFileSize"];
+00584:                 this.columnThresholdDBLogFileSize = base.Columns["ThresholdDBLogFileSize"];
+00585:             }
+00586:           <br />
+00587:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00588:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00589:             private void InitClass() {
+00590:                 this.columnCompanyCode = new global::System.Data.DataColumn("CompanyCode", typeof(string), null, global::System.Data.MappingType.Element);
+00591:                 base.Columns.Add(this.columnCompanyCode);
+00592:                 this.columnStoreCode = new global::System.Data.DataColumn("StoreCode", typeof(string), null, global::System.Data.MappingType.Element);
+00593:                 base.Columns.Add(this.columnStoreCode);
+00594:                 this.columnTerminalNo = new global::System.Data.DataColumn("TerminalNo", typeof(int), null, global::System.Data.MappingType.Element);
+00595:                 base.Columns.Add(this.columnTerminalNo);
+00596:                 this.columnNodeType = new global::System.Data.DataColumn("NodeType", typeof(string), null, global::System.Data.MappingType.Element);
+00597:                 base.Columns.Add(this.columnNodeType);
+00598:                 this.columnAvaiableSpaceInC = new global::System.Data.DataColumn("AvaiableSpaceInC", typeof(long), null, global::System.Data.MappingType.Element);
+00599:                 base.Columns.Add(this.columnAvaiableSpaceInC);
+00600:                 this.columnAvaiableSpaceInD = new global::System.Data.DataColumn("AvaiableSpaceInD", typeof(long), null, global::System.Data.MappingType.Element);
+00601:                 base.Columns.Add(this.columnAvaiableSpaceInD);
+00602:                 this.columnTotalFolderSizeInLog = new global::System.Data.DataColumn("TotalFolderSizeInLog", typeof(long), null, global::System.Data.MappingType.Element);
+00603:                 base.Columns.Add(this.columnTotalFolderSizeInLog);
+00604:                 this.columnTotalFolderSizeInDBBackUp = new global::System.Data.DataColumn("TotalFolderSizeInDBBackUp", typeof(long), null, global::System.Data.MappingType.Element);
+00605:                 base.Columns.Add(this.columnTotalFolderSizeInDBBackUp);
+00606:                 this.columnDBFileSize = new global::System.Data.DataColumn("DBFileSize", typeof(long), null, global::System.Data.MappingType.Element);
+00607:                 base.Columns.Add(this.columnDBFileSize);
+00608:                 this.columnDBLogFileSize = new global::System.Data.DataColumn("DBLogFileSize", typeof(long), null, global::System.Data.MappingType.Element);
+00609:                 base.Columns.Add(this.columnDBLogFileSize);
+00610:                 this.columnThresholdAvaiableSpaceInC = new global::System.Data.DataColumn("ThresholdAvaiableSpaceInC", typeof(long), null, global::System.Data.MappingType.Element);
+00611:                 base.Columns.Add(this.columnThresholdAvaiableSpaceInC);
+00612:                 this.columnThresholdAvaiableSpaceInD = new global::System.Data.DataColumn("ThresholdAvaiableSpaceInD", typeof(long), null, global::System.Data.MappingType.Element);
+00613:                 base.Columns.Add(this.columnThresholdAvaiableSpaceInD);
+00614:                 this.columnThresholdTotalFolderSizeInDBBackUp = new global::System.Data.DataColumn("ThresholdTotalFolderSizeInDBBackUp", typeof(long), null, global::System.Data.MappingType.Element);
+00615:                 base.Columns.Add(this.columnThresholdTotalFolderSizeInDBBackUp);
+00616:                 this.columnThresholdTotalFolderSizeInLog = new global::System.Data.DataColumn("ThresholdTotalFolderSizeInLog", typeof(long), null, global::System.Data.MappingType.Element);
+00617:                 base.Columns.Add(this.columnThresholdTotalFolderSizeInLog);
+00618:                 this.columnThresholdDBFileSize = new global::System.Data.DataColumn("ThresholdDBFileSize", typeof(long), null, global::System.Data.MappingType.Element);
+00619:                 base.Columns.Add(this.columnThresholdDBFileSize);
+00620:                 this.columnThresholdDBLogFileSize = new global::System.Data.DataColumn("ThresholdDBLogFileSize", typeof(long), null, global::System.Data.MappingType.Element);
+00621:                 base.Columns.Add(this.columnThresholdDBLogFileSize);
+00622:                 this.columnCompanyCode.AllowDBNull = false;
+00623:                 this.columnCompanyCode.MaxLength = 10;
+00624:                 this.columnStoreCode.AllowDBNull = false;
+00625:                 this.columnStoreCode.MaxLength = 10;
+00626:                 this.columnTerminalNo.AllowDBNull = false;
+00627:                 this.columnNodeType.AllowDBNull = false;
+00628:                 this.columnNodeType.MaxLength = 2;
+00629:                 this.columnAvaiableSpaceInC.ReadOnly = true;
+00630:                 this.columnAvaiableSpaceInD.ReadOnly = true;
+00631:                 this.columnTotalFolderSizeInLog.ReadOnly = true;
+00632:                 this.columnTotalFolderSizeInDBBackUp.ReadOnly = true;
+00633:                 this.columnDBFileSize.ReadOnly = true;
+00634:                 this.columnDBLogFileSize.ReadOnly = true;
+00635:             }
+00636:           <br />
+00637:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00638:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00639:             public PosTerminalCapacityAlertListRow NewPosTerminalCapacityAlertListRow() {
+00640:                 return ((PosTerminalCapacityAlertListRow)(this.NewRow()));
+00641:             }
+00642:           <br />
+00643:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00644:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00645:             protected override global::System.Data.DataRow NewRowFromBuilder(global::System.Data.DataRowBuilder builder) {
+00646:                 return new PosTerminalCapacityAlertListRow(builder);
+00647:             }
+00648:           <br />
+00649:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00650:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00651:             protected override global::System.Type GetRowType() {
+00652:                 return typeof(PosTerminalCapacityAlertListRow);
+00653:             }
+00654:           <br />
+00655:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00656:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00657:             protected override void OnRowChanged(global::System.Data.DataRowChangeEventArgs e) {
+00658:                 base.OnRowChanged(e);
+00659:                 if ((this.PosTerminalCapacityAlertListRowChanged != null)) {
+00660:                     this.PosTerminalCapacityAlertListRowChanged(this, new PosTerminalCapacityAlertListRowChangeEvent(((PosTerminalCapacityAlertListRow)(e.Row)), e.Action));
+00661:                 }
+00662:             }
+00663:           <br />
+00664:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00665:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00666:             protected override void OnRowChanging(global::System.Data.DataRowChangeEventArgs e) {
+00667:                 base.OnRowChanging(e);
+00668:                 if ((this.PosTerminalCapacityAlertListRowChanging != null)) {
+00669:                     this.PosTerminalCapacityAlertListRowChanging(this, new PosTerminalCapacityAlertListRowChangeEvent(((PosTerminalCapacityAlertListRow)(e.Row)), e.Action));
+00670:                 }
+00671:             }
+00672:           <br />
+00673:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00674:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00675:             protected override void OnRowDeleted(global::System.Data.DataRowChangeEventArgs e) {
+00676:                 base.OnRowDeleted(e);
+00677:                 if ((this.PosTerminalCapacityAlertListRowDeleted != null)) {
+00678:                     this.PosTerminalCapacityAlertListRowDeleted(this, new PosTerminalCapacityAlertListRowChangeEvent(((PosTerminalCapacityAlertListRow)(e.Row)), e.Action));
+00679:                 }
+00680:             }
+00681:           <br />
+00682:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00683:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00684:             protected override void OnRowDeleting(global::System.Data.DataRowChangeEventArgs e) {
+00685:                 base.OnRowDeleting(e);
+00686:                 if ((this.PosTerminalCapacityAlertListRowDeleting != null)) {
+00687:                     this.PosTerminalCapacityAlertListRowDeleting(this, new PosTerminalCapacityAlertListRowChangeEvent(((PosTerminalCapacityAlertListRow)(e.Row)), e.Action));
+00688:                 }
+00689:             }
+00690:           <br />
+00691:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00692:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00693:             public void RemovePosTerminalCapacityAlertListRow(PosTerminalCapacityAlertListRow row) {
+00694:                 this.Rows.Remove(row);
+00695:             }
+00696:           <br />
+00697:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00698:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00699:             public static global::System.Xml.Schema.XmlSchemaComplexType GetTypedTableSchema(global::System.Xml.Schema.XmlSchemaSet xs) {
+00700:                 global::System.Xml.Schema.XmlSchemaComplexType type = new global::System.Xml.Schema.XmlSchemaComplexType();
+00701:                 global::System.Xml.Schema.XmlSchemaSequence sequence = new global::System.Xml.Schema.XmlSchemaSequence();
+00702:                 PosTerminalCapacityDataSet ds = new PosTerminalCapacityDataSet();
+00703:                 global::System.Xml.Schema.XmlSchemaAny any1 = new global::System.Xml.Schema.XmlSchemaAny();
+00704:                 any1.Namespace = "http://www.w3.org/2001/XMLSchema";
+00705:                 any1.MinOccurs = new decimal(0);
+00706:                 any1.MaxOccurs = decimal.MaxValue;
+00707:                 any1.ProcessContents = global::System.Xml.Schema.XmlSchemaContentProcessing.Lax;
+00708:                 sequence.Items.Add(any1);
+00709:                 global::System.Xml.Schema.XmlSchemaAny any2 = new global::System.Xml.Schema.XmlSchemaAny();
+00710:                 any2.Namespace = "urn:schemas-microsoft-com:xml-diffgram-v1";
+00711:                 any2.MinOccurs = new decimal(1);
+00712:                 any2.ProcessContents = global::System.Xml.Schema.XmlSchemaContentProcessing.Lax;
+00713:                 sequence.Items.Add(any2);
+00714:                 global::System.Xml.Schema.XmlSchemaAttribute attribute1 = new global::System.Xml.Schema.XmlSchemaAttribute();
+00715:                 attribute1.Name = "namespace";
+00716:                 attribute1.FixedValue = ds.Namespace;
+00717:                 type.Attributes.Add(attribute1);
+00718:                 global::System.Xml.Schema.XmlSchemaAttribute attribute2 = new global::System.Xml.Schema.XmlSchemaAttribute();
+00719:                 attribute2.Name = "tableTypeName";
+00720:                 attribute2.FixedValue = "PosTerminalCapacityAlertListDataTable";
+00721:                 type.Attributes.Add(attribute2);
+00722:                 type.Particle = sequence;
+00723:                 global::System.Xml.Schema.XmlSchema dsSchema = ds.GetSchemaSerializable();
+00724:                 if (xs.Contains(dsSchema.TargetNamespace)) {
+00725:                     global::System.IO.MemoryStream s1 = new global::System.IO.MemoryStream();
+00726:                     global::System.IO.MemoryStream s2 = new global::System.IO.MemoryStream();
+00727:                     try {
+00728:                         global::System.Xml.Schema.XmlSchema schema = null;
+00729:                         dsSchema.Write(s1);
+00730:                         for (global::System.Collections.IEnumerator schemas = xs.Schemas(dsSchema.TargetNamespace).GetEnumerator(); schemas.MoveNext(); ) {
+00731:                             schema = ((global::System.Xml.Schema.XmlSchema)(schemas.Current));
+00732:                             s2.SetLength(0);
+00733:                             schema.Write(s2);
+00734:                             if ((s1.Length == s2.Length)) {
+00735:                                 s1.Position = 0;
+00736:                                 s2.Position = 0;
+00737:                                 for (; ((s1.Position != s1.Length) 
+00738:                                             &amp;&amp; (s1.ReadByte() == s2.ReadByte())); ) {
+00739:                                     ;
+00740:                                 }
+00741:                                 if ((s1.Position == s1.Length)) {
+00742:                                     return type;
+00743:                                 }
+00744:                             }
+00745:                         }
+00746:                     }
+00747:                     finally {
+00748:                         if ((s1 != null)) {
+00749:                             s1.Close();
+00750:                         }
+00751:                         if ((s2 != null)) {
+00752:                             s2.Close();
+00753:                         }
+00754:                     }
+00755:                 }
+00756:                 xs.Add(dsSchema);
+00757:                 return type;
+00758:             }
+00759:         }
+00760:       <br />
+00761:         /// <summary>
+00762:         ///Represents strongly named DataRow class.
+00763:         ///</summary>
+00764:         public partial class PosTerminalCapacityAlertListRow : global::System.Data.DataRow {
+00765:           <br />
+00766:             private PosTerminalCapacityAlertListDataTable tablePosTerminalCapacityAlertList;
+00767:           <br />
+00768:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00769:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00770:             internal PosTerminalCapacityAlertListRow(global::System.Data.DataRowBuilder rb) : 
+00771:                     base(rb) {
+00772:                 this.tablePosTerminalCapacityAlertList = ((PosTerminalCapacityAlertListDataTable)(this.Table));
+00773:             }
+00774:           <br />
+00775:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00776:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00777:             public string CompanyCode {
+00778:                 get {
+00779:                     return ((string)(this[this.tablePosTerminalCapacityAlertList.CompanyCodeColumn]));
+00780:                 }
+00781:                 set {
+00782:                     this[this.tablePosTerminalCapacityAlertList.CompanyCodeColumn] = value;
+00783:                 }
+00784:             }
+00785:           <br />
+00786:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00787:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00788:             public string StoreCode {
+00789:                 get {
+00790:                     return ((string)(this[this.tablePosTerminalCapacityAlertList.StoreCodeColumn]));
+00791:                 }
+00792:                 set {
+00793:                     this[this.tablePosTerminalCapacityAlertList.StoreCodeColumn] = value;
+00794:                 }
+00795:             }
+00796:           <br />
+00797:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00798:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00799:             public int TerminalNo {
+00800:                 get {
+00801:                     return ((int)(this[this.tablePosTerminalCapacityAlertList.TerminalNoColumn]));
+00802:                 }
+00803:                 set {
+00804:                     this[this.tablePosTerminalCapacityAlertList.TerminalNoColumn] = value;
+00805:                 }
+00806:             }
+00807:           <br />
+00808:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00809:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00810:             public string NodeType {
+00811:                 get {
+00812:                     return ((string)(this[this.tablePosTerminalCapacityAlertList.NodeTypeColumn]));
+00813:                 }
+00814:                 set {
+00815:                     this[this.tablePosTerminalCapacityAlertList.NodeTypeColumn] = value;
+00816:                 }
+00817:             }
+00818:           <br />
+00819:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00820:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00821:             public long AvaiableSpaceInC {
+00822:                 get {
+00823:                     try {
+00824:                         return ((long)(this[this.tablePosTerminalCapacityAlertList.AvaiableSpaceInCColumn]));
+00825:                     }
+00826:                     catch (global::System.InvalidCastException e) {
+00827:                         throw new global::System.Data.StrongTypingException("テーブル \'PosTerminalCapacityAlertList\' にある列 \'AvaiableSpaceInC\' の値は DBNull です。", e);
+00828:                     }
+00829:                 }
+00830:                 set {
+00831:                     this[this.tablePosTerminalCapacityAlertList.AvaiableSpaceInCColumn] = value;
+00832:                 }
+00833:             }
+00834:           <br />
+00835:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00836:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00837:             public long AvaiableSpaceInD {
+00838:                 get {
+00839:                     try {
+00840:                         return ((long)(this[this.tablePosTerminalCapacityAlertList.AvaiableSpaceInDColumn]));
+00841:                     }
+00842:                     catch (global::System.InvalidCastException e) {
+00843:                         throw new global::System.Data.StrongTypingException("テーブル \'PosTerminalCapacityAlertList\' にある列 \'AvaiableSpaceInD\' の値は DBNull です。", e);
+00844:                     }
+00845:                 }
+00846:                 set {
+00847:                     this[this.tablePosTerminalCapacityAlertList.AvaiableSpaceInDColumn] = value;
+00848:                 }
+00849:             }
+00850:           <br />
+00851:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00852:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00853:             public long TotalFolderSizeInLog {
+00854:                 get {
+00855:                     try {
+00856:                         return ((long)(this[this.tablePosTerminalCapacityAlertList.TotalFolderSizeInLogColumn]));
+00857:                     }
+00858:                     catch (global::System.InvalidCastException e) {
+00859:                         throw new global::System.Data.StrongTypingException("テーブル \'PosTerminalCapacityAlertList\' にある列 \'TotalFolderSizeInLog\' の値は DBNull です。", e);
+00860:                     }
+00861:                 }
+00862:                 set {
+00863:                     this[this.tablePosTerminalCapacityAlertList.TotalFolderSizeInLogColumn] = value;
+00864:                 }
+00865:             }
+00866:           <br />
+00867:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00868:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00869:             public long TotalFolderSizeInDBBackUp {
+00870:                 get {
+00871:                     try {
+00872:                         return ((long)(this[this.tablePosTerminalCapacityAlertList.TotalFolderSizeInDBBackUpColumn]));
+00873:                     }
+00874:                     catch (global::System.InvalidCastException e) {
+00875:                         throw new global::System.Data.StrongTypingException("テーブル \'PosTerminalCapacityAlertList\' にある列 \'TotalFolderSizeInDBBackUp\' の値は DBNull で" +
+00876:                                 "す。", e);
+00877:                     }
+00878:                 }
+00879:                 set {
+00880:                     this[this.tablePosTerminalCapacityAlertList.TotalFolderSizeInDBBackUpColumn] = value;
+00881:                 }
+00882:             }
+00883:           <br />
+00884:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00885:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00886:             public long DBFileSize {
+00887:                 get {
+00888:                     try {
+00889:                         return ((long)(this[this.tablePosTerminalCapacityAlertList.DBFileSizeColumn]));
+00890:                     }
+00891:                     catch (global::System.InvalidCastException e) {
+00892:                         throw new global::System.Data.StrongTypingException("テーブル \'PosTerminalCapacityAlertList\' にある列 \'DBFileSize\' の値は DBNull です。", e);
+00893:                     }
+00894:                 }
+00895:                 set {
+00896:                     this[this.tablePosTerminalCapacityAlertList.DBFileSizeColumn] = value;
+00897:                 }
+00898:             }
+00899:           <br />
+00900:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00901:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00902:             public long DBLogFileSize {
+00903:                 get {
+00904:                     try {
+00905:                         return ((long)(this[this.tablePosTerminalCapacityAlertList.DBLogFileSizeColumn]));
+00906:                     }
+00907:                     catch (global::System.InvalidCastException e) {
+00908:                         throw new global::System.Data.StrongTypingException("テーブル \'PosTerminalCapacityAlertList\' にある列 \'DBLogFileSize\' の値は DBNull です。", e);
+00909:                     }
+00910:                 }
+00911:                 set {
+00912:                     this[this.tablePosTerminalCapacityAlertList.DBLogFileSizeColumn] = value;
+00913:                 }
+00914:             }
+00915:           <br />
+00916:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00917:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00918:             public long ThresholdAvaiableSpaceInC {
+00919:                 get {
+00920:                     try {
+00921:                         return ((long)(this[this.tablePosTerminalCapacityAlertList.ThresholdAvaiableSpaceInCColumn]));
+00922:                     }
+00923:                     catch (global::System.InvalidCastException e) {
+00924:                         throw new global::System.Data.StrongTypingException("テーブル \'PosTerminalCapacityAlertList\' にある列 \'ThresholdAvaiableSpaceInC\' の値は DBNull で" +
+00925:                                 "す。", e);
+00926:                     }
+00927:                 }
+00928:                 set {
+00929:                     this[this.tablePosTerminalCapacityAlertList.ThresholdAvaiableSpaceInCColumn] = value;
+00930:                 }
+00931:             }
+00932:           <br />
+00933:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00934:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00935:             public long ThresholdAvaiableSpaceInD {
+00936:                 get {
+00937:                     try {
+00938:                         return ((long)(this[this.tablePosTerminalCapacityAlertList.ThresholdAvaiableSpaceInDColumn]));
+00939:                     }
+00940:                     catch (global::System.InvalidCastException e) {
+00941:                         throw new global::System.Data.StrongTypingException("テーブル \'PosTerminalCapacityAlertList\' にある列 \'ThresholdAvaiableSpaceInD\' の値は DBNull で" +
+00942:                                 "す。", e);
+00943:                     }
+00944:                 }
+00945:                 set {
+00946:                     this[this.tablePosTerminalCapacityAlertList.ThresholdAvaiableSpaceInDColumn] = value;
+00947:                 }
+00948:             }
+00949:           <br />
+00950:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00951:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00952:             public long ThresholdTotalFolderSizeInDBBackUp {
+00953:                 get {
+00954:                     try {
+00955:                         return ((long)(this[this.tablePosTerminalCapacityAlertList.ThresholdTotalFolderSizeInDBBackUpColumn]));
+00956:                     }
+00957:                     catch (global::System.InvalidCastException e) {
+00958:                         throw new global::System.Data.StrongTypingException("テーブル \'PosTerminalCapacityAlertList\' にある列 \'ThresholdTotalFolderSizeInDBBackUp\' の値は" +
+00959:                                 " DBNull です。", e);
+00960:                     }
+00961:                 }
+00962:                 set {
+00963:                     this[this.tablePosTerminalCapacityAlertList.ThresholdTotalFolderSizeInDBBackUpColumn] = value;
+00964:                 }
+00965:             }
+00966:           <br />
+00967:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00968:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00969:             public long ThresholdTotalFolderSizeInLog {
+00970:                 get {
+00971:                     try {
+00972:                         return ((long)(this[this.tablePosTerminalCapacityAlertList.ThresholdTotalFolderSizeInLogColumn]));
+00973:                     }
+00974:                     catch (global::System.InvalidCastException e) {
+00975:                         throw new global::System.Data.StrongTypingException("テーブル \'PosTerminalCapacityAlertList\' にある列 \'ThresholdTotalFolderSizeInLog\' の値は DBNu" +
+00976:                                 "ll です。", e);
+00977:                     }
+00978:                 }
+00979:                 set {
+00980:                     this[this.tablePosTerminalCapacityAlertList.ThresholdTotalFolderSizeInLogColumn] = value;
+00981:                 }
+00982:             }
+00983:           <br />
+00984:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00985:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+00986:             public long ThresholdDBFileSize {
+00987:                 get {
+00988:                     try {
+00989:                         return ((long)(this[this.tablePosTerminalCapacityAlertList.ThresholdDBFileSizeColumn]));
+00990:                     }
+00991:                     catch (global::System.InvalidCastException e) {
+00992:                         throw new global::System.Data.StrongTypingException("テーブル \'PosTerminalCapacityAlertList\' にある列 \'ThresholdDBFileSize\' の値は DBNull です。", e);
+00993:                     }
+00994:                 }
+00995:                 set {
+00996:                     this[this.tablePosTerminalCapacityAlertList.ThresholdDBFileSizeColumn] = value;
+00997:                 }
+00998:             }
+00999:           <br />
+01000:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01001:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01002:             public long ThresholdDBLogFileSize {
+01003:                 get {
+01004:                     try {
+01005:                         return ((long)(this[this.tablePosTerminalCapacityAlertList.ThresholdDBLogFileSizeColumn]));
+01006:                     }
+01007:                     catch (global::System.InvalidCastException e) {
+01008:                         throw new global::System.Data.StrongTypingException("テーブル \'PosTerminalCapacityAlertList\' にある列 \'ThresholdDBLogFileSize\' の値は DBNull です。", e);
+01009:                     }
+01010:                 }
+01011:                 set {
+01012:                     this[this.tablePosTerminalCapacityAlertList.ThresholdDBLogFileSizeColumn] = value;
+01013:                 }
+01014:             }
+01015:           <br />
+01016:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01017:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01018:             public bool IsAvaiableSpaceInCNull() {
+01019:                 return this.IsNull(this.tablePosTerminalCapacityAlertList.AvaiableSpaceInCColumn);
+01020:             }
+01021:           <br />
+01022:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01023:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01024:             public void SetAvaiableSpaceInCNull() {
+01025:                 this[this.tablePosTerminalCapacityAlertList.AvaiableSpaceInCColumn] = global::System.Convert.DBNull;
+01026:             }
+01027:           <br />
+01028:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01029:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01030:             public bool IsAvaiableSpaceInDNull() {
+01031:                 return this.IsNull(this.tablePosTerminalCapacityAlertList.AvaiableSpaceInDColumn);
+01032:             }
+01033:           <br />
+01034:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01035:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01036:             public void SetAvaiableSpaceInDNull() {
+01037:                 this[this.tablePosTerminalCapacityAlertList.AvaiableSpaceInDColumn] = global::System.Convert.DBNull;
+01038:             }
+01039:           <br />
+01040:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01041:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01042:             public bool IsTotalFolderSizeInLogNull() {
+01043:                 return this.IsNull(this.tablePosTerminalCapacityAlertList.TotalFolderSizeInLogColumn);
+01044:             }
+01045:           <br />
+01046:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01047:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01048:             public void SetTotalFolderSizeInLogNull() {
+01049:                 this[this.tablePosTerminalCapacityAlertList.TotalFolderSizeInLogColumn] = global::System.Convert.DBNull;
+01050:             }
+01051:           <br />
+01052:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01053:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01054:             public bool IsTotalFolderSizeInDBBackUpNull() {
+01055:                 return this.IsNull(this.tablePosTerminalCapacityAlertList.TotalFolderSizeInDBBackUpColumn);
+01056:             }
+01057:           <br />
+01058:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01059:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01060:             public void SetTotalFolderSizeInDBBackUpNull() {
+01061:                 this[this.tablePosTerminalCapacityAlertList.TotalFolderSizeInDBBackUpColumn] = global::System.Convert.DBNull;
+01062:             }
+01063:           <br />
+01064:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01065:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01066:             public bool IsDBFileSizeNull() {
+01067:                 return this.IsNull(this.tablePosTerminalCapacityAlertList.DBFileSizeColumn);
+01068:             }
+01069:           <br />
+01070:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01071:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01072:             public void SetDBFileSizeNull() {
+01073:                 this[this.tablePosTerminalCapacityAlertList.DBFileSizeColumn] = global::System.Convert.DBNull;
+01074:             }
+01075:           <br />
+01076:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01077:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01078:             public bool IsDBLogFileSizeNull() {
+01079:                 return this.IsNull(this.tablePosTerminalCapacityAlertList.DBLogFileSizeColumn);
+01080:             }
+01081:           <br />
+01082:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01083:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01084:             public void SetDBLogFileSizeNull() {
+01085:                 this[this.tablePosTerminalCapacityAlertList.DBLogFileSizeColumn] = global::System.Convert.DBNull;
+01086:             }
+01087:           <br />
+01088:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01089:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01090:             public bool IsThresholdAvaiableSpaceInCNull() {
+01091:                 return this.IsNull(this.tablePosTerminalCapacityAlertList.ThresholdAvaiableSpaceInCColumn);
+01092:             }
+01093:           <br />
+01094:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01095:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01096:             public void SetThresholdAvaiableSpaceInCNull() {
+01097:                 this[this.tablePosTerminalCapacityAlertList.ThresholdAvaiableSpaceInCColumn] = global::System.Convert.DBNull;
+01098:             }
+01099:           <br />
+01100:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01101:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01102:             public bool IsThresholdAvaiableSpaceInDNull() {
+01103:                 return this.IsNull(this.tablePosTerminalCapacityAlertList.ThresholdAvaiableSpaceInDColumn);
+01104:             }
+01105:           <br />
+01106:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01107:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01108:             public void SetThresholdAvaiableSpaceInDNull() {
+01109:                 this[this.tablePosTerminalCapacityAlertList.ThresholdAvaiableSpaceInDColumn] = global::System.Convert.DBNull;
+01110:             }
+01111:           <br />
+01112:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01113:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01114:             public bool IsThresholdTotalFolderSizeInDBBackUpNull() {
+01115:                 return this.IsNull(this.tablePosTerminalCapacityAlertList.ThresholdTotalFolderSizeInDBBackUpColumn);
+01116:             }
+01117:           <br />
+01118:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01119:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01120:             public void SetThresholdTotalFolderSizeInDBBackUpNull() {
+01121:                 this[this.tablePosTerminalCapacityAlertList.ThresholdTotalFolderSizeInDBBackUpColumn] = global::System.Convert.DBNull;
+01122:             }
+01123:           <br />
+01124:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01125:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01126:             public bool IsThresholdTotalFolderSizeInLogNull() {
+01127:                 return this.IsNull(this.tablePosTerminalCapacityAlertList.ThresholdTotalFolderSizeInLogColumn);
+01128:             }
+01129:           <br />
+01130:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01131:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01132:             public void SetThresholdTotalFolderSizeInLogNull() {
+01133:                 this[this.tablePosTerminalCapacityAlertList.ThresholdTotalFolderSizeInLogColumn] = global::System.Convert.DBNull;
+01134:             }
+01135:           <br />
+01136:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01137:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01138:             public bool IsThresholdDBFileSizeNull() {
+01139:                 return this.IsNull(this.tablePosTerminalCapacityAlertList.ThresholdDBFileSizeColumn);
+01140:             }
+01141:           <br />
+01142:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01143:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01144:             public void SetThresholdDBFileSizeNull() {
+01145:                 this[this.tablePosTerminalCapacityAlertList.ThresholdDBFileSizeColumn] = global::System.Convert.DBNull;
+01146:             }
+01147:           <br />
+01148:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01149:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01150:             public bool IsThresholdDBLogFileSizeNull() {
+01151:                 return this.IsNull(this.tablePosTerminalCapacityAlertList.ThresholdDBLogFileSizeColumn);
+01152:             }
+01153:           <br />
+01154:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01155:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01156:             public void SetThresholdDBLogFileSizeNull() {
+01157:                 this[this.tablePosTerminalCapacityAlertList.ThresholdDBLogFileSizeColumn] = global::System.Convert.DBNull;
+01158:             }
+01159:         }
+01160:       <br />
+01161:         /// <summary>
+01162:         ///Row event argument class
+01163:         ///</summary>
+01164:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01165:         public class PosTerminalCapacityAlertListRowChangeEvent : global::System.EventArgs {
+01166:           <br />
+01167:             private PosTerminalCapacityAlertListRow eventRow;
+01168:           <br />
+01169:             private global::System.Data.DataRowAction eventAction;
+01170:           <br />
+01171:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01172:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01173:             public PosTerminalCapacityAlertListRowChangeEvent(PosTerminalCapacityAlertListRow row, global::System.Data.DataRowAction action) {
+01174:                 this.eventRow = row;
+01175:                 this.eventAction = action;
+01176:             }
+01177:           <br />
+01178:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01179:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01180:             public PosTerminalCapacityAlertListRow Row {
+01181:                 get {
+01182:                     return this.eventRow;
+01183:                 }
+01184:             }
+01185:           <br />
+01186:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01187:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01188:             public global::System.Data.DataRowAction Action {
+01189:                 get {
+01190:                     return this.eventAction;
+01191:                 }
+01192:             }
+01193:         }
+01194:     }
+01195: }
+01196: namespace ForYouApplications.POS4U.Background.Data.Container.PosTerminalCapacityDataSetTableAdapters {
+01197:   <br />
+01198:   <br />
+01199:     /// <summary>
+01200:     ///Represents the connection and commands used to retrieve and save data.
+01201:     ///</summary>
+01202:     [global::System.ComponentModel.DesignerCategoryAttribute("code")]
+01203:     [global::System.ComponentModel.ToolboxItem(true)]
+01204:     [global::System.ComponentModel.DataObjectAttribute(true)]
+01205:     [global::System.ComponentModel.DesignerAttribute("Microsoft.VSDesigner.DataSource.Design.TableAdapterDesigner, Microsoft.VSDesigner" +
+01206:         ", Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a")]
+01207:     [global::System.ComponentModel.Design.HelpKeywordAttribute("vs.data.TableAdapter")]
+01208:     public partial class PosTerminalCapacityAlertListTableAdapter : global::System.ComponentModel.Component {
+01209:       <br />
+01210:         private global::System.Data.SqlClient.SqlDataAdapter _adapter;
+01211:       <br />
+01212:         private global::System.Data.SqlClient.SqlConnection _connection;
+01213:       <br />
+01214:         private global::System.Data.SqlClient.SqlTransaction _transaction;
+01215:       <br />
+01216:         private global::System.Data.SqlClient.SqlCommand[] _commandCollection;
+01217:       <br />
+01218:         private bool _clearBeforeFill;
+01219:       <br />
+01220:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01221:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01222:         public PosTerminalCapacityAlertListTableAdapter() {
+01223:             this.ClearBeforeFill = true;
+01224:         }
+01225:       <br />
+01226:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01227:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01228:         protected internal global::System.Data.SqlClient.SqlDataAdapter Adapter {
+01229:             get {
+01230:                 if ((this._adapter == null)) {
+01231:                     this.InitAdapter();
+01232:                 }
+01233:                 return this._adapter;
+01234:             }
+01235:         }
+01236:       <br />
+01237:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01238:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01239:         public global::System.Data.SqlClient.SqlConnection Connection {
+01240:             get {
+01241:                 if ((this._connection == null)) {
+01242:                     this.InitConnection();
+01243:                 }
+01244:                 return this._connection;
+01245:             }
+01246:             set {
+01247:                 this._connection = value;
+01248:                 if ((this.Adapter.InsertCommand != null)) {
+01249:                     this.Adapter.InsertCommand.Connection = value;
+01250:                 }
+01251:                 if ((this.Adapter.DeleteCommand != null)) {
+01252:                     this.Adapter.DeleteCommand.Connection = value;
+01253:                 }
+01254:                 if ((this.Adapter.UpdateCommand != null)) {
+01255:                     this.Adapter.UpdateCommand.Connection = value;
+01256:                 }
+01257:                 for (int i = 0; (i &lt; this.CommandCollection.Length); i = (i + 1)) {
+01258:                     if ((this.CommandCollection[i] != null)) {
+01259:                         ((global::System.Data.SqlClient.SqlCommand)(this.CommandCollection[i])).Connection = value;
+01260:                     }
+01261:                 }
+01262:             }
+01263:         }
+01264:       <br />
+01265:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01266:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01267:         internal global::System.Data.SqlClient.SqlTransaction Transaction {
+01268:             get {
+01269:                 return this._transaction;
+01270:             }
+01271:             set {
+01272:                 this._transaction = value;
+01273:                 for (int i = 0; (i &lt; this.CommandCollection.Length); i = (i + 1)) {
+01274:                     this.CommandCollection[i].Transaction = this._transaction;
+01275:                 }
+01276:                 if (((this.Adapter != null) 
+01277:                             &amp;&amp; (this.Adapter.DeleteCommand != null))) {
+01278:                     this.Adapter.DeleteCommand.Transaction = this._transaction;
+01279:                 }
+01280:                 if (((this.Adapter != null) 
+01281:                             &amp;&amp; (this.Adapter.InsertCommand != null))) {
+01282:                     this.Adapter.InsertCommand.Transaction = this._transaction;
+01283:                 }
+01284:                 if (((this.Adapter != null) 
+01285:                             &amp;&amp; (this.Adapter.UpdateCommand != null))) {
+01286:                     this.Adapter.UpdateCommand.Transaction = this._transaction;
+01287:                 }
+01288:             }
+01289:         }
+01290:       <br />
+01291:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01292:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01293:         protected global::System.Data.SqlClient.SqlCommand[] CommandCollection {
+01294:             get {
+01295:                 if ((this._commandCollection == null)) {
+01296:                     this.InitCommandCollection();
+01297:                 }
+01298:                 return this._commandCollection;
+01299:             }
+01300:         }
+01301:       <br />
+01302:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01303:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01304:         public bool ClearBeforeFill {
+01305:             get {
+01306:                 return this._clearBeforeFill;
+01307:             }
+01308:             set {
+01309:                 this._clearBeforeFill = value;
+01310:             }
+01311:         }
+01312:       <br />
+01313:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01314:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01315:         private void InitAdapter() {
+01316:             this._adapter = new global::System.Data.SqlClient.SqlDataAdapter();
+01317:             global::System.Data.Common.DataTableMapping tableMapping = new global::System.Data.Common.DataTableMapping();
+01318:             tableMapping.SourceTable = "Table";
+01319:             tableMapping.DataSetTable = "PosTerminalCapacityAlertList";
+01320:             tableMapping.ColumnMappings.Add("CompanyCode", "CompanyCode");
+01321:             tableMapping.ColumnMappings.Add("StoreCode", "StoreCode");
+01322:             tableMapping.ColumnMappings.Add("TerminalNo", "TerminalNo");
+01323:             tableMapping.ColumnMappings.Add("NodeType", "NodeType");
+01324:             tableMapping.ColumnMappings.Add("AvaiableSpaceInC", "AvaiableSpaceInC");
+01325:             tableMapping.ColumnMappings.Add("AvaiableSpaceInD", "AvaiableSpaceInD");
+01326:             tableMapping.ColumnMappings.Add("TotalFolderSizeInLog", "TotalFolderSizeInLog");
+01327:             tableMapping.ColumnMappings.Add("TotalFolderSizeInDBBackUp", "TotalFolderSizeInDBBackUp");
+01328:             tableMapping.ColumnMappings.Add("DBFileSize", "DBFileSize");
+01329:             tableMapping.ColumnMappings.Add("DBLogFileSize", "DBLogFileSize");
+01330:             tableMapping.ColumnMappings.Add("ThresholdAvaiableSpaceInC", "ThresholdAvaiableSpaceInC");
+01331:             tableMapping.ColumnMappings.Add("ThresholdAvaiableSpaceInD", "ThresholdAvaiableSpaceInD");
+01332:             tableMapping.ColumnMappings.Add("ThresholdTotalFolderSizeInDBBackUp", "ThresholdTotalFolderSizeInDBBackUp");
+01333:             tableMapping.ColumnMappings.Add("ThresholdTotalFolderSizeInLog", "ThresholdTotalFolderSizeInLog");
+01334:             tableMapping.ColumnMappings.Add("ThresholdDBFileSize", "ThresholdDBFileSize");
+01335:             tableMapping.ColumnMappings.Add("ThresholdDBLogFileSize", "ThresholdDBLogFileSize");
+01336:             this._adapter.TableMappings.Add(tableMapping);
+01337:         }
+01338:       <br />
+01339:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01340:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01341:         private void InitConnection() {
+01342:             this._connection = new global::System.Data.SqlClient.SqlConnection();
+01343:             this._connection.ConnectionString = global::ForYouApplications.POS4U.Background.Data.Container.Properties.Settings.Default.POS4U_Trial_TranConnectionString;
+01344:         }
+01345:       <br />
+01346:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01347:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01348:         private void InitCommandCollection() {
+01349:             this._commandCollection = new global::System.Data.SqlClient.SqlCommand[1];
+01350:             this._commandCollection[0] = new global::System.Data.SqlClient.SqlCommand();
+01351:             this._commandCollection[0].Connection = this.Connection;
+01352:             this._commandCollection[0].CommandText = "dbo.usp_GetPosTerminalCapacityAlertList";
+01353:             this._commandCollection[0].CommandType = global::System.Data.CommandType.StoredProcedure;
+01354:             this._commandCollection[0].Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@RETURN_VALUE", global::System.Data.SqlDbType.Int, 4, global::System.Data.ParameterDirection.ReturnValue, 10, 0, null, global::System.Data.DataRowVersion.Current, false, null, "", "", ""));
+01355:             this._commandCollection[0].Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@CompanyCode", global::System.Data.SqlDbType.NVarChar, 10, global::System.Data.ParameterDirection.Input, 0, 0, null, global::System.Data.DataRowVersion.Current, false, null, "", "", ""));
+01356:             this._commandCollection[0].Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@StoreCodeCommon", global::System.Data.SqlDbType.NVarChar, 10, global::System.Data.ParameterDirection.Input, 0, 0, null, global::System.Data.DataRowVersion.Current, false, null, "", "", ""));
+01357:         }
+01358:       <br />
+01359:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01360:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01361:         [global::System.ComponentModel.Design.HelpKeywordAttribute("vs.data.TableAdapter")]
+01362:         [global::System.ComponentModel.DataObjectMethodAttribute(global::System.ComponentModel.DataObjectMethodType.Fill, true)]
+01363:         public virtual int Fill(PosTerminalCapacityDataSet.PosTerminalCapacityAlertListDataTable dataTable, string CompanyCode, string StoreCodeCommon) {
+01364:             this.Adapter.SelectCommand = this.CommandCollection[0];
+01365:             if ((CompanyCode == null)) {
+01366:                 this.Adapter.SelectCommand.Parameters[1].Value = global::System.DBNull.Value;
+01367:             }
+01368:             else {
+01369:                 this.Adapter.SelectCommand.Parameters[1].Value = ((string)(CompanyCode));
+01370:             }
+01371:             if ((StoreCodeCommon == null)) {
+01372:                 this.Adapter.SelectCommand.Parameters[2].Value = global::System.DBNull.Value;
+01373:             }
+01374:             else {
+01375:                 this.Adapter.SelectCommand.Parameters[2].Value = ((string)(StoreCodeCommon));
+01376:             }
+01377:             if ((this.ClearBeforeFill == true)) {
+01378:                 dataTable.Clear();
+01379:             }
+01380:             int returnValue = this.Adapter.Fill(dataTable);
+01381:             return returnValue;
+01382:         }
+01383:       <br />
+01384:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01385:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01386:         [global::System.ComponentModel.Design.HelpKeywordAttribute("vs.data.TableAdapter")]
+01387:         [global::System.ComponentModel.DataObjectMethodAttribute(global::System.ComponentModel.DataObjectMethodType.Select, true)]
+01388:         public virtual PosTerminalCapacityDataSet.PosTerminalCapacityAlertListDataTable GetData(string CompanyCode, string StoreCodeCommon) {
+01389:             this.Adapter.SelectCommand = this.CommandCollection[0];
+01390:             if ((CompanyCode == null)) {
+01391:                 this.Adapter.SelectCommand.Parameters[1].Value = global::System.DBNull.Value;
+01392:             }
+01393:             else {
+01394:                 this.Adapter.SelectCommand.Parameters[1].Value = ((string)(CompanyCode));
+01395:             }
+01396:             if ((StoreCodeCommon == null)) {
+01397:                 this.Adapter.SelectCommand.Parameters[2].Value = global::System.DBNull.Value;
+01398:             }
+01399:             else {
+01400:                 this.Adapter.SelectCommand.Parameters[2].Value = ((string)(StoreCodeCommon));
+01401:             }
+01402:             PosTerminalCapacityDataSet.PosTerminalCapacityAlertListDataTable dataTable = new PosTerminalCapacityDataSet.PosTerminalCapacityAlertListDataTable();
+01403:             this.Adapter.Fill(dataTable);
+01404:             return dataTable;
+01405:         }
+01406:     }
+01407:   <br />
+01408:     /// <summary>
+01409:     ///TableAdapterManager is used to coordinate TableAdapters in the dataset to enable Hierarchical Update scenarios
+01410:     ///</summary>
+01411:     [global::System.ComponentModel.DesignerCategoryAttribute("code")]
+01412:     [global::System.ComponentModel.ToolboxItem(true)]
+01413:     [global::System.ComponentModel.DesignerAttribute("Microsoft.VSDesigner.DataSource.Design.TableAdapterManagerDesigner, Microsoft.VSD" +
+01414:         "esigner, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a")]
+01415:     [global::System.ComponentModel.Design.HelpKeywordAttribute("vs.data.TableAdapterManager")]
+01416:     public partial class TableAdapterManager : global::System.ComponentModel.Component {
+01417:       <br />
+01418:         private UpdateOrderOption _updateOrder;
+01419:       <br />
+01420:         private bool _backupDataSetBeforeUpdate;
+01421:       <br />
+01422:         private global::System.Data.IDbConnection _connection;
+01423:       <br />
+01424:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01425:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01426:         public UpdateOrderOption UpdateOrder {
+01427:             get {
+01428:                 return this._updateOrder;
+01429:             }
+01430:             set {
+01431:                 this._updateOrder = value;
+01432:             }
+01433:         }
+01434:       <br />
+01435:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01436:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01437:         public bool BackupDataSetBeforeUpdate {
+01438:             get {
+01439:                 return this._backupDataSetBeforeUpdate;
+01440:             }
+01441:             set {
+01442:                 this._backupDataSetBeforeUpdate = value;
+01443:             }
+01444:         }
+01445:       <br />
+01446:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01447:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01448:         [global::System.ComponentModel.Browsable(false)]
+01449:         public global::System.Data.IDbConnection Connection {
+01450:             get {
+01451:                 if ((this._connection != null)) {
+01452:                     return this._connection;
+01453:                 }
+01454:                 return null;
+01455:             }
+01456:             set {
+01457:                 this._connection = value;
+01458:             }
+01459:         }
+01460:       <br />
+01461:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01462:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01463:         [global::System.ComponentModel.Browsable(false)]
+01464:         public int TableAdapterInstanceCount {
+01465:             get {
+01466:                 int count = 0;
+01467:                 return count;
+01468:             }
+01469:         }
+01470:       <br />
+01471:         /// <summary>
+01472:         ///Update rows in top-down order.
+01473:         ///</summary>
+01474:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01475:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01476:         private int UpdateUpdatedRows(PosTerminalCapacityDataSet dataSet, global::System.Collections.Generic.List<global::System.Data.DataRow> allChangedRows, global::System.Collections.Generic.List<global::System.Data.DataRow> allAddedRows) {
+01477:             int result = 0;
+01478:             return result;
+01479:         }
+01480:       <br />
+01481:         /// <summary>
+01482:         ///Insert rows in top-down order.
+01483:         ///</summary>
+01484:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01485:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01486:         private int UpdateInsertedRows(PosTerminalCapacityDataSet dataSet, global::System.Collections.Generic.List<global::System.Data.DataRow> allAddedRows) {
+01487:             int result = 0;
+01488:             return result;
+01489:         }
+01490:       <br />
+01491:         /// <summary>
+01492:         ///Delete rows in bottom-up order.
+01493:         ///</summary>
+01494:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01495:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01496:         private int UpdateDeletedRows(PosTerminalCapacityDataSet dataSet, global::System.Collections.Generic.List<global::System.Data.DataRow> allChangedRows) {
+01497:             int result = 0;
+01498:             return result;
+01499:         }
+01500:       <br />
+01501:         /// <summary>
+01502:         ///Remove inserted rows that become updated rows after calling TableAdapter.Update(inserted rows) first
+01503:         ///</summary>
+01504:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01505:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01506:         private global::System.Data.DataRow[] GetRealUpdatedRows(global::System.Data.DataRow[] updatedRows, global::System.Collections.Generic.List<global::System.Data.DataRow> allAddedRows) {
+01507:             if (((updatedRows == null) 
+01508:                         || (updatedRows.Length &lt; 1))) {
+01509:                 return updatedRows;
+01510:             }
+01511:             if (((allAddedRows == null) 
+01512:                         || (allAddedRows.Count &lt; 1))) {
+01513:                 return updatedRows;
+01514:             }
+01515:             global::System.Collections.Generic.List<global::System.Data.DataRow> realUpdatedRows = new global::System.Collections.Generic.List<global::System.Data.DataRow>();
+01516:             for (int i = 0; (i &lt; updatedRows.Length); i = (i + 1)) {
+01517:                 global::System.Data.DataRow row = updatedRows[i];
+01518:                 if ((allAddedRows.Contains(row) == false)) {
+01519:                     realUpdatedRows.Add(row);
+01520:                 }
+01521:             }
+01522:             return realUpdatedRows.ToArray();
+01523:         }
+01524:       <br />
+01525:         /// <summary>
+01526:         ///Update all changes to the dataset.
+01527:         ///</summary>
+01528:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01529:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01530:         public virtual int UpdateAll(PosTerminalCapacityDataSet dataSet) {
+01531:             if ((dataSet == null)) {
+01532:                 throw new global::System.ArgumentNullException("dataSet");
+01533:             }
+01534:             if ((dataSet.HasChanges() == false)) {
+01535:                 return 0;
+01536:             }
+01537:             global::System.Data.IDbConnection workConnection = this.Connection;
+01538:             if ((workConnection == null)) {
+01539:                 throw new global::System.ApplicationException("TableAdapterManager には接続情報がありません。それぞれの TableAdapterManager TableAdapter プロパティを有効な" +
+01540:                         " TableAdapter インスタンスに設定してください。");
+01541:             }
+01542:             bool workConnOpened = false;
+01543:             if (((workConnection.State &amp; global::System.Data.ConnectionState.Broken) 
+01544:                         == global::System.Data.ConnectionState.Broken)) {
+01545:                 workConnection.Close();
+01546:             }
+01547:             if ((workConnection.State == global::System.Data.ConnectionState.Closed)) {
+01548:                 workConnection.Open();
+01549:                 workConnOpened = true;
+01550:             }
+01551:             global::System.Data.IDbTransaction workTransaction = workConnection.BeginTransaction();
+01552:             if ((workTransaction == null)) {
+01553:                 throw new global::System.ApplicationException("トランザクションを開始できません。現在のデータ接続がトランザクションをサポートしていないか、または現在の状態がトランザクションの開始を許可していません。");
+01554:             }
+01555:             global::System.Collections.Generic.List<global::System.Data.DataRow> allChangedRows = new global::System.Collections.Generic.List<global::System.Data.DataRow>();
+01556:             global::System.Collections.Generic.List<global::System.Data.DataRow> allAddedRows = new global::System.Collections.Generic.List<global::System.Data.DataRow>();
+01557:             global::System.Collections.Generic.List<global::System.Data.Common.DataAdapter> adaptersWithAcceptChangesDuringUpdate = new global::System.Collections.Generic.List<global::System.Data.Common.DataAdapter>();
+01558:             global::System.Collections.Generic.Dictionary<object, global::System.Data.IDbConnection> revertConnections = new global::System.Collections.Generic.Dictionary<object, global::System.Data.IDbConnection>();
+01559:             int result = 0;
+01560:             global::System.Data.DataSet backupDataSet = null;
+01561:             if (this.BackupDataSetBeforeUpdate) {
+01562:                 backupDataSet = new global::System.Data.DataSet();
+01563:                 backupDataSet.Merge(dataSet);
+01564:             }
+01565:             try {
+01566:                 // ---- Prepare for update -----------
+01567:                 //
+01568:                 // 
+01569:                 //---- Perform updates -----------
+01570:                 //
+01571:                 if ((this.UpdateOrder == UpdateOrderOption.UpdateInsertDelete)) {
+01572:                     result = (result + this.UpdateUpdatedRows(dataSet, allChangedRows, allAddedRows));
+01573:                     result = (result + this.UpdateInsertedRows(dataSet, allAddedRows));
+01574:                 }
+01575:                 else {
+01576:                     result = (result + this.UpdateInsertedRows(dataSet, allAddedRows));
+01577:                     result = (result + this.UpdateUpdatedRows(dataSet, allChangedRows, allAddedRows));
+01578:                 }
+01579:                 result = (result + this.UpdateDeletedRows(dataSet, allChangedRows));
+01580:                 // 
+01581:                 //---- Commit updates -----------
+01582:                 //
+01583:                 workTransaction.Commit();
+01584:                 if ((0 &lt; allAddedRows.Count)) {
+01585:                     global::System.Data.DataRow[] rows = new System.Data.DataRow[allAddedRows.Count];
+01586:                     allAddedRows.CopyTo(rows);
+01587:                     for (int i = 0; (i &lt; rows.Length); i = (i + 1)) {
+01588:                         global::System.Data.DataRow row = rows[i];
+01589:                         row.AcceptChanges();
+01590:                     }
+01591:                 }
+01592:                 if ((0 &lt; allChangedRows.Count)) {
+01593:                     global::System.Data.DataRow[] rows = new System.Data.DataRow[allChangedRows.Count];
+01594:                     allChangedRows.CopyTo(rows);
+01595:                     for (int i = 0; (i &lt; rows.Length); i = (i + 1)) {
+01596:                         global::System.Data.DataRow row = rows[i];
+01597:                         row.AcceptChanges();
+01598:                     }
+01599:                 }
+01600:             }
+01601:             catch (global::System.Exception ex) {
+01602:                 workTransaction.Rollback();
+01603:                 // ---- Restore the dataset -----------
+01604:                 if (this.BackupDataSetBeforeUpdate) {
+01605:                     global::System.Diagnostics.Debug.Assert((backupDataSet != null));
+01606:                     dataSet.Clear();
+01607:                     dataSet.Merge(backupDataSet);
+01608:                 }
+01609:                 else {
+01610:                     if ((0 &lt; allAddedRows.Count)) {
+01611:                         global::System.Data.DataRow[] rows = new System.Data.DataRow[allAddedRows.Count];
+01612:                         allAddedRows.CopyTo(rows);
+01613:                         for (int i = 0; (i &lt; rows.Length); i = (i + 1)) {
+01614:                             global::System.Data.DataRow row = rows[i];
+01615:                             row.AcceptChanges();
+01616:                             row.SetAdded();
+01617:                         }
+01618:                     }
+01619:                 }
+01620:                 throw ex;
+01621:             }
+01622:             finally {
+01623:                 if (workConnOpened) {
+01624:                     workConnection.Close();
+01625:                 }
+01626:                 if ((0 &lt; adaptersWithAcceptChangesDuringUpdate.Count)) {
+01627:                     global::System.Data.Common.DataAdapter[] adapters = new System.Data.Common.DataAdapter[adaptersWithAcceptChangesDuringUpdate.Count];
+01628:                     adaptersWithAcceptChangesDuringUpdate.CopyTo(adapters);
+01629:                     for (int i = 0; (i &lt; adapters.Length); i = (i + 1)) {
+01630:                         global::System.Data.Common.DataAdapter adapter = adapters[i];
+01631:                         adapter.AcceptChangesDuringUpdate = true;
+01632:                     }
+01633:                 }
+01634:             }
+01635:             return result;
+01636:         }
+01637:       <br />
+01638:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01639:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01640:         protected virtual void SortSelfReferenceRows(global::System.Data.DataRow[] rows, global::System.Data.DataRelation relation, bool childFirst) {
+01641:             global::System.Array.Sort<global::System.Data.DataRow>(rows, new SelfReferenceComparer(relation, childFirst));
+01642:         }
+01643:       <br />
+01644:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01645:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01646:         protected virtual bool MatchTableAdapterConnection(global::System.Data.IDbConnection inputConnection) {
+01647:             if ((this._connection != null)) {
+01648:                 return true;
+01649:             }
+01650:             if (((this.Connection == null) 
+01651:                         || (inputConnection == null))) {
+01652:                 return true;
+01653:             }
+01654:             if (string.Equals(this.Connection.ConnectionString, inputConnection.ConnectionString, global::System.StringComparison.Ordinal)) {
+01655:                 return true;
+01656:             }
+01657:             return false;
+01658:         }
+01659:       <br />
+01660:         /// <summary>
+01661:         ///Update Order Option
+01662:         ///</summary>
+01663:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01664:         public enum UpdateOrderOption {
+01665:           <br />
+01666:             InsertUpdateDelete = 0,
+01667:           <br />
+01668:             UpdateInsertDelete = 1,
+01669:         }
+01670:       <br />
+01671:         /// <summary>
+01672:         ///Used to sort self-referenced table's rows
+01673:         ///</summary>
+01674:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01675:         private class SelfReferenceComparer : object, global::System.Collections.Generic.IComparer<global::System.Data.DataRow> {
+01676:           <br />
+01677:             private global::System.Data.DataRelation _relation;
+01678:           <br />
+01679:             private int _childFirst;
+01680:           <br />
+01681:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01682:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01683:             internal SelfReferenceComparer(global::System.Data.DataRelation relation, bool childFirst) {
+01684:                 this._relation = relation;
+01685:                 if (childFirst) {
+01686:                     this._childFirst = -1;
+01687:                 }
+01688:                 else {
+01689:                     this._childFirst = 1;
+01690:                 }
+01691:             }
+01692:           <br />
+01693:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01694:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01695:             private global::System.Data.DataRow GetRoot(global::System.Data.DataRow row, out int distance) {
+01696:                 global::System.Diagnostics.Debug.Assert((row != null));
+01697:                 global::System.Data.DataRow root = row;
+01698:                 distance = 0;
+01699: 
+01700:                 global::System.Collections.Generic.IDictionary<global::System.Data.DataRow, global::System.Data.DataRow> traversedRows = new global::System.Collections.Generic.Dictionary<global::System.Data.DataRow, global::System.Data.DataRow>();
+01701:                 traversedRows[row] = row;
+01702: 
+01703:                 global::System.Data.DataRow parent = row.GetParentRow(this._relation, global::System.Data.DataRowVersion.Default);
+01704:                 for (
+01705:                 ; ((parent != null) 
+01706:                             &amp;&amp; (traversedRows.ContainsKey(parent) == false)); 
+01707:                 ) {
+01708:                     distance = (distance + 1);
+01709:                     root = parent;
+01710:                     traversedRows[parent] = parent;
+01711:                     parent = parent.GetParentRow(this._relation, global::System.Data.DataRowVersion.Default);
+01712:                 }
+01713: 
+01714:                 if ((distance == 0)) {
+01715:                     traversedRows.Clear();
+01716:                     traversedRows[row] = row;
+01717:                     parent = row.GetParentRow(this._relation, global::System.Data.DataRowVersion.Original);
+01718:                     for (
+01719:                     ; ((parent != null) 
+01720:                                 &amp;&amp; (traversedRows.ContainsKey(parent) == false)); 
+01721:                     ) {
+01722:                         distance = (distance + 1);
+01723:                         root = parent;
+01724:                         traversedRows[parent] = parent;
+01725:                         parent = parent.GetParentRow(this._relation, global::System.Data.DataRowVersion.Original);
+01726:                     }
+01727:                 }
+01728: 
+01729:                 return root;
+01730:             }
+01731:           <br />
+01732:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01733:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+01734:             public int Compare(global::System.Data.DataRow row1, global::System.Data.DataRow row2) {
+01735:                 if (object.ReferenceEquals(row1, row2)) {
+01736:                     return 0;
+01737:                 }
+01738:                 if ((row1 == null)) {
+01739:                     return -1;
+01740:                 }
+01741:                 if ((row2 == null)) {
+01742:                     return 1;
+01743:                 }
+01744: 
+01745:                 int distance1 = 0;
+01746:                 global::System.Data.DataRow root1 = this.GetRoot(row1, out distance1);
+01747: 
+01748:                 int distance2 = 0;
+01749:                 global::System.Data.DataRow root2 = this.GetRoot(row2, out distance2);
+01750: 
+01751:                 if (object.ReferenceEquals(root1, root2)) {
+01752:                     return (this._childFirst * distance1.CompareTo(distance2));
+01753:                 }
+01754:                 else {
+01755:                     global::System.Diagnostics.Debug.Assert(((root1.Table != null) 
+01756:                                     &amp;&amp; (root2.Table != null)));
+01757:                     if ((root1.Table.Rows.IndexOf(root1) &lt; root2.Table.Rows.IndexOf(root2))) {
+01758:                         return -1;
+01759:                     }
+01760:                     else {
+01761:                         return 1;
+01762:                     }
+01763:                 }
+01764:             }
+01765:         }
+01766:     }
+01767: }
+01768: 
+01769: #pragma warning restore 1591</p>
+<p>END ORIGINAL PROMPT</p></div></a><div class="index-item-stats">
+<div class="index-item-long-text"><div class="truncatable"><div class="truncatable-content"><div class="index-item-long-text-content"><h1>文件级源码笔记：large_file_background_service_posterminalcapacitydataset_designer_cs</h1>
+<h2>Batch 信息</h2>
+<ul>
+<li>Batch ID: batch_054</li>
+<li>Batch Name: large_file_background_service_posterminalcapacitydataset_designer_cs</li>
+<li>Module: background_service</li>
+<li>Purpose: 解释后台服务、同步任务、Windows Service 和定时处理</li>
+</ul>
+<hr />
+<h2>文件：Source/POS4UBackground/Data/Background.Data.BackgroundContainer/PosTerminalCapacityDataSet.Designer.cs</h2>
+<h3>1. 文件定位</h3>
+<p>本文件是 Visual Studio Typed DataSet 设计器自动生成的代码文件，属于 <code>ForYouApplications.POS4U.Background.Data.Container</code> 命名空间的一部分（第 13 行）。它的作用是定义 <strong>POS 终端容量告警相关的强类型 DataSet</strong>，提供类型安全的数据表、数据行和数据适配器，用于在后台服务中读取和操作 SQL Server 存储过程 <code>dbo.usp_GetPosTerminalCapacityAlertList</code> 的返回结果。</p>
+<p>由于是 <code>.Designer.cs</code> 文件，其内容完全由 <strong>System.Data.Design.TypedDataSetGenerator</strong>（版本 16.0.0.0）自动生成（第 4-8 行、第 32 行等多处出现）。<strong>开发者不应直接修改该文件</strong>，任何对 DataSet 结构的修改都应通过 Visual Studio 的 XSD 设计器完成，然后重新生成。</p>
+<p>该文件承担的角色是 <strong>数据层的基础类型定义</strong>，为后台服务提供访问 POS 终端磁盘容量监控数据的强类型编程接口。</p>
+<h3>2. 对外暴露内容</h3>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>文件路径 + 行号</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PosTerminalCapacityDataSet</code> (class)</td>
+<td>第 25-1194 行</td>
+<td>继承 <code>System.Data.DataSet</code> 的强类型 DataSet，核心容器</td>
+</tr>
+<tr>
+<td><code>PosTerminalCapacityAlertListDataTable</code> (class)</td>
+<td>第 280-759 行</td>
+<td>嵌套于 DataSet 内的 DataTable 子类，映射 <code>PosTerminalCapacityAlertList</code> 表</td>
+</tr>
+<tr>
+<td><code>PosTerminalCapacityAlertListRow</code> (class)</td>
+<td>第 764-1159 行</td>
+<td>嵌套于 DataSet 内的 DataRow 子类，提供类型安全的列访问</td>
+</tr>
+<tr>
+<td><code>PosTerminalCapacityAlertListRowChangeEvent</code> (class)</td>
+<td>第 1165-1193 行</td>
+<td>行变更事件参数类</td>
+</tr>
+<tr>
+<td><code>PosTerminalCapacityAlertListRowChangeEventHandler</code> (delegate)</td>
+<td>第 273 行</td>
+<td>行变更事件委托</td>
+</tr>
+<tr>
+<td><code>PosTerminalCapacityAlertListTableAdapter</code> (class)</td>
+<td>第 1208-1406 行（位于子命名空间 <code>PosTerminalCapacityDataSetTableAdapters</code>）</td>
+<td>TableAdapter，封装 SQL 连接和命令以填充 DataTable</td>
+</tr>
+<tr>
+<td><code>TableAdapterManager</code> (class)</td>
+<td>第 1416-1766 行（位于子命名空间 <code>PosTerminalCapacityDataSetTableAdapters</code>）</td>
+<td>协调多个 TableAdapter 实现层次化更新的管理器</td>
+</tr>
+<tr>
+<td><code>Fill</code> (method)</td>
+<td>第 1363-1382 行</td>
+<td>用存储过程结果填充 DataTable</td>
+</tr>
+<tr>
+<td><code>GetData</code> (method)</td>
+<td>第 1388-1405 行</td>
+<td>返回填充后的新 DataTable 实例</td>
+</tr>
+</tbody>
+</table>
+<p><strong>DataTable 的列属性（共 16 列）：</strong></p>
+<table>
+<thead>
+<tr>
+<th>列名</th>
+<th>类型</th>
+<th>可为空</th>
+<th>约束</th>
+<th>位置</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CompanyCode</code></td>
+<td><code>string</code></td>
+<td>否 (AllowDBNull=false)</td>
+<td>MaxLength=10</td>
+<td>第 49-53 行</td>
+</tr>
+<tr>
+<td><code>StoreCode</code></td>
+<td><code>string</code></td>
+<td>否</td>
+<td>MaxLength=10</td>
+<td>第 57-61 行</td>
+</tr>
+<tr>
+<td><code>TerminalNo</code></td>
+<td><code>int</code></td>
+<td>否</td>
+<td>—</td>
+<td>第 65-69 行</td>
+</tr>
+<tr>
+<td><code>NodeType</code></td>
+<td><code>string</code></td>
+<td>否</td>
+<td>MaxLength=2</td>
+<td>第 73-77 行</td>
+</tr>
+<tr>
+<td><code>AvaiableSpaceInC</code></td>
+<td><code>long</code></td>
+<td>是 (ReadOnly=true)</td>
+<td>—</td>
+<td>第 81-85 行</td>
+</tr>
+<tr>
+<td><code>AvaiableSpaceInD</code></td>
+<td><code>long</code></td>
+<td>是 (ReadOnly=true)</td>
+<td>—</td>
+<td>第 89-93 行</td>
+</tr>
+<tr>
+<td><code>TotalFolderSizeInLog</code></td>
+<td><code>long</code></td>
+<td>是 (ReadOnly=true)</td>
+<td>—</td>
+<td>第 97-101 行</td>
+</tr>
+<tr>
+<td><code>TotalFolderSizeInDBBackUp</code></td>
+<td><code>long</code></td>
+<td>是 (ReadOnly=true)</td>
+<td>—</td>
+<td>第 105-109 行</td>
+</tr>
+<tr>
+<td><code>DBFileSize</code></td>
+<td><code>long</code></td>
+<td>是 (ReadOnly=true)</td>
+<td>—</td>
+<td>第 113-117 行</td>
+</tr>
+<tr>
+<td><code>DBLogFileSize</code></td>
+<td><code>long</code></td>
+<td>是 (ReadOnly=true)</td>
+<td>—</td>
+<td>第 121-125 行</td>
+</tr>
+<tr>
+<td><code>ThresholdAvaiableSpaceInC</code></td>
+<td><code>long</code></td>
+<td>是 (ReadOnly=true)</td>
+<td>—</td>
+<td>第 129-133 行</td>
+</tr>
+<tr>
+<td><code>ThresholdAvaiableSpaceInD</code></td>
+<td><code>long</code></td>
+<td>是 (ReadOnly=true)</td>
+<td>—</td>
+<td>第 137-141 行</td>
+</tr>
+<tr>
+<td><code>ThresholdTotalFolderSizeInDBBackUp</code></td>
+<td><code>long</code></td>
+<td>是 (ReadOnly=true)</td>
+<td>—</td>
+<td>第 145-149 行</td>
+</tr>
+<tr>
+<td><code>ThresholdTotalFolderSizeInLog</code></td>
+<td><code>long</code></td>
+<td>是 (ReadOnly=true)</td>
+<td>—</td>
+<td>第 153-157 行</td>
+</tr>
+<tr>
+<td><code>ThresholdDBFileSize</code></td>
+<td><code>long</code></td>
+<td>是 (ReadOnly=true)</td>
+<td>—</td>
+<td>第 161-165 行</td>
+</tr>
+<tr>
+<td><code>ThresholdDBLogFileSize</code></td>
+<td><code>long</code></td>
+<td>是 (ReadOnly=true)</td>
+<td>—</td>
+<td>第 169-173 行</td>
+</tr>
+</tbody>
+</table>
+<h3>3. 关键逻辑 walkthrough</h3>
+<h4>3.1 PosTerminalCapacityDataSet 的构造与初始化</h4>
+<p><strong>默认构造函数</strong>（第 33-40 行）：
+1. 调用 <code>this.BeginInit()</code> 开始初始化。
+2. 调用 <code>this.InitClass()</code>（第 201-209 行）设置 DataSet 的元数据（DataSetName 为 <code>"PosTerminalCapacityDataSet"</code>，XML Namespace 为 <code>"http://tempuri.org/PosTerminalCapacityDataSet.xsd"</code>），并创建 <code>PosTerminalCapacityAlertListDataTable</code> 实例添加到 <code>Tables</code> 集合。
+3. 注册 <code>SchemaChanged</code> 事件处理程序（第 36-38 行），当表结构或关系集合发生变化时重新初始化变量。
+4. 调用 <code>this.EndInit()</code> 结束初始化。</p>
+<p><strong>序列化构造函数</strong>（第 44-76 行）：
+- 首先判断序列化模式：如果是二进制序列化，直接调用 <code>InitVars(false)</code> 恢复字段引用，并注册 SchemaChanged 事件后返回（第 46-51 行）。
+- 如果是包含 Schema 的模式（<code>IncludeSchema</code>），则从 <code>SerializationInfo</code> 获取 XML Schema 字符串，通过 <code>DataSet.ReadXmlSchema</code> 解析出表结构，再为 <code>PosTerminalCapacityAlertList</code> 表创建 DataTable 实例，复制所有 DataSet 级属性（DataSetName、Prefix、Namespace、Locale、CaseSensitive、EnforceConstraints），然后 Merge 数据并初始化变量。
+- 否则直接通过 <code>ReadXmlSchema</code> 读取 Schema。</p>
+<h4>3.2 序列化与克隆支持</h4>
+<p><strong><code>Clone</code></strong>（第 129-134 行）：调用基类的 <code>Clone()</code> 创建副本，然后调用 <code>InitVars()</code> 重新初始化字段引用，并复制 <code>SchemaSerializationMode</code>。</p>
+<p><strong><code>ShouldSerializeTables</code> / <code>ShouldSerializeRelations</code></strong>（第 138-146 行）：均返回 <code>false</code>，指示在序列化时不要序列化 Tables 和 Relations 属性——这些信息已经在 DataSet 自身的序列化逻辑中处理。</p>
+<p><strong><code>ReadXmlSerializable</code></strong>（第 150-171 行）：重写基类的 ReadXml 反序列化方法。同样区分是否包含 Schema 的序列化模式。</p>
+<p><strong><code>GetSchemaSerializable</code></strong>（第 175-180 行）：通过 <code>MemoryStream</code> 将当前 Schema 写入并返回 <code>XmlSchema</code> 对象。</p>
+<p><strong><code>GetTypedDataSetSchema</code></strong>（第 227-270 行）：静态方法，用于生成描述 DataSet Schema 的 <code>XmlSchemaComplexType</code>。它包含一个关键的去重逻辑（第 236-267 行）：检查传入的 <code>XmlSchemaSet</code> 中是否已包含目标 Namespace 的 Schema，如果已存在且内容完全一致，则直接返回，避免重复添加。内容比对通过逐字节比较两个 MemoryStream 实现（第 246-253 行）。这种幂等性设计对 XML Schema 集的管理很重要。</p>
+<h4>3.3 行变更事件体系</h4>
+<p>通过委托和事件提供行变更通知（第 273 行、第 493-502 行）：</p>
+<pre><code>PosTerminalCapacityAlertListRowChangeEventHandler
+  → 公开事件（4个）：
+    - PosTerminalCapacityAlertListRowChanging   (第 493 行)
+    - PosTerminalCapacityAlertListRowChanged    (第 496 行)
+    - PosTerminalCapacityAlertListRowDeleting   (第 499 行)
+    - PosTerminalCapacityAlertListRowDeleted    (第 502 行)
+</code></pre>
+<p>对应的触发方法（第 657-689 行）通过重写 <code>OnRowChanged</code> / <code>OnRowChanging</code> / <code>OnRowDeleted</code> / <code>OnRowDeleting</code> 来广播事件，并封装 <code>PosTerminalCapacityAlertListRowChangeEvent</code>（第 1165-1193 行）作为事件参数。</p>
+<h4>3.4 TableAdapter：SQL 数据访问</h4>
+<p><strong><code>PosTerminalCapacityAlertListTableAdapter</code></strong>（第 1208-1406 行）封装了对存储过程 <code>dbo.usp_GetPosTerminalCapacityAlertList</code> 的调用。</p>
+<p><strong>连接初始化</strong>（第 1341-1344 行）：</p>
+<pre><code class="language-csharp">this._connection.ConnectionString = global::ForYouApplications.POS4U.Background.Data.Container.Properties.Settings.Default.POS4U_Trial_TranConnectionString;
+</code></pre>
+<p>连接字符串来自 <code>Settings</code> 文件中的 <code>POS4U_Trial_TranConnectionString</code> 配置项。<strong>需要结合其他文件确认</strong>该连接字符串在 Settings.settings 中的具体定义。</p>
+<p><strong>命令集合初始化</strong>（第 1348-1357 行）：
+- 唯一的命令（索引 0）设置为存储过程 <code>dbo.usp_GetPosTerminalCapacityAlertList</code>。
+- 定义三个参数：
+  - <code>@RETURN_VALUE</code>（Direction=ReturnValue，Int 类型）
+  - <code>@CompanyCode</code>（Direction=Input，NVarChar(10)）
+  - <code>@StoreCodeCommon</code>（Direction=Input，NVarChar(10)）</p>
+<p><strong>Column Mappings</strong>（第 1317-1336 行）：将存储过程返回的列名映射到 DataTable 的列名（全部同名映射，如 <code>"CompanyCode" → "CompanyCode"</code>）。</p>
+<p><strong><code>Fill</code> 方法</strong>（第 1363-1382 行）：
+1. 将 <code>CommandCollection[0]</code>（存储过程命令）设为 <code>Adapter.SelectCommand</code>。
+2. 处理 <code>CompanyCode</code> 和 <code>StoreCodeCommon</code> 参数的空值——如果为 null，则传入 <code>DBNull.Value</code>。
+3. 根据 <code>ClearBeforeFill</code> 属性（默认 true，第 1223 行、第 1304 行）决定是否先清空 DataTable。
+4. 调用 <code>Adapter.Fill(dataTable)</code> 执行 SQL 查询并填充 DataTable。
+5. 返回受影响的行数（<code>int</code> 类型返回值）。</p>
+<p><strong><code>GetData</code> 方法</strong>（第 1388-1405 行）：与 <code>Fill</code> 逻辑相同，但创建一个新的 <code>PosTerminalCapacityAlertListDataTable</code> 实例并返回它，而不是填充传入的实例。</p>
+<h4>3.5 TableAdapterManager</h4>
+<p><strong><code>UpdateAll</code></strong>（第 1530-1636 行）实现层次化更新（Hierarchical Update）：
+1. 参数校验：检查 dataSet 是否为 null，以及是否有变更。
+2. 事务管理：获取连接，开启事务（第 1551 行）。
+3. 根据 <code>UpdateOrder</code> 属性决定更新顺序（<code>InsertUpdateDelete</code> 或 <code>UpdateInsertDelete</code>，第 1571-1579 行）。
+4. 错误处理：如果更新过程中抛出异常，执行回滚（第 1602 行）。如果启用了 <code>BackupDataSetBeforeUpdate</code>，则先备份 DataSet，回滚后恢复原状态（第 1604-1608 行）。
+5. 最终确保连接关闭（第 1623-1625 行）和 <code>AcceptChangesDuringUpdate</code> 恢复（第 1626-1632 行）。</p>
+<p>需要注意的是，本文件中 <code>TableAdapterManager</code> 实际上并未集成任何具体的 TableAdapter 实例（<code>TableAdapterInstanceCount</code> 返回 0，第 1464-1469 行），<code>UpdateUpdatedRows</code> 等核心方法均返回 0（第 1476-1478 行、第 1486-1488 行、第 1496-1498 行）。这意味着 <strong>它只提供了框架骨架，没有被实际初始化为可用状态</strong>，需要结合其他文件确认是否有单独的配置或部分类对其进行扩展。这是一个重要发现。</p>
+<p><strong><code>SelfReferenceComparer</code></strong>（第 1675-1765 行）：私有嵌套类，用于排序自引用表中的行。通过 <code>GetRoot</code>（第 1695-1730 行）追溯每行的根父行，计算层级距离，然后进行比较。它对自引用关系（如父子层级）的排序至关重要，但本 DataSet 中并没有定义自引用关系，因此当前 batch 中它不会被实际使用。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<h4>4.1 PosTerminalCapacityDataSet (class)</h4>
+<ul>
+<li><strong>位置</strong>: 第 25-1194 行</li>
+<li><strong>输入（构造函数）</strong>:</li>
+<li>无参构造函数（第 33 行）</li>
+<li>序列化构造函数接受 <code>SerializationInfo</code> 和 <code>StreamingContext</code>（第 44 行）</li>
+<li><strong>输出</strong>: <code>PosTerminalCapacityDataSet</code> 实例</li>
+<li><strong>副作用</strong>: 构造时创建 DataTable 并注册 SchemaChanged 事件</li>
+<li><strong>调用关系</strong>:</li>
+<li>被 <code>PosTerminalCapacityAlertListTableAdapter.GetData</code> 隐式使用（内部创建 DataTable）</li>
+<li>被 <code>TableAdapterManager.UpdateAll</code> 作为参数接收</li>
+<li>被 <code>GetTypedDataSetSchema</code> 和 <code>GetTypedTableSchema</code> 的静态方法创建临时实例</li>
+<li><strong>边界情况</strong>: </li>
+<li>序列化路径区分二进制和 XML Schema 模式（第 46-76 行）</li>
+<li>Schema 变更时重新初始化变量（第 219-223 行）</li>
+<li><strong>可能的坑</strong>: <code>SchemaSerializationMode</code> 默认为 <code>IncludeSchema</code>（第 29 行），如果远程调用方使用不同的序列化设置可能导致反序列化失败</li>
+</ul>
+<h4>4.2 PosTerminalCapacityAlertListDataTable (class)</h4>
+<ul>
+<li><strong>位置</strong>: 第 280-759 行</li>
+<li><strong>输入（构造函数）</strong>:</li>
+<li>无参（第 316 行）</li>
+<li>从已有 DataTable 构造的 internal 构造函数（第 325 行）</li>
+<li>序列化构造函数（第 342 行）</li>
+<li><strong>输出</strong>: <code>PosTerminalCapacityAlertListDataTable</code> 实例</li>
+<li><strong>副作用</strong>: <code>InitClass</code>（第 589-635 行）中设置 16 个 DataColumn 并添加约束</li>
+<li><strong>调用关系</strong>: </li>
+<li>通过 <code>AddPosTerminalCapacityAlertListRow</code>（第 512-550 行）添加新行</li>
+<li>通过 <code>RemovePosTerminalCapacityAlertListRow</code>（第 693-695 行）移除行</li>
+<li>被 <code>Fill</code> / <code>GetData</code> 填充</li>
+<li><strong>关键的列约束</strong>（第 622-634 行）:</li>
+<li><code>CompanyCode</code>: AllowDBNull=false, MaxLength=10</li>
+<li><code>StoreCode</code>: AllowDBNull=false, MaxLength=10</li>
+<li><code>TerminalNo</code>: AllowDBNull=false</li>
+<li><code>NodeType</code>: AllowDBNull=false, MaxLength=2</li>
+<li>6 个测量列（AvaiableSpaceInC 等）: ReadOnly=true，表示这些值由查询计算得出，不应被手动修改</li>
+<li><strong>可能的坑</strong>: </li>
+<li>代码中拼写错误 <code>AvaiableSpaceInC</code> / <code>AvaiableSpaceInD</code> 应为 <code>AvailableSpaceInC</code> / <code>AvailableSpaceInD</code>（缺少字母 l），这是命名缺陷，但贯穿整个文件一致性使用，不影响运行时行为</li>
+</ul>
+<h4>4.3 PosTerminalCapacityAlertListRow (class)</h4>
+<ul>
+<li><strong>位置</strong>: 第 764-1159 行</li>
+<li><strong>输入</strong>: <code>DataRowBuilder</code>（通过 internal 构造函数，第 770 行）</li>
+<li><strong>输出</strong>: 提供类型安全的属性访问和 DBNull 检查</li>
+<li><strong>关键设计</strong>: </li>
+<li>非空列（CompanyCode, StoreCode, TerminalNo, NodeType）的属性直接返回强制类型转换值（<code>((string)(this[...]))</code>），没有 null 保护</li>
+<li>可为空列（6 个容量测量值和 6 个阈值列）的 getter 则包含 <code>try-catch</code> 块（例如第 823-828 行），如果值为 DBNull 则抛 <code>StrongTypingException</code>，异常信息是日语</li>
+<li>每个可为空列都有一对 <code>IsXxxNull()</code> 和 <code>SetXxxNull()</code> 方法（如第 1018-1026 行），允许调用者安全地检查和设置 DBNull</li>
+<li><strong>可能的坑</strong>: 如果不先通过 <code>IsXxxNull()</code> 检查就直接读取可为空列，会抛出 <code>StrongTypingException</code> 而非返回 <code>null</code>，调用方需要处理这个异常</li>
+</ul>
+<h4>4.4 PosTerminalCapacityAlertListTableAdapter (class)</h4>
+<ul>
+<li><strong>位置</strong>: 第 1208-1406 行</li>
+<li><strong>输入</strong>: <code>Fill(DataTable, string CompanyCode, string StoreCodeCommon)</code> 或 <code>GetData(string CompanyCode, string StoreCodeCommon)</code></li>
+<li><strong>输出</strong>: 填充后的 DataTable（<code>Fill</code> 返回 <code>int</code> 行数，<code>GetData</code> 返回 <code>DataTable</code>）</li>
+<li><strong>副作用</strong>: 执行 SQL 查询，修改 DataTable 内容</li>
+<li><strong>调用关系</strong>: </li>
+<li>调用存储过程 <code>dbo.usp_GetPosTerminalCapacityAlertList</code></li>
+<li>读取 <code>Settings.Default.POS4U_Trial_TranConnectionString</code> 作为连接字符串</li>
+<li><strong>边界情况</strong>:</li>
+<li><code>CompanyCode</code> 或 <code>StoreCodeCommon</code> 为 null 时传入 <code>DBNull.Value</code>（第 1365-1376 行、第 1390-1401 行）</li>
+<li><code>ClearBeforeFill</code> 为 true 时先清空 DataTable 再填充（第 1377-1379 行）</li>
+<li><strong>可能的坑</strong>: 没有对存储过程执行失败的异常处理，调用方需要自己处理 <code>SqlException</code></li>
+</ul>
+<h4>4.5 TableAdapterManager (class)</h4>
+<ul>
+<li><strong>位置</strong>: 第 1416-1766 行</li>
+<li><strong>输入</strong>: <code>UpdateAll(PosTerminalCapacityDataSet dataSet)</code></li>
+<li><strong>输出</strong>: <code>int</code> 表示受影响行数</li>
+<li><strong>副作用</strong>: 开启数据库事务，执行更新，提交或回滚</li>
+<li><strong>重要发现</strong>: 该类的 <code>TableAdapterInstanceCount</code> 返回 0（第 1464-1469 行），核心更新方法都返回 0。这意味着该类当前处于<strong>骨架状态</strong>，没有绑定的 TableAdapter。需要结合其他文件确认是否有部分类或配置使其具备实际功能。</li>
+</ul>
+<h3>5. 依赖关系</h3>
+<table>
+<thead>
+<tr>
+<th>依赖</th>
+<th>位置</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>System.Data.DataSet</code> (基类)</td>
+<td>第 25 行</td>
+<td>强类型 DataSet 的基类</td>
+</tr>
+<tr>
+<td><code>System.Data.TypedTableBase&lt;T&gt;</code></td>
+<td>第 280 行</td>
+<td>强类型 DataTable 的基类</td>
+</tr>
+<tr>
+<td><code>System.Data.DataRow</code></td>
+<td>第 764 行</td>
+<td>强类型 DataRow 的基类</td>
+</tr>
+<tr>
+<td><code>System.Data.SqlClient</code> 系列</td>
+<td>第 1210-1216 行</td>
+<td>SQL Server 数据访问（SqlDataAdapter, SqlConnection, SqlCommand, SqlTransaction）</td>
+</tr>
+<tr>
+<td><code>Properties.Settings.Default.POS4U_Trial_TranConnectionString</code></td>
+<td>第 1343 行</td>
+<td>数据库连接字符串配置</td>
+</tr>
+<tr>
+<td>存储过程 <code>dbo.usp_GetPosTerminalCapacityAlertList</code></td>
+<td>第 1352 行</td>
+<td>实际获取终端容量告警数据的 SQL 查询</td>
+</tr>
+<tr>
+<td><code>System.Runtime.Serialization.SerializationInfo</code> / <code>StreamingContext</code></td>
+<td>第 44 行</td>
+<td>序列化反序列化支持</td>
+</tr>
+<tr>
+<td><code>System.Xml.Schema</code> / <code>System.Xml</code></td>
+<td>多个位置</td>
+<td>XML Schema 序列化/反序列化</td>
+</tr>
+</tbody>
+</table>
+<p><strong>需要结合其他文件确认</strong>：
+- <code>Properties.Settings.Default.POS4U_Trial_TranConnectionString</code> 的具体连接字符串
+- 存储过程 <code>dbo.usp_GetPosTerminalCapacityAlertList</code> 的 SQL 定义
+- <code>PosTerminalCapacityDataSet.xsd</code>（对应的 XSD Schema 文件）
+- 该 DataSet 的消费者（哪些后台服务类使用这些 TableAdapter 执行数据查询）</p>
+<h3>6. 错误处理与边界情况</h3>
+<h4>6.1 PosTerminalCapacityAlertListRow 的 DBNull 处理</h4>
+<p>对于 6 个可空的容量测量列和 6 个阈值列，getter 使用 try-catch 将 <code>InvalidCastException</code>（由访问 DBNull 值引发）包装为 <code>StrongTypingException</code>（第 823-828 行、第 839-844 行等，共 12 处）。异常信息为日语，例如：</p>
+<blockquote>
+<p><code>"テーブル 'PosTerminalCapacityAlertList' にある列 'AvaiableSpaceInC' の値は DBNull です。"</code></p>
+</blockquote>
+<p><strong>这不是生产友好的用户界面</strong>，但这是自动生成代码的标准行为，调用方应通过 <code>IsXxxNull()</code> 方法提前检查。</p>
+<h4>6.2 TableAdapter Fill/GetData 的空参数处理</h4>
+<p><code>CompanyCode</code> 和 <code>StoreCodeCommon</code> 参数为 null 时，自动设置为 <code>DBNull.Value</code>（第 1365-1376 行），这保证了对 SQL Server 存储过程的正确调用。</p>
+<h4>6.3 TableAdapterManager.UpdateAll 的错误处理</h4>
+<ul>
+<li>参数空值检查（第 1531-1533 行）：<code>dataSet == null</code> 抛出 <code>ArgumentNullException</code></li>
+<li>连接缺失检查（第 1538-1540 行）：抛出 <code>ApplicationException</code></li>
+<li>事务启动失败（第 1552-1553 行）：抛出 <code>ApplicationException</code></li>
+<li>异常时回滚（第 1601-1620 行）：catch 块中执行 <code>workTransaction.Rollback()</code>，如果启用了备份则恢复 DataSet 数据；最后 <code>throw ex</code> 重新抛出异常</li>
+<li>finally 块（第 1622-1634 行）：关闭连接，恢复 <code>AcceptChangesDuringUpdate</code> 设置</li>
+</ul>
+<h4>6.4 当前文件没有显式错误处理的部分</h4>
+<ul>
+<li><strong>TableAdapter 层面没有 SQL 异常处理</strong>：<code>Fill</code> 和 <code>GetData</code> 中的 <code>Adapter.Fill()</code> 可能抛出 <code>SqlException</code>，但调用方需要自己处理。</li>
+<li><strong>没有日志记录</strong>：当前文件没有任何日志或跟踪语句。</li>
+</ul>
+<h3>7. 测试相关</h3>
+<h4>7.1 当前输入中是否包含对应测试</h4>
+<p>当前 batch 只包含该 <code>.Designer.cs</code> 文件本身，没有包含对应的测试文件。</p>
+<h4>7.2 测试建议</h4>
+<p>鉴于该文件是自动生成的强类型 DataSet，建议：</p>
+<ol>
+<li><strong>集成测试（高优先级）</strong>：</li>
+<li>测试 <code>PosTerminalCapacityAlertListTableAdapter.Fill()</code> 在真实或模拟数据库上执行存储过程，验证返回的数据结构是否正确（16 列，类型、长度、空约束符合定义）。</li>
+<li>
+<p>测试空参数传入时存储过程仍能正常执行（<code>CompanyCode</code> 和 <code>StoreCodeCommon</code> 为 null）。</p>
+</li>
+<li>
+<p><strong>行访问测试</strong>：</p>
+</li>
+<li>验证填充数据后，通过强类型属性（如 <code>row.CompanyCode</code>、<code>row.AvaiableSpaceInC</code>）能正确读取值。</li>
+<li>
+<p>验证可为空列的 IsNull/SetNull 行为。</p>
+</li>
+<li>
+<p><strong>序列化/反序列化测试</strong>：</p>
+</li>
+<li>测试 <code>Clone()</code> 是否返回完整副本。</li>
+<li>测试 XML 序列化再反序列化后数据不丢失。</li>
+<li>
+<p>测试 <code>GetTypedDataSetSchema</code> 的幂等性（重复调用 <code>XmlSchemaSet</code> 不会抛出异常）。</p>
+</li>
+<li>
+<p><strong>TableAdapterManager 测试</strong>（低优先级）：</p>
+</li>
+<li>确认当前是否被实际使用——因为 <code>TableAdapterInstanceCount</code> 返回 0，UpdateAll 可能不工作。</li>
+</ol>
+<h3>8. 新人阅读建议</h3>
+<ol>
+<li>
+<p><strong>先了解 Typed DataSet 的用途</strong>：本文件不包含业务逻辑，它只是将 SQL Server 的存储过程结果包装为类型安全的 .NET 对象。理解这一点比逐行阅读更关键。</p>
+</li>
+<li>
+<p><strong>读核心数据结构</strong>（第 589-635 行）：先看 <code>InitClass()</code> 中的列定义，了解这个 DataSet 包含什么字段及其约束。这决定了业务代码可以访问的数据范围。注意 <code>ReadOnly=true</code> 和 <code>MaxLength</code> 约束提示了某些列是计算列（磁盘容量）而非用户输入。</p>
+</li>
+<li>
+<p><strong>读数据访问层</strong>（第 1348-1405 行）：看 <code>InitCommandCollection</code> 和 <code>Fill</code>/<code>GetData</code> 方法，理解数据从哪里来（存储过程 <code>dbo.usp_GetPosTerminalCapacityAlertList</code>），需要什么参数（<code>CompanyCode</code>、<code>StoreCodeCommon</code>）。</p>
+</li>
+<li>
+<p><strong>了解 Typed DataSet 常规模式</strong>即可往下阅读：序列化、克隆、事件体系等是 .NET Typed DataSet 代码生成器的标准模板，不同 DataSet 之间的差异不大。新人不必深究每个字节比较细节（第 246-253 行）。</p>
+</li>
+<li>
+<p><strong>注意架构上下文</strong>：本文件属于 <code>Background.Data.BackgroundContainer</code> 命名空间，暗示它被 POS4U 后台服务用于监控终端容量并可能触发告警。理解这一点可以帮你把文件放入整个项目的业务图景中。</p>
+</li>
+<li>
+<p><strong>认识表中数据的业务含义</strong>：该表同时包含"实际值"（<code>AvaiableSpaceInC</code> 等）和"阈值"（<code>ThresholdAvaiableSpaceInC</code> 等），暗示消费方代码可能会比较实际值和阈值来判断是否需要发出容量告警。</p>
+</li>
+</ol>
+<h3>9. 不确定点</h3>
+<ol>
+<li>
+<p><strong>存储过程定义未知</strong>：<code>dbo.usp_GetPosTerminalCapacityAlertList</code> 的 SQL 定义未知，需要结合数据库脚本来确认其查询逻辑、参数处理和 JOIN 关系。</p>
+</li>
+<li>
+<p><strong>连接字符串来源未知</strong>：<code>Settings.Default.POS4U_Trial_TranConnectionString</code> 在 Settings.settings 或 app.config 中的具体值未知。</p>
+</li>
+<li>
+<p><strong>TableAdapterManager 是否被实际使用</strong>：<code>TableAdapterInstanceCount</code> 返回 0，但可能通过部分类（partial class）在其他文件中扩展。需要检查是否有 <code>TableAdapterManager</code> 的扩展类或是否存在对应的 <code>.xsd</code> 文件中的配置。</p>
+</li>
+<li>
+<p><strong>DataSet 的消费者未知</strong>：当前 batch 不包含使用该 DataSet 或 TableAdapter 的业务服务类，无法确定谁调用 <code>Fill</code>/<code>GetData</code>、以及告警逻辑如何实现。</p>
+</li>
+<li>
+<p><strong>表结构中 "ReadOnly=true" 列的数据流</strong>：6 个测量值和 6 个阈值被标记为 ReadOnly，说明它们是由存储过程计算或从其他表获取的。需要结合存储过程确认具体的数据来源。</p>
+</li>
+<li>
+<p><strong><code>NodeType</code> 列可能的值</strong>：MaxLength=2 提示该列存储长度最多 2 个字符的编码，但其业务含义（节点类型是物理 POS 终端还是逻辑节点）需要结合业务文档确认。</p>
+</li>
+<li>
+<p><strong>列名拼写错误 <code>AvaiableSpaceInC/D</code></strong>：确认拼写错误是否会与存储过程的返回列名不匹配——ColumnMappings（第 1324-1325 行）是同名映射，如果存储过程使用正确拼写（<code>AvailableSpaceInC</code>）会导致映射失败。需要结合存储过程确认。</p>
+</li>
+<li>
+<p><strong>XSD Schema 文件</strong>：应该存在配套的 <code>.xsd</code> 文件（如 <code>PosTerminalCapacityDataSet.xsd</code>）定义了 DataSet 的 XML Schema，当前 batch 未包含。</p>
+</li>
+<li>
+<p><strong>继承链中可能存在的扩展</strong>：所有类都是 <code>partial class</code>（第 25 行、第 280 行、第 764 行等），可能存在其他文件为其添加业务逻辑方法。需要检查项目中是否有同名的 <code>.cs</code> 非 Designer 文件。</p>
+</li>
+<li>
+<p><strong><code>#pragma warning disable 1591</code></strong>（第 11 行）和恢复（第 1769 行）说明项目可能在编译时开启了 XML 文档警告，而这个自动生成文件没有提供完整的 XML 文档注释。这不是问题，但说明项目的代码分析策略。</p>
+</li>
+</ol>
+<hr />
+<h2>本批覆盖确认</h2>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>覆盖状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Source/POS4UBackground/Data/Background.Data.BackgroundContainer/PosTerminalCapacityDataSet.Designer.cs</code></td>
+<td>已详细讲解</td>
+<td>覆盖了 DataSet、DataTable、DataRow、TableAdapter、TableAdapterManager 全部 5 个类及其方法和属性，包括序列化、事件体系、DBNull 处理、列约束等细节。指出了拼写错误、TableAdapterManager 骨架状态等关键发现。列出了 10 项需要结合其他文件确认的不确定点。</td>
+</tr>
+</tbody>
+</table></div></div><button class="expand-btn">Show more</button></div></div>
+</div></div>
+        
+
+<div class="pagination">
+<span class="current">Index</span>
+<span class="disabled">&larr; Prev</span>
+<a href="page-001.html">1</a>
+<a href="page-001.html">Next &rarr;</a>
+</div>
+
+
+        <dialog id="search-modal">
+            <div class="search-modal-header">
+                <input type="text" id="modal-search-input" placeholder="Search..." aria-label="Search transcripts">
+                <button id="modal-search-btn" type="button" aria-label="Search">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+                </button>
+                <button id="modal-close-btn" type="button" aria-label="Close">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+                </button>
+            </div>
+            <div id="search-status"></div>
+            <div id="search-results"></div>
+        </dialog>
+        <script>
+(function() {
+    var totalPages = 1;
+    var searchBox = document.getElementById('search-box');
+    var searchInput = document.getElementById('search-input');
+    var searchBtn = document.getElementById('search-btn');
+    var modal = document.getElementById('search-modal');
+    var modalInput = document.getElementById('modal-search-input');
+    var modalSearchBtn = document.getElementById('modal-search-btn');
+    var modalCloseBtn = document.getElementById('modal-close-btn');
+    var searchStatus = document.getElementById('search-status');
+    var searchResults = document.getElementById('search-results');
+
+    if (!searchBox || !modal) return;
+
+    // Hide search on file:// protocol (doesn't work due to CORS restrictions)
+    if (window.location.protocol === 'file:') return;
+
+    // Show search box (progressive enhancement)
+    searchBox.style.display = 'flex';
+
+    // Gist preview support - detect if we're on gisthost.github.io or gistpreview.github.io
+    var hostname = window.location.hostname;
+    var isGistPreview = hostname === 'gisthost.github.io' || hostname === 'gistpreview.github.io';
+    var gistId = null;
+    var gistOwner = null;
+    var gistInfoLoaded = false;
+
+    if (isGistPreview) {
+        // Extract gist ID from URL query string like ?78a436a8a9e7a2e603738b8193b95410/index.html
+        var queryMatch = window.location.search.match(/^\?([a-f0-9]+)/i);
+        if (queryMatch) {
+            gistId = queryMatch[1];
+        }
+    }
+
+    async function loadGistInfo() {
+        if (!isGistPreview || !gistId || gistInfoLoaded) return;
+        try {
+            var response = await fetch('https://api.github.com/gists/' + gistId);
+            if (response.ok) {
+                var info = await response.json();
+                gistOwner = info.owner.login;
+                gistInfoLoaded = true;
+            }
+        } catch (e) {
+            console.error('Failed to load gist info:', e);
+        }
+    }
+
+    function getPageFetchUrl(pageFile) {
+        if (isGistPreview && gistOwner && gistId) {
+            // Use raw gist URL for fetching content
+            return 'https://gist.githubusercontent.com/' + gistOwner + '/' + gistId + '/raw/' + pageFile;
+        }
+        return pageFile;
+    }
+
+    function getPageLinkUrl(pageFile) {
+        if (isGistPreview && gistId) {
+            // Use gistpreview URL format for navigation links
+            return '?' + gistId + '/' + pageFile;
+        }
+        return pageFile;
+    }
+
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function escapeRegex(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function openModal(query) {
+        modalInput.value = query || '';
+        searchResults.innerHTML = '';
+        searchStatus.textContent = '';
+        modal.showModal();
+        modalInput.focus();
+        if (query) {
+            performSearch(query);
+        }
+    }
+
+    function closeModal() {
+        modal.close();
+        // Update URL to remove search fragment, preserving path and query string
+        if (window.location.hash.startsWith('#search=')) {
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+    }
+
+    function updateUrlHash(query) {
+        if (query) {
+            // Preserve path and query string when adding hash
+            history.replaceState(null, '', window.location.pathname + window.location.search + '#search=' + encodeURIComponent(query));
+        }
+    }
+
+    function highlightTextNodes(element, searchTerm) {
+        var walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
+        var nodesToReplace = [];
+
+        while (walker.nextNode()) {
+            var node = walker.currentNode;
+            if (node.nodeValue.toLowerCase().indexOf(searchTerm.toLowerCase()) !== -1) {
+                nodesToReplace.push(node);
+            }
+        }
+
+        nodesToReplace.forEach(function(node) {
+            var text = node.nodeValue;
+            var regex = new RegExp('(' + escapeRegex(searchTerm) + ')', 'gi');
+            var parts = text.split(regex);
+            if (parts.length > 1) {
+                var span = document.createElement('span');
+                parts.forEach(function(part) {
+                    if (part.toLowerCase() === searchTerm.toLowerCase()) {
+                        var mark = document.createElement('mark');
+                        mark.textContent = part;
+                        span.appendChild(mark);
+                    } else {
+                        span.appendChild(document.createTextNode(part));
+                    }
+                });
+                node.parentNode.replaceChild(span, node);
+            }
+        });
+    }
+
+    function fixInternalLinks(element, pageFile) {
+        // Update all internal anchor links to include the page file
+        var links = element.querySelectorAll('a[href^="#"]');
+        links.forEach(function(link) {
+            var href = link.getAttribute('href');
+            link.setAttribute('href', pageFile + href);
+        });
+    }
+
+    function processPage(pageFile, html, query) {
+        var parser = new DOMParser();
+        var doc = parser.parseFromString(html, 'text/html');
+        var resultsFromPage = 0;
+
+        // Find all message blocks
+        var messages = doc.querySelectorAll('.message');
+        messages.forEach(function(msg) {
+            var text = msg.textContent || '';
+            if (text.toLowerCase().indexOf(query.toLowerCase()) !== -1) {
+                resultsFromPage++;
+
+                // Get the message ID for linking
+                var msgId = msg.id || '';
+                var pageLinkUrl = getPageLinkUrl(pageFile);
+                var link = pageLinkUrl + (msgId ? '#' + msgId : '');
+
+                // Clone the message HTML and highlight matches
+                var clone = msg.cloneNode(true);
+                // Fix internal links to include the page file
+                fixInternalLinks(clone, pageLinkUrl);
+                highlightTextNodes(clone, query);
+
+                var resultDiv = document.createElement('div');
+                resultDiv.className = 'search-result';
+                resultDiv.innerHTML = '<a href="' + link + '">' +
+                    '<div class="search-result-page">' + escapeHtml(pageFile) + '</div>' +
+                    '<div class="search-result-content">' + clone.innerHTML + '</div>' +
+                    '</a>';
+                searchResults.appendChild(resultDiv);
+            }
+        });
+
+        return resultsFromPage;
+    }
+
+    async function performSearch(query) {
+        if (!query.trim()) {
+            searchStatus.textContent = 'Enter a search term';
+            return;
+        }
+
+        updateUrlHash(query);
+        searchResults.innerHTML = '';
+        searchStatus.textContent = 'Searching...';
+
+        // Load gist info if on gistpreview (needed for constructing URLs)
+        if (isGistPreview && !gistInfoLoaded) {
+            searchStatus.textContent = 'Loading gist info...';
+            await loadGistInfo();
+            if (!gistOwner) {
+                searchStatus.textContent = 'Failed to load gist info. Search unavailable.';
+                return;
+            }
+        }
+
+        var resultsFound = 0;
+        var pagesSearched = 0;
+
+        // Build list of pages to fetch
+        var pagesToFetch = [];
+        for (var i = 1; i <= totalPages; i++) {
+            pagesToFetch.push('page-' + String(i).padStart(3, '0') + '.html');
+        }
+
+        searchStatus.textContent = 'Searching...';
+
+        // Process pages in batches of 3, but show results immediately as each completes
+        var batchSize = 3;
+        for (var i = 0; i < pagesToFetch.length; i += batchSize) {
+            var batch = pagesToFetch.slice(i, i + batchSize);
+
+            // Create promises that process results immediately when each fetch completes
+            var promises = batch.map(function(pageFile) {
+                return fetch(getPageFetchUrl(pageFile))
+                    .then(function(response) {
+                        if (!response.ok) throw new Error('Failed to fetch');
+                        return response.text();
+                    })
+                    .then(function(html) {
+                        // Process and display results immediately
+                        var count = processPage(pageFile, html, query);
+                        resultsFound += count;
+                        pagesSearched++;
+                        searchStatus.textContent = 'Found ' + resultsFound + ' result(s) in ' + pagesSearched + '/' + totalPages + ' pages...';
+                    })
+                    .catch(function() {
+                        pagesSearched++;
+                        searchStatus.textContent = 'Found ' + resultsFound + ' result(s) in ' + pagesSearched + '/' + totalPages + ' pages...';
+                    });
+            });
+
+            // Wait for this batch to complete before starting the next
+            await Promise.all(promises);
+        }
+
+        searchStatus.textContent = 'Found ' + resultsFound + ' result(s) in ' + totalPages + ' pages';
+    }
+
+    // Event listeners
+    searchBtn.addEventListener('click', function() {
+        openModal(searchInput.value);
+    });
+
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            openModal(searchInput.value);
+        }
+    });
+
+    modalSearchBtn.addEventListener('click', function() {
+        performSearch(modalInput.value);
+    });
+
+    modalInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            performSearch(modalInput.value);
+        }
+    });
+
+    modalCloseBtn.addEventListener('click', closeModal);
+
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+
+    // Check for #search= in URL on page load
+    if (window.location.hash.startsWith('#search=')) {
+        var query = decodeURIComponent(window.location.hash.substring(8));
+        if (query) {
+            searchInput.value = query;
+            openModal(query);
+        }
+    }
+})();
+        </script>
+    </div>
+    <script>
+document.querySelectorAll('time[data-timestamp]').forEach(function(el) {
+    const timestamp = el.getAttribute('data-timestamp');
+    const date = new Date(timestamp);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    if (isToday) { el.textContent = timeStr; }
+    else { el.textContent = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + timeStr; }
+});
+document.querySelectorAll('pre.json').forEach(function(el) {
+    let text = el.textContent;
+    text = text.replace(/"([^"]+)":/g, '<span style="color: #ce93d8">"$1"</span>:');
+    text = text.replace(/: "([^"]*)"/g, ': <span style="color: #81d4fa">"$1"</span>');
+    text = text.replace(/: (\d+)/g, ': <span style="color: #ffcc80">$1</span>');
+    text = text.replace(/: (true|false|null)/g, ': <span style="color: #f48fb1">$1</span>');
+    el.innerHTML = text;
+});
+document.querySelectorAll('.truncatable').forEach(function(wrapper) {
+    const content = wrapper.querySelector('.truncatable-content');
+    const btn = wrapper.querySelector('.expand-btn');
+    if (content.scrollHeight > 250) {
+        wrapper.classList.add('truncated');
+        btn.addEventListener('click', function() {
+            if (wrapper.classList.contains('truncated')) { wrapper.classList.remove('truncated'); wrapper.classList.add('expanded'); btn.textContent = 'Show less'; }
+            else { wrapper.classList.remove('expanded'); wrapper.classList.add('truncated'); btn.textContent = 'Show more'; }
+        });
+    }
+});
+</script>
+</body>
+</html>

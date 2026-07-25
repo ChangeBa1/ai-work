@@ -1,0 +1,4741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code transcript - page 1</title>
+    <style>
+:root { --bg-color: #f5f5f5; --card-bg: #ffffff; --user-bg: #e3f2fd; --user-border: #1976d2; --assistant-bg: #f5f5f5; --assistant-border: #9e9e9e; --thinking-bg: #fff8e1; --thinking-border: #ffc107; --thinking-text: #666; --tool-bg: #f3e5f5; --tool-border: #9c27b0; --tool-result-bg: #e8f5e9; --tool-error-bg: #ffebee; --text-color: #212121; --text-muted: #757575; --code-bg: #263238; --code-text: #aed581; }
+* { box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 16px; line-height: 1.6; }
+.container { max-width: 800px; margin: 0 auto; }
+h1 { font-size: 1.5rem; margin-bottom: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--user-border); }
+.header-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 2px solid var(--user-border); padding-bottom: 8px; margin-bottom: 24px; }
+.header-row h1 { border-bottom: none; padding-bottom: 0; margin-bottom: 0; flex: 1; min-width: 200px; }
+.message { margin-bottom: 16px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.message.user { background: var(--user-bg); border-left: 4px solid var(--user-border); }
+.message.assistant { background: var(--card-bg); border-left: 4px solid var(--assistant-border); }
+.message.tool-reply { background: #fff8e1; border-left: 4px solid #ff9800; }
+.tool-reply .role-label { color: #e65100; }
+.tool-reply .tool-result { background: transparent; padding: 0; margin: 0; }
+.tool-reply .tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff8e1); }
+.message-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: rgba(0,0,0,0.03); font-size: 0.85rem; }
+.role-label { font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.user .role-label { color: var(--user-border); }
+time { color: var(--text-muted); font-size: 0.8rem; }
+.timestamp-link { color: inherit; text-decoration: none; }
+.timestamp-link:hover { text-decoration: underline; }
+.message:target { animation: highlight 2s ease-out; }
+@keyframes highlight { 0% { background-color: rgba(25, 118, 210, 0.2); } 100% { background-color: transparent; } }
+.message-content { padding: 16px; }
+.message-content p { margin: 0 0 12px 0; }
+.message-content p:last-child { margin-bottom: 0; }
+.thinking { background: var(--thinking-bg); border: 1px solid var(--thinking-border); border-radius: 8px; padding: 12px; margin: 12px 0; font-size: 0.9rem; color: var(--thinking-text); }
+.thinking-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #f57c00; margin-bottom: 8px; }
+.thinking p { margin: 8px 0; }
+.assistant-text { margin: 8px 0; }
+.tool-use { background: var(--tool-bg); border: 1px solid var(--tool-border); border-radius: 8px; padding: 12px; margin: 12px 0; }
+.tool-header { font-weight: 600; color: var(--tool-border); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.tool-icon { font-size: 1.1rem; }
+.tool-description { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 8px; font-style: italic; }
+.tool-result { background: var(--tool-result-bg); border-radius: 8px; padding: 12px; margin: 12px 0; }
+.tool-result.tool-error { background: var(--tool-error-bg); }
+.file-tool { border-radius: 8px; padding: 12px; margin: 12px 0; }
+.write-tool { background: linear-gradient(135deg, #e3f2fd 0%, #e8f5e9 100%); border: 1px solid #4caf50; }
+.edit-tool { background: linear-gradient(135deg, #fff3e0 0%, #fce4ec 100%); border: 1px solid #ff9800; }
+.file-tool-header { font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.write-header { color: #2e7d32; }
+.edit-header { color: #e65100; }
+.file-tool-icon { font-size: 1rem; }
+.file-tool-path { font-family: monospace; background: rgba(0,0,0,0.08); padding: 2px 8px; border-radius: 4px; }
+.file-tool-fullpath { font-family: monospace; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px; word-break: break-all; }
+.file-content { margin: 0; }
+.edit-section { display: flex; margin: 4px 0; border-radius: 4px; overflow: hidden; }
+.edit-label { padding: 8px 12px; font-weight: bold; font-family: monospace; display: flex; align-items: flex-start; }
+.edit-old { background: #fce4ec; }
+.edit-old .edit-label { color: #b71c1c; background: #f8bbd9; }
+.edit-old .edit-content { color: #880e4f; }
+.edit-new { background: #e8f5e9; }
+.edit-new .edit-label { color: #1b5e20; background: #a5d6a7; }
+.edit-new .edit-content { color: #1b5e20; }
+.edit-content { margin: 0; flex: 1; background: transparent; font-size: 0.85rem; }
+.edit-replace-all { font-size: 0.75rem; font-weight: normal; color: var(--text-muted); }
+.write-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #e6f4ea); }
+.edit-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff0e5); }
+.todo-list { background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); border: 1px solid #81c784; border-radius: 8px; padding: 12px; margin: 12px 0; }
+.todo-header { font-weight: 600; color: #2e7d32; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.todo-items { list-style: none; margin: 0; padding: 0; }
+.todo-item { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.06); font-size: 0.9rem; }
+.todo-item:last-child { border-bottom: none; }
+.todo-icon { flex-shrink: 0; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 50%; }
+.todo-completed .todo-icon { color: #2e7d32; background: rgba(46, 125, 50, 0.15); }
+.todo-completed .todo-content { color: #558b2f; text-decoration: line-through; }
+.todo-in-progress .todo-icon { color: #f57c00; background: rgba(245, 124, 0, 0.15); }
+.todo-in-progress .todo-content { color: #e65100; font-weight: 500; }
+.todo-pending .todo-icon { color: #757575; background: rgba(0,0,0,0.05); }
+.todo-pending .todo-content { color: #616161; }
+pre { background: var(--code-bg); color: var(--code-text); padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; line-height: 1.5; margin: 8px 0; white-space: pre-wrap; word-wrap: break-word; }
+pre.json { color: #e0e0e0; }
+code { background: rgba(0,0,0,0.08); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+pre code { background: none; padding: 0; }
+.user-content { margin: 0; }
+.truncatable { position: relative; }
+.truncatable.truncated .truncatable-content { max-height: 200px; overflow: hidden; }
+.truncatable.truncated::after { content: ''; position: absolute; bottom: 32px; left: 0; right: 0; height: 60px; background: linear-gradient(to bottom, transparent, var(--card-bg)); pointer-events: none; }
+.message.user .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--user-bg)); }
+.message.tool-reply .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff8e1); }
+.tool-use .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-bg)); }
+.tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-result-bg)); }
+.expand-btn { display: none; width: 100%; padding: 8px 16px; margin-top: 4px; background: rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; cursor: pointer; font-size: 0.85rem; color: var(--text-muted); }
+.expand-btn:hover { background: rgba(0,0,0,0.1); }
+.truncatable.truncated .expand-btn, .truncatable.expanded .expand-btn { display: block; }
+.pagination { display: flex; justify-content: center; gap: 8px; margin: 24px 0; flex-wrap: wrap; }
+.pagination a, .pagination span { padding: 5px 10px; border-radius: 6px; text-decoration: none; font-size: 0.85rem; }
+.pagination a { background: var(--card-bg); color: var(--user-border); border: 1px solid var(--user-border); }
+.pagination a:hover { background: var(--user-bg); }
+.pagination .current { background: var(--user-border); color: white; }
+.pagination .disabled { color: var(--text-muted); border: 1px solid #ddd; }
+.pagination .index-link { background: var(--user-border); color: white; }
+details.continuation { margin-bottom: 16px; }
+details.continuation summary { cursor: pointer; padding: 12px 16px; background: var(--user-bg); border-left: 4px solid var(--user-border); border-radius: 12px; font-weight: 500; color: var(--text-muted); }
+details.continuation summary:hover { background: rgba(25, 118, 210, 0.15); }
+details.continuation[open] summary { border-radius: 12px 12px 0 0; margin-bottom: 0; }
+.index-item { margin-bottom: 16px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); background: var(--user-bg); border-left: 4px solid var(--user-border); }
+.index-item a { display: block; text-decoration: none; color: inherit; }
+.index-item a:hover { background: rgba(25, 118, 210, 0.1); }
+.index-item-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: rgba(0,0,0,0.03); font-size: 0.85rem; }
+.index-item-number { font-weight: 600; color: var(--user-border); }
+.index-item-content { padding: 16px; }
+.index-item-stats { padding: 8px 16px 12px 32px; font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid rgba(0,0,0,0.06); }
+.index-item-commit { margin-top: 6px; padding: 4px 8px; background: #fff3e0; border-radius: 4px; font-size: 0.85rem; color: #e65100; }
+.index-item-commit code { background: rgba(0,0,0,0.08); padding: 1px 4px; border-radius: 3px; font-size: 0.8rem; margin-right: 6px; }
+.commit-card { margin: 8px 0; padding: 10px 14px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 6px; }
+.commit-card a { text-decoration: none; color: #5d4037; display: block; }
+.commit-card a:hover { color: #e65100; }
+.commit-card-hash { font-family: monospace; color: #e65100; font-weight: 600; margin-right: 8px; }
+.index-commit { margin-bottom: 12px; padding: 10px 16px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+.index-commit a { display: block; text-decoration: none; color: inherit; }
+.index-commit a:hover { background: rgba(255, 152, 0, 0.1); margin: -10px -16px; padding: 10px 16px; border-radius: 8px; }
+.index-commit-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; margin-bottom: 4px; }
+.index-commit-hash { font-family: monospace; color: #e65100; font-weight: 600; }
+.index-commit-msg { color: #5d4037; }
+.index-item-long-text { margin-top: 8px; padding: 12px; background: var(--card-bg); border-radius: 8px; border-left: 3px solid var(--assistant-border); }
+.index-item-long-text .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--card-bg)); }
+.index-item-long-text-content { color: var(--text-color); }
+#search-box { display: none; align-items: center; gap: 8px; }
+#search-box input { padding: 6px 12px; border: 1px solid var(--assistant-border); border-radius: 6px; font-size: 16px; width: 180px; }
+#search-box button, #modal-search-btn, #modal-close-btn { background: var(--user-border); color: white; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+#search-box button:hover, #modal-search-btn:hover { background: #1565c0; }
+#modal-close-btn { background: var(--text-muted); margin-left: 8px; }
+#modal-close-btn:hover { background: #616161; }
+#search-modal[open] { border: none; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.2); padding: 0; width: 90vw; max-width: 900px; height: 80vh; max-height: 80vh; display: flex; flex-direction: column; }
+#search-modal::backdrop { background: rgba(0,0,0,0.5); }
+.search-modal-header { display: flex; align-items: center; gap: 8px; padding: 16px; border-bottom: 1px solid var(--assistant-border); background: var(--bg-color); border-radius: 12px 12px 0 0; }
+.search-modal-header input { flex: 1; padding: 8px 12px; border: 1px solid var(--assistant-border); border-radius: 6px; font-size: 16px; }
+#search-status { padding: 8px 16px; font-size: 0.85rem; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); }
+#search-results { flex: 1; overflow-y: auto; padding: 16px; }
+.search-result { margin-bottom: 16px; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.search-result a { display: block; text-decoration: none; color: inherit; }
+.search-result a:hover { background: rgba(25, 118, 210, 0.05); }
+.search-result-page { padding: 6px 12px; background: rgba(0,0,0,0.03); font-size: 0.8rem; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); }
+.search-result-content { padding: 12px; }
+.search-result mark { background: #fff59d; padding: 1px 2px; border-radius: 2px; }
+@media (max-width: 600px) { body { padding: 8px; } .message, .index-item { border-radius: 8px; } .message-content, .index-item-content { padding: 12px; } pre { font-size: 0.8rem; padding: 8px; } #search-box input { width: 120px; } #search-modal[open] { width: 95vw; height: 90vh; } }
+</style>
+</head>
+<body>
+    <div class="container">
+        <h1><a href="index.html" style="color: inherit; text-decoration: none;">Claude Code transcript</a> - page 1/1</h1>
+        
+
+<div class="pagination"><a href="index.html" class="index-link">Index</a></div>
+
+        
+<div class="message user" id="msg-2026-07-09T04-54-41-506Z"><div class="message-header"><span class="role-label">User</span><a href="#msg-2026-07-09T04-54-41-506Z" class="timestamp-link"><time datetime="2026-07-09T04:54:41.506Z" data-timestamp="2026-07-09T04:54:41.506Z">2026-07-09T04:54:41.506Z</time></a></div><div class="message-content">
+<div class="user-content"><p>你是源码教材项目的信息提取员，不是散文作者。</p>
+<p>任务：根据下面的带行号源码，为本 batch 中的每个文件生成“文件级源码讲解笔记”。</p>
+<p>Batch 信息：
+- Batch ID: batch_001
+- Batch Name: startup_startup_entrypoints
+- Module: startup
+- Purpose: 解释启动入口、初始化顺序、配置加载、路由注册和主流程入口
+- Related Runtime Flows: 启动流程、配置加载流程、请求处理流程、错误处理流程、日志流程
+- Output Note Path: _sourcebook/notes/batch_001_startup_startup_entrypoints_file_notes.md</p>
+<p>本批文件：
+- POS4UCloud/Source/POS4UBO/POS4UBackoffice/App_Start/RouteConfig.cs
+- POS4UCloud/Source/POS4UBO/POS4UBackoffice/Global.asax
+- POS4UCloud/Source/POS4UBO/POS4UBackoffice/Global.asax.cs
+- Source/POS4U/App.xaml
+- Source/POS4U/App.xaml.cs
+- Source/POS4UBackground/POS4U.Console.MasterSync/Program.cs
+- Source/POS4UBackground/POS4U.Console.VersionUp/Program.cs
+- Source/POS4UBackground/POS4U.WindowsService.Administrator/Program.cs
+- Source/POS4ULogicService/App_Start/WebApiConfig.cs
+- Source/POS4ULogicService/Global.asax
+- Source/POS4ULogicService/Global.asax.cs
+- Source/POS4UTwoOperatorsCH/App.xaml
+- Source/POS4UTwoOperatorsCH/App.xaml.cs
+- Source/TRAN4U/Program.cs
+- Tools/BOLoginPassword/BOLoginPassword/BOLoginPassword/Program.cs
+- Tools/CESettingTool/CESettingTool/App.xaml
+- Tools/CESettingTool/CESettingTool/App.xaml.cs
+- Tools/CESettingToolV4/CESettingToolV4/App.xaml
+- Tools/CESettingToolV4/CESettingToolV4/App.xaml.cs
+- Tools/CESettingToolV5/CESettingToolV4/App.xaml
+- Tools/CESettingToolV5/CESettingToolV4/App.xaml.cs
+- Tools/DataUpdate4Replace/DataUpdate4Replace/App.xaml
+- Tools/DataUpdate4Replace/DataUpdate4Replace/App.xaml.cs
+- Tools/IMEChange/IMEChange/Program.cs
+- Tools/MasterSync/MasterSync/App.xaml
+- Tools/MasterSync/MasterSync/App.xaml.cs
+- Tools/POSLogUploader/POSLogUploader/Program.cs
+- Tools/POSModuleUploader/POSModuleApplyer/App.xaml
+- Tools/POSModuleUploader/POSModuleApplyer/App.xaml.cs
+- Tools/POSModuleUploader/POSModuleUploader/App.xaml
+- Tools/POSModuleUploader/POSModuleUploader/App.xaml.cs
+- Tools/TimeSynchronization/TimeSynchronization/Program.cs
+- Tools/VersionUp/VersionUp/App.xaml
+- Tools/VersionUp/VersionUp/App.xaml.cs</p>
+<p>本批任务目标：
+- 为本批每个文件生成可追溯到源码行号的文件级笔记。
+- 重点说明文件职责、对外暴露内容、关键逻辑、依赖关系、错误处理、测试建议和不确定点。
+- 只做文件级源码笔记，不写最终教材正文。</p>
+<p>硬性规则：</p>
+<ol>
+<li>必须基于实际源码。</li>
+<li>每一条技术事实都要引用文件路径和行号。</li>
+<li>不允许编造不存在的函数、参数、返回值、配置项、业务逻辑。</li>
+<li>如果无法确定，请写“需要结合其他文件确认”。</li>
+<li>不要只讲核心函数，小工具函数、边界处理、异常处理也要说明。</li>
+<li>每个文件必须单独成节。</li>
+<li>不要写最终教材章节，只写文件级源码笔记。</li>
+<li>不要省略本批任何文件。</li>
+<li>如果某个文件很简单，也要说明它为什么简单、在项目中承担什么角色。</li>
+<li>如果发现当前 batch 缺少理解该文件所需的上下文，请在“不确定点”中明确列出需要结合哪些文件。</li>
+</ol>
+<p>质量规则：
+- 优先解释运行时行为和业务意图，再补充语法层面的说明。
+- 遇到配置、SQL、脚本、文档、二进制占位文件，也必须说明它对项目理解的作用。
+- 对非文本文件、缺失文件或无法从当前 batch 判断的内容，必须标记“需要结合其他文件确认”或“需要人工确认”，不要猜。
+- 入口、配置加载、请求处理、数据读写、错误处理、日志、测试相关线索要特别标出。
+- 输出中不要出现未引用行号的技术断言。</p>
+<p>覆盖确认要求：
+- 结尾必须输出“本批覆盖确认”表。
+- 表中必须逐一列出本批所有文件。
+- 覆盖状态只能使用：已详细讲解 / 已简略讲解 / 需要结合其他文件确认。</p>
+<p>输出格式：</p>
+<h1>文件级源码笔记：startup_startup_entrypoints</h1>
+<h2>Batch 信息</h2>
+<ul>
+<li>Batch ID: batch_001</li>
+<li>Batch Name: startup_startup_entrypoints</li>
+<li>Module: startup</li>
+<li>Purpose: 解释启动入口、初始化顺序、配置加载、路由注册和主流程入口</li>
+</ul>
+<hr />
+<h2>文件：<path></h2>
+<h3>1. 文件定位</h3>
+<p>说明这个文件在项目中的角色，属于哪个模块，解决什么问题。</p>
+<h3>2. 对外暴露内容</h3>
+<p>列出 class / function / component / API / command / config / export。</p>
+<p>每一项都要包含：
+- 名称
+- 文件路径 + 行号
+- 用途</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>按代码执行顺序解释关键逻辑。</p>
+<p>要求：
+- 引用文件路径和行号
+- 解释运行时会发生什么
+- 不要只翻译代码，要说明代码意图</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>逐个说明：
+- 名称
+- 位置：文件路径 + 行号
+- 输入
+- 输出
+- 副作用
+- 调用关系
+- 边界情况
+- 可能的坑</p>
+<h3>5. 依赖关系</h3>
+<p>说明它依赖哪些文件、库、配置、类型、组件，以及这些依赖的用途。</p>
+<h3>6. 错误处理与边界情况</h3>
+<p>必须引用源码行号。</p>
+<p>如果没有明显错误处理，也要说明“当前文件没有显式错误处理”，并指出可能依赖哪里处理。</p>
+<h3>7. 测试相关</h3>
+<p>说明：
+- 当前输入中是否包含对应测试
+- 如果有，测试覆盖了什么
+- 如果没有，应该如何测试这个文件</p>
+<h3>8. 新人阅读建议</h3>
+<p>告诉新人应该如何理解这个文件，阅读时先看哪里，再看哪里。</p>
+<h3>9. 不确定点</h3>
+<p>列出不能从当前 batch 确认的问题，不要猜。</p>
+<hr />
+<h2>本批覆盖确认</h2>
+<p>请列出本批所有文件，并标记：</p>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>覆盖状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>path</td>
+<td>已详细讲解 / 已简略讲解 / 需要结合其他文件确认</td>
+<td>说明</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p>下面是本批源码：</p>
+<p>FILE: POS4UCloud/Source/POS4UBO/POS4UBackoffice/App_Start/RouteConfig.cs
+SHA256: e47dbc2641d469311c6de98111522d30dbd30815bf3c8ebf15b67e31ebb4d203
+================================================================================
+00001: ﻿using System.Web.Mvc;
+00002: using System.Web.Routing;
+00003: 
+00004: namespace ForYouApplications.POS4U.Backoffice
+00005: {
+00006:     /// <summary>
+00007:     /// ルートコンフィグ
+00008:     /// </summary>
+00009:     public class RouteConfig
+00010:     {
+00011:         /// <summary>
+00012:         /// ルーティング情報を登録する
+00013:         /// </summary>
+00014:         /// <param name="routes">ルーティング情報</param>
+00015:         public static void RegisterRoutes(RouteCollection routes)
+00016:         {
+00017:             routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
+00018: 
+00019:             // コントローラークラスに設定した属性によるルーティングをマップする
+00020:             routes.MapMvcAttributeRoutes();
+00021: 
+00022:             // 必ず MapMvcAttributeRoutes 呼び出しの後に MapRoute を呼び出す
+00023:             // ※かつデフォルトの Account コントローラー側で RoutePrefix、Route 属性を利用しない
+00024:             routes.MapRoute(
+00025:                 name: "Default",
+00026:                 url: "{controller}/{action}",
+00027:                 defaults: new { controller = "Account", action = "Login" });
+00028:         }
+00029:     }
+00030: }</p>
+<hr />
+<p>FILE: POS4UCloud/Source/POS4UBO/POS4UBackoffice/Global.asax
+00001: [非文本文件，未内联源码。size_bytes=127, extension=.asax，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: POS4UCloud/Source/POS4UBO/POS4UBackoffice/Global.asax.cs
+SHA256: ef639bd2f9db5f18940400dd007109a8c1b536fe4d45a434b002fc6e1f255790
+================================================================================
+00001: ﻿using System;
+00002: using System.Net;
+00003: using System.Threading;
+00004: using System.Web;
+00005: using System.Web.Mvc;
+00006: using System.Web.Optimization;
+00007: using System.Web.Routing;
+00008: using ForYouApplications.POS4U.Framework.Library;
+00009: 
+00010: namespace ForYouApplications.POS4U.Backoffice
+00011: {
+00012: #pragma warning disable SA1649 // File name must match first type name
+00013:     /// <summary>
+00014:     /// MvcApplication
+00015:     /// </summary>
+00016:     public class MvcApplication : HttpApplication
+00017: #pragma warning restore SA1649 // File name must match first type name
+00018:     {
+00019:         /// <summary>処理リクエスト数</summary>
+00020:         private volatile int _processingRequestCount;
+00021: 
+00022:         /// <summary>
+00023:         /// アプリケーション開始
+00024:         /// </summary>
+00025:         protected void Application_Start()
+00026:         {
+00027:             Logger.Info("Application_Start method is called.");
+00028: 
+00029:             ServicePointManager.DefaultConnectionLimit = 12;
+00030: 
+00031:             AreaRegistration.RegisterAllAreas();
+00032:             FilterConfig.RegisterGlobalFilters(GlobalFilters.Filters);
+00033:             RouteConfig.RegisterRoutes(RouteTable.Routes);
+00034:             BundleConfig.RegisterBundles(BundleTable.Bundles);
+00035:         }
+00036: 
+00037:         /// <summary>
+00038:         /// アプリケーション終了
+00039:         /// </summary>
+00040:         protected void Application_End()
+00041:         {
+00042:             try
+00043:             {
+00044:                 Logger.Info("Application_End method is called.");
+00045: 
+00046:                 do
+00047:                 {
+00048:                     if (this._processingRequestCount &lt;= 0)
+00049:                     {
+00050:                         break;
+00051:                     }
+00052: 
+00053:                     Thread.Sleep(100);
+00054:                 }
+00055:                 while (true);
+00056: 
+00057:                 Logger.Info("Application will terminate safely.");
+00058:             }
+00059:             catch
+00060:             {
+00061:             }
+00062:         }
+00063: 
+00064:         /// <summary>
+00065:         /// アプリケーションエラー
+00066:         /// </summary>
+00067:         /// <param name="sender">呼出元</param>
+00068:         /// <param name="e">引数</param>
+00069:         protected void Application_Error(object sender, EventArgs e)
+00070:         {
+00071:             // Controller 外で起きた例外を処理する
+00072:             var exception = this.Server.GetLastError();
+00073:             if (exception == null)
+00074:             {
+00075:                 return;
+00076:             }
+00077: 
+00078:             Logger.Fatal(exception.ToString());
+00079:         }
+00080: 
+00081:         /// <summary>
+00082:         /// リクエスト処理開始
+00083:         /// </summary>
+00084:         /// <param name="sender">呼出元</param>
+00085:         /// <param name="e">引数</param>
+00086:         protected void Application_BeginRequest(object sender, EventArgs e) =&gt;
+00087:             Interlocked.Increment(ref this._processingRequestCount);
+00088: 
+00089:         /// <summary>
+00090:         /// リクエスト処理終了
+00091:         /// </summary>
+00092:         /// <param name="sender">呼出元</param>
+00093:         /// <param name="e">引数</param>
+00094:         protected void Application_EndRequest(object sender, EventArgs e) =&gt;
+00095:             Interlocked.Decrement(ref this._processingRequestCount);
+00096:     }
+00097: }</p>
+<hr />
+<p>FILE: Source/POS4U/App.xaml
+00001: [非文本文件，未内联源码。size_bytes=655, extension=.xaml，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/POS4U/App.xaml.cs
+SHA256: 351ed9f8a8289f2b20bfbae52b7bf9a990905b36c07e1c82cc1e7f2c350db978
+================================================================================
+00001: ﻿using System;
+00002: using System.Collections.Generic;
+00003: using System.Configuration;
+00004: using System.Data;
+00005: using System.Diagnostics;
+00006: using System.IO;
+00007: using System.Linq;
+00008: using System.Threading;
+00009: using System.Threading.Tasks;
+00010: using System.Windows;
+00011: using System.Windows.Input;
+00012: using ForYouApplications.POS4U.Common.Const;
+00013: using ForYouApplications.POS4U.Device.DeviceDefine;
+00014: using ForYouApplications.POS4U.Framework.Library;
+00015: using ForYouApplications.POS4U.WinPOS.Common;
+00016: using ForYouApplications.POS4U.WinPOS.Framework;
+00017: using ForYouApplications.POS4U.WinPOS.Framework.Library;
+00018: 
+00019: namespace ForYouApplications.POS4U
+00020: {
+00021:     /// <summary>
+00022:     /// App.xaml の相互作用ロジック
+00023:     /// </summary>
+00024:     public partial class App : Application
+00025:     {
+00026:         /// <summary>
+00027:         /// コントローラー
+00028:         /// </summary>
+00029:         private WinPOSController _controller;
+00030: 
+00031:         /// <summary>
+00032:         /// 開始処理
+00033:         /// </summary>
+00034:         /// <param name="e">イベント引数</param>
+00035:         protected override void OnStartup(StartupEventArgs e)
+00036:         {
+00037:             try
+00038:             {
+00039:                 // 自身のファイル名.txtを作成し、プロセスの起動をLauncherに知らせる。
+00040:                 MakeMainModuleNameTextFile();
+00041: 
+00042:                 // 二重起動チェック
+00043:                 if (!Debugger.IsAttached)
+00044:                 {
+00045:                     if (SystemLibrary.IsProcessAlreadyExist())
+00046:                     {
+00047:                         string msg = "POS4U has already been started.";
+00048:                         Logger.Info(msg);
+00049:                         MessageBox.Show(msg);
+00050:                         this.Shutdown();
+00051:                         return;
+00052:                     }
+00053:                 }
+00054: 
+00055:                 Logger.Info("Welcome to POS4U Main Loop");
+00056: 
+00057:                 System.Windows.Forms.Application.ThreadException += new ThreadExceptionEventHandler(Application_ThreadException);
+00058:                 Thread.GetDomain().UnhandledException += new UnhandledExceptionEventHandler(POS4U_UnhandledException);
+00059:                 Current.DispatcherUnhandledException += new System.Windows.Threading.DispatcherUnhandledExceptionEventHandler(Current_DispatcherUnhandledException);
+00060:                 System.Windows.Threading.Dispatcher.CurrentDispatcher.UnhandledException += new System.Windows.Threading.DispatcherUnhandledExceptionEventHandler(CurrentDispatcher_UnhandledException);
+00061: 
+00062:                 base.OnStartup(e);
+00063: 
+00064:                 this.StartupController();
+00065: 
+00066:                 if (!this.MainWindow.IsActive)
+00067:                 {
+00068:                     // メインメニューがアクティブになる
+00069:                     Logger.Info("MainWindow.Activate");
+00070:                     this.MainWindow.Activate();
+00071:                 }
+00072: 
+00073:                 if (WinPOSSettingValues.NodeImageType.Value == "03")
+00074:                 {
+00075:                     // Posiflexの場合、画面表示のため、仮にCtrlボタン押すように
+00076:                     Task.Factory.StartNew(() =&gt;
+00077:                     {
+00078:                         Thread.Sleep(3000);
+00079:                         Logger.Info("EmulateKeyPress:LeftCtrl");
+00080:                         POSKeyEmulator.EmulateKeyPress(Key.LeftCtrl);
+00081:                     });
+00082:                 }
+00083: 
+00084:                 // 入力IME非表示
+00085:                 SystemUser32DLL.SystemParametersInfo(111, 0, "0", 0);
+00086: 
+00087:                 if (WinPOSSettingValues.IsTwoOperatorsCashier.Value)
+00088:                 {
+00089:                     // 二人制キャッシャーの場合、二人制チェッカーの実行ファイルを起動
+00090:                     string fileName = WinPOSSettingValues.TwoOperatorsCheckerFileName.Value;
+00091: 
+00092:                     if (!string.IsNullOrEmpty(fileName))
+00093:                     {
+00094:                         string path = Path.Combine(Thread.GetDomain().BaseDirectory, fileName);
+00095: 
+00096:                         var psi = new ProcessStartInfo
+00097:                         {
+00098:                             FileName = path,
+00099:                             CreateNoWindow = true,
+00100:                             UseShellExecute = false
+00101:                         };
+00102: 
+00103:                         // 実行結果は待たない
+00104:                         Process.Start(psi);
+00105:                         Logger.Info(string.Format("Excute TwoOperatorsChecker path:{0}", path));
+00106:                     }
+00107:                 }
+00108:             }
+00109:             catch (Exception ex)
+00110:             {
+00111:                 Logger.Fatal(ex.ToString());
+00112:                 throw;
+00113:             }
+00114:         }
+00115: 
+00116:         /// <summary>
+00117:         /// アプリケーション終了処理
+00118:         /// </summary>
+00119:         /// <param name="e">
+00120:         /// ExitEventArgs型のオブジェクト
+00121:         /// </param>
+00122:         protected override void OnExit(ExitEventArgs e)
+00123:         {
+00124:             Logger.Info("OnExit begin.");
+00125: 
+00126:             if (this._controller != null)
+00127:             {
+00128:                 // コントローラ終了処理
+00129:                 this._controller.Exit();
+00130:                 this._controller = null;
+00131:             }
+00132: 
+00133:             base.OnExit(e);
+00134: 
+00135:             Logger.Info("OnExit end.");
+00136:         }
+00137: 
+00138:         /// <summary>
+00139:         /// 自身のファイル名.txtを作成
+00140:         /// </summary>
+00141:         private static void MakeMainModuleNameTextFile()
+00142:         {
+00143:             string fileName = Process.GetCurrentProcess().MainModule.FileName;
+00144:             fileName = fileName + ".txt";
+00145: 
+00146:             // 空ファイルを作成
+00147:             using (FileStream fileStream = File.Create(fileName))
+00148:             {
+00149:                 fileStream.Close();
+00150:             }
+00151:         }
+00152: 
+00153:         /// <summary>
+00154:         /// Exceptionをログ出力する
+00155:         /// </summary>
+00156:         /// <param name="sender">イベント発生元</param>
+00157:         /// <param name="e">イベント情報</param>
+00158:         private static void CurrentDispatcher_UnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+00159:         {
+00160:             Exception ex = e.Exception;
+00161: 
+00162:             Logger.Fatal("CurrentDispatcher_UnhandledException : " + ex.ToString());
+00163:             throw e.Exception;
+00164:         }
+00165: 
+00166:         /// <summary>
+00167:         /// Exceptionをログ出力する
+00168:         /// </summary>
+00169:         /// <param name="sender">イベント発生元</param>
+00170:         /// <param name="e">イベント情報</param>
+00171:         private static void Current_DispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+00172:         {
+00173:             Exception ex = e.Exception;
+00174: 
+00175:             Logger.Fatal("Current_DispatcherUnhandledException : " + ex.ToString());
+00176:             throw e.Exception;
+00177:         }
+00178: 
+00179:         /// <summary>
+00180:         /// Exceptionをログ出力する
+00181:         /// </summary>
+00182:         /// <param name="sender">イベント発生元</param>
+00183:         /// <param name="e">イベント情報</param>
+00184:         private static void POS4U_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+00185:         {
+00186:             Exception ex = e.ExceptionObject as Exception;
+00187: 
+00188:             Logger.Fatal("POS4U_UnhandledException : " + ex.ToString());
+00189:             throw ex;
+00190:         }
+00191: 
+00192:         /// <summary>
+00193:         /// Exceptionをログ出力する
+00194:         /// </summary>
+00195:         /// <param name="sender">イベント発生元</param>
+00196:         /// <param name="e">イベント情報</param>
+00197:         private static void Application_ThreadException(object sender, ThreadExceptionEventArgs e)
+00198:         {
+00199:             Exception ex = e.Exception;
+00200: 
+00201:             Logger.Fatal("Application_ThreadException : " + ex.ToString());
+00202:             throw e.Exception;
+00203:         }
+00204: 
+00205:         /// <summary>
+00206:         /// コントローラーのスタート
+00207:         /// </summary>
+00208:         private void StartupController()
+00209:         {
+00210:             // コントローラー初期化処理
+00211:             this._controller = new WinPOSController();
+00212: 
+00213:             // セットアップ処理の実行
+00214:             this._controller.Startup(DeviceIds.AutoRun.Id, EventCodes.Common_PowerOn.Code, null);
+00215:         }
+00216:     }
+00217: }</p>
+<hr />
+<p>FILE: Source/POS4UBackground/POS4U.Console.MasterSync/Program.cs
+SHA256: fa797f3addd90fbe014d3ff847819e6e358ba22363915defcc83f3dff8cc91b7
+================================================================================
+00001: ﻿using System;
+00002: using System.Collections.Generic;
+00003: using System.Linq;
+00004: using System.Threading;
+00005: using ForYouApplications.POS4U.Background.Business.MasterSyncPos;
+00006: using ForYouApplications.POS4U.Framework.Library;
+00007: using ForYouApplications.POS4U.WinPOS.Framework.Library;
+00008: 
+00009: namespace ForYouApplications.POS4U.Background.Console
+00010: {
+00011:     /// <summary>
+00012:     /// プログラム
+00013:     /// </summary>
+00014:     public static class Program
+00015:     {
+00016:         /// <summary>プログラムの開始終了を示す字下げとして使用するヘッダ文字列</summary>
+00017:         private static readonly string RootLogHeader = "&gt;&gt;&gt;&gt; ";
+00018: 
+00019:         /// <summary>
+00020:         /// アプリケーションのメイン エントリ ポイント
+00021:         /// </summary>
+00022:         /// <param name="args">引数</param>
+00023:         /// <returns>0: 正常 / -1:異常</returns>
+00024:         public static int Main(string[] args)
+00025:         {
+00026:             Thread.GetDomain().UnhandledException += MasterSync_UnhandledException;
+00027: 
+00028:             Action exitAction = null;
+00029:             bool result = false;
+00030: 
+00031:             Logger.Info($"{RootLogHeader}MasterSync started");
+00032: 
+00033:             try
+00034:             {
+00035:                 Factory.Init(new List<FactoryInitInfo>());
+00036: 
+00037:                 if (SystemLibrary.IsProcessAlreadyExist())
+00038:                 {
+00039:                     Logger.Warn($"{RootLogHeader}MasterSync ended. Process has terminated, because of already existed");
+00040:                     return -1;
+00041:                 }
+00042: 
+00043:                 if (IsValidArgs(args, out exitAction))
+00044:                 {
+00045:                     var controller = new ControllerBulk(
+00046:                         OnExecuteStep,
+00047:                         OnExecuteComplete,
+00048:                         OnExecuteAllComplete);
+00049:                     controller.Execute(false);
+00050:                 }
+00051: 
+00052:                 Logger.Info($"{RootLogHeader}MasterSync ended");
+00053:             }
+00054:             finally
+00055:             {
+00056:                 exitAction?.Invoke();
+00057:             }
+00058: 
+00059:             return result ? 0 : -1;
+00060:         }
+00061: 
+00062:         /// <summary>
+00063:         /// MasterSync 起動引数の検証
+00064:         /// </summary>
+00065:         /// <param name="args">引数</param>
+00066:         /// <param name="exitAction">終了時の処理</param>
+00067:         /// <returns>検証結果</returns>
+00068:         private static bool IsValidArgs(
+00069:             string[] args,
+00070:             out Action exitAction)
+00071:         {
+00072:             exitAction = exitAction = () =&gt; { };
+00073:             if (args == null)
+00074:             {
+00075:                 Logger.Error($"Argument not specified");
+00076:                 return false;
+00077:             }
+00078: 
+00079:             var exitProcessArg = args.FirstOrDefault();
+00080: 
+00081:             if (exitProcessArg == ProcessExitArgments.Reboot)
+00082:             {
+00083:                 exitAction = () =&gt; SystemLibrary.Reboot();
+00084:             }
+00085: 
+00086:             return true;
+00087:         }
+00088: 
+00089:         /// <summary>
+00090:         /// 予期しないエラー
+00091:         /// </summary>
+00092:         /// <param name="sender">発生元</param>
+00093:         /// <param name="e">イベント引数</param>
+00094:         private static void MasterSync_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+00095:         {
+00096:             // 補足されなかった例外をログ出力する
+00097:             var ex = e.ExceptionObject as Exception;
+00098:             Logger.Fatal($"{RootLogHeader}MasterSync ended abnormally. UnhandledException : " + ex?.ToString());
+00099: 
+00100:             // 以下の throw を実行した場合、呼出元ではどうなるか
+00101:             // 　例：0 除算例外をハンドルできなかった時のサンプル
+00102:             // 　　ExitCode = -1073741676
+00103:             // 　　(Process を Start し WaitForExit した後の値)
+00104:             throw ex;
+00105:         }
+00106: 
+00107:         /// <summary>
+00108:         /// 実行処理ステップイベント処理
+00109:         /// </summary>
+00110:         /// <param name="sender">
+00111:         /// イベント元情報
+00112:         /// </param>
+00113:         /// <param name="e">
+00114:         /// イベント引数
+00115:         /// </param>
+00116:         private static void OnExecuteStep(object sender, ExecuteStepEventArgs e)
+00117:         {
+00118:         }
+00119: 
+00120:         /// <summary>
+00121:         /// 実行処理完了イベント処理
+00122:         /// </summary>
+00123:         /// <param name="sender">
+00124:         /// イベント元情報
+00125:         /// </param>
+00126:         /// <param name="e">
+00127:         /// イベント引数
+00128:         /// </param>
+00129:         private static void OnExecuteComplete(object sender, ExecuteCompleteEventArgs e)
+00130:         {
+00131:         }
+00132: 
+00133:         /// <summary>
+00134:         /// 実行処理完了イベント処理
+00135:         /// </summary>
+00136:         /// <param name="sender">
+00137:         /// イベント元情報
+00138:         /// </param>
+00139:         /// <param name="e">
+00140:         /// イベント引数
+00141:         /// </param>
+00142:         private static void OnExecuteAllComplete(object sender, ExecuteCompleteEventArgs e)
+00143:         {
+00144:         }
+00145:     }
+00146: }</p>
+<hr />
+<p>FILE: Source/POS4UBackground/POS4U.Console.VersionUp/Program.cs
+SHA256: 97d0c25040a0189c370e3d8e8eb4402e5ebd689ca378a6d0b0e1f7fff80603de
+================================================================================
+00001: ﻿using System;
+00002: using System.Collections.Generic;
+00003: using System.Diagnostics;
+00004: using System.IO;
+00005: using System.Threading;
+00006: using ForYouApplications.POS4U.Background.Console.Logic;
+00007: using ForYouApplications.POS4U.Background.Data.Accessor;
+00008: using ForYouApplications.POS4U.Data.Accessor;
+00009: using ForYouApplications.POS4U.Framework.Library;
+00010: using ForYouApplications.POS4U.WinPOS.Framework.Library;
+00011: 
+00012: namespace ForYouApplications.POS4U.Background.Console
+00013: {
+00014:     /// <summary>
+00015:     /// プログラム
+00016:     /// </summary>
+00017:     public static class Program
+00018:     {
+00019:         /// <summary>プログラムの開始終了を示す字下げとして使用するヘッダ文字列</summary>
+00020:         private const string RootLogHeader = "&gt;&gt;&gt;&gt; ";
+00021: 
+00022:         /// <summary>
+00023:         /// アプリケーションのメイン エントリ ポイント
+00024:         /// </summary>
+00025:         /// <param name="args">引数</param>
+00026:         /// <returns>0: 正常 / -1:異常</returns>
+00027:         public static int Main(string[] args)
+00028:         {
+00029:             Thread.GetDomain().UnhandledException += VersionUp_UnhandledException;
+00030: 
+00031:             // 設定ファイルリーダーの準備
+00032:             var conn = FrameworkLibrarySettingValues.POS4UConnectionString;
+00033: 
+00034:             Factory.Init(new List<FactoryInitInfo>());
+00035: 
+00036:             Logger.Info($"{RootLogHeader}VersionUp started");
+00037: 
+00038:             if (SystemLibrary.IsProcessAlreadyExist())
+00039:             {
+00040:                 Logger.Warn($"{RootLogHeader}VersionUp ended. Process has terminated, because of already existed");
+00041:                 return -1;
+00042:             }
+00043:             else
+00044:             {
+00045:                 bool result = false;
+00046: 
+00047:                 string vmName;
+00048:                 string currentVersion;
+00049:                 string newVersion;
+00050:                 string modulePath;
+00051:                 if (IsValidArgs(args, out vmName, out currentVersion, out newVersion, out modulePath))
+00052:                 {
+00053:                     var up = new UpdateManager();
+00054:                     result = up.Execute(vmName, currentVersion, newVersion, modulePath);
+00055:                 }
+00056: 
+00057:                 Logger.Info($"{RootLogHeader}VersionUp ended");
+00058:                 return result ? 0 : -1;
+00059:             }
+00060:         }
+00061: 
+00062:         /// <summary>
+00063:         /// VersionUp 起動引数の検証
+00064:         /// </summary>
+00065:         /// <param name="args">引数</param>
+00066:         /// <param name="vmName">結果：仮想マシン名</param>
+00067:         /// <param name="currentVersion">結果：現在のバージョン</param>
+00068:         /// <param name="newVersion">結果：新バージョン</param>
+00069:         /// <param name="zipFilePath">結果：Zip ファイルのフルパス</param>
+00070:         /// <returns>検証結果</returns>
+00071:         private static bool IsValidArgs(
+00072:             string[] args,
+00073:             out string vmName,
+00074:             out string currentVersion,
+00075:             out string newVersion,
+00076:             out string zipFilePath)
+00077:         {
+00078:             vmName = null;
+00079:             currentVersion = null;
+00080:             newVersion = null;
+00081:             zipFilePath = null;
+00082: 
+00083:             if (args == null
+00084:                 || args.Length &lt;= 3)
+00085:             {
+00086:                 Logger.Error($"Argument not specified");
+00087:                 return false;
+00088:             }
+00089: 
+00090:             vmName = args[0];
+00091:             currentVersion = args[1];
+00092:             newVersion = args[2];
+00093:             zipFilePath = args[3];
+00094: 
+00095:             if (!File.Exists(zipFilePath))
+00096:             {
+00097:                 Logger.Error($"VersionUp zip[{zipFilePath}] is not exist");
+00098:                 return false;
+00099:             }
+00100: 
+00101:             // DB の VM 管理情報が存在するかチェックする
+00102:             var accessor = Factory.CreatePlugin<IVersionUpAccessor>(BackgroundDataAccessorPluginIds.VersionUp);
+00103: 
+00104:             var dbVersion = accessor.GetCurrentModuleInfo();
+00105:             if (string.IsNullOrEmpty(dbVersion))
+00106:             {
+00107:                 Logger.Error($"VMManagement[{vmName}] is not exist");
+00108:                 return false;
+00109:             }
+00110: 
+00111:             // DB の現在バージョンを調べ、引数と一致するかチェックする
+00112:             if (currentVersion != dbVersion)
+00113:             {
+00114:                 Logger.Error($"Invalid current version[{currentVersion}]");
+00115:                 return false;
+00116:             }
+00117: 
+00118:             if (currentVersion.CompareTo(newVersion) &gt;= 0)
+00119:             {
+00120:                 Logger.Error($"Invalid version. current[{currentVersion}] new[{newVersion}]");
+00121:                 return false;
+00122:             }
+00123: 
+00124:             return true;
+00125:         }
+00126: 
+00127:         /// <summary>
+00128:         /// 予期しないエラー
+00129:         /// </summary>
+00130:         /// <param name="sender">発生元</param>
+00131:         /// <param name="e">イベント引数</param>
+00132:         private static void VersionUp_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+00133:         {
+00134:             // 補足されなかった例外をログ出力する
+00135:             var ex = e.ExceptionObject as Exception;
+00136:             Logger.Fatal($"{RootLogHeader}VersionUp ended abnormally. UnhandledException : " + ex?.ToString());
+00137: 
+00138:             // 以下の throw を実行した場合、呼出元ではどうなるか
+00139:             // 　例：0 除算例外をハンドルできなかった時のサンプル
+00140:             // 　　ExitCode = -1073741676
+00141:             // 　　(Process を Start し WaitForExit した後の値)
+00142:             throw ex;
+00143:         }
+00144:     }
+00145: }</p>
+<hr />
+<p>FILE: Source/POS4UBackground/POS4U.WindowsService.Administrator/Program.cs
+SHA256: db767103630995030f6b92b1572cd49b13ac4561b0de11e1e6a0ce31770aeb98
+================================================================================
+00001: ﻿using System;
+00002: using System.Diagnostics;
+00003: using System.ServiceProcess;
+00004: using System.Threading;
+00005: using ForYouApplications.POS4U.Background.Business.BackgroundCommon;
+00006: using ForYouApplications.POS4U.Framework.Library;
+00007: 
+00008: namespace ForYouApplications.POS4U.Background.WindowsService
+00009: {
+00010:     /// <summary>
+00011:     /// サービスメイン
+00012:     /// </summary>
+00013:     public static class Program
+00014:     {
+00015:         /// <summary>
+00016:         /// アプリケーションのメイン エントリ ポイントです。
+00017:         /// </summary>
+00018:         public static void Main()
+00019:         {
+00020:             Thread.GetDomain().UnhandledException += Program_UnhandledException;
+00021: 
+00022:             new MessageId(null);
+00023:             new SettingValue<object>(null, null);
+00024: 
+00025:             Logger.Info("POS4UAdministratorService Start.");
+00026: 
+00027:             if (Debugger.IsAttached)
+00028:             {
+00029:                 Logger.Info("Start Debug");
+00030: 
+00031:                 bool stop = false;
+00032:                 var controller = new Controller();
+00033:                 controller.Init(arg =&gt;
+00034:                 {
+00035:                     if (arg.Type.Code == NotifyAdministratorTypes.VersionUp.Code ||
+00036:                         arg.Type.Code == NotifyAdministratorTypes.MasterSyncBulk.Code)
+00037:                     { 
+00038:                         stop = true;
+00039:                     }
+00040:                 });
+00041: 
+00042:                 controller.Start();
+00043: 
+00044:                 while (!stop)
+00045:                 {
+00046:                     Thread.Sleep(1000);
+00047:                 }
+00048: 
+00049:                 controller.Stop();
+00050:             }
+00051:             else
+00052:             {
+00053:                 var servicesToRun = new ServiceBase[]
+00054:                 {
+00055:                     new AdministratorService()
+00056:                 };
+00057: 
+00058:                 ServiceBase.Run(servicesToRun);
+00059:             }
+00060:         }
+00061: 
+00062:         /// <summary>
+00063:         /// 予期しないエラー
+00064:         /// </summary>
+00065:         /// <param name="sender">発生元</param>
+00066:         /// <param name="e">イベント引数</param>
+00067:         private static void Program_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+00068:         {
+00069:             var ex = e.ExceptionObject as Exception;
+00070:             Logger.Fatal("Program_UnhandledException : " + ex?.ToString());
+00071:             throw ex;
+00072:         }
+00073:     }
+00074: }</p>
+<hr />
+<p>FILE: Source/POS4ULogicService/App_Start/WebApiConfig.cs
+SHA256: fb61f076865fc1a78e4bb98b0197164da1528269e3fd258cbc2f0f9ee5bceeea
+================================================================================
+00001: ﻿using System;
+00002: using System.Collections.Generic;
+00003: using System.Linq;
+00004: using System.Web.Http;
+00005: using System.Web.Http.ExceptionHandling;
+00006: using ForYouApplications.POS4U.LogicService;
+00007: 
+00008: namespace POS4ULogicService
+00009: {
+00010:     /// <summary>
+00011:     /// WebApiConfig
+00012:     /// </summary>
+00013:     public static class WebApiConfig
+00014:     {
+00015:         /// <summary>
+00016:         /// Register
+00017:         /// </summary>
+00018:         /// <param name="config">構成</param>
+00019:         public static void Register(HttpConfiguration config)
+00020:         {
+00021:             // Web API の設定およびサービス
+00022:             config.Services.Replace(typeof(IExceptionLogger), new LogicServiceExceptionLogger());
+00023: 
+00024:             // Web API ルート
+00025:             config.MapHttpAttributeRoutes();
+00026:         }
+00027:     }
+00028: }</p>
+<hr />
+<p>FILE: Source/POS4ULogicService/Global.asax
+00001: [非文本文件，未内联源码。size_bytes=111, extension=.asax，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/POS4ULogicService/Global.asax.cs
+SHA256: 6e962499fd7c20db5d1e7b2de570ab4d99d2e2f629edc8681420d32e7e63e7a4
+================================================================================
+00001: ﻿// <auto-generated />
+00002: using System;
+00003: using System.Net;
+00004: using System.Threading;
+00005: using System.Web;
+00006: using System.Web.Http;
+00007: using ForYouApplications.POS4U.Framework.Library;
+00008: using ForYouApplications.POS4U.LogicService.Framework;
+00009: 
+00010: namespace POS4ULogicService
+00011: {
+00012:     /// <summary>
+00013:     /// WebApiApplication
+00014:     /// </summary>
+00015:     public class WebApiApplication : HttpApplication
+00016:     {
+00017:         /// <summary>
+00018:         /// 処理リクエスト数
+00019:         /// </summary>
+00020:         private volatile int _processingRequestCount;
+00021: 
+00022:         /// <summary>
+00023:         /// アプリケーション開始
+00024:         /// </summary>
+00025:         protected void Application_Start()
+00026:         {
+00027:             Logger.Info("Application_Start method is called.");
+00028: 
+00029:             ServicePointManager.DefaultConnectionLimit = 12;
+00030: 
+00031:             GlobalConfiguration.Configure(WebApiConfig.Register);
+00032: 
+00033:             LogicServiceController.Instance.Startup();
+00034:         }
+00035: 
+00036:         /// <summary>
+00037:         /// アプリケーション終了
+00038:         /// </summary>
+00039:         protected void Application_End()
+00040:         {
+00041:             try
+00042:             {
+00043:                 Logger.Info("Application_End method is called.");
+00044: 
+00045:                 do
+00046:                 {
+00047:                     if (_processingRequestCount &lt;= 0)
+00048:                     {
+00049:                         break;
+00050:                     }
+00051: 
+00052:                     Thread.Sleep(100);
+00053:                 } while (true);
+00054: 
+00055:                 Logger.Info("Application will terminate safely.");
+00056:             }
+00057:             catch (Exception)
+00058:             {
+00059:             }
+00060:         }
+00061: 
+00062:         /// <summary>
+00063:         /// リクエスト処理開始
+00064:         /// </summary>
+00065:         /// <param name="sender"></param>
+00066:         /// <param name="e"></param>
+00067:         protected void Application_BeginRequest(object sender, EventArgs e)
+00068:         {
+00069:             Interlocked.Increment(ref _processingRequestCount);
+00070:         }
+00071: 
+00072:         /// <summary>
+00073:         /// リクエスト処理終了
+00074:         /// </summary>
+00075:         /// <param name="sender"></param>
+00076:         /// <param name="e"></param>
+00077:         protected void Application_EndRequest(object sender, EventArgs e)
+00078:         {
+00079:             Interlocked.Decrement(ref _processingRequestCount);
+00080:         }
+00081:     }
+00082: }</p>
+<hr />
+<p>FILE: Source/POS4UTwoOperatorsCH/App.xaml
+00001: [非文本文件，未内联源码。size_bytes=655, extension=.xaml，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/POS4UTwoOperatorsCH/App.xaml.cs
+SHA256: e6c2c1fb8e6dea29b6b059ac7f50a24aa3860f61b3d30bf7a66038df9fa849e0
+================================================================================
+00001: ﻿using System;
+00002: using System.Diagnostics;
+00003: using System.IO;
+00004: using System.Threading;
+00005: using System.Threading.Tasks;
+00006: using System.Windows;
+00007: using System.Windows.Input;
+00008: using ForYouApplications.POS4U.Common.Const;
+00009: using ForYouApplications.POS4U.Device.DeviceDefine;
+00010: using ForYouApplications.POS4U.Framework.Library;
+00011: using ForYouApplications.POS4U.WinPOS.Common;
+00012: using ForYouApplications.POS4U.WinPOS.Framework;
+00013: using ForYouApplications.POS4U.WinPOS.Framework.Library;
+00014: using Microsoft.VisualBasic;
+00015: 
+00016: namespace ForYouApplications.POS4U
+00017: {
+00018:     /// <summary>
+00019:     /// App.xaml の相互作用ロジック
+00020:     /// </summary>
+00021:     public partial class App : Application
+00022:     {
+00023:         /// <summary>
+00024:         /// コントローラー
+00025:         /// </summary>
+00026:         private WinPOSController _controller;
+00027: 
+00028:         /// <summary>
+00029:         /// 開始処理
+00030:         /// </summary>
+00031:         /// <param name="e">イベント引数</param>
+00032:         protected override void OnStartup(StartupEventArgs e)
+00033:         {
+00034:             try
+00035:             {
+00036:                 // 自身のファイル名.txtを作成し、プロセスの起動をLauncherに知らせる。
+00037:                 MakeMainModuleNameTextFile();
+00038: 
+00039:                 // 二重起動チェック
+00040:                 if (!Debugger.IsAttached)
+00041:                 {
+00042:                     if (SystemLibrary.IsProcessAlreadyExist())
+00043:                     {
+00044:                         string msg = "POS4U has already been started.";
+00045:                         Logger.Info(msg);
+00046:                         this.Shutdown();
+00047:                         return;
+00048:                     }
+00049:                 }
+00050: 
+00051:                 Logger.Info("Welcome to POS4U Main Loop");
+00052: 
+00053:                 System.Windows.Forms.Application.ThreadException += new ThreadExceptionEventHandler(Application_ThreadException);
+00054:                 Thread.GetDomain().UnhandledException += new UnhandledExceptionEventHandler(POS4U_UnhandledException);
+00055:                 Current.DispatcherUnhandledException += new System.Windows.Threading.DispatcherUnhandledExceptionEventHandler(Current_DispatcherUnhandledException);
+00056:                 System.Windows.Threading.Dispatcher.CurrentDispatcher.UnhandledException += new System.Windows.Threading.DispatcherUnhandledExceptionEventHandler(CurrentDispatcher_UnhandledException);
+00057: 
+00058:                 base.OnStartup(e);
+00059: 
+00060:                 this.StartupController();
+00061: 
+00062:                 // CH はアクティブにしない
+00063:                 this.MainWindow.ShowActivated = false;
+00064: 
+00065:                 if (WinPOSSettingValues.NodeImageType.Value == "03")
+00066:                 {
+00067:                     // Posiflexの場合、画面表示のため、仮にCtrlボタン押すように
+00068:                     Task.Factory.StartNew(() =&gt;
+00069:                     {
+00070:                         Thread.Sleep(3000);
+00071:                         Logger.Info("EmulateKeyPress:LeftCtrl");
+00072:                         POSKeyEmulator.EmulateKeyPress(Key.LeftCtrl);
+00073:                     });
+00074:                 }
+00075: 
+00076:                 // 入力IME非表示
+00077:                 SystemUser32DLL.SystemParametersInfo(111, 0, "0", 0);
+00078: 
+00079:                 if (!Debugger.IsAttached)
+00080:                 {
+00081:                     // アプリケーション・アクティブ化の監視
+00082:                     this.Activated += this.Application_Activated;
+00083:                 }
+00084:             }
+00085:             catch (Exception ex)
+00086:             {
+00087:                 Logger.Fatal(ex.ToString());
+00088:                 throw;
+00089:             }
+00090:         }
+00091: 
+00092:         /// <summary>
+00093:         /// アプリケーション終了処理
+00094:         /// </summary>
+00095:         /// <param name="e">
+00096:         /// ExitEventArgs型のオブジェクト
+00097:         /// </param>
+00098:         protected override void OnExit(ExitEventArgs e)
+00099:         {
+00100:             Logger.Info("OnExit begin.");
+00101: 
+00102:             if (this._controller != null)
+00103:             {
+00104:                 // コントローラ終了処理
+00105:                 this._controller.Exit();
+00106:                 this._controller = null;
+00107:             }
+00108: 
+00109:             base.OnExit(e);
+00110: 
+00111:             Logger.Info("OnExit end.");
+00112:         }
+00113: 
+00114:         /// <summary>
+00115:         /// 自身のファイル名.txtを作成
+00116:         /// </summary>
+00117:         private static void MakeMainModuleNameTextFile()
+00118:         {
+00119:             string fileName = Process.GetCurrentProcess().MainModule.FileName;
+00120:             fileName = fileName + ".txt";
+00121: 
+00122:             // 空ファイルを作成
+00123:             using (FileStream fileStream = File.Create(fileName))
+00124:             {
+00125:                 fileStream.Close();
+00126:             }
+00127:         }
+00128: 
+00129:         /// <summary>
+00130:         /// Exceptionをログ出力する
+00131:         /// </summary>
+00132:         /// <param name="sender">イベント発生元</param>
+00133:         /// <param name="e">イベント情報</param>
+00134:         private static void CurrentDispatcher_UnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+00135:         {
+00136:             Exception ex = e.Exception;
+00137: 
+00138:             Logger.Fatal("CurrentDispatcher_UnhandledException : " + ex.ToString());
+00139:             throw e.Exception;
+00140:         }
+00141: 
+00142:         /// <summary>
+00143:         /// Exceptionをログ出力する
+00144:         /// </summary>
+00145:         /// <param name="sender">イベント発生元</param>
+00146:         /// <param name="e">イベント情報</param>
+00147:         private static void Current_DispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+00148:         {
+00149:             Exception ex = e.Exception;
+00150: 
+00151:             Logger.Fatal("Current_DispatcherUnhandledException : " + ex.ToString());
+00152:             throw e.Exception;
+00153:         }
+00154: 
+00155:         /// <summary>
+00156:         /// Exceptionをログ出力する
+00157:         /// </summary>
+00158:         /// <param name="sender">イベント発生元</param>
+00159:         /// <param name="e">イベント情報</param>
+00160:         private static void POS4U_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+00161:         {
+00162:             Exception ex = e.ExceptionObject as Exception;
+00163: 
+00164:             Logger.Fatal("POS4U_UnhandledException : " + ex.ToString());
+00165:             throw ex;
+00166:         }
+00167: 
+00168:         /// <summary>
+00169:         /// Exceptionをログ出力する
+00170:         /// </summary>
+00171:         /// <param name="sender">イベント発生元</param>
+00172:         /// <param name="e">イベント情報</param>
+00173:         private static void Application_ThreadException(object sender, ThreadExceptionEventArgs e)
+00174:         {
+00175:             Exception ex = e.Exception;
+00176: 
+00177:             Logger.Fatal("Application_ThreadException : " + ex.ToString());
+00178:             throw e.Exception;
+00179:         }
+00180: 
+00181:         /// <summary>
+00182:         /// アプリケーションがアクティブになった時のイベント
+00183:         /// </summary>
+00184:         /// <param name="sender">イベント発生元</param>
+00185:         /// <param name="e">イベント情報</param>
+00186:         private void Application_Activated(object sender, EventArgs e)
+00187:         {
+00188:             try
+00189:             {
+00190:                 // 常にキー入力が CA で検知できるよう、CA プロセスをアクティブにする (CA はキーボードスキャナを利用する)
+00191:                 // CA がアクティブ Window、CH がノーアクティブ Window で動作し、他に アクティブな Window は起動していない運用を想定
+00192:                 // ※デバッグでシミュレータ Window のタイトルをクリックすると本イベントが発生し、CA がアクティブとなる。
+00193:                 // 　ただし、続けてタイトルをもう一度クリックすると CH がアクティブとなる。これはデバッグ時の制約とする
+00194:                 // 　(CH がアクティブにならないとシミュレータのボタンが押せない、などシミュレータが利用できない事態となる)
+00195:                 var p = Process.GetProcessesByName("POS4U");
+00196:                 if (p != null &amp;&amp; p.Length &gt; 0)
+00197:                 {
+00198:                     Interaction.AppActivate(p[0].Id);
+00199:                 }
+00200:             }
+00201:             catch (ArgumentException)
+00202:             {
+00203:                 // POS4U 起動が完了していないことが原因で起こる例外は問題ないので握り潰す
+00204:             }
+00205:             catch (Exception ex)
+00206:             {
+00207:                 Logger.Warn($"Application_Activated : {ex}");
+00208:             }
+00209:         }
+00210: 
+00211:         /// <summary>
+00212:         /// コントローラーのスタート
+00213:         /// </summary>
+00214:         private void StartupController()
+00215:         {
+00216:             // コントローラー初期化処理
+00217:             this._controller = new WinPOSController();
+00218: 
+00219:             // セットアップ処理の実行
+00220:             this._controller.Startup(DeviceIds.AutoRun.Id, EventCodes.Common_PowerOn.Code, null);
+00221:         }
+00222:     }
+00223: }</p>
+<hr />
+<p>FILE: Source/TRAN4U/Program.cs
+SHA256: 3ffbd606565ac5eea8ca849df86a439ffbdd5a50f09dd8ebc2fe8eaef6cf3f16
+================================================================================
+00001: ﻿using System;
+00002: using System.Collections.Generic;
+00003: using System.Diagnostics;
+00004: using System.IO;
+00005: using System.Linq;
+00006: using System.Threading;
+00007: using System.Windows.Forms;
+00008: using ForYouApplications.POS4U.Framework.Library;
+00009: using ForYouApplications.POS4U.WinPOS.Framework.Library;
+00010: 
+00011: namespace ForYouApplications.TRAN4U
+00012: {
+00013:     /// <summary>
+00014:     /// TRAN4Uメインプログラム
+00015:     /// </summary>
+00016:     internal static class Program
+00017:     {
+00018:         /// <summary>
+00019:         /// アプリケーションのメイン エントリ ポイントです。
+00020:         /// </summary>
+00021:         [STAThread]
+00022:         public static void Main()
+00023:         {
+00024:             try
+00025:             {
+00026:                 // 自身のファイル名.txtを作成し、プロセスの起動をLauncherに知らせる。
+00027:                 MakeMainModuleNameTextFile();
+00028: 
+00029:                 // ログ出力用オブジェクトインスタンスの生成
+00030:                 Logger.Info("&gt;&gt;&gt;&gt;&gt;&gt; TRAN4U Start");
+00031: 
+00032:                 // 二重起動チェック
+00033:                 if (!Debugger.IsAttached)
+00034:                 {
+00035:                     if (SystemLibrary.IsProcessAlreadyExist())
+00036:                     {
+00037:                         Logger.Info("XXXXXX TRAN4U has terminated, because of already existed");
+00038:                         return;
+00039:                     }
+00040:                 }
+00041: 
+00042:                 Application.ThreadException -= new ThreadExceptionEventHandler(Application_ThreadException);
+00043:                 Application.ThreadException += new ThreadExceptionEventHandler(Application_ThreadException);
+00044: 
+00045:                 Thread.GetDomain().UnhandledException -= new UnhandledExceptionEventHandler(TRAN4U_UnhandledException);
+00046:                 Thread.GetDomain().UnhandledException += new UnhandledExceptionEventHandler(TRAN4U_UnhandledException);
+00047: 
+00048:                 // コントローラーの起動
+00049:                 TRAN4UController controller = new TRAN4UController();
+00050:                 controller.Init();
+00051: 
+00052:                 // 常駐処理
+00053:                 Application.Run(controller);
+00054: 
+00055:                 Logger.Info("&lt;&lt;&lt;&lt;&lt;&lt; TRAN4U Good-bye. See you soon!");
+00056:             }
+00057:             catch (Exception ex)
+00058:             {
+00059:                 Logger.Fatal("TRAN4U ERROR!!");
+00060:                 Logger.Fatal(ex.ToString());
+00061:                 throw;
+00062:             }
+00063:         }
+00064: 
+00065:         /// <summary>
+00066:         /// 自身のファイル名.txtを作成
+00067:         /// </summary>
+00068:         private static void MakeMainModuleNameTextFile()
+00069:         {
+00070:             string fileName = Process.GetCurrentProcess().MainModule.FileName;
+00071:             fileName = fileName + ".txt";
+00072: 
+00073:             // 空ファイルを作成
+00074:             using (FileStream fileStream = File.Create(fileName))
+00075:             {
+00076:                 fileStream.Close();
+00077:             }
+00078:         }
+00079: 
+00080:         /// <summary>
+00081:         /// Exceptionをログ出力する
+00082:         /// </summary>
+00083:         /// <param name="sender">イベント発生元</param>
+00084:         /// <param name="e">イベント情報</param>
+00085:         private static void TRAN4U_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+00086:         {
+00087:             Exception ex = e.ExceptionObject as Exception;
+00088:             Logger.Fatal("TRAN4U_UnhandledException : " + ex.ToString());
+00089:             throw ex;
+00090:         }
+00091: 
+00092:         /// <summary>
+00093:         /// Exceptionをログ出力する
+00094:         /// </summary>
+00095:         /// <param name="sender">イベント発生元</param>
+00096:         /// <param name="e">イベント情報</param>
+00097:         private static void Application_ThreadException(object sender, ThreadExceptionEventArgs e)
+00098:         {
+00099:             Exception ex = e.Exception;
+00100:             Logger.Fatal("Application_ThreadException : " + ex.ToString());
+00101:             throw e.Exception;
+00102:         }
+00103:     }
+00104: }</p>
+<hr />
+<p>FILE: Tools/BOLoginPassword/BOLoginPassword/BOLoginPassword/Program.cs
+SHA256: a057cefec1ba388bfb2781bb5b4c5e2596a864fe83873dda1cd897a7188e20a0
+================================================================================
+00001: using System;
+00002: using System.Collections.Generic;
+00003: using System.Linq;
+00004: using System.Threading.Tasks;
+00005: using System.Windows.Forms;
+00006: 
+00007: namespace BOLoginPassword
+00008: {
+00009:     static class Program
+00010:     {
+00011:         /// <summary>
+00012:         ///  The main entry point for the application.
+00013:         /// </summary>
+00014:         [STAThread]
+00015:         static void Main()
+00016:         {
+00017:             Application.SetHighDpiMode(HighDpiMode.SystemAware);
+00018:             Application.EnableVisualStyles();
+00019:             Application.SetCompatibleTextRenderingDefault(false);
+00020:             Application.Run(new Form1());
+00021:         }
+00022:     }
+00023: }</p>
+<hr />
+<p>FILE: Tools/CESettingTool/CESettingTool/App.xaml
+00001: [非文本文件，未内联源码。size_bytes=544, extension=.xaml，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Tools/CESettingTool/CESettingTool/App.xaml.cs
+SHA256: c0ba18745852eae0e3a2bf73ec08010e98758376a58ba22444c507d2d4464332
+================================================================================
+00001: ﻿using System;
+00002: using System.Diagnostics;
+00003: using System.Threading;
+00004: using System.Windows;
+00005: using System.Windows.Threading;
+00006: using ForYouApplications.POS4U.Framework.Library;
+00007: 
+00008: namespace ForYouApplications.POS4U.Tools.CESettingTool
+00009: {
+00010:     /// <summary>
+00011:     /// App.xaml の相互作用ロジック
+00012:     /// </summary>
+00013:     public partial class App : Application
+00014:     {
+00015:         /// <summary>
+00016:         /// アプリ起動
+00017:         /// </summary>
+00018:         /// <param name="e">イベント情報</param>
+00019:         protected override void OnStartup(StartupEventArgs e)
+00020:         {
+00021:             // ログ出力用オブジェクトインスタンスの生成
+00022:             Logger.Info("&gt;&gt;&gt;&gt;&gt;&gt; CESettingTool Start");
+00023: 
+00024:             string processName = Process.GetCurrentProcess().ProcessName;
+00025: 
+00026:             ////// 二重起動チェック
+00027:             ////if (SystemManagement.IsProcessAlreadyExist())
+00028:             ////{
+00029:             ////    Logger.Info(string.Format("{0} has terminated, because of already existed", processName));
+00030:             ////    this.Shutdown();
+00031:             ////    return;
+00032:             ////}
+00033: 
+00034:             Logger.Info("Welcome to CESettingTool Main Loop");
+00035: 
+00036:             Thread.GetDomain().UnhandledException += new UnhandledExceptionEventHandler(CESettingTool_UnhandledException);
+00037:             Application.Current.DispatcherUnhandledException += new DispatcherUnhandledExceptionEventHandler(Current_DispatcherUnhandledException);
+00038:             Dispatcher.CurrentDispatcher.UnhandledException += new DispatcherUnhandledExceptionEventHandler(CurrentDispatcher_UnhandledException);
+00039: 
+00040:             base.OnStartup(e);
+00041: 
+00042:             MainWindow window = new MainWindow();
+00043:             System.Windows.Forms.Screen[] screens = System.Windows.Forms.Screen.AllScreens;
+00044:             foreach (System.Windows.Forms.Screen screen in screens)
+00045:             {
+00046:                 if (screen.Primary)
+00047:                 {
+00048:                     System.Drawing.Rectangle workingArea = screen.WorkingArea;
+00049:                     window.Width = workingArea.Width;
+00050:                     window.Height = workingArea.Height;
+00051:                     window.Top = workingArea.Top;
+00052:                     window.Left = workingArea.Left;
+00053:                     break;
+00054:                 }
+00055:             }
+00056: 
+00057:             window.Show();
+00058:         }
+00059: 
+00060:         /// <summary>
+00061:         /// Exceptionをログ出力する
+00062:         /// </summary>
+00063:         /// <param name="sender">イベント発生元</param>
+00064:         /// <param name="e">イベント情報</param>
+00065:         private static void CurrentDispatcher_UnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+00066:         {
+00067:             Exception ex = e.Exception;
+00068: 
+00069:             Logger.Fatal("CurrentDispatcher_UnhandledException : " + ex.ToString());
+00070:             throw e.Exception;
+00071:         }
+00072: 
+00073:         /// <summary>
+00074:         /// Exceptionをログ出力する
+00075:         /// </summary>
+00076:         /// <param name="sender">イベント発生元</param>
+00077:         /// <param name="e">イベント情報</param>
+00078:         private static void Current_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+00079:         {
+00080:             Exception ex = e.Exception;
+00081: 
+00082:             Logger.Fatal("Current_DispatcherUnhandledException : " + ex.ToString());
+00083:             throw e.Exception;
+00084:         }
+00085: 
+00086:         /// <summary>
+00087:         /// Exceptionをログ出力する
+00088:         /// </summary>
+00089:         /// <param name="sender">イベント発生元</param>
+00090:         /// <param name="e">イベント情報</param>
+00091:         private static void CESettingTool_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+00092:         {
+00093:             Exception ex = e.ExceptionObject as Exception;
+00094: 
+00095:             Logger.Fatal("CESettingTool_UnhandledException : " + ex.ToString());
+00096:             throw ex;
+00097:         }
+00098:     }
+00099: }</p>
+<hr />
+<p>FILE: Tools/CESettingToolV4/CESettingToolV4/App.xaml
+00001: [非文本文件，未内联源码。size_bytes=544, extension=.xaml，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Tools/CESettingToolV4/CESettingToolV4/App.xaml.cs
+SHA256: c0ba18745852eae0e3a2bf73ec08010e98758376a58ba22444c507d2d4464332
+================================================================================
+00001: ﻿using System;
+00002: using System.Diagnostics;
+00003: using System.Threading;
+00004: using System.Windows;
+00005: using System.Windows.Threading;
+00006: using ForYouApplications.POS4U.Framework.Library;
+00007: 
+00008: namespace ForYouApplications.POS4U.Tools.CESettingTool
+00009: {
+00010:     /// <summary>
+00011:     /// App.xaml の相互作用ロジック
+00012:     /// </summary>
+00013:     public partial class App : Application
+00014:     {
+00015:         /// <summary>
+00016:         /// アプリ起動
+00017:         /// </summary>
+00018:         /// <param name="e">イベント情報</param>
+00019:         protected override void OnStartup(StartupEventArgs e)
+00020:         {
+00021:             // ログ出力用オブジェクトインスタンスの生成
+00022:             Logger.Info("&gt;&gt;&gt;&gt;&gt;&gt; CESettingTool Start");
+00023: 
+00024:             string processName = Process.GetCurrentProcess().ProcessName;
+00025: 
+00026:             ////// 二重起動チェック
+00027:             ////if (SystemManagement.IsProcessAlreadyExist())
+00028:             ////{
+00029:             ////    Logger.Info(string.Format("{0} has terminated, because of already existed", processName));
+00030:             ////    this.Shutdown();
+00031:             ////    return;
+00032:             ////}
+00033: 
+00034:             Logger.Info("Welcome to CESettingTool Main Loop");
+00035: 
+00036:             Thread.GetDomain().UnhandledException += new UnhandledExceptionEventHandler(CESettingTool_UnhandledException);
+00037:             Application.Current.DispatcherUnhandledException += new DispatcherUnhandledExceptionEventHandler(Current_DispatcherUnhandledException);
+00038:             Dispatcher.CurrentDispatcher.UnhandledException += new DispatcherUnhandledExceptionEventHandler(CurrentDispatcher_UnhandledException);
+00039: 
+00040:             base.OnStartup(e);
+00041: 
+00042:             MainWindow window = new MainWindow();
+00043:             System.Windows.Forms.Screen[] screens = System.Windows.Forms.Screen.AllScreens;
+00044:             foreach (System.Windows.Forms.Screen screen in screens)
+00045:             {
+00046:                 if (screen.Primary)
+00047:                 {
+00048:                     System.Drawing.Rectangle workingArea = screen.WorkingArea;
+00049:                     window.Width = workingArea.Width;
+00050:                     window.Height = workingArea.Height;
+00051:                     window.Top = workingArea.Top;
+00052:                     window.Left = workingArea.Left;
+00053:                     break;
+00054:                 }
+00055:             }
+00056: 
+00057:             window.Show();
+00058:         }
+00059: 
+00060:         /// <summary>
+00061:         /// Exceptionをログ出力する
+00062:         /// </summary>
+00063:         /// <param name="sender">イベント発生元</param>
+00064:         /// <param name="e">イベント情報</param>
+00065:         private static void CurrentDispatcher_UnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+00066:         {
+00067:             Exception ex = e.Exception;
+00068: 
+00069:             Logger.Fatal("CurrentDispatcher_UnhandledException : " + ex.ToString());
+00070:             throw e.Exception;
+00071:         }
+00072: 
+00073:         /// <summary>
+00074:         /// Exceptionをログ出力する
+00075:         /// </summary>
+00076:         /// <param name="sender">イベント発生元</param>
+00077:         /// <param name="e">イベント情報</param>
+00078:         private static void Current_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+00079:         {
+00080:             Exception ex = e.Exception;
+00081: 
+00082:             Logger.Fatal("Current_DispatcherUnhandledException : " + ex.ToString());
+00083:             throw e.Exception;
+00084:         }
+00085: 
+00086:         /// <summary>
+00087:         /// Exceptionをログ出力する
+00088:         /// </summary>
+00089:         /// <param name="sender">イベント発生元</param>
+00090:         /// <param name="e">イベント情報</param>
+00091:         private static void CESettingTool_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+00092:         {
+00093:             Exception ex = e.ExceptionObject as Exception;
+00094: 
+00095:             Logger.Fatal("CESettingTool_UnhandledException : " + ex.ToString());
+00096:             throw ex;
+00097:         }
+00098:     }
+00099: }</p>
+<hr />
+<p>FILE: Tools/CESettingToolV5/CESettingToolV4/App.xaml
+00001: [非文本文件，未内联源码。size_bytes=544, extension=.xaml，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Tools/CESettingToolV5/CESettingToolV4/App.xaml.cs
+SHA256: c0ba18745852eae0e3a2bf73ec08010e98758376a58ba22444c507d2d4464332
+================================================================================
+00001: ﻿using System;
+00002: using System.Diagnostics;
+00003: using System.Threading;
+00004: using System.Windows;
+00005: using System.Windows.Threading;
+00006: using ForYouApplications.POS4U.Framework.Library;
+00007: 
+00008: namespace ForYouApplications.POS4U.Tools.CESettingTool
+00009: {
+00010:     /// <summary>
+00011:     /// App.xaml の相互作用ロジック
+00012:     /// </summary>
+00013:     public partial class App : Application
+00014:     {
+00015:         /// <summary>
+00016:         /// アプリ起動
+00017:         /// </summary>
+00018:         /// <param name="e">イベント情報</param>
+00019:         protected override void OnStartup(StartupEventArgs e)
+00020:         {
+00021:             // ログ出力用オブジェクトインスタンスの生成
+00022:             Logger.Info("&gt;&gt;&gt;&gt;&gt;&gt; CESettingTool Start");
+00023: 
+00024:             string processName = Process.GetCurrentProcess().ProcessName;
+00025: 
+00026:             ////// 二重起動チェック
+00027:             ////if (SystemManagement.IsProcessAlreadyExist())
+00028:             ////{
+00029:             ////    Logger.Info(string.Format("{0} has terminated, because of already existed", processName));
+00030:             ////    this.Shutdown();
+00031:             ////    return;
+00032:             ////}
+00033: 
+00034:             Logger.Info("Welcome to CESettingTool Main Loop");
+00035: 
+00036:             Thread.GetDomain().UnhandledException += new UnhandledExceptionEventHandler(CESettingTool_UnhandledException);
+00037:             Application.Current.DispatcherUnhandledException += new DispatcherUnhandledExceptionEventHandler(Current_DispatcherUnhandledException);
+00038:             Dispatcher.CurrentDispatcher.UnhandledException += new DispatcherUnhandledExceptionEventHandler(CurrentDispatcher_UnhandledException);
+00039: 
+00040:             base.OnStartup(e);
+00041: 
+00042:             MainWindow window = new MainWindow();
+00043:             System.Windows.Forms.Screen[] screens = System.Windows.Forms.Screen.AllScreens;
+00044:             foreach (System.Windows.Forms.Screen screen in screens)
+00045:             {
+00046:                 if (screen.Primary)
+00047:                 {
+00048:                     System.Drawing.Rectangle workingArea = screen.WorkingArea;
+00049:                     window.Width = workingArea.Width;
+00050:                     window.Height = workingArea.Height;
+00051:                     window.Top = workingArea.Top;
+00052:                     window.Left = workingArea.Left;
+00053:                     break;
+00054:                 }
+00055:             }
+00056: 
+00057:             window.Show();
+00058:         }
+00059: 
+00060:         /// <summary>
+00061:         /// Exceptionをログ出力する
+00062:         /// </summary>
+00063:         /// <param name="sender">イベント発生元</param>
+00064:         /// <param name="e">イベント情報</param>
+00065:         private static void CurrentDispatcher_UnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+00066:         {
+00067:             Exception ex = e.Exception;
+00068: 
+00069:             Logger.Fatal("CurrentDispatcher_UnhandledException : " + ex.ToString());
+00070:             throw e.Exception;
+00071:         }
+00072: 
+00073:         /// <summary>
+00074:         /// Exceptionをログ出力する
+00075:         /// </summary>
+00076:         /// <param name="sender">イベント発生元</param>
+00077:         /// <param name="e">イベント情報</param>
+00078:         private static void Current_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+00079:         {
+00080:             Exception ex = e.Exception;
+00081: 
+00082:             Logger.Fatal("Current_DispatcherUnhandledException : " + ex.ToString());
+00083:             throw e.Exception;
+00084:         }
+00085: 
+00086:         /// <summary>
+00087:         /// Exceptionをログ出力する
+00088:         /// </summary>
+00089:         /// <param name="sender">イベント発生元</param>
+00090:         /// <param name="e">イベント情報</param>
+00091:         private static void CESettingTool_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+00092:         {
+00093:             Exception ex = e.ExceptionObject as Exception;
+00094: 
+00095:             Logger.Fatal("CESettingTool_UnhandledException : " + ex.ToString());
+00096:             throw ex;
+00097:         }
+00098:     }
+00099: }</p>
+<hr />
+<p>FILE: Tools/DataUpdate4Replace/DataUpdate4Replace/App.xaml
+00001: [非文本文件，未内联源码。size_bytes=560, extension=.xaml，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Tools/DataUpdate4Replace/DataUpdate4Replace/App.xaml.cs
+SHA256: edb0be729cc5240bc43aac53a831ea6e904418fcf5d80bfe6cf07f8ba9168890
+================================================================================
+00001: ﻿using System;
+00002: using System.Collections.Generic;
+00003: using System.Configuration;
+00004: using System.Data;
+00005: using System.Diagnostics;
+00006: using System.IO;
+00007: using System.Linq;
+00008: using System.Threading;
+00009: using System.Windows;
+00010: using System.Windows.Input;
+00011: using System.Windows.Threading;
+00012: using ForYouApplications.POS4U.Framework.Library;
+00013: using ForYouApplications.POS4U.WinPOS.Framework;
+00014: using ForYouApplications.POS4U.WinPOS.Framework.Library;
+00015: 
+00016: namespace ForYouApplications.DataUpdate4Replace
+00017: {
+00018:     /// <summary>
+00019:     /// App.xaml の相互作用ロジック
+00020:     /// </summary>
+00021:     public partial class App : Application
+00022:     {
+00023:         /// <summary>
+00024:         /// アプリ起動
+00025:         /// </summary>
+00026:         /// <param name="e">イベント情報</param>
+00027:         protected override void OnStartup(StartupEventArgs e)
+00028:         {
+00029:             try
+00030:             {
+00031:                 // 自身のファイル名.txtを作成し、プロセスの起動をLauncherに知らせる。
+00032:                 MakeMainModuleNameTextFile();
+00033: 
+00034:                 // ログ出力用オブジェクトインスタンスの生成
+00035:                 Logger.Info("&gt;&gt;&gt;&gt;&gt; DataUpdate4Replace Start");
+00036: 
+00037:                 string processName = Process.GetCurrentProcess().ProcessName;
+00038: 
+00039:                 // 二重起動チェック
+00040:                 if (SystemLibrary.IsProcessAlreadyExist())
+00041:                 {
+00042:                     Logger.Info(string.Format("{0} has terminated, because of already existed", processName));
+00043:                     this.Shutdown(-1);
+00044:                     return;
+00045:                 }
+00046: 
+00047:                 Thread.GetDomain().UnhandledException += new UnhandledExceptionEventHandler(this.DataUpdate4Replace_UnhandledException);
+00048:                 Application.Current.DispatcherUnhandledException += new DispatcherUnhandledExceptionEventHandler(this.Current_DispatcherUnhandledException);
+00049:                 Dispatcher.CurrentDispatcher.UnhandledException += new DispatcherUnhandledExceptionEventHandler(this.CurrentDispatcher_UnhandledException);
+00050: 
+00051:                 base.OnStartup(e);
+00052: 
+00053:                 new SettingValue<object>(null, null);
+00054:                 new MessageId(null);
+00055: 
+00056:                 if (WinPOSFrameworkSettingValues.CursorHide.Value)
+00057:                 {
+00058:                     Mouse.OverrideCursor = Cursors.None;
+00059:                 }
+00060: 
+00061:                 var window = new MainWindow();
+00062:                 window.Closing += this.MainWindow_Closing;
+00063:                 window.Show();
+00064:             }
+00065:             catch (Exception ex)
+00066:             {
+00067:                 Logger.Fatal(ex.ToString());
+00068:                 throw;
+00069:             }
+00070:         }
+00071: 
+00072:         /// <summary>
+00073:         /// アプリケーション終了処理
+00074:         /// </summary>
+00075:         /// <param name="e">
+00076:         /// ExitEventArgs型のオブジェクト
+00077:         /// </param>
+00078:         protected override void OnExit(System.Windows.ExitEventArgs e)
+00079:         {
+00080:             Logger.Info("OnExit begin.");
+00081: 
+00082:             base.OnExit(e);
+00083: 
+00084:             Logger.Info("OnExit end.");
+00085:         }
+00086: 
+00087:         /// <summary>
+00088:         /// 自身のファイル名.txtを作成
+00089:         /// </summary>
+00090:         private static void MakeMainModuleNameTextFile()
+00091:         {
+00092:             string fileName = Process.GetCurrentProcess().MainModule.FileName;
+00093:             fileName = fileName + ".txt";
+00094: 
+00095:             // 空ファイルを作成
+00096:             using (FileStream fileStream = File.Create(fileName))
+00097:             {
+00098:                 fileStream.Close();
+00099:             }
+00100:         }
+00101: 
+00102:         /// <summary>
+00103:         /// メインウィンドウクローズイベント
+00104:         /// </summary>
+00105:         /// <param name="sender">イベント発生元</param>
+00106:         /// <param name="e">イベント情報</param>
+00107:         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+00108:         {
+00109:             var window = sender as MainWindow;
+00110: 
+00111:             if (window != null &amp;&amp; window.ExitCode != 0)
+00112:             {
+00113:                 this.Shutdown(window.ExitCode);
+00114:             }
+00115:         }
+00116: 
+00117:         /// <summary>
+00118:         /// Exceptionをログ出力する
+00119:         /// </summary>
+00120:         /// <param name="sender">イベント発生元</param>
+00121:         /// <param name="e">イベント情報</param>
+00122:         private void CurrentDispatcher_UnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+00123:         {
+00124:             Exception ex = e.Exception;
+00125: 
+00126:             Logger.Error(ex.ToString());
+00127: 
+00128:             this.Shutdown(-1);
+00129:         }
+00130: 
+00131:         /// <summary>
+00132:         /// Exceptionをログ出力する
+00133:         /// </summary>
+00134:         /// <param name="sender">イベント発生元</param>
+00135:         /// <param name="e">イベント情報</param>
+00136:         private void Current_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+00137:         {
+00138:             Exception ex = e.Exception;
+00139: 
+00140:             Logger.Error(ex.ToString());
+00141: 
+00142:             this.Shutdown(-1);
+00143:         }
+00144: 
+00145:         /// <summary>
+00146:         /// Exceptionをログ出力する
+00147:         /// </summary>
+00148:         /// <param name="sender">イベント発生元</param>
+00149:         /// <param name="e">イベント情報</param>
+00150:         private void DataUpdate4Replace_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+00151:         {
+00152:             Exception ex = e.ExceptionObject as Exception;
+00153: 
+00154:             Logger.Error(ex.ToString());
+00155: 
+00156:             this.Shutdown(-1);
+00157:         }
+00158:     }
+00159: }</p>
+<hr />
+<p>FILE: Tools/IMEChange/IMEChange/Program.cs
+SHA256: 7c920dd06d3d0100e6a8a539c96270ee90e4e961e7fbbeb2171c17eaf333df3f
+================================================================================
+00001: ﻿using ForYouApplications.POS4U.Framework.Library;
+00002: using System;
+00003: using System.Diagnostics;
+00004: using System.IO;
+00005: 
+00006: namespace ForYouApplications.POS4U.Tools
+00007: {
+00008:     public static class Program
+00009:     {
+00010:         /// <summary>
+00011:         /// IME対応
+00012:         /// </summary>
+00013:         /// <returns>0:正常 -1:異常</returns>
+00014:         [STAThread]
+00015:         public static int Main()
+00016:         {
+00017:             try
+00018:             {
+00019:                 Logger.Info("▼▼▼▼▼▼▼▼IMEChange Exe Start.▼▼▼▼▼▼▼▼");
+00020: 
+00021:                 // 自身のファイル名.txtを作成し、プロセスの起動をLauncherに知らせる。
+00022:                 MakeMainModuleNameTextFile();
+00023: 
+00024:                 bool isXP = Environment.OSVersion.Version.Major == 5;
+00025:                 if (isXP)
+00026:                 {
+00027:                     Logger.Info("@@@@IMEChange Exe XPだけ、入力IMEへ転換して非表示対応.");
+00028: 
+00029:                     // XPだけ、入力IMEへ転換して非表示対応
+00030:                     uint wM_INPUTLANGCHANGEREQUEST = 0x0050;
+00031:                     int hWND_BROADCAST = 0xffff;
+00032:                     uint kLF_ACTIVATE = 1;
+00033:                     string ja_jp = "00000411";
+00034:                     SystemUser32DLL.PostMessage(hWND_BROADCAST, wM_INPUTLANGCHANGEREQUEST, IntPtr.Zero, SystemUser32DLL.LoadKeyboardLayout(ja_jp, kLF_ACTIVATE));
+00035:                     SystemUser32DLL.SystemParametersInfo(111, 0, "0", 0);
+00036:                 }
+00037: 
+00038:                 Logger.Info("▲▲▲▲▲▲▲▲IMEChange Exe End.▲▲▲▲▲▲▲▲");
+00039:             }
+00040:             catch (Exception ex)
+00041:             {
+00042:                 Logger.Error($"IMEChange Exe Exception.ex={ex.ToString()}");
+00043:                 return -1;
+00044:             }
+00045: 
+00046:             return 0;
+00047:         }
+00048: 
+00049:         /// <summary>
+00050:         /// 自身のファイル名.txtを作成
+00051:         /// </summary>
+00052:         private static void MakeMainModuleNameTextFile()
+00053:         {
+00054:             string fileName = Process.GetCurrentProcess().MainModule.FileName;
+00055:             fileName = fileName + ".txt";
+00056: 
+00057:             // 空ファイルを作成
+00058:             using (FileStream fileStream = File.Create(fileName))
+00059:             {
+00060:                 fileStream.Close();
+00061:             }
+00062:         }
+00063:     }
+00064: }</p>
+<hr />
+<p>FILE: Tools/MasterSync/MasterSync/App.xaml
+00001: [非文本文件，未内联源码。size_bytes=546, extension=.xaml，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Tools/MasterSync/MasterSync/App.xaml.cs
+SHA256: 4c27a7e8df21732f2054e8842c6071dfb80faec0b45f2454888a1c9fffef1b21
+================================================================================
+00001: ﻿using System;
+00002: using System.Diagnostics;
+00003: using System.IO;
+00004: using System.Threading;
+00005: using System.Windows;
+00006: using System.Windows.Input;
+00007: using System.Windows.Threading;
+00008: using ForYouApplications.POS4U.Framework.Library;
+00009: using ForYouApplications.POS4U.WinPOS.Framework;
+00010: using ForYouApplications.POS4U.WinPOS.Framework.Library;
+00011: 
+00012: namespace POS4ULogicService.MasterSync
+00013: {
+00014:     /// <summary>
+00015:     /// App.xaml の相互作用ロジック
+00016:     /// </summary>
+00017:     public partial class App : Application
+00018:     {
+00019:         /// <summary>
+00020:         /// アプリ起動
+00021:         /// </summary>
+00022:         /// <param name="e">イベント情報</param>
+00023:         protected override void OnStartup(StartupEventArgs e)
+00024:         {
+00025:             try
+00026:             {
+00027:                 // 自身のファイル名.txtを作成し、プロセスの起動をLauncherに知らせる。
+00028:                 MakeMainModuleNameTextFile();
+00029: 
+00030:                 // ログ出力用オブジェクトインスタンスの生成
+00031:                 Logger.Info("&gt;&gt;&gt;&gt;&gt; MasterSync Start");
+00032: 
+00033:                 string processName = Process.GetCurrentProcess().ProcessName;
+00034: 
+00035:                 // 二重起動チェック
+00036:                 if (SystemLibrary.IsProcessAlreadyExist())
+00037:                 {
+00038:                     Logger.Info(string.Format("{0} has terminated, because of already existed", processName));
+00039:                     this.Shutdown(-1);
+00040:                     return;
+00041:                 }
+00042: 
+00043:                 Thread.GetDomain().UnhandledException += new UnhandledExceptionEventHandler(this.MasterSync_UnhandledException);
+00044:                 Application.Current.DispatcherUnhandledException += new DispatcherUnhandledExceptionEventHandler(this.Current_DispatcherUnhandledException);
+00045:                 Dispatcher.CurrentDispatcher.UnhandledException += new DispatcherUnhandledExceptionEventHandler(this.CurrentDispatcher_UnhandledException);
+00046: 
+00047:                 base.OnStartup(e);
+00048: 
+00049:                 new SettingValue<object>(null, null);
+00050:                 new MessageId(null);
+00051: 
+00052:                 if (WinPOSFrameworkSettingValues.CursorHide.Value)
+00053:                 {
+00054:                     Mouse.OverrideCursor = Cursors.None;
+00055:                 }
+00056: 
+00057:                 var window = new MainWindow();
+00058:                 window.Closing += this.MainWindow_Closing;
+00059:                 window.Show();
+00060:             }
+00061:             catch (Exception ex)
+00062:             {
+00063:                 Logger.Fatal(ex.ToString());
+00064:                 throw;
+00065:             }
+00066:         }
+00067: 
+00068:         /// <summary>
+00069:         /// 自身のファイル名.txtを作成
+00070:         /// </summary>
+00071:         private static void MakeMainModuleNameTextFile()
+00072:         {
+00073:             string fileName = Process.GetCurrentProcess().MainModule.FileName;
+00074:             fileName = fileName + ".txt";
+00075: 
+00076:             // 空ファイルを作成
+00077:             using (FileStream fileStream = File.Create(fileName))
+00078:             {
+00079:                 fileStream.Close();
+00080:             }
+00081:         }
+00082: 
+00083:         /// <summary>
+00084:         /// アプリケーション終了処理
+00085:         /// </summary>
+00086:         /// <param name="e">
+00087:         /// ExitEventArgs型のオブジェクト
+00088:         /// </param>
+00089:         protected override void OnExit(System.Windows.ExitEventArgs e)
+00090:         {
+00091:             Logger.Info("OnExit begin.");
+00092: 
+00093:             base.OnExit(e);
+00094: 
+00095:             Logger.Info("OnExit end.");
+00096:         }
+00097: 
+00098:         /// <summary>
+00099:         /// メインウィンドウクローズイベント
+00100:         /// </summary>
+00101:         /// <param name="sender">イベント発生元</param>
+00102:         /// <param name="e">イベント情報</param>
+00103:         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+00104:         {
+00105:             var window = sender as MainWindow;
+00106: 
+00107:             if (window != null &amp;&amp; window.ExitCode != 0)
+00108:             {
+00109:                 this.Shutdown(window.ExitCode);
+00110:             }
+00111:         }
+00112: 
+00113:         /// <summary>
+00114:         /// Exceptionをログ出力する
+00115:         /// </summary>
+00116:         /// <param name="sender">イベント発生元</param>
+00117:         /// <param name="e">イベント情報</param>
+00118:         private void CurrentDispatcher_UnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+00119:         {
+00120:             Exception ex = e.Exception;
+00121: 
+00122:             Logger.Error(ex.ToString());
+00123: 
+00124:             this.Shutdown(-1);
+00125:         }
+00126: 
+00127:         /// <summary>
+00128:         /// Exceptionをログ出力する
+00129:         /// </summary>
+00130:         /// <param name="sender">イベント発生元</param>
+00131:         /// <param name="e">イベント情報</param>
+00132:         private void Current_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+00133:         {
+00134:             Exception ex = e.Exception;
+00135: 
+00136:             Logger.Error(ex.ToString());
+00137: 
+00138:             this.Shutdown(-1);
+00139:         }
+00140: 
+00141:         /// <summary>
+00142:         /// Exceptionをログ出力する
+00143:         /// </summary>
+00144:         /// <param name="sender">イベント発生元</param>
+00145:         /// <param name="e">イベント情報</param>
+00146:         private void MasterSync_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+00147:         {
+00148:             Exception ex = e.ExceptionObject as Exception;
+00149: 
+00150:             Logger.Error(ex.ToString());
+00151: 
+00152:             this.Shutdown(-1);
+00153:         }
+00154:     }
+00155: }</p>
+<hr />
+<p>FILE: Tools/POSLogUploader/POSLogUploader/Program.cs
+SHA256: 9d73567e824eba23924d56cf9fb52ff49e37f86a11238fc104259ae6e7812fe6
+================================================================================
+00001: ﻿using System;
+00002: using System.IO;
+00003: using System.Net;
+00004: using System.Threading;
+00005: using ForYouApplications.POS4U.Background.Business.BackgroundCommon;
+00006: using ForYouApplications.POS4U.Background.Common.Const;
+00007: using ForYouApplications.POS4U.Common.Const;
+00008: using ForYouApplications.POS4U.Device.DeviceCommon;
+00009: using ForYouApplications.POS4U.Framework.Library;
+00010: using ForYouApplications.POS4U.LogicService.ServiceAccessor;
+00011: using ForYouApplications.POS4U.WinPOS.Framework;
+00012: using ForYouApplications.POS4U.WinPOS.Framework.Library;
+00013: using Ionic.Zip;
+00014: 
+00015: namespace ForYouApplications.POS4U
+00016: {
+00017:     /// <summary>
+00018:     /// POSログアップロードプログラム
+00019:     /// </summary>
+00020:     public static class Program
+00021:     {
+00022:         private static readonly string _workZipDirName = "workUploadLog";
+00023:         private static readonly string _logDirectory = BackgroundCommonUtility.GetLocalLogDirectory();
+00024:         private static readonly string _workZipDir = Path.Combine(_logDirectory, _workZipDirName);
+00025:         private static readonly string _zipFileName = $"{WinPOSFrameworkSettingValues.TerminalNo.Value.ToString().PadLeft(4, '0')}.zip";
+00026:         private static readonly string _logFilePattern = "<em>.</em>";
+00027:         private static readonly int _postRetryMaxCount = 5;
+00028: 
+00029:         /// <summary>
+00030:         /// アプリケーションのメイン エントリ ポイントです。
+00031:         /// </summary>
+00032:         /// <returns>0:正常 -1:異常</returns>
+00033:         [STAThread]
+00034: 
+00035:         public static int Main()
+00036:         {
+00037:             try
+00038:             {
+00039:                 new SettingValue<object>(null, null);
+00040: 
+00041:                 var zipFilePath = MakeLogZipFile();
+00042:                 if (!File.Exists(zipFilePath))
+00043:                 {
+00044:                     return -1;
+00045:                 }
+00046: 
+00047:                 var param = CreateUploadParam(zipFilePath);
+00048: 
+00049:                 UploadFileResult postReuslt;
+00050:                 var result = ExecutePost(
+00051:                     () =&gt; DataServiceAccessor.DataServicePost<UploadFileParam, UploadFileResult>(
+00052:                                 DeviceSettingValues.LogicServiceBaseAddress.Value,
+00053:                                 "UploadFile",
+00054:                                 WinPOSFrameworkSettingValues.CompanyCode.Value,
+00055:                                 param),
+00056:                     out postReuslt);
+00057: 
+00058:                 return postReuslt.IsSuccess ? 0 : -1;
+00059:             }
+00060:             catch (Exception ex)
+00061:             {
+00062:                 Logger.Error(ex.ToString());
+00063:                 return -1;
+00064:             }
+00065:             finally
+00066:             {
+00067:                 FileUtility.DeleteDirectory(_workZipDir);
+00068:             }
+00069:         }
+00070: 
+00071:         /// <summary>
+00072:         /// ログファイルのZipを作成します
+00073:         /// </summary>
+00074:         /// <returns>作成したZipファイルパス</returns>
+00075:         private static string MakeLogZipFile()
+00076:         {
+00077:             if (!Directory.Exists(_logDirectory))
+00078:             {
+00079:                 return string.Empty;
+00080:             }
+00081: 
+00082:             var zipFilePath = Path.Combine(_workZipDir, _zipFileName);
+00083:             MakeZipFile(_logDirectory, _logFilePattern, zipFilePath);
+00084:             return zipFilePath;
+00085:         }
+00086: 
+00087:         /// <summary>
+00088:         /// 対象フォルダをZipファイルに圧縮する
+00089:         /// </summary>
+00090:         /// <param name="targetDir">対象フォルダ</param>
+00091:         /// <param name="targetFilePattern">Zip対象のファイルのパターン</param>
+00092:         /// <param name="zipFilePath">保存先Zipファイルパス</param>
+00093:         private static void MakeZipFile(string targetDir, string targetFilePattern, string zipFilePath)
+00094:         {
+00095:             try
+00096:             {
+00097:                 var zipDir = Path.GetDirectoryName(zipFilePath);
+00098:                 FileUtility.DeleteDirectory(zipDir);
+00099:                 Directory.CreateDirectory(zipDir);
+00100: 
+00101:                 using (var zip = new ZipFile())
+00102:                 {
+00103:                     zip.CompressionLevel = Ionic.Zlib.CompressionLevel.BestCompression;
+00104: 
+00105:                     foreach (var targetFile in Directory.EnumerateFiles(targetDir, _logFilePattern))
+00106:                     {
+00107:                         zip.AddFile(Path.GetFullPath(targetFile), string.Empty);
+00108:                     }
+00109: 
+00110:                     zip.Save(zipFilePath);
+00111:                 }
+00112:             }
+00113:             catch (Exception ex)
+00114:             {
+00115:                 throw new ApplicationException("ファイルのアーカイブに失敗しました。", ex);
+00116:             }
+00117:         }
+00118: 
+00119:         /// <summary>
+00120:         /// UplopadFileパラメータをさくせします
+00121:         /// </summary>
+00122:         /// <param name="zipFilePath">zipファイルパス</param>
+00123:         /// <returns>UploadFileパラメータ</returns>
+00124:         private static UploadFileParam CreateUploadParam(string zipFilePath)
+00125:         {
+00126:             var companyCode = WinPOSFrameworkSettingValues.CompanyCode.Value;
+00127:             var storeCode = WinPOSFrameworkSettingValues.StoreCode.Value;
+00128:             return new UploadFileParam()
+00129:             {
+00130:                 AccessCode = SettingValues.AccessCode.Value,
+00131:                 ContainerName = StorageBlobContainerName.PosAppLogs.Id,
+00132:                 NameWithDir = MakeBlobNameWithDir(companyCode, storeCode),
+00133:                 Attachment = File.ReadAllBytes(zipFilePath)
+00134:             };
+00135:         }
+00136: 
+00137:         /// <summary>
+00138:         /// Blobディレクトリを作成します。
+00139:         /// </summary>
+00140:         /// <param name="companyCode">企業コード</param>
+00141:         /// <param name="storeCode">店舗コード</param>
+00142:         /// <returns>blobNameWithDir</returns>
+00143:         private static string MakeBlobNameWithDir(string companyCode, string storeCode)
+00144:         {
+00145:             var now = DateTimeUtility.GetUserTimeNow();
+00146: 
+00147:             return string.Join(
+00148:                 "/",
+00149:                 companyCode,
+00150:                 storeCode,
+00151:                 now.ToString("yyyyMM"),
+00152:                 now.ToString("dd"),
+00153:                 _zipFileName);
+00154:         }
+00155: 
+00156:         /// <summary>
+00157:         /// POSTを実施する
+00158:         /// </summary>
+00159:         /// <typeparam name="TResult">リクエスト結果の型</typeparam>
+00160:         /// <param name="postFunc">Post処理</param>
+00161:         /// <param name="result">リクエスト結果</param>
+00162:         /// <returns>POST処理の成否</returns>
+00163:         private static bool ExecutePost<TResult>(Func<TResult> postFunc, out TResult result)
+00164:         {
+00165:             result = default(TResult);
+00166:             TResult resultWork = default(TResult);
+00167: 
+00168:             Action action = () =&gt;
+00169:             {
+00170:                 resultWork = postFunc();
+00171:             };
+00172: 
+00173:             if (!RetryExecute(action, _postRetryMaxCount))
+00174:             {
+00175:                 return false;
+00176:             }
+00177: 
+00178:             result = resultWork;
+00179:             return true;
+00180:         }
+00181: 
+00182:         /// <summary>
+00183:         /// リトライ実行
+00184:         /// </summary>
+00185:         /// <param name="action">リトライ対象メソッド</param>
+00186:         /// <param name="retryMaxCount">最大リトライ回数</param>
+00187:         /// <returns>成功可否</returns>
+00188:         private static bool RetryExecute(Action action, int retryMaxCount)
+00189:         {
+00190:             return RetryExecute<WebException>(action, GetSleepMilliSecond, retryMaxCount);
+00191:         }
+00192: 
+00193:         /// <summary>
+00194:         /// リトライ実行
+00195:         /// </summary>
+00196:         /// <typeparam name="TException">例外の型</typeparam>
+00197:         /// <param name="action">リトライ対象メソッド</param>
+00198:         /// <param name="getSleepMilliSecond">Sleepの処理</param>
+00199:         /// <param name="retryMaxCount">最大リトライ回数</param>
+00200:         /// <returns>成功可否</returns>
+00201:         private static bool RetryExecute<TException>(Action action, Func<int, int> getSleepMilliSecond, int retryMaxCount)
+00202:             where TException : Exception
+00203:         {
+00204:             var count = 0;
+00205:             while (true)
+00206:             {
+00207:                 try
+00208:                 {
+00209:                     action();
+00210:                     return true;
+00211:                 }
+00212:                 catch (TException ex)
+00213:                 {
+00214:                     if (count &gt;= retryMaxCount)
+00215:                     {
+00216:                         Logger.Error(ex.ToString());
+00217:                         Logger.Error("Retry Loop has reached to max.");
+00218: 
+00219:                         return false;
+00220:                     }
+00221:                     else
+00222:                     {
+00223:                         Logger.Warn(ex.ToString());
+00224:                     }
+00225:                 }
+00226:                 catch (Exception)
+00227:                 {
+00228:                     throw;
+00229:                 }
+00230: 
+00231:                 count++;
+00232:                 Logger.Warn($"Retry Loop : Retry count-&gt; {count}");
+00233:                 Thread.Sleep(getSleepMilliSecond(count));
+00234:             }
+00235:         }
+00236: 
+00237:         /// <summary>
+00238:         /// 次回再試行までのインターバル値を取得します。
+00239:         /// </summary>
+00240:         /// <param name="retryCount">再試行回数</param>
+00241:         /// <returns>インターバル値（ミリ秒）</returns>
+00242:         private static int GetSleepMilliSecond(int retryCount)
+00243:         {
+00244:             const int RETRY_SLEEP = 100;
+00245:             const int RETRY_SLEEP_MIN = 100;
+00246:             const int RETRY_SLEEP_MAX = 10000;
+00247: 
+00248:             int sleep = retryCount * retryCount * RETRY_SLEEP;
+00249: 
+00250:             if (sleep &gt; RETRY_SLEEP_MAX)
+00251:             {
+00252:                 sleep = RETRY_SLEEP_MAX;
+00253:             }
+00254:             else if (sleep &lt; RETRY_SLEEP_MIN)
+00255:             {
+00256:                 sleep = RETRY_SLEEP_MIN;
+00257:             }
+00258: 
+00259:             return sleep;
+00260:         }
+00261:     }
+00262: }</p>
+<hr />
+<p>FILE: Tools/POSModuleUploader/POSModuleApplyer/App.xaml
+00001: [非文本文件，未内联源码。size_bytes=402, extension=.xaml，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Tools/POSModuleUploader/POSModuleApplyer/App.xaml.cs
+SHA256: b80b9c5f3bb052c5e6fc9815ebcd9dc901ce733db1d81da31bd043b9f6a60623
+================================================================================
+00001: ﻿using System;
+00002: using System.Collections.Generic;
+00003: using System.Configuration;
+00004: using System.Data;
+00005: using System.Linq;
+00006: using System.Threading.Tasks;
+00007: using System.Windows;
+00008: using System.Windows.Threading;
+00009: 
+00010: namespace ForYouApplications.Tools
+00011: {
+00012:     /// <summary>
+00013:     /// App.xaml の相互作用ロジック
+00014:     /// </summary>
+00015:     public partial class App : Application
+00016:     {
+00017:         /// <summary>
+00018:         /// コンストラクタ
+00019:         /// </summary>
+00020:         public App()
+00021:         {
+00022:             // 未処理例外の処理
+00023:             // UI スレッドで実行されているコードで処理されなかったら発生する（.NET 3.0 より）
+00024:             DispatcherUnhandledException += App_DispatcherUnhandledException;
+00025:             // バックグラウンドタスク内で処理されなかったら発生する（.NET 4.0 より）
+00026:             TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
+00027:             // 例外が処理されなかったら発生する（.NET 1.0 より）
+00028:             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+00029:         }
+00030: 
+00031:         /// <summary>
+00032:         /// 最終的に処理されなかった未処理例外を処理します。
+00033:         /// </summary>
+00034:         /// <param name="sender">送信者</param>
+00035:         /// <param name="e">イベント引数</param>
+00036:         private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+00037:         {
+00038:             var exception = e.ExceptionObject as Exception;
+00039:             if (exception == null)
+00040:             {
+00041:                 MessageBox.Show($"System.Exceptionとして扱えない例外。{e.ExceptionObject.ToString()}");
+00042:                 return;
+00043:             }
+00044:             ShowMessageUnhandledException(exception, "未処理例外");
+00045:             Environment.Exit(1);
+00046:         }
+00047: 
+00048:         /// <summary>
+00049:         /// バックグラウンドタスクで発生した未処理例外を処理します。
+00050:         /// </summary>
+00051:         /// <param name="sender">送信者</param>
+00052:         /// <param name="e">イベント引数</param>
+00053:         private void TaskScheduler_UnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e)
+00054:         {
+00055:             ShowMessageUnhandledException(e.Exception, "バックグラウンドタスク");
+00056:             Environment.Exit(1);
+00057:         }
+00058: 
+00059:         /// <summary>
+00060:         /// UI スレッドで発生した未処理例外を処理します。
+00061:         /// </summary>
+00062:         /// <param name="sender">送信者</param>
+00063:         /// <param name="e">イベント引数</param>
+00064:         private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+00065:         {
+00066:             var exception = e.Exception as Exception;
+00067:             ShowMessageUnhandledException(exception, "UI スレッド");
+00068:             Environment.Exit(1);
+00069:         }
+00070: 
+00071:         /// <summary>
+00072:         /// 未処理例外を表示します
+00073:         /// </summary>
+00074:         /// <param name="e">例外オブジェクト</param>
+00075:         /// <param name="sourceName">発生したスレッドの種別を示す文字列</param>
+00076:         private void ShowMessageUnhandledException(Exception e, string sourceName)
+00077:         {
+00078:             var message = $"予期せぬエラーが発生しました";
+00079:             if (e != null)
+00080:             {
+00081:                 message += $"\n{e.Message}\nException:{e.ToString()}";
+00082:             }
+00083:             MessageBox.Show(message, $"未処理例外 ({sourceName})", MessageBoxButton.OK, MessageBoxImage.Stop);
+00084:         }
+00085:     }
+00086: }</p>
+<hr />
+<p>FILE: Tools/POSModuleUploader/POSModuleUploader/App.xaml
+00001: [非文本文件，未内联源码。size_bytes=373, extension=.xaml，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Tools/POSModuleUploader/POSModuleUploader/App.xaml.cs
+SHA256: 095ba122429aaea45ec8660968c6406555addebe70c77891e956377502f7757d
+================================================================================
+00001: ﻿using System;
+00002: using System.Collections.Generic;
+00003: using System.Configuration;
+00004: using System.Data;
+00005: using System.Linq;
+00006: using System.Threading.Tasks;
+00007: using System.Windows;
+00008: 
+00009: namespace ModuleUploader
+00010: {
+00011:     /// <summary>
+00012:     /// App.xaml の相互作用ロジック
+00013:     /// </summary>
+00014:     public partial class App : Application
+00015:     {
+00016:     }
+00017: }</p>
+<hr />
+<p>FILE: Tools/TimeSynchronization/TimeSynchronization/Program.cs
+SHA256: 1b99493988f986ac905ffdfa3a6224ac79532ada06af9a1e601d086cf275a7be
+================================================================================
+00001: ﻿using System;
+00002: using System.Diagnostics;
+00003: using System.IO;
+00004: using System.Net;
+00005: using System.Net.Security;
+00006: using System.Net.Sockets;
+00007: using System.Runtime.InteropServices;
+00008: using System.Text;
+00009: using System.Web.Services.Protocols;
+00010: using ForYouApplications.POS4U.Common.Const;
+00011: using ForYouApplications.POS4U.Device.DeviceCommon;
+00012: using ForYouApplications.POS4U.Framework.Library;
+00013: using ForYouApplications.POS4U.LogicService.ServiceAccessor;
+00014: using ForYouApplications.POS4U.WinPOS.Framework;
+00015: 
+00016: namespace ForYouApplications.POS4U.Tools
+00017: {
+00018:     /// <summary>
+00019:     /// 時刻同期プログラム
+00020:     /// </summary>
+00021:     public static class Program
+00022:     {
+00023:         /// <summary>
+00024:         /// アプリケーションのメイン エントリ ポイントです。
+00025:         /// </summary>
+00026:         /// <returns>0:正常 -1:異常</returns>
+00027:         [STAThread]
+00028:         public static int Main()
+00029:         {
+00030:             try
+00031:             {
+00032:                 // 自身のファイル名.txtを作成し、プロセスの起動をLauncherに知らせる。
+00033:                 MakeMainModuleNameTextFile();
+00034: 
+00035:                 new MessageId(null);
+00036:                 new SettingValue<object>(null, null);
+00037: 
+00038:                 // SSL通信で信頼されない証明書を回避する
+00039:                 RemoteCertificateValidationCallback remoteCallback = (sender, certificate, chain, sslPolicyErrors) =&gt; { return true; };
+00040:                 ServicePointManager.ServerCertificateValidationCallback -= remoteCallback;
+00041:                 ServicePointManager.ServerCertificateValidationCallback += remoteCallback;
+00042:             }
+00043:             catch (Exception ex)
+00044:             {
+00045:                 // 予期しないエラー
+00046:                 Logger.Error(ex.ToString());
+00047:                 return -1;
+00048:             }
+00049: 
+00050:             return SynchronizeSystemDateTime() ? 0 : -1;
+00051:         }
+00052: 
+00053:         /// <summary>
+00054:         /// 自身のファイル名.txtを作成
+00055:         /// </summary>
+00056:         private static void MakeMainModuleNameTextFile()
+00057:         {
+00058:             string fileName = Process.GetCurrentProcess().MainModule.FileName;
+00059:             fileName = fileName + ".txt";
+00060: 
+00061:             // 空ファイルを作成
+00062:             using (FileStream fileStream = File.Create(fileName))
+00063:             {
+00064:                 fileStream.Close();
+00065:             }
+00066:         }
+00067: 
+00068:         /// <summary>
+00069:         /// システム時刻を同期させる
+00070:         /// </summary>
+00071:         /// <returns>処理成否</returns>
+00072:         private static bool SynchronizeSystemDateTime()
+00073:         {
+00074:             // ★同期機能のみ提供
+00075:             // 　※時刻を調整した上で次のプログラム実行へ移るため
+00076:             try
+00077:             {
+00078:                 Logger.Info("Start GetCurrentDateTime");
+00079: 
+00080:                 var result = POSLogicWebServiceAccessor.GetCurrentDateTime(
+00081:                     DeviceSettingValues.LogicServiceBaseAddress.Value,
+00082:                     WinPOSFrameworkSettingValues.CompanyCode.Value,
+00083:                     WinPOSFrameworkSettingValues.StoreCode.Value,
+00084:                     WinPOSFrameworkSettingValues.TerminalNo.Value,
+00085:                     SettingValues.AccessCode.Value);
+00086: 
+00087:                 if (result != null)
+00088:                 {
+00089:                     DateTime serverTime = result.CurrentDateTime;
+00090: 
+00091:                     Logger.Info(string.Format(
+00092:                         "End GetCurrentDateTime[{0}]",
+00093:                         serverTime.ToString("yyyy/MM/dd HH:mm:ss.fffffff")));
+00094: 
+00095:                     var sysTime = new NativeMethods.SystemTime();
+00096:                     sysTime.wYear = (ushort)serverTime.Year;
+00097:                     sysTime.wMonth = (ushort)serverTime.Month;
+00098:                     sysTime.wDay = (ushort)serverTime.Day;
+00099:                     sysTime.wHour = (ushort)serverTime.Hour;
+00100:                     sysTime.wMinute = (ushort)serverTime.Minute;
+00101:                     sysTime.wSecond = (ushort)serverTime.Second;
+00102:                     sysTime.wMiliseconds = (ushort)serverTime.Millisecond;
+00103: 
+00104:                     if (NativeMethods.SetLocalTime(ref sysTime))
+00105:                     {
+00106:                         Logger.Info("Succeeded SetLocalTime");
+00107:                         return true;
+00108:                     }
+00109:                     else
+00110:                     {
+00111:                         int errCode = Marshal.GetLastWin32Error();
+00112:                         var message = new StringBuilder(1024);
+00113: 
+00114:                         NativeMethods.FormatMessage(
+00115:                             NativeMethods.FORMAT_MESSAGE_FROM_SYSTEM,
+00116:                             IntPtr.Zero,
+00117:                             (uint)errCode,
+00118:                             0,
+00119:                             message,
+00120:                             message.Capacity,
+00121:                             IntPtr.Zero);
+00122: 
+00123:                         Logger.Error(string.Format(
+00124:                             "Failed Win32API - SetLocalTime[{0}:{1}]",
+00125:                             errCode.ToString("X"),
+00126:                             message.ToString().Replace("\n", string.Empty).Replace("\r", string.Empty)));
+00127:                         return false;
+00128:                     }
+00129:                 }
+00130: 
+00131:                 return false;
+00132:             }
+00133:             catch (SoapException ex)
+00134:             {
+00135:                 Logger.Warn(ex.ToString());
+00136:                 return false;
+00137:             }
+00138:             catch (WebException ex)
+00139:             {
+00140:                 Logger.Warn(ex.ToString());
+00141:                 return false;
+00142:             }
+00143:             catch (SocketException ex)
+00144:             {
+00145:                 Logger.Warn(ex.ToString());
+00146:                 return false;
+00147:             }
+00148:             catch (Exception ex)
+00149:             {
+00150:                 Logger.Error(ex.ToString());
+00151:                 return false;
+00152:             }
+00153:         }
+00154: 
+00155:         /// <summary>
+00156:         /// DllImport Manage クラス
+00157:         /// </summary>
+00158:         private static class NativeMethods
+00159:         {
+00160:             /// <summary>
+00161:             /// WIN32 API const FORMAT_MESSAGE_FROM_SYSTEM
+00162:             /// </summary>
+00163:             internal const uint FORMAT_MESSAGE_FROM_SYSTEM = 0x00001000;
+00164: 
+00165:             /// <summary>
+00166:             /// WIN32 API method SetLocalTime
+00167:             /// </summary>
+00168:             /// <param name="sysTime">sysTime</param>
+00169:             /// <returns>bool</returns>
+00170:             [DllImport("kernel32.dll", SetLastError = true)]
+00171:             internal static extern bool SetLocalTime(ref SystemTime sysTime);
+00172: 
+00173:             /// <summary>
+00174:             /// WIN32 API method FormatMessage
+00175:             /// </summary>
+00176:             /// <param name="dwFlags">dwFlags</param>
+00177:             /// <param name="lpSource">lpSource</param>
+00178:             /// <param name="dwMessageId">dwMessageId</param>
+00179:             /// <param name="dwLanguageId">dwLanguageId</param>
+00180:             /// <param name="lpBuffer">lpBuffer</param>
+00181:             /// <param name="nSize">nSize</param>
+00182:             /// <param name="Arguments">Arguments</param>
+00183:             /// <returns>uint</returns>
+00184:             [DllImport("kernel32.dll")]
+00185:             internal static extern uint FormatMessage(
+00186:                 uint dwFlags,
+00187:                 IntPtr lpSource,
+00188:                 uint dwMessageId,
+00189:                 uint dwLanguageId,
+00190:                 StringBuilder lpBuffer,
+00191:                 int nSize,
+00192:                 IntPtr Arguments);
+00193: 
+00194:             /// <summary>
+00195:             /// WIN32 API struct SystemTime
+00196:             /// </summary>
+00197:             [StructLayout(LayoutKind.Sequential)]
+00198:             internal struct SystemTime
+00199:             {
+00200:                 /// <summary>wYear</summary>
+00201:                 public ushort wYear;
+00202: 
+00203:                 /// <summary>wMonth</summary>
+00204:                 public ushort wMonth;
+00205: 
+00206:                 /// <summary>wDayOfWeek</summary>
+00207:                 public ushort wDayOfWeek;
+00208: 
+00209:                 /// <summary>wDay</summary>
+00210:                 public ushort wDay;
+00211: 
+00212:                 /// <summary>wHour</summary>
+00213:                 public ushort wHour;
+00214: 
+00215:                 /// <summary>wMinute</summary>
+00216:                 public ushort wMinute;
+00217: 
+00218:                 /// <summary>wSecond</summary>
+00219:                 public ushort wSecond;
+00220: 
+00221:                 /// <summary>wMiliseconds</summary>
+00222:                 public ushort wMiliseconds;
+00223:             }
+00224:         }
+00225:     }
+00226: }</p>
+<hr />
+<p>FILE: Tools/VersionUp/VersionUp/App.xaml
+00001: [非文本文件，未内联源码。size_bytes=627, extension=.xaml，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Tools/VersionUp/VersionUp/App.xaml.cs
+SHA256: a84d40100c56527fffffcdcd4d734f812ade0fcc8266386d90dfe36b7596c910
+================================================================================
+00001: ﻿using System;
+00002: using System.Diagnostics;
+00003: using System.IO;
+00004: using System.Linq;
+00005: using System.Threading;
+00006: using System.Windows;
+00007: using System.Windows.Input;
+00008: using System.Windows.Threading;
+00009: using ForYouApplications.POS4U.Framework.Library;
+00010: using ForYouApplications.POS4U.WinPOS.Framework;
+00011: using ForYouApplications.POS4U.WinPOS.Framework.Library;
+00012: using ForYouApplications.VersionUp.Utility;
+00013: 
+00014: namespace ForYouApplications.VersionUp
+00015: {
+00016:     /// <summary>
+00017:     /// App.xaml の相互作用ロジック
+00018:     /// </summary>
+00019:     public partial class App : Application
+00020:     {
+00021:         /// <summary>
+00022:         /// スタートアップ
+00023:         /// </summary>
+00024:         /// <param name="e">引数</param>
+00025:         protected override void OnStartup(StartupEventArgs e)
+00026:         {
+00027:             try
+00028:             {
+00029:                 // 自身のファイル名.txtを作成し、プロセスの起動をLauncherに知らせる。
+00030:                 MakeMainModuleNameTextFile();
+00031: 
+00032:                 // 二重起動チェック
+00033:                 if (SystemLibrary.IsProcessAlreadyExist())
+00034:                 {
+00035:                     Logger.Info(string.Format("{0} has terminated, because of already existed", Process.GetCurrentProcess().ProcessName));
+00036:                     this.Shutdown();
+00037:                     return;
+00038:                 }
+00039: 
+00040:                 Logger.Info("Welcome to VersionUp Main Loop");
+00041: 
+00042:                 new SettingValue<object>(null, null);
+00043: 
+00044:                 ForYouApplications.VersionUp.Properties.Resources.Culture = new System.Globalization.CultureInfo(VersionUpSettingValues.Locale.Value);
+00045:                 Thread.GetDomain().UnhandledException += new UnhandledExceptionEventHandler(VersionUp_UnhandledException);
+00046:                 Application.Current.DispatcherUnhandledException += new DispatcherUnhandledExceptionEventHandler(Current_DispatcherUnhandledException);
+00047:                 Dispatcher.CurrentDispatcher.UnhandledException += new DispatcherUnhandledExceptionEventHandler(CurrentDispatcher_UnhandledException);
+00048: 
+00049:                 base.OnStartup(e);
+00050: 
+00051:                 if (WinPOSFrameworkSettingValues.CursorHide.Value)
+00052:                 {
+00053:                     Mouse.OverrideCursor = Cursors.None;
+00054:                 }
+00055: 
+00056:                 MainWindow window = new MainWindow();
+00057:                 window.Show();
+00058:             }
+00059:             catch (Exception ex)
+00060:             {
+00061:                 Logger.Fatal(ex.ToString());
+00062:                 throw;
+00063:             }
+00064:         }
+00065: 
+00066:         /// <summary>
+00067:         /// 自身のファイル名.txtを作成
+00068:         /// </summary>
+00069:         private static void MakeMainModuleNameTextFile()
+00070:         {
+00071:             string fileName = Process.GetCurrentProcess().MainModule.FileName;
+00072:             fileName = fileName + ".txt";
+00073: 
+00074:             // 空ファイルを作成
+00075:             using (FileStream fileStream = File.Create(fileName))
+00076:             {
+00077:                 fileStream.Close();
+00078:             }
+00079:         }
+00080: 
+00081:         /// <summary>
+00082:         /// Exceptionをログ出力する
+00083:         /// </summary>
+00084:         /// <param name="sender">イベント発生元</param>
+00085:         /// <param name="e">イベント情報</param>
+00086:         private static void CurrentDispatcher_UnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+00087:         {
+00088:             Exception ex = e.Exception;
+00089: 
+00090:             Logger.Fatal("CurrentDispatcher_UnhandledException : " + ex.ToString());
+00091:             throw e.Exception;
+00092:         }
+00093: 
+00094:         /// <summary>
+00095:         /// Exceptionをログ出力する
+00096:         /// </summary>
+00097:         /// <param name="sender">イベント発生元</param>
+00098:         /// <param name="e">イベント情報</param>
+00099:         private static void Current_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+00100:         {
+00101:             Exception ex = e.Exception;
+00102: 
+00103:             Logger.Fatal("Current_DispatcherUnhandledException : " + ex.ToString());
+00104:             throw e.Exception;
+00105:         }
+00106: 
+00107:         /// <summary>
+00108:         /// Exceptionをログ出力する
+00109:         /// </summary>
+00110:         /// <param name="sender">イベント発生元</param>
+00111:         /// <param name="e">イベント情報</param>
+00112:         private static void VersionUp_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+00113:         {
+00114:             Exception ex = e.ExceptionObject as Exception;
+00115: 
+00116:             Logger.Fatal("VersionUp_UnhandledException : " + ex.ToString());
+00117:             throw ex;
+00118:         }
+00119:     }
+00120: }</p></div></div></div>
+<div class="message assistant" id="msg-2026-07-09T04-54-48-769Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2026-07-09T04-54-48-769Z" class="timestamp-link"><time datetime="2026-07-09T04:54:48.769Z" data-timestamp="2026-07-09T04:54:48.769Z">2026-07-09T04:54:48.769Z</time></a></div><div class="message-content">
+<div class="thinking"><div class="thinking-label">Thinking</div><p>The user wants me to generate file-level source code explanation notes for a batch of files. Let me carefully read through all the source code provided and create comprehensive notes for each file.</p>
+<p>Let me organize this systematically. I need to analyze each file and produce notes following the specified format.</p>
+<p>Let me go through each file carefully.</p>
+<ol>
+<li><strong>RouteConfig.cs</strong> - MVC route configuration for Backoffice</li>
+<li><strong>Global.asax</strong> - Non-text file (marker)</li>
+<li><strong>Global.asax.cs</strong> - Application lifecycle events for Backoffice</li>
+<li><strong>App.xaml</strong> - Non-text file (marker)</li>
+<li><strong>App.xaml.cs</strong> - WPF application startup for POS4U main POS</li>
+<li><strong>MasterSync/Program.cs</strong> - Console app for MasterSync</li>
+<li><strong>VersionUp/Program.cs</strong> - Console app for VersionUp</li>
+<li><strong>WindowsService.Administrator/Program.cs</strong> - Windows Service for Administrator</li>
+<li><strong>WebApiConfig.cs</strong> - Web API configuration for LogicService</li>
+<li><strong>Global.asax</strong> - Non-text file (marker)</li>
+<li><strong>Global.asax.cs</strong> - Application lifecycle for LogicService</li>
+<li><strong>TwoOperatorsCH/App.xaml</strong> - Non-text file (marker)</li>
+<li><strong>TwoOperatorsCH/App.xaml.cs</strong> - WPF app for Two-Operator Checker</li>
+<li><strong>TRAN4U/Program.cs</strong> - Console app for TRAN4U</li>
+<li><strong>BOLoginPassword/Program.cs</strong> - WinForms app for BO login password</li>
+<li><strong>CESettingTool/App.xaml</strong> - Non-text file</li>
+<li><strong>CESettingTool/App.xaml.cs</strong> - CE Setting Tool</li>
+<li><strong>CESettingToolV4/App.xaml</strong> - Non-text file</li>
+<li><strong>CESettingToolV4/App.xaml.cs</strong> - Same SHA256 as V3</li>
+<li><strong>CESettingToolV5/App.xaml</strong> - Non-text file</li>
+<li><strong>CESettingToolV5/App.xaml.cs</strong> - Same SHA256 as V3/V4</li>
+<li><strong>DataUpdate4Replace/App.xaml</strong> - Non-text file</li>
+<li><strong>DataUpdate4Replace/App.xaml.cs</strong> - Data update tool</li>
+<li><strong>IMEChange/Program.cs</strong> - IME change tool</li>
+<li><strong>MasterSync/App.xaml</strong> - Non-text file</li>
+<li><strong>MasterSync/App.xaml.cs</strong> - MasterSync WPF</li>
+<li><strong>POSLogUploader/Program.cs</strong> - Log uploader</li>
+<li><strong>POSModuleApplyer/App.xaml</strong> - Non-text file</li>
+<li><strong>POSModuleApplyer/App.xaml.cs</strong> - Module applyer</li>
+<li><strong>POSModuleUploader/App.xaml</strong> - Non-text file</li>
+<li><strong>POSModuleUploader/App.xaml.cs</strong> - Module uploader (minimal)</li>
+<li><strong>TimeSynchronization/Program.cs</strong> - Time sync tool</li>
+<li><strong>VersionUp/App.xaml</strong> - Non-text file</li>
+<li><strong>VersionUp/App.xaml.cs</strong> - VersionUp WPF</li>
+</ol>
+<p>Let me write this out now. This will be a very long document.</p>
+<p>Let me also note the SHA256 pattern: CESettingTool/CESettingTool/App.xaml.cs, CESettingToolV4/CESettingToolV4/App.xaml.cs, and CESettingToolV5/CESettingToolV4/App.xaml.cs all share the same SHA256 <code>c0ba1874...</code>, which means they are identical files placed in different directories (for different versions of the CE Setting Tool).</p>
+<p>Now let me write the notes document.</p></div></div></div>
+<div class="message assistant" id="msg-2026-07-09T04-54-49-710Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2026-07-09T04-54-49-710Z" class="timestamp-link"><time datetime="2026-07-09T04:54:49.710Z" data-timestamp="2026-07-09T04:54:49.710Z">2026-07-09T04:54:49.710Z</time></a></div><div class="message-content">
+<div class="tool-use" data-tool-id="call_00_dBcQETug8aZJHpoUaxD16473"><div class="tool-header"><span class="tool-icon">⚙</span> TaskCreate</div><div class="tool-description">Analyze all 34 files in batch_001 (startup entry points) and produce detailed file-level source code notes with line references, covering file positioning, exposed APIs, key logic, dependencies, error handling, test suggestions, and uncertainties.</div><div class="truncatable"><div class="truncatable-content"><pre class="json">{
+  &#34;activeForm&#34;: &#34;Writing file-level source notes&#34;,
+  &#34;subject&#34;: &#34;Generate batch_001 file-level source notes&#34;
+}</pre></div><button class="expand-btn">Show more</button></div></div></div></div>
+<div class="message tool-reply" id="msg-2026-07-09T04-54-49-743Z"><div class="message-header"><span class="role-label">Tool reply</span><a href="#msg-2026-07-09T04-54-49-743Z" class="timestamp-link"><time datetime="2026-07-09T04:54:49.743Z" data-timestamp="2026-07-09T04:54:49.743Z">2026-07-09T04:54:49.743Z</time></a></div><div class="message-content"><div class="tool-result"><div class="truncatable"><div class="truncatable-content"><pre>Task #1 created successfully: Generate batch_001 file-level source notes</pre></div><button class="expand-btn">Show more</button></div></div></div></div>
+<div class="message assistant" id="msg-2026-07-09T04-54-51-696Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2026-07-09T04-54-51-696Z" class="timestamp-link"><time datetime="2026-07-09T04:54:51.696Z" data-timestamp="2026-07-09T04:54:51.696Z">2026-07-09T04:54:51.696Z</time></a></div><div class="message-content">
+<div class="thinking"><div class="thinking-label">Thinking</div><p>Let me carefully write the notes document now. I need to be thorough for each file.</p></div></div></div>
+<div class="message assistant" id="msg-2026-07-09T04-54-51-938Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2026-07-09T04-54-51-938Z" class="timestamp-link"><time datetime="2026-07-09T04:54:51.938Z" data-timestamp="2026-07-09T04:54:51.938Z">2026-07-09T04:54:51.938Z</time></a></div><div class="message-content">
+<div class="tool-use" data-tool-id="call_00_lfpOBXNp4ygE4cKEQAlF7534"><div class="tool-header"><span class="tool-icon">⚙</span> TaskUpdate</div><div class="truncatable"><div class="truncatable-content"><pre class="json">{
+  &#34;status&#34;: &#34;in_progress&#34;,
+  &#34;taskId&#34;: &#34;1&#34;
+}</pre></div><button class="expand-btn">Show more</button></div></div></div></div>
+<div class="message tool-reply" id="msg-2026-07-09T04-54-51-964Z"><div class="message-header"><span class="role-label">Tool reply</span><a href="#msg-2026-07-09T04-54-51-964Z" class="timestamp-link"><time datetime="2026-07-09T04:54:51.964Z" data-timestamp="2026-07-09T04:54:51.964Z">2026-07-09T04:54:51.964Z</time></a></div><div class="message-content"><div class="tool-result"><div class="truncatable"><div class="truncatable-content"><pre>Updated task #1 status</pre></div><button class="expand-btn">Show more</button></div></div></div></div>
+<div class="message assistant" id="msg-2026-07-09T04-54-53-857Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2026-07-09T04-54-53-857Z" class="timestamp-link"><time datetime="2026-07-09T04:54:53.857Z" data-timestamp="2026-07-09T04:54:53.857Z">2026-07-09T04:54:53.857Z</time></a></div><div class="message-content">
+<div class="thinking"><div class="thinking-label">Thinking</div><p>Let me now write the comprehensive notes document.</p></div></div></div>
+<div class="message assistant" id="msg-2026-07-09T04-57-50-229Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2026-07-09T04-57-50-229Z" class="timestamp-link"><time datetime="2026-07-09T04:57:50.229Z" data-timestamp="2026-07-09T04:57:50.229Z">2026-07-09T04:57:50.229Z</time></a></div><div class="message-content"><div class="file-tool write-tool" data-tool-id="call_00_KLSBRKdi9RwTNkrloXsa9499">
+<div class="file-tool-header write-header"><span class="file-tool-icon">📝</span> Write <span class="file-tool-path">batch_001_startup_startup_entrypoints_file_notes.md</span></div>
+<div class="file-tool-fullpath">D:\POJ\NodeMaster\_sourcebook/notes/batch_001_startup_startup_entrypoints_file_notes.md</div>
+<div class="truncatable"><div class="truncatable-content"><pre class="file-content"># 文件级源码笔记：startup_startup_entrypoints
+
+## Batch 信息
+
+- Batch ID: batch_001
+- Batch Name: startup_startup_entrypoints
+- Module: startup
+- Purpose: 解释启动入口、初始化顺序、配置加载、路由注册和主流程入口
+- Related Runtime Flows: 启动流程、配置加载流程、请求处理流程、错误处理流程、日志流程
+- Output Note Path: _sourcebook/notes/batch_001_startup_startup_entrypoints_file_notes.md
+
+---
+
+## 文件：POS4UCloud/Source/POS4UBO/POS4UBackoffice/App_Start/RouteConfig.cs
+
+### 1. 文件定位
+
+Backoffice（后台管理系统）的 ASP.NET MVC 路由配置。属于 POS4UCloud 解决方案的 Backoffice Web 项目。负责将 URL 请求映射到对应的 Controller/Action。
+
+### 2. 对外暴露内容
+
+| 名称 | 位置 | 用途 |
+|------|------|------|
+| `RouteConfig.RegisterRoutes(RouteCollection)` | 第15行 | 注册 MVC 路由规则。`public static` 方法，由 Global.asax.cs 中的 `Application_Start` 调用。 |
+
+### 3. 关键逻辑 walkthrough
+
+- **第17行**：忽略对 `*.axd` 的请求路由（IIS 资源请求，不需要 MVC 处理），这是标准 ASP.NET MVC 默认配置。
+- **第20行**：调用 `MapMvcAttributeRoutes()`，启用 Controller 类上的 `[Route]`、`[RoutePrefix]` 等属性路由。
+- **第24行-第27行**：在属性路由注册后添加默认路由 `{controller}/{action}`。默认值 `controller = &#34;Account&#34;`, `action = &#34;Login&#34;`，即未指定路径时跳转到登录页。注释（第22-23行）强调必须先在前面调 `MapMvcAttributeRoutes`，且默认 Account Controller 不要用 RoutePrefix/Route 属性，否则会冲突。
+
+### 4. 依赖关系
+
+- `System.Web.Mvc`（第1行）：MVC 框架核心（`RouteCollection`、`MapMvcAttributeRoutes`、`MapRoute`）
+- `System.Web.Routing`（第2行）：路由基础设施
+- 调用方：`Global.asax.cs` 第33行 `RouteConfig.RegisterRoutes(RouteTable.Routes)`
+
+### 5. 错误处理与边界情况
+
+当前文件没有显式错误处理。路由注册失败会抛异常并由 ASP.NET 运行时层处理。
+
+### 6. 测试相关
+
+当前 batch 未包含对应测试。建议测试：属性路由是否生效、默认路由是否正确定向到 Account/Login、添加自定义 Route 后是否会与默认路由冲突。
+
+### 7. 新人阅读建议
+
+先理解 ASP.NET MVC 路由基本概念（属性路由 vs 传统路由）。注意注册顺序：属性路由优先，然后是默认回退路由。
+
+### 8. 不确定点
+
+- 具体有哪些 Controller 使用了属性路由（`[Route]`/`[RoutePrefix]`）需要查看 Controllers 目录
+- `FilterConfig`、`BundleConfig` 的实现在当前 batch 未提供
+- `Account` Controller 的实际路径和行为需要其他文件确认
+
+---
+
+## 文件：POS4UCloud/Source/POS4UBO/POS4UBackoffice/Global.asax
+
+### 1. 文件定位
+
+ASP.NET Web Forms / MVC 应用程序的标记文件。作为 IIS 应用程序生命周期的事件处理入口点的声明文件。
+
+### 2. 对外暴露内容
+
+无代码暴露。仅为标记文件，用于关联 `.asax.cs` 代码后置文件。
+
+### 3. 关键逻辑 walkthrough
+
+非文本文件（127 bytes），不包含内联代码。其行为由同目录下的 `Global.asax.cs` 中的 `MvcApplication` 类定义。
+
+### 4. 依赖关系
+
+依赖于 `Global.asax.cs`（带代码后置的 `MvcApplication` 类）。
+
+### 5. 错误处理与边界情况
+
+不适用。
+
+### 6. 测试相关
+
+不适用。
+
+### 7. 新人阅读建议
+
+只需知道它是 ASP.NET 应用程序的入口声明标记。实际代码在 `Global.asax.cs` 中。
+
+### 8. 不确定点
+
+需要人工确认教材中对此非文本文件的处理方式（仅提及存在，或需要查看其原始 XAML 内容）。
+
+---
+
+## 文件：POS4UCloud/Source/POS4UBO/POS4UBackoffice/Global.asax.cs
+
+### 1. 文件定位
+
+Backoffice Web 应用（ASP.NET MVC）的全局应用程序类，处理 `HttpApplication` 生命周期事件：启动、结束、错误、请求开始/结束。是 Backoffice 后端启动的核心入口。
+
+### 2. 对外暴露内容
+
+| 名称 | 位置 | 用途 |
+|------|------|------|
+| `MvcApplication` 类 | 第16行 | 继承 `HttpApplication`，处理 ASP.NET 应用生命周期。内部类，标记 `#pragma warning disable SA1649` 抑制文件名与类型名不匹配的警告 |
+| `_processingRequestCount` | 第20行 | `volatile int`，记录当前正在处理的请求数，用于安全关闭 |
+| `Application_Start()` | 第25行 | 应用启动时注册 Area、Filter、Route、Bundle |
+| `Application_End()` | 第40行 | 等待所有请求处理完成后安全终止 |
+| `Application_Error()` | 第69行 | 全局未处理异常捕获 |
+| `Application_BeginRequest()` | 第86行 | 请求开始，递增请求计数器 |
+| `Application_EndRequest()` | 第94行 | 请求结束，递减请求计数器 |
+
+### 3. 关键逻辑 walkthrough
+
+- **第27行**：启动时输出日志 `Application_Start method is called.`
+- **第29行**：`ServicePointManager.DefaultConnectionLimit = 12`，将 HTTP 并发连接数从默认的 2 提升到 12，以支持并发请求。
+- **第31-34行**：依次调用：
+  1. `AreaRegistration.RegisterAllAreas()` — 注册 MVC Areas
+  2. `FilterConfig.RegisterGlobalFilters(GlobalFilters.Filters)` — 注册全局 Filter
+  3. `RouteConfig.RegisterRoutes(RouteTable.Routes)` — 注册路由
+  4. `BundleConfig.RegisterBundles(BundleTable.Bundles)` — 注册静态资源 Bundle
+- **第40-62行**：`Application_End` 使用 `do...while(true)` 轮询 `_processingRequestCount`，每 100ms 检查是否有未完成请求。全部完成后输出 `Application will terminate safely.`。外层 `try-catch` 吞掉所有异常以确保关闭不失败。
+- **第69-79行**：`Application_Error` 从 `Server.GetLastError()` 获取异常，不为 null 时用 `Logger.Fatal` 记录。
+- **第86-95行**：`BeginRequest`/`EndRequest` 使用 `Interlocked.Increment/Decrement` 原子操作维护请求计数器，保证线程安全。
+
+### 4. 关键函数说明
+
+**Application_End**（第40-62行）
+- 输入：无
+- 输出：void
+- 副作用：可能阻塞直到所有请求完成
+- 逻辑：空循环 → Sleep 100ms → 检查 `_processingRequestCount &lt;= 0` → break
+- 边界情况：`catch {}`（第59-61行）吞掉所有异常，即使 Logger 也出错也不会影响关闭
+- 可能的坑：如果某个请求挂起不返回，`Application_End` 将无限循环。没有超时退出机制。
+
+### 5. 依赖关系
+
+- `System.Web.Mvc`：`AreaRegistration`、`GlobalFilters`
+- `System.Web.Optimization`：`BundleTable`、`BundleConfig`
+- `System.Web.Routing`：`RouteTable`
+- `ForYouApplications.POS4U.Framework.Library`：`Logger`（日志记录类）
+- `FilterConfig`、`RouteConfig`、`BundleConfig`：同一项目的配置文件，当前 batch 仅包含 `RouteConfig`
+
+### 6. 错误处理与边界情况
+
+- **第69-79行**：`Application_Error` 只记录不处理，日志后异常不会得到处理（`Server.GetLastError()` 未调用 `ClearError()`），ASP.NET 将继续传播异常。
+- **第59-61行**：`Application_End` 的 catch 块为空（`catch {}`），吞掉所有异常。
+- **第86-95行**：无防护，`Application_BeginRequest`/`EndRequest` 在任何请求中都会触发。
+
+### 7. 测试相关
+
+当前 batch 未包含测试。建议测试：
+- 启动时四步注册的顺序和异常传播
+- 并发请求下 `_processingRequestCount` 的准确性
+- `Application_End` 是否能正常等待所有请求完成
+- `Application_Error` 在各种异常类型下的日志输出
+
+### 8. 新人阅读建议
+
+按 ASP.NET 生命周期事件顺序阅读：`Application_Start` → `Application_BeginRequest` → `Application_EndRequest` → `Application_End`。理解 `_processingRequestCount` 的线程安全设计和 `Application_End` 的关闭等待机制。
+
+### 9. 不确定点
+
+- `FilterConfig`、`BundleConfig` 的实现在本 batch 未提供
+- `Logger.Info`/`Logger.Fatal` 的具体实现（输出目标、格式）需要查看 `ForYouApplications.POS4U.Framework.Library`
+
+---
+
+## 文件：Source/POS4U/App.xaml
+
+### 1. 文件定位
+
+POS4U 主 POS 应用程序（WPF）的 XAML 标记文件。定义应用程序级资源和启动 URI。
+
+### 2. 对外暴露内容
+
+无代码暴露。XAML 标记文件。
+
+### 3. 关键逻辑 walkthrough
+
+非文本文件（655 bytes），不包含内联源码。具体行为由 `App.xaml.cs` 定义。
+
+### 4. 依赖关系
+
+依赖于 `App.xaml.cs`（代码后置文件）。
+
+### 5. 错误处理与边界情况
+
+不适用。
+
+### 6. 测试相关
+
+不适用。
+
+### 7. 新人阅读建议
+
+WPF 标准模式：`App.xaml` 定义资源字典和启动配置，`App.xaml.cs` 包含启动逻辑。
+
+### 8. 不确定点
+
+需要人工确认教材中对此非文本文件的处理方式（是否需描述其 XAML 内容）。
+
+---
+
+## 文件：Source/POS4U/App.xaml.cs
+
+### 1. 文件定位
+
+POS4U 主 POS 前端 WPF 应用程序的启动入口。担当主进程的初始化、二重起動チェック、异常处理挂载、控制器启动、外围进程启动（二人制チェッカー）、以及终了处理。是整个 POS 前台系统的入口点。
+
+### 2. 对外暴露内容
+
+| 名称 | 位置 | 用途 |
+|------|------|------|
+| `App` 类 | 第24行 | 继承 `System.Windows.Application`，管理 WPF 应用生命周期 |
+| `_controller` | 第29行 | `WinPOSController` 实例，POS 业务逻辑控制器 |
+| `OnStartup(StartupEventArgs)` | 第35行 | 应用启动入口，`protected override` |
+| `OnExit(ExitEventArgs)` | 第122行 | 应用退出清理 |
+| `MakeMainModuleNameTextFile()` | 第141行 | 创建 `.txt` 标记文件通知 Launcher |
+| `StartupController()` | 第208行 | 初始化并启动 `WinPOSController` |
+| 4 个异常处理方法 | 第158-203行 | 分别处理不同层级未处理异常 |
+
+### 3. 关键逻辑 walkthrough
+
+**OnStartup 执行顺序：**
+
+1. **第40行**：`MakeMainModuleNameTextFile()` — 创建进程对应的 `.txt` 空文件，用于通知 Launcher 进程已启动。这是一种进程间通信机制（通过文件系统）。
+
+2. **第43-53行**：二重起動チェック — 调试模式（`Debugger.IsAttached`）下跳过，生产环境调用 `SystemLibrary.IsProcessAlreadyExist()`，若已有实例则弹出消息框并 `Shutdown()`。
+
+3. **第57-60行**：挂载四个未处理异常处理器：
+   - `System.Windows.Forms.Application.ThreadException` — WinForms 线程异常
+   - `Thread.GetDomain().UnhandledException` — AppDomain 未处理异常
+   - `Current.DispatcherUnhandledException` — WPF UI 线程异常
+   - `Dispatcher.CurrentDispatcher.UnhandledException` — 当前 Dispatcher 未处理异常
+   覆盖了几乎所有可能的异常泄漏场景。
+
+4. **第62行**：`base.OnStartup(e)` — WPF 标准启动（加载 App.xaml 资源等）。
+
+5. **第64行**：`StartupController()` — 创建 `WinPOSController` 并调用 `_controller.Startup(DeviceIds.AutoRun.Id, EventCodes.Common_PowerOn.Code, null)`，用&#34;自动运行&#34;设备 ID 和&#34;电源开启&#34;事件码启动控制器。
+
+6. **第66-71行**：确保主窗口激活。若 `MainWindow.IsActive` 为 false 则调用 `MainWindow.Activate()`。
+
+7. **第73-82行**：Posiflex 专有处理 — 若配置 `WinPOSSettingValues.NodeImageType.Value == &#34;03&#34;`（Posiflex 硬件），异步延迟 3 秒后模拟按下 LeftCtrl 键，解决 Posiflex 设备的画面显示问题。
+
+8. **第85行**：`SystemUser32DLL.SystemParametersInfo(111, 0, &#34;0&#34;, 0)` — 禁用输入法（IME）显示（参数 111 = SPI_SETDEFAULTINPUTLANG）。
+
+9. **第87-107行**：二人制モード — 若 `WinPOSSettingValues.IsTwoOperatorsCashier.Value` 为 true，启动二人制チェッカー外部进程（不等待退出）。
+
+**OnExit（第122行）：**
+- 若 `_controller != null`，调用 `_controller.Exit()` 并置 null，然后 `base.OnExit(e)`。
+
+**MakeMainModuleNameTextFile（第141行）：**
+- 通过 `Process.GetCurrentProcess().MainModule.FileName` 取当前进程 exe 路径，追加 `.txt`，创建空文件。
+
+### 4. 关键函数/类说明
+
+**StartupController**（第208-215行）
+- 输入：无
+- 输出：void
+- 副作用：初始化 `_controller` 并启动 POS 业务流程（电源开启 → 自动运行）
+- 调用链：`WinPOSController.Startup(DeviceIds.AutoRun.Id, EventCodes.Common_PowerOn.Code, null)`
+
+**POS4U_UnhandledException**（第184-190行）
+- 行为：记录 Fatal 日志后 `throw ex`（重新抛出原异常）
+- 注意点：其他三个异常处理器的行为类似但细节不同：
+  - `CurrentDispatcher_UnhandledException`（第158行）：`throw e.Exception`
+  - `Current_DispatcherUnhandledException`（第171行）：`throw e.Exception`
+  - `Application_ThreadException`（第197行）：`throw e.Exception`
+  - `POS4U_UnhandledException`（第184行）：`throw ex`（注意是 `throw ex` 而不是 `throw`，会重置堆栈）
+
+### 5. 依赖关系
+
+- `ForYouApplications.POS4U.Common.Const`：`DeviceIds`、`EventCodes`
+- `ForYouApplications.POS4U.Device.DeviceDefine`：常规定义
+- `ForYouApplications.POS4U.Framework.Library`：`Logger`、`SystemLibrary`
+- `ForYouApplications.POS4U.WinPOS.Common`：`SystemUser32DLL`
+- `ForYouApplications.POS4U.WinPOS.Framework`：`WinPOSFrameworkSettingValues`
+- `ForYouApplications.POS4U.WinPOS.Framework.Library`：`SettingValues`、`POSKeyEmulator`
+- `POSKeyEmulator`：按键模拟（第80行）
+- `WinPOSController`：核心控制器类（第29行、212行）
+
+### 6. 错误处理与边界情况
+
+- **第109-113行**：外层 `try-catch` 捕获 `OnStartup` 中的任何异常，记录 Fatal 日志后重新抛出。
+- **二重起動チェック第43行**：调试模式下跳过，允许同一机器上同时运行多个调试实例。这是开发时的便利设计。
+- **第73-82行**：Posiflex 模拟按键在异步任务中执行，不阻塞主线程。若任务失败不会影响主流程（没有异常处理）。
+- **第87-107行**：二人制进程启动不等待结果。如果路径为空或文件不存在，`Process.Start` 在未检查文件存在的情况下会抛 `Win32Exception`。虽然第92行检查了字符串是否为空，但没有检查文件是否存在。需要结合其他文件确认。
+- **makeMainModuleNameTextFile 第141行**：没有异常保护。如果进程 MainModule 访问失败，会抛异常给外层 catch。
+
+### 7. 测试相关
+
+当前 batch 未包含测试。建议测试：
+- 正常启动流程（MainWindow 激活确认）
+- 二重起動検知
+- 每个未处理异常处理器的触发和日志输出
+- Posiflex 硬件路径下的按键模拟
+- 二人制チェッカー进程启动
+- OnExit 时的 controller.Exit() 调用
+
+### 8. 新人阅读建议
+
+从 `OnStartup` 开始，理解 POS4U 主进程的启动流程是一个&#34;检查→初始化→启动业务→环境适配→进程管理&#34;的多阶段过程。注意异常处理器覆盖了 4 个不同层面，体现了稳定性的设计考虑。
+
+### 9. 不确定点
+
+- `WinPOSController.Startup()` 的实际行为需要查看 `WinPOSController` 类
+- `DeviceIds.AutoRun.Id`、`EventCodes.Common_PowerOn.Code` 的具体值需要查看 `Common.Const`
+- `WinPOSSettingValues.IsTwoOperatorsCashier.Value` 的配置来源（DB/Config）
+- `WinPOSSettingValues.NodeImageType.Value` 的取值范围和含义（目前只看到 &#34;03&#34; = Posiflex）
+
+---
+
+## 文件：Source/POS4UBackground/POS4U.Console.MasterSync/Program.cs
+
+### 1. 文件定位
+
+MasterSync（主数据同步控制台）应用程序的入口点。是一个后台控制台程序，负责通过 `ControllerBulk` 批量执行主数据同步任务。在 POS4U 后?系统运行，属于后台任务模块。
+
+### 2. 对外暴露内容
+
+| 名称 | 位置 | 用途 |
+|------|------|------|
+| `Program.Main(string[])` | 第24行 | 入口点，返回 int 状态码 |
+| `RootLogHeader` | 第17行 | 日志前缀 `&#34;&gt;&gt;&gt;&gt; &#34;` |
+| `IsValidArgs(string[], out Action)` | 第68行 | 参数验证 |
+| `MasterSync_UnhandledException` | 第94行 | 全局未处理异常处理 |
+| `OnExecuteStep` | 第116行 | 步骤执行回调（空实现） |
+| `OnExecuteComplete` | 第129行 | 完成回调（空实现） |
+| `OnExecuteAllComplete` | 第142行 | 全部完成回调（空实现） |
+
+### 3. 关键逻辑 walkthrough
+
+1. **第26行**：注册全局未处理异常处理器 `MasterSync_UnhandledException`。
+2. **第35行**：`Factory.Init(new List&lt;FactoryInitInfo&gt;())` — 初始化工厂/DI 容器（空配置列表）。
+3. **第37-41行**：二重起動チェック — 若已有实例运行，记录 Warn 日志并返回 -1。
+4. **第43-49行**：参数验证 — 调用 `IsValidArgs`，若通过则创建 `ControllerBulk` 实例传入三个回调（全部为空实现），执行 `controller.Execute(false)`。
+5. **第54-57行**：`finally` 中执行退出动作（`exitAction?.Invoke()`）— 若参数指定了重启，则执行系统重启。
+6. **第59行**：返回值 — `result` 始终为 false（因为第29行初始化为 false，且从未设为 true），所以始终返回 -1。**这是一个疑似 bug**：`result` 变量从未被赋值为 true，因此即使执行成功也返回 -1。
+7. **第68-87行**：`IsValidArgs` 检查 `args` 是否为 null。若第一个参数是 `ProcessExitArgments.Reboot`，则将退出动作设为 `SystemLibrary.Reboot()`。
+
+### 4. 关键函数说明
+
+**IsValidArgs**（第68-87行）
+- 输入：`args` 字符串数组，`exitAction` 输出参数
+- 输出：bool（始终返回 true，除非 args 为 null）
+- 副作用：当参数为 `ProcessExitArgments.Reboot` 时设定退出时重启系统
+- 边界情况：args 为 null 时返回 false（第73行），但第72行有一个可疑的双赋值 `exitAction = exitAction = () =&gt; { }`
+
+**MasterSync_UnhandledException**（第94-105行）
+- 记录 Fatal 日志后 `throw ex`（会重置堆栈，丢失原始堆栈信息）
+
+### 5. 依赖关系
+
+- `ForYouApplications.POS4U.Background.Business.MasterSyncPos`：`ControllerBulk`、`ExecuteStepEventArgs`、`ExecuteCompleteEventArgs`
+- `ForYouApplications.POS4U.Framework.Library`：`Logger`、`Factory`
+- `ForYouApplications.POS4U.WinPOS.Framework.Library`：`SystemLibrary`
+
+### 6. 错误处理与边界情况
+
+- 第26行：全局异常处理器注册在任何业务逻辑之前，确保启动阶段的异常也能被捕获。
+- 第37-41行：二重起動検知时返回 -1，但 `finally` 中 `exitAction?.Invoke()` 可能会执行重启逻辑，导致原本已存在的进程被重启。
+- 第72行：有一个明显的赋值错误 `exitAction = exitAction = () =&gt; { }`（变量赋值给自己），应仅为 `exitAction = () =&gt; { }`。
+- 返回值 bug：第29行 `result = false`，且整个 Main 中从未设 `result = true`，因此第59行总是返回 -1。
+
+### 7. 测试相关
+
+当前 batch 未包含测试。建议测试：
+- 正常同步执行流程
+- 二重起動時の返回码
+- 参数 `Reboot` 时退出动作是否触发
+- **验证返回值 bug（第29行 result 始终为 false 的问题）**
+
+### 8. 新人阅读建议
+
+这是后台控制台应用的典型结构。注意区分 `MasterSync`（本文件）和 `Tools/MasterSync`（GUI 版本），它们在目的上相似但实现方式不同。
+
+### 9. 不确定点
+
+- `Factory.Init` 的具体实现（DI 容器初始化）
+- `ProcessExitArgments.Reboot` 的实际值
+- 三个回调事件 `OnExecuteStep`/`OnExecuteComplete`/`OnExecuteAllComplete` 为空实现，但它们的参数类型 `ExecuteStepEventArgs`/`ExecuteCompleteEventArgs` 的结构未知
+- `ControllerBulk.Execute(false)` 中 `false` 参数的含义
+
+---
+
+## 文件：Source/POS4UBackground/POS4U.Console.VersionUp/Program.cs
+
+### 1. 文件定位
+
+VersionUp（版本升级控制台程序）的入口点。负责从命令行接收升级参数（VM 名、当前版本、新版本、升级包路径），验证后将升级任务委托给 `UpdateManager` 执行。属于后台管理模块。
+
+### 2. 对外暴露内容
+
+| 名称 | 位置 | 用途 |
+|------|------|------|
+| `Program.Main(string[])` | 第27行 | 入口点，返回 int 状态码 |
+| `RootLogHeader` | 第20行 | 日志前缀 `&#34;&gt;&gt;&gt;&gt; &#34;` |
+| `IsValidArgs(string[], out string, out string, out string, out string)` | 第71行 | 验证 4 个必需参数 |
+| `VersionUp_UnhandledException` | 第132行 | 全局未处理异常处理 |
+
+### 3. 关键逻辑 walkthrough
+
+1. **第29行**：注册全局未处理异常处理器。
+2. **第32行**：先读取连接字符串 `FrameworkLibrarySettingValues.POS4UConnectionString`（在 `Factory.Init` 前执行——注意这是有意为之，连接字符串在框架初始化前就需要）。
+3. **第34行**：`Factory.Init(new List&lt;FactoryInitInfo&gt;())` — 初始化工厂/DI。
+4. **第38-42行**：二重起動チェック。若有已有实例则返回 -1。
+5. **第51行**：验证 4 个参数：
+   - `args[0]` = vmName（VM 名）
+   - `args[1]` = currentVersion（当前版本）
+   - `args[2]` = newVersion（新版本）
+   - `args[3]` = modulePath（升级包路径）
+6. **第53行**：`new UpdateManager().Execute(vmName, currentVersion, newVersion, modulePath)` — 执行版本升级。
+7. **第83-88行**：基本参数检查 — args 不能为 null，长度必须 &gt; 3。
+8. **第95-99行**：检查 zip 文件是否存在。
+9. **第102-109行**：通过 `Factory` 创建 `IVersionUpAccessor` 插件，从 DB 获取当前版本信息。
+10. **第112-116行**：检查传入的 currentVersion 是否与 DB 一致。
+11. **第118-122行**：检查版本大小关系：`currentVersion.CompareTo(newVersion) &gt;= 0` 不合法（新版本必须比当前版本大）。
+
+### 4. 关键函数说明
+
+**IsValidArgs**（第71-125行）
+- 输入：`args` 字符串数组；输出参数 `vmName`/`currentVersion`/`newVersion`/`zipFilePath`
+- 输出：bool（全部验证通过返回 true）
+- 验证顺序：args 非 null 且长度 &gt; 3 → zip 文件存在 → DB 中有对应 VM 信息 → DB 当前版本与参数匹配 → 新版本 &gt; 当前版本
+- 边界情况：`args.Length == 4` 时通过，少于 4 个失败，多于 4 个会忽略多余参数
+
+**VersionUp_UnhandledException**（第132-143行）
+- 记录 Fatal 日志后 `throw ex`（会重置堆栈）
+
+### 5. 依赖关系
+
+- `ForYouApplications.POS4U.Background.Console.Logic`：`UpdateManager`
+- `ForYouApplications.POS4U.Background.Data.Accessor`：`IVersionUpAccessor`、`BackgroundDataAccessorPluginIds`
+- `ForYouApplications.POS4U.Framework.Library`：`Logger`、`Factory`、`FrameworkLibrarySettingValues`
+- `ForYouApplications.POS4U.WinPOS.Framework.Library`：`SystemLibrary`
+
+### 6. 错误处理与边界情况
+
+- **第83-84行**：`args.Length &lt;= 3` 时拒绝，要求至少 4 个参数。
+- **第95-99行**：zip 文件存在性检查。
+- **第104-109行**：DB 中没有 VM 信息时拒绝。
+- **第112-116行**：版本不匹配时拒绝。
+- **第118-122行**：当前版本 &gt;= 新版本时拒绝。
+- **第132-143行**：全局异常处理，记录后重新抛出。
+
+### 7. 测试相关
+
+当前 batch 未包含测试。建议测试：
+- 参数验证的各种边界（参数不足、文件不存在、版本不匹配、版本倒退）
+- DB 版本查询失败
+- UpdateManager.Execute 在升级失败/成功时的不同返回
+- 二重起動検知
+
+### 8. 新人阅读阅读建议
+
+这是典型的命令行工具入口。参数验证在 Main 方法外部通过 `IsValidArgs` 完成，职责分离清晰。注意它与 `Tools/VersionUp`（WPF GUI 版本）的区别。
+
+### 9. 不确定点
+
+- `UpdateManager.Execute` 的具体行为（解压、备份、替换、重启等）
+- `IVersionUpAccessor.GetCurrentModuleInfo()` 从哪个表/DB 查询
+- `BackgroundDataAccessorPluginIds.VersionUp` 的插件注册方式
+- `FrameworkLibrarySettingValues.POS4UConnectionString` 的配置来源
+
+---
+
+## 文件：Source/POS4UBackground/POS4U.WindowsService.Administrator/Program.cs
+
+### 1. 文件定位
+
+Windows Service（后台管理服务）的入口点。以 Windows Service 或控制台模式运行（取决于是否附加调试器）。负责在后台运行 Windows 服务，处理版本升级通知和主数据同步请求。
+
+### 2. 对外暴露内容
+
+| 名称 | 位置 | 用途 |
+|------|------|------|
+| `Program.Main()` | 第18行 | 入口点，无参数无返回值 |
+| `Program_UnhandledException` | 第67行 | 全局未处理异常处理 |
+
+### 3. 关键逻辑 walkthrough
+
+1. **第20行**：注册全局未处理异常处理器。
+2. **第22-23行**：预先初始化 `MessageId` 和 `SettingValue&lt;object&gt;` 实例，确保框架的配置/消息组件至少在构造函数中完成初始化。
+3. **第27-50行**：调试模式路径（`Debugger.IsAttached`）：
+   - 创建 `Controller` 实例（第32行）
+   - 调用 `controller.Init(arg =&gt; { ... })` 注册回调，当接收到 `NotifyAdministratorTypes.VersionUp` 或 `MasterSyncBulk` 通知时停止循环（第33-39行）
+   - `controller.Start()` 开始服务（第42行）
+   - `while(!stop) Thread.Sleep(1000)` 等待停止信号（第44-47行）
+   - `controller.Stop()` 停止服务（第49行）
+4. **第53-58行**：生产环境路径：
+   - 创建 `AdministratorService` 实例
+   - 调用 `ServiceBase.Run(servicesToRun)` 以标准 Windows Service 方式运行
+
+### 4. 关键函数说明
+
+**Program_UnhandledException**（第67-72行）
+- 记录 Fatal 日志后 `throw ex`（会重置堆栈）
+
+### 5. 依赖关系
+
+- `System.ServiceProcess`：`ServiceBase`、`ServiceBase.Run`
+- `ForYouApplications.POS4U.Background.Business.BackgroundCommon`：`MessageId`、`SettingValue`、`NotifyAdministratorTypes`
+- `ForYouApplications.POS4U.Framework.Library`：`Logger`
+- 自定义 `Controller` 类（第32行）：管理员服务的业务控制器
+- 自定义 `AdministratorService` 类（第55行）：Windows Service 实现
+
+### 6. 错误处理与边界情况
+
+- **第27-50行**：调试模式是一个模拟服务环境的替代方案，使用 `Thread.Sleep` 循环模拟服务运行。
+- **第33-39行**：调试模式下注册的回调仅处理 `VersionUp` 和 `MasterSyncBulk` 两种通知类型，其他通知会被忽略（stop 保持 false）。
+- **第42行**：`controller.Start()` 可能抛出异常，当前没有异常处理（外层也没有 catch），异常会传播到全局异常处理器。
+- **第67-72行**：全局异常处理记录后重新抛出。
+
+### 7. 测试相关
+
+当前 batch 未包含测试。建议测试：
+- 调试模式的启动/停止流程
+- 生产模式下的 ServiceBase.Run
+- Controller 的回调注册和通知处理
+
+### 8. 新人阅读建议
+
+理解这个文件需要区分两种运行模式。注意 `Controller` 是自定义的业务类，与  `ServiceBase` 不同。同时关注 Windows Service 的 `OnStart`/`OnStop` 方法在 `AdministratorService` 类中实现。
+
+### 9. 不确定点
+
+- `Controller` 类的实现需要其他文件确认
+- `AdministratorService` 类的实现（它才是真正的 Windows Service 生命周期实现）
+- `MessageId` 和 `SettingValue&lt;object&gt;` 构造函数中做了什么（为什么需要在 Main 中初始化）
+- `NotifyAdministratorTypes.VersionUp.Code` 和 `NotifyAdministratorTypes.MasterSyncBulk.Code` 的实际值
+
+---
+
+## 文件：Source/POS4ULogicService/App_Start/WebApiConfig.cs
+
+### 1. 文件定位
+
+LogicService（逻辑服务层，Web API）的配置类。负责注册全局异常日志器和 Web API 路由。LogicService 是 POS4U 后端的 Web API 服务层，供 POS 前端和 BO 后台调用。
+
+### 2. 对外暴露内容
+
+| 名称 | 位置 | 用途 |
+|------|------|------|
+| `WebApiConfig.Register(HttpConfiguration)` | 第19行 | 注册 Web API 配置（异常日志器 + 属性路由） |
+
+### 3. 关键逻辑 walkthrough
+
+- **第22行**：将 `IExceptionLogger` 服务替换为自定义的 `LogicServiceExceptionLogger`。这是 ASP.NET Web API 2 的扩展点，用于全局记录所有未处理的异常。
+- **第25行**：`config.MapHttpAttributeRoutes()` — 启用基于 `[Route]` 属性的 Web API 路由。注意与 Backoffice 的 MVC 不同，这里使用的是 Web API 的属性路由。
+
+### 4. 依赖关系
+
+- `System.Web.Http`：`HttpConfiguration`、`MapHttpAttributeRoutes` 扩展方法
+- `System.Web.Http.ExceptionHandling`：`IExceptionLogger`
+- `ForYouApplications.POS4U.LogicService`：`LogicServiceExceptionLogger`（自定义异常日志器）
+- 调用方：`Global.asax.cs` 第31行 `GlobalConfiguration.Configure(WebApiConfig.Register)`
+
+### 5. 错误处理与边界情况
+
+当前文件没有显式错误处理。异常日志器的替换如果失败（如 `LogicServiceExceptionLogger` 构造异常），会在 `GlobalConfiguration.Configure` 调用时传播。
+
+### 6. 测试相关
+
+当前 batch 未包含测试。建议测试：
+- 自定义异常日志器 `LogicServiceExceptionLogger` 是否正确记录异常
+- 属性路由是否正确定义和匹配
+- 多个 API Controller 的路由是否存在冲突
+
+### 7. 新人阅读建议
+
+ASP.NET Web API 2 的配置模式与 MVC 类似但框架不同。注意替换 `IExceptionLogger` 是一个全局异常日志点。
+
+### 8. 不确定点
+
+- `LogicServiceExceptionLogger` 的具体实现需要查看 `ForYouApplications.POS4U.LogicService` 命名空间
+- 具体有哪些 API Controller 及其路由需要查看 Controllers 目录
+
+---
+
+## 文件：Source/POS4ULogicService/Global.asax
+
+### 1. 文件定位
+
+LogicService Web 应用的 ASP.NET 应用程序标记文件。
+
+### 2. 对外暴露内容
+
+无代码暴露。声明文件，行为由 `Global.asax.cs` 定义。
+
+### 3. 关键逻辑 walkthrough
+
+非文本文件（111 bytes），不包含内联代码。
+
+### 4. 依赖关系
+
+依赖于 `Global.asax.cs`（`WebApiApplication` 类）。
+
+### 5. 错误处理与边界情况
+
+不适用。
+
+### 6. 测试相关
+
+不适用。
+
+### 7. 新人阅读建议
+
+标记文件，实际行为见 `Global.asax.cs`。
+
+### 8. 不确定点
+
+需要人工确认教材处理方式。
+
+---
+
+## 文件：Source/POS4ULogicService/Global.asax.cs
+
+### 1. 文件定位
+
+LogicService Web API 应用的全局应用程序类，处理 ASP.NET 生命周期事件。与 Backoffice 的 `Global.asax.cs` 结构相似但职责不同——它启动 Web API 而非 MVC。
+
+### 2. 对外暴露内容
+
+| 名称 | 位置 | 用途 |
+|------|------|------|
+| `WebApiApplication` 类 | 第15行 | 继承 `HttpApplication` |
+| `_processingRequestCount` | 第20行 | `volatile int`，当前处理请求数 |
+| `Application_Start()` | 第25行 | 配置 Web API + 启动 LogicService 控制器 |
+| `Application_End()` | 第39行 | 等待请求完成安全退出 |
+| `Application_BeginRequest()` | 第67行 | 递增请求计数器 |
+| `Application_EndRequest()` | 第77行 | 递减请求计数器 |
+
+### 3. 关键逻辑 walkthrough
+
+1. **第27行**：启动日志。
+2. **第29行**：`ServicePointManager.DefaultConnectionLimit = 12` — 与 Backoffice 相同的并发连接设置。
+3. **第31行**：`GlobalConfiguration.Configure(WebApiConfig.Register)` — 配置 Web API（注册异常日志器 + 属性路由）。
+4. **第33行**：`LogicServiceController.Instance.Startup()` — 启动 LogicService 内部控制器。这是一个单例模式调用，与 POS4U 主 POS 的 `WinPOSController.Startup()` 不同，这里通过 `Instance` 属性获取单例。
+5. **第39-60行**：`Application_End` 逻辑与 Backoffice 相同——轮询请求计数器，等待全部完成。
+6. **第67-80行**：`BeginRequest`/`EndRequest` 使用 `Interlocked` 原子操作维护计数器。
+
+### 4. 依赖关系
+
+- `System.Web.Http`：`GlobalConfiguration`
+- `ForYouApplications.POS4U.Framework.Library`：`Logger`
+- `ForYouApplications.POS4U.LogicService.Framework`：`LogicServiceController`
+- `WebApiConfig`：同项目配置类
+
+### 5. 错误处理与边界情况
+
+- **第39-60行**：`Application_End` 的 `catch (Exception) {}` 吞掉异常。
+- **第67-80行**：请求计数无边界检查（没有防止递减到负数的保护，尽管理论上 `BeginRequest`/`EndRequest` 成对出现）。
+- 注释（第1行）标明 `// &lt;auto-generated /&gt;`，说明这是由 Visual Studio 自动生成的文件。
+
+### 6. 测试相关
+
+当前 batch 未包含测试。建议测试与 Backoffice `Global.asax.cs` 类似。
+
+### 7. 新人阅读建议
+
+对比阅读 Backoffice 的 `Global.asax.cs`（POS4UCloud 项目）和 LogicService 的 `Global.asax.cs`，注意它们的相似模式和关键区别：
+- Backoffice 使用 MVC + Filter/Bundle；LogicService 使用 Web API + 自定义异常日志器
+- LogicService 额外启动了 `LogicServiceController.Instance`
+
+### 8. 不确定点
+
+- `LogicServiceController` 类的实现（单例、Startup 行为）
+- `LogicServiceExceptionLogger` 的实现
+
+---
+
+## 文件：Source/POS4UTwoOperatorsCH/App.xaml
+
+### 1. 文件定位
+
+二人制チェッカー（Two-Operator Checker）WPF 应用程序的 XAML 标记文件。二人制モード时在主 POS 之外独立运行的辅助进程，处理副收银员的收银操作。
+
+### 2. 对外暴露内容
+
+无代码暴露。标记文件。
+
+### 3. 关键逻辑 walkthrough
+
+非文本文件（655 bytes），不包含内联源码。行为由 `App.xaml.cs` 定义。
+
+### 4. 依赖关系
+
+依赖于 `App.xaml.cs`。
+
+### 5-8. 同 `App.xaml.cs` 整体描述
+
+行为与 POS4U 主 POS 的 `App.xaml` 类似但已做二人制适配。
+
+---
+
+## 文件：Source/POS4UTwoOperatorsCH/App.xaml.cs
+
+### 1. 文件定位
+
+二人制チェッカー（CH）进程的 WPF 应用程序入口。与 POS4U 主 POS（CA）配合运行，处理副收银员操作。关键区别：CH 窗口不激活（`ShowActivated = false`），且有一个监听 `Activated` 事件将焦点还给 CA 的机制。
+
+### 2. 对外暴露内容
+
+| 名称 | 位置 | 用途 |
+|------|------|------|
+| `App` 类 | 第21行 | 继承 `Application` |
+| `_controller` | 第26行 | `WinPOSController` 实例 |
+| `OnStartup(StartupEventArgs)` | 第32行 | 启动入口 |
+| `OnExit(ExitEventArgs)` | 第98行 | 退出清理 |
+| `Application_Activated` | 第186行 | 捕获激活事件，把焦点还给 CA |
+| `StartupController()` | 第214行 | 启动控制器 |
+
+### 3. 关键逻辑 walkthrough
+
+- **启动流程**（第32-90行）：与 POS4U 主 POS 基本一致（MakeMainModuleNameTextFile → 二重起動チェック → 注册异常处理 → base.OnStartup → StartupController）。
+- **第63行**：`this.MainWindow.ShowActivated = false` — CH 窗口以非激活模式显示，防止抢走 CA 的焦点。这是二人制操作的核心设计。
+- **第65-74行**：与主 POS 相同的 Posiflex 按键模拟。
+- **第79-83行**：（非调试模式）注册 `this.Activated` 事件 → `Application_Activated`，该事件处理函数会在 CH 窗口被激活时立即把焦点还给 CA 进程。
+
+**Application_Activated**（第186-209行）：
+- 尝试通过 `Process.GetProcessesByName(&#34;POS4U&#34;)` 查找主 POS 进程
+- 找到后调用 `Interaction.AppActivate(p[0].Id)` 将焦点切回主 POS（CA）
+- 捕获 `ArgumentException`（第201行）— 当 POS4U 尚未完全启动时忽略异常
+- 捕获其他异常（第205行）记录 Warn 日志
+
+### 4. 关键函数说明
+
+**Application_Activated**（第186-209行）
+- 输入：`sender`、`e`
+- 输出：void
+- 副作用：强制将活动窗口切换到 POS4U 主进程
+- 边界情况：找不到 POS4U 进程时不做任何事；POS4U 启动中抛 `ArgumentException` 被吞掉
+- 注释（第191-194行）详细解释了此行为的开发设计和调试时的限制：调试时点击模拟器窗口标题导致 Activated 触发，CA 被激活；再点一次 CH 才激活
+
+### 5. 依赖关系
+
+- 与 POS4U 主 POS `App.xaml.cs` 几乎相同
+- 新增依赖 `Microsoft.VisualBasic`（第14行）：用于 `Interaction.AppActivate`
+- `System.Windows.Input`：`POSKeyEmulator`、`Key`
+
+### 6. 错误处理与边界情况
+
+- **第201-204行**：`ArgumentException` 被显式吞掉，注释说明原因是&#34;POS4U 起動が完了していないことが原因で起こる例外&#34;。
+- **第205-208行**：其他异常被记录 Warn 级别日志。
+- **第195行**：`GetProcessesByName(&#34;POS4U&#34;)` 可能找不到进程（`null` 或空数组），此时第196行的检查跳过不做任何操作。
+- 没有实现 `MainWindow.Activate()` 操作（与主 POS 第66-71行对比）。
+
+### 7. 测试相关
+
+当前 batch 未包含测试。建议测试：
+- CH 启动时是否不激活
+- Activated 事件是否能把焦点切回 CA
+- 找不到 POS4U 进程时的行为
+- 正常退出流程
+
+### 8. 新人阅读建议
+
+与主 POS `App.xaml.cs` 对照着读。关注 CH 与 CA 的焦点管理策略——这是二人制系统的核心。
+
+### 9. 不确定点
+
+- 与主 POS `App.xaml.cs` 的关系：两个文件代码结构高度相似，是否存在共享基类或代码复用策略
+- `TwoOperatorsCheckerFileName` 配置项的路径
+
+---
+
+## 文件：Source/TRAN4U/Program.cs
+
+### 1. 文件定位
+
+TRAN4U（交易传输守护程序）的入口点。这是一个常驻后台的 WinForms 应用程序，负责将 POS 交易数据传送到后端服务器。使用 `Application.Run(controller)` 模式实现常驻循环。
+
+### 2. 对外暴露内容
+
+| 名称 | 位置 | 用途 |
+|------|------|------|
+| `Program.Main()` | 第22行 | STAThread 入口点 |
+| `MakeMainModuleNameTextFile()` | 第68行 | 创建标记文件 |
+| `TRAN4U_UnhandledException` | 第85行 | 全局未处理异常 |
+| `Application_ThreadException` | 第97行 | WinForms 线程异常 |
+
+### 3. 关键逻辑 walkthrough
+
+1. **第27行**：`MakeMainModuleNameTextFile()` — 标记文件。
+2. **第33-40行**：二重起動チェック。
+3. **第42-46行**：先 -= 再 += 注册异常处理（防止重复注册导致的多次执行）。
+4. **第49-50行**：创建 `TRAN4UController` 并调用 `Init()` 初始化。
+5. **第53行**：`Application.Run(controller)` — 以 WinForms 消息循环运行 controller，controller 需要继承 `ApplicationContext` 或 `Form`。
+6. **第55行**：消息循环结束后输出再见日志。
+
+### 4. 关键函数说明
+
+**MakeMainModuleNameTextFile**（第68-78行）
+- 与 POS4U 主 POS 相同模式：取当前进程路径 + &#34;.txt&#34; 创建空文件。
+
+**TRAN4U_UnhandledException**（第85-90行）
+- Fatal 日志后 `throw ex`。
+
+**Application_ThreadException**（第97-102行）
+- Fatal 日志后 `throw e.Exception`。
+
+### 5. 依赖关系
+
+- `System.Windows.Forms`：`Application`
+- `ForYouApplications.POS4U.Framework.Library`：`Logger`
+- `ForYouApplications.POS4U.WinPOS.Framework.Library`：`SystemLibrary`
+- `ForYouApplications.TRAN4U`：`TRAN4UController`（不同命名空间）
+
+### 6. 错误处理与边界情况
+
+- **第42-46行**：先 -= 再 += 是常见的防止重复注册技巧（但前提是之前已注册过该处理程序；若没有，-= 不会有任何效果）。
+- **第56-62行**：整个 `Main` 由 `try-catch` 包裹，捕获所有异常到 Fatal 日志并重新抛出。
+
+### 7. 测试相关
+
+当前 batch 未包含测试。建议测试：
+- TRAN4UController 的 Init 和消息循环
+- 二重起動検知
+- 两个未处理异常处理器的触发
+
+### 8. 新人阅读建议
+
+注意 TRAN4U 使用的是 WinForms `Application.Run` 而不是 WPF 的 `Application.Run`。它的 controller 作为 `Application.Run` 的参数，意味着它是以 WinForms ApplicationContext 模式运行的后台守护程序。
+
+### 9. 不确定点
+
+- `TRAN4UController` 是否继承 `ApplicationContext` 或 `Form`
+- `TRAN4UController.Init()` 的具体行为
+- 交易传输的详细逻辑（协议、重试等）
+
+---
+
+## 文件：Tools/BOLoginPassword/BOLoginPassword/BOLoginPassword/Program.cs
+
+### 1. 文件定位
+
+BOLoginPassword（Backoffice 登录密码工具）的入口点。这是一个非常简单的 WinForms 工具，用于处理 Backoffice 登录密码相关操作。角色是工具类程序中最简单的模板。
+
+### 2. 对外暴露内容
+
+| 名称 | 位置 | 用途 |
+|------|------|------|
+| `Program.Main()` | 第15行 | STAThread 入口，启动 WinForms 窗口 |
+
+### 3. 关键逻辑 walkthrough
+
+- **第17行**：`Application.SetHighDpiMode(HighDpiMode.SystemAware)` — 在 Windows 高 DPI 模式下正确显示。
+- **第18行**：`Application.EnableVisualStyles()` — 启用可视化样式。
+- **第19行**：`Application.SetCompatibleTextRenderingDefault(false)` — 使用兼容的文本渲染。
+- **第20行**：`Application.Run(new Form1())` — 启动主窗体。
+
+### 4. 依赖关系
+
+- `System.Windows.Forms`：WinForms 基础
+- `Form1`：主窗口（路径在 `BOLoginPassword` 项目内）
+
+### 5. 错误处理与边界情况
+
+当前文件没有显式错误处理。Form1 构造或运行时抛出的异常由 WinForms 框架处理（可能会触发 `Application.ThreadException` 事件）。
+
+### 6. 测试相关
+
+当前 batch 未包含测试。建议测试 Form1 的功能逻辑（密码更改/验证）。
+
+### 7. 新人阅读建议
+
+这是最基础的 WinForms 工具入口模板，大量 Visual Studio 生成的模板代码。关注 `Form1` 的实际功能。
+
+### 8. 不确定点
+
+- `Form1` 的具体功能（密码修改/验证/重置）
+- 是否需要管理员权限运行
+- 是否调用 Backoffice API 修改密码
+
+---
+
+## 文件：Tools/CESettingTool/CESettingTool/App.xaml
+
+### 1. 文件定位
+
+CESettingTool（CE 设置工具）的 WPF XAML 标记文件。
+
+### 2-8. 非文本文件，同其他 App.xaml 文件的说明模式。
+
+需要人工确认教材处理方式。
+
+---
+
+## 文件：Tools/CESettingTool/CESettingTool/App.xaml.cs
+
+### 1. 文件定位
+
+CESettingTool（CE 设置工具）WPF 应用程序的入口。用于配置 CE（Customer-facing Display / 顧客表示器？）设备的设置。
+
+### 2. 对外暴露内容
+
+| 名称 | 位置 | 用途 |
+|------|------|------|
+| `App.OnStartup(StartupEventArgs)` | 第19行 | 启动入口 |
+| `CurrentDispatcher_UnhandledException` | 第65行 | 当前 Dispatcher 异常 |
+| `Current_DispatcherUnhandledException` | 第78行 | 应用 Dispatcher 异常 |
+| `CESettingTool_UnhandledException` | 第91行 | AppDomain 异常 |
+
+### 3. 关键逻辑 walkthrough
+
+1. **第22行**：启动日志。
+2. **第24-32行**：注释掉的二重起動チェック代码。
+3. **第36-38行**：注册三种未处理异常处理器。
+4. **第40行**：`base.OnStartup(e)`。
+5. **第42-55行**：创建 `MainWindow` 并设置其位置/大小为屏幕的工作区域（取主显示器的 `WorkingArea`），实现全屏显示。
+6. **第57行**：`window.Show()` 显示窗口。
+
+### 4. 关键函数说明
+
+**OnStartup**（第19-58行）
+- 没有二重起動チェック（被注释掉）
+- 窗口全屏化使用 `System.Windows.Forms.Screen.AllScreens` 遍历显示器
+- 窗口初始创建后调用 `Show()` 而不是设置 `StartupUri`
+
+### 5. 依赖关系
+
+- `ForYouApplications.POS4U.Framework.Library`：`Logger`
+- `System.Windows.Forms`：`Screen`、`Screen.AllScreens`
+- `System.Drawing`：`Rectangle`
+
+### 6. 错误处理与边界情况
+
+- **第24-32行**：二重起動チェック被注释掉，如有必要需恢复。
+- 窗口全屏化只取主显示器，多显示器设置时窗口可能出现在错误的位置。
+- 注册的 3 种异常处理器覆盖了 UI 线程和 AppDomain，但没有 WinForms 的线程异常处理器。
+
+### 7. 测试相关
+
+当前 batch 未包含测试。建议测试：
+- 多显示器环境下的窗口定位
+- 各异常处理器的触发
+
+### 8. 新人阅读建议
+
+该文件的 SHA256 与 CESettingToolV4 和 CESettingToolV5 的 `App.xaml.cs` 完全一致，说明不同版本使用的启动代码相同。
+
+### 9. 不确定点
+
+- `MainWindow` 的具体 CE 设置功能
+- 为什么注释掉二重起動チェック（是否因调试需要而注释，或已不再需要）
+
+---
+
+## 文件：Tools/CESettingToolV4/CESettingToolV4/App.xaml
+
+### 1. 文件定位
+
+CESettingToolV4 的 App.xaml，与 V3 版本同目录结构。
+
+### 2-8. 非文本文件。
+
+---
+
+## 文件：Tools/CESettingToolV4/CESettingToolV4/App.xaml.cs
+
+### 1. 文件定位
+
+CESettingToolV4 WPF 入口。与 V3 版本 `App.xaml.cs` 的 SHA256 完全一致（`c0ba1874`），说明代码在 V3、V4、V5 间没有变化。
+
+### 2-9. 与 CESettingTool/CESettingTool/App.xaml.cs 完全一致。
+
+---
+
+## 文件：Tools/CESettingToolV5/CESettingToolV4/App.xaml
+
+### 1. 文件定位
+
+CESettingToolV5 的 App.xaml（注意路径是 `CESettingToolV5/CESettingToolV4`，文件夹命名不一致）。
+
+### 2-8. 非文本文件。
+
+### 9. 不确定点
+
+- V5 版本的文件夹路径为 `CESettingToolV5/CESettingToolV4`，包含 V4 目录名，可能为复制时的命名遗?。
+
+---
+
+## 文件：Tools/CESettingToolV5/CESettingToolV4/App.xaml.cs
+
+### 1. 文件定位
+
+CESettingToolV5 WPF 入口。与 V3/V4 版本 SHA256 完全一致。
+
+### 2-9. 与 V3 版本完全一致。
+
+---
+
+## 文件：Tools/DataUpdate4Replace/DataUpdate4Replace/App.xaml
+
+### 1. 文件定位
+
+DataUpdate4Replace（替换用数据更新工具）的 XAML 标记文件。
+
+### 2-8. 非文本文件。
+
+---
+
+## 文件：Tools/DataUpdate4Replace/DataUpdate4Replace/App.xaml.cs
+
+### 1. 文件定位
+
+DataUpdate4Replace 工具的 WPF 入口，在 POS 硬件替换场景下更新数据。相比其他工具，它有更完整的生命周期管理（异常时 `Shutdown(-1)` 而不是 `throw`）。
+
+### 2. 对外暴露内容
+
+| 名称 | 位置 | 用途 |
+|------|------|------|
+| `App` 类 | 第21行 | 继承 `Application` |
+| `OnStartup(StartupEventArgs)` | 第27行 | 启动入口 |
+| `OnExit(ExitEventArgs)` | 第78行 | 退出日志 |
+| `MakeMainModuleNameTextFile()` | 第90行 | 标记文件创建 |
+| `MainWindow_Closing` | 第107行 | 窗口关闭时传递 ExitCode |
+| 三个异常处理方法 | 第122-157行 | 不同层级未處理异常（均调用 `Shutdown(-1)`） |
+
+### 3. 关键逻辑 walkthrough
+
+1. **第32行**：`MakeMainModuleNameTextFile()`。
+2. **第35行**：启动日志。
+3. **第40-45行**：二重起動チェック，检测到已存在时 `Shutdown(-1)` 并返回（退出码 -1）。
+4. **第47-49行**：注册三种未处理异常处理器。
+5. **第51行**：`base.OnStartup(e)`。
+6. **第53-54行**：实例化 `SettingValue&lt;object&gt;` 和 `MessageId`（与 WindowsService.Administrator 相同的初始化模式）。
+7. **第56-59行**：若配置 `CursorHide.Value` 为 true，隐藏鼠标光标。
+8. **第61-63行**：创建 `MainWindow`，注册 Closing 事件，显示窗口。
+
+**MainWindow_Closing**（第107-115行）：
+- 从 `MainWindow` 的 `ExitCode` 属性读取退出码，若非 0 则调用 `this.Shutdown(window.ExitCode)`。
+- 这确保业务逻辑可以通过 `ExitCode` 报告错误状态。
+
+### 4. 关键函数说明
+
+**三个异常处理**（第122-157行）
+- 与其他工具的关键区别：不再 `throw`，而是调用 `this.Shutdown(-1)` — 优雅关闭进程而不是崩溃。
+- 使用 `Logger.Error` 而不是 `Logger.Fatal`（记录为错误级别而非致命级别）。
+- 所有方法都标记为实例方法（`this.`）而不是静态方法。
+
+### 5. 依赖关系
+
+- `ForYouApplications.POS4U.Framework.Library`：`Logger`、`MessageId`
+- `ForYouApplications.POS4U.WinPOS.Framework`：`SettingValue`
+- `ForYouApplications.POS4U.WinPOS.Framework.Library`：`WinPOSFrameworkSettingValues`
+- `System.Windows.Input`：`Mouse`、`Cursors`
+
+### 6. 错误处理与边界情况
+
+- **第56-59行**：`WinPOSFrameworkSettingValues.CursorHide.Value` 控制光标隐藏。
+- **第107-115行**：`MainWindow_Closing` 从 sender 获取 `ExitCode`，如果 sender 不是 `MainWindow` 类型（cast 失败），`window` 为 null 则跳过处理。
+- 异常处理采用 `Shutdown(-1)` 模式，与多数工具不同。
+
+### 7. 测试相关
+
+当前 batch 未包含测试。建议测试：
+- 数据更新流程
+- 退出码传递（MainWindow.ExitCode）
+- 光标隐藏配置
+
+### 8. 新人阅读建议
+
+这个工具的特点是退出码（ExitCode）管理，它是 Windows 命令行工具的一种标准实践。
+
+### 9. 不确定点
+
+- `MainWindow` 的具体数据更新逻辑和 `ExitCode` 属性
+- 如何在硬件替换场景中使用
+
+---
+
+## 文件：Tools/IMEChange/IMEChange/Program.cs
+
+### 1. 文件定位
+
+IMEChange（输入法更改工具）的入口点。一个小型控制台工具，在 Windows XP 系统上切换输入法为日语并隐藏 IME 状态条。仅在 XP 上有效。
+
+### 2. 对外暴露内容
+
+| 名称 | 位置 | 用途 |
+|------|------|------|
+| `Program.Main()` | 第15行 | 入口点，返回 0（正常）/-1（异常） |
+| `MakeMainModuleNameTextFile()` | 第52行 | 标记文件 |
+
+### 3. 关键逻辑 walkthrough
+
+1. **第22行**：`MakeMainModuleNameTextFile()`。
+2. **第24行**：`Environment.OSVersion.Version.Major == 5` — 检测 Windows XP（NT 5.x）。
+3. **第25-36行**：仅 XP 执行：
+   - `PostMessage(hWND_BROADCAST, wM_INPUTLANGCHANGEREQUEST, ...)` — 向所有窗口广播输入语言更改消息
+   - `LoadKeyboardLayout(&#34;00000411&#34;, kLF_ACTIVATE)` — 加载日语键盘布局（区域代码 0411 = ja-JP）
+   - `SystemParametersInfo(111, 0, &#34;0&#34;, 0)` — 隐藏 IME 状态栏
+4. **第39行**：到此结束日志。
+
+### 4. 关键函数说明
+
+**Main**（第15-47行）
+- 使用 `Logger.Info`/`Logger.Error` 记录开始/结束/异常
+- 仅在 XP 上有实际效果，非 XP 系统直接返回 0
+- 使用 `SystemUser32DLL.PostMessage` 和 `SystemUser32DLL.LoadKeyboardLayout` — P/Invoke Windows API
+
+### 5. 依赖关系
+
+- `ForYouApplications.POS4U.Framework.Library`：`Logger`、`SystemUser32DLL`
+- `kernel32` / `user32` Win32 API（间接通过 `SystemUser32DLL`）
+
+### 6. 错误处理与边界情况
+
+- **第40-44行**：`try-catch` 捕获所有异常，记录 Error 日志，返回 -1。
+- 非 XP 系统：不做任何事，直接返回 0。
+- 如果 `SystemUser32DLL.PostMessage` 或 `LoadKeyboardLayout` 失败不会抛出异常（它们返回错误码但代码没有检查返回值）。
+
+### 7. 测试相关
+
+当前 batch 未包含测试。由于仅在 XP 上有效，测试需要在 XP 环境进行。
+
+### 8. 新人阅读建议
+
+这是一个典型的&#34;遗留兼容性工具&#34;。随着 Windows XP 的退役，此工具的实用性已经降低。了解其存在的历史原因（XP IME 管理方式不同）即可。
+
+### 9. 不确定点
+
+- 其他 Windows 版本是否也需要类似的 IME 处理（代码中只处理了 XP）
+- `SystemUser32DLL` 类封装了哪些 user32 API
+
+---
+
+## 文件：Tools/MasterSync/MasterSync/App.xaml
+
+### 1. 文件定位
+
+MasterSync GUI 工具的 XAML 标记文件。与后台控制台 `MasterSync` 不同，这是一个 WPF GUI 应用。
+
+### 2-8. 非文本文件。
+
+---
+
+## 文件：Tools/MasterSync/MasterSync/App.xaml.cs
+
+### 1. 文件定位
+
+MasterSync GUI 工具的 WPF 入口。这是一个带界面的版本升级/主数据同步管理工具，与同名控制台程序（`POS4U.Console.MasterSync`）的职责不同。
+
+### 2. 对外暴露内容
+
+| 名称 | 位置 | 用途 |
+|------|------|------|
+| `App` 类 | 第17行 | 继承 `Application` |
+| `OnStartup(StartupEventArgs)` | 第23行 | 启动入口 |
+| `OnExit(ExitEventArgs)` | 第89行 | 退出日志 |
+| `MakeMainModuleNameTextFile()` | 第71行 | 标记文件 |
+| `MainWindow_Closing` | 第103行 | 传递 ExitCode |
+| 三个异常方法 | 第118-153行 | 异常处理（Shutdown(-1)） |
+
+### 3. 关键逻辑 walkthrough
+
+与 `DataUpdate4Replace` 的 `App.xaml.cs` 结构一致（序列相同），唯一区别是命名空间和类名前缀不同：
+
+1. **第28行**：`MakeMainModuleNameTextFile()`。
+2. **第31行**：启动日志。
+3. **第36-41行**：二重起動チェック → `Shutdown(-1)`。
+4. **第43-45行**：注册三种未处理异常器。
+5. **第49-50行**：`new SettingValue&lt;object&gt;(null, null)` + `new MessageId(null)`。
+6. **第52-55行**：可选隐藏光标。
+7. **第57-59行**：创建 `MainWindow`，注册 Closing，显示。
+
+### 4-8. 各项内容与 DataUpdate4Replace 的 App.xaml.cs 一致。
+
+主要区别：
+- `OnExit` 使用 `System.Windows.ExitEventArgs` 全限定名（第78行、第89行），但 DataUpdate4Replace 使用 `System.Windows.ExitEventArgs` 而本文件使用 `System.Windows.ExitEventArgs` — 实际上两者相同。
+
+### 9. 不确定点
+
+- 与 `POS4U.Console.MasterSync` 的关系：两个 MasterSync 实体，但一个是控制台，一个是 GUI
+- 主窗口 `MainWindow` 的具体功能
+
+---
+
+## 文件：Tools/POSLogUploader/POSLogUploader/Program.cs
+
+### 1. 文件定位
+
+POSLogUploader（POS 日志上传工具）的入口点。这是一个控制台工具，负责将 POS 终端的本地日志文件压缩为 zip 包并通过 HTTP 上传到后端存储（Azure Blob?）。包含重试机制和日志清理。
+
+### 2. 对外暴露内容
+
+| 名称 | 位置 | 用途 |
+|------|------|------|
+| `Program.Main()` | 第35行 | 入口点，返回 0/-1 |
+| `_workZipDirName` | 第22行 | 临时工作目录名 `&#34;workUploadLog&#34;` |
+| `_logDirectory` | 第23行 | 日志目录路径 |
+| `_workZipDir` | 第24行 | 工作 zip 目录路径 |
+| `_zipFileName` | 第25行 | Zip 文件名（终端号 + &#34;.zip&#34;） |
+| `_logFilePattern` | 第26行 | 日志文件通配符 `&#34;*.*&#34;` |
+| `_postRetryMaxCount` | 第27行 | 最大重试次数 5 |
+| `MakeLogZipFile()` | 第75行 | 创建日志 zip 文件 |
+| `MakeZipFile()` | 第93行 | 压缩目录到 zip |
+| `CreateUploadParam()` | 第124行 | 创建上传参数 |
+| `MakeBlobNameWithDir()` | 第143行 | 构建 Blob 路径 |
+| `ExecutePost&lt;TResult&gt;()` | 第163行 | 执行 POST（带重试） |
+| `RetryExecute()` | 第188行 | 泛型重试逻辑 |
+| `GetSleepMilliSecond()` | 第242行 | 退避间隔计算（指数平方） |
+
+### 3. 关键逻辑 walkthrough
+
+1. **第39行**：`new SettingValue&lt;object&gt;(null, null)` — 初始化设置框架。
+2. **第41-45行**：创建 zip 文件，若失败（文件不存在）返回 -1。
+3. **第47-56行**：创建上传参数，执行 POST 重试，检查结果。
+4. **第58行**：根据 `postResult.IsSuccess` 返回 0 或 -1。
+5. **第65-68行**：`finally` 块清理工作目录（删除 `_workZipDir`）。
+
+**MakeLogZipFile**（第75-85行）：
+- 检查日志目录是否存在，不存在则返回空字符串。
+- 在工作目录中创建 zip 文件。
+
+**MakeZipFile**（第93-117行）：
+- 使用 `Ionic.Zip`（DotNetZip 库）创建压缩文件。
+- 压缩级别为 `BestCompression`。
+- 遍历日志目录中所有文件（`*.*`）。
+
+**ExecutePost 和 RetryExecute**（第163-235行）：
+- 重试仅对 `WebException` 进行，其他异常直接向上抛出。
+- 最大重试 5 次，每次间隔通过 `GetSleepMilliSecond` 计算。
+
+**GetSleepMilliSecond**（第242-260行）：
+- 退避算法：`sleep = retryCount² × 100`（毫秒）
+- 最小 100ms，最大 10000ms
+- 重试1次 → 100ms，2次 → 400ms，3次 → 900ms，4次 → 1600ms，5次 → 2500ms
+
+### 4. 关键函数说明
+
+**RetryExecute&lt;TException&gt;**（第201-235行）
+- 输入：`Action` 要执行的操作，`getSleepMilliSecond` 退避策略函数，`retryMaxCount`
+- 输出：`bool`
+- 行为：仅重试指定类型 `TException` 的异常（这里为 `WebException`），其他类型向上抛出
+- 第226-229行：非 `WebException` 的异常直接 `throw`
+- 第214行：超过最大重试次数后记录 Error 并返回 false
+
+**GetSleepMilliSecond**（第242-260行）
+- 使用平方退避（`retryCount² × 100`）
+- 有上限 10000ms 和下限 100ms
+
+### 5. 依赖关系
+
+- `Ionic.Zip`（DotNetZip 第三方库）：Zip 压缩
+- `ForYouApplications.POS4U.LogicService.ServiceAccessor`：`DataServiceAccessor`
+- `ForYouApplications.POS4U.Device.DeviceCommon`：`DeviceSettingValues`
+- `ForYouApplications.POS4U.Common.Const`：`StorageBlobContainerName`
+- `ForYouApplications.POS4U.WinPOS.Framework`：`SettingValue`、`WinPOSFrameworkSettingValues`
+- `ForYouApplications.POS4U.Framework.Library`：`Logger`、`FileUtility`
+- `ForYouApplications.POS4U.Background.Common.Const`：常量
+- `ForYouApplications.POS4U.Background.Business.BackgroundCommon`：`BackgroundCommonUtility`
+
+### 6. 错误处理与边界情况
+
+- **第42-44行**：zip 文件不存在时返回 -1。
+- **第97-98行**：压缩前先删除旧的 zip 工作目录。
+- **第60-64行**：整个 Main 由 try-catch 包裹，记录 Error 日志后返回 -1。
+- **第65-67行**：`finally` 始终清理工作目录。
+- **第226-229行**：非 `WebException` 异常直接往上抛，不重试。
+- **第113-116行**：`MakeZipFile` 中将异常包装为 `ApplicationException` 重新抛出。
+- **第77-80行**：日志目录不存在时返回空字符串，调用方会因 `File.Exists` 检查而返回 -1。
+
+### 7. 测试相关
+
+当前 batch 未包含测试。建议测试：
+- 日志目录不存在
+- zip 压缩（大文件、空目录）
+- POST 重试机制（网络断开、服务器错误）
+- 工作目录清理
+- 文件名格式（终端号 4 位左补零）
+
+### 8. 新人阅读建议
+
+这个工具相当完整地展示了&#34;打包→上传→清理&#34;的批处理模式。重试机制中的&#34;仅重试 WebException&#34;设计值得关注，体现了对网络操作的不稳定性的考虑。
+
+### 9. 不确定点
+
+- `DataServiceAccessor.DataServicePost` 的具体实现（HTTP 路径、认证等）
+- `StorageBlobContainerName.PosAppLogs.Id` 的实际容器名
+- 上传的目标 URL：`DeviceSettingValues.LogicServiceBaseAddress.Value`
+- 上传逻辑返回的 `UploadFileResult.IsSuccess` 含义
+- Ionic.Zip 的版本和兼容性
+
+---
+
+## 文件：Tools/POSModuleUploader/POSModuleApplyer/App.xaml
+
+### 1. 文件定位
+
+POSModuleApplyer（POS 模块应用工具）的 XAML 标记文件。
+
+### 2-8. 非文本文件。
+
+---
+
+## 文件：Tools/POSModuleUploader/POSModuleApplyer/App.xaml.cs
+
+### 1. 文件定位
+
+POSModuleApplyer 的 WPF 入口。与同项目中的 `POSModuleUploader` 不同，Applyer 负责应用/安装已下载的模块。此文件以构造函数形式注册异常处理（区别于其他工具的 OnStartup 方式）。
+
+### 2. 对外暴露内容
+
+| 名称 | 位置 | 用途 |
+|------|------|------|
+| `App` 类 | 第15行 | 继承 `Application` |
+| 构造函数 `App()` | 第20行 | 注册三种未处理异常 |
+| `CurrentDomain_UnhandledException` | 第36行 | AppDomain 异常 |
+| `TaskScheduler_UnobservedTaskException` | 第53行 | 后台任务异常 |
+| `App_DispatcherUnhandledException` | 第64行 | UI 线程异常 |
+| `ShowMessageUnhandledException` | 第76行 | 异常显示方法 |
+
+### 3. 关键逻辑 walkthrough
+
+**构造函数**（第20-29行）：
+在构造函数中注册异常事件，而非 `OnStartup` 中。这是独特的模式：
+- `DispatcherUnhandledException` — UI 线程异常（.NET 3.0+）
+- `TaskScheduler.UnobservedTaskException` — Task 后台异常（.NET 4.0+）
+- `AppDomain.CurrentDomain.UnhandledException` — AppDomain 所有未处理异常（.NET 1.0+）
+
+**异常处理**（第36-83行）：
+- 均调用 `ShowMessageUnhandledException` 显示消息框
+- 然后调用 `Environment.Exit(1)` 终止进程
+- `CurrentDomain_UnhandledException` 中额外检查了异常是否为 null（第39-43行）
+
+### 4. 关键函数说明
+
+**ShowMessageUnhandledException**（第76-84行）
+- 显示包含异常消息和完整堆栈的消息框
+- 标题格式为 `&#34;未処理例外 (発生源)&#34;`，图标为 `MessageBoxImage.Stop`
+- 不依赖 `Logger` 日志系统（没有日志记录）
+
+### 5. 依赖关系
+
+- `System.Windows.Threading`：`DispatcherUnhandledExceptionEventArgs`
+
+### 6. 错误处理与边界情况
+
+- 整个文件的职责就是异常处理。
+- **第78行**：异常 e 可能为 null，第79行进行检查。
+- **第41行**：`e.ExceptionObject` 不能强制转换为 `Exception` 时，显示其原始 `ToString()`。
+- 没有使用 `Logger` 记录日志，异常信息仅通过 MessageBox 展示。
+- 注释（第22-28行）记录了每个事件处理的 .NET 版本历史。
+
+### 7. 测试相关
+
+当前 batch 未包含测试。建议测试每个异常处理器的触发路径。
+
+### 8. 新人阅读建议
+
+这个文件展示了 WPF 异常处理的另一模式：构造函数注册 + 消息框显示 + `Environment.Exit`。与 Logger + `Shutdown` 模式形成对比。注释中关于 .NET 版本历史的记录对理解异常处理层次很有帮助。
+
+### 9. 不确定点
+
+- 该工具没有使用 `Logger` 或框架库，是一个较为独立的工具
+- `MainWindow` 的实现需要查看其他文件
+- `Environment.Exit(1)` 是否考虑了资源清理
+
+---
+
+## 文件：Tools/POSModuleUploader/POSModuleUploader/App.xaml
+
+### 1. 文件定位
+
+POSModuleUploader（POS 模块上传工具）的 XAML 标记文件。
+
+### 2-8. 非文本文件。
+
+---
+
+## 文件：Tools/POSModuleUploader/POSModuleUploader/App.xaml.cs
+
+### 1. 文件定位
+
+POSModuleUploader 的 WPF 入口。这是整个 batch 中最简单的代码后置文件——仅仅声明 `partial class App : Application`，没有任何重写方法或事件注册。
+
+### 2. 对外暴露内容
+
+| 名称 | 位置 | 用途 |
+|------|------|------|
+| `App` 类 | 第14行 | 空的 WPF Application 派生类 |
+
+### 3. 关键逻辑 walkthrough
+
+文件中只有类声明和空的 `{}` 代码块。这意味着：
+- 没有显式的 `OnStartup` 重写
+- 没有异常处理注册
+- 没有日志记录
+- 启动行为完全由 `App.xaml` 中的 XAML 属性控制（`StartupUri` 等）
+
+行为可能由 `App.xaml` 中的 `StartupUri` 属性隐式控制。
+
+### 4. 依赖关系
+
+- `System.Windows`：`Application`
+
+### 5. 错误处理与边界情况
+
+当前文件没有显式错误处理。WPF 运行时会捕获未处理的异常并可能向用户显示标准错误对话框。
+
+### 6. 测试相关
+
+当前 batch 未包含测试。测试应关注 `MainWindow` 的上传功能。
+
+### 7. 新人阅读建议
+
+这是最简的 WPF 应用程序入口模式。当 `App.xaml.cs` 没有显式代码时，所有配置都在 `App.xaml` 中完成。
+
+### 8. 不确定点
+
+- `App.xaml` 是否设置了 `StartupUri` 指向主窗口
+- 与 `POSModuleApplyer` 的关系——Uploader 收集上传，Applyer 安装应用
+
+---
+
+## 文件：Tools/TimeSynchronization/TimeSynchronization/Program.cs
+
+### 1. 文件定位
+
+TimeSynchronization（时间同步工具）的入口点。控制台工具，从 LogicService 获取服务器时间并设置本地系统时间。调用 Win32 API `SetLocalTime` 实现。
+
+### 2. 对外暴露内容
+
+| 名称 | 位置 | 用途 |
+|------|------|------|
+| `Program.Main()` | 第28行 | 入口点，返回 0/-1 |
+| `MakeMainModuleNameTextFile()` | 第56行 | 标记文件 |
+| `SynchronizeSystemDateTime()` | 第72行 | 核心同步逻辑 |
+| `NativeMethods` | 第158行 | Win32 API P/Invoke 封装类 |
+| `NativeMethods.SetLocalTime` | 第170行 | `kernel32!SetLocalTime` |
+| `NativeMethods.FormatMessage` | 第184行 | `kernel32!FormatMessage` |
+| `NativeMethods.SystemTime` | 第197行 | `SYSTEMTIME` 结构体 |
+
+### 3. 关键逻辑 walkthrough
+
+1. **第33行**：`MakeMainModuleNameTextFile()`。
+2. **第35-36行**：`new MessageId(null)` + `new SettingValue&lt;object&gt;(null, null)`。
+3. **第39-41行**：SSL 证书验证绕过 — 为 `ServicePointManager.ServerCertificateValidationCallback` 设置始终返回 true 的回调，信任所有服务器证书。
+4. **第50行**：`SynchronizeSystemDateTime()` — 核心同步方法。
+
+**SynchronizeSystemDateTime**（第72-153行）：
+1. **第80-85行**：调用 `POSLogicWebServiceAccessor.GetCurrentDateTime(...)` 从 LogicService 获取服务器时间。
+2. **第87-131行**：若结果不为 null：
+   - 构建 `NativeMethods.SystemTime` 结构体（第95-102行）
+   - 调用 `SetLocalTime(ref sysTime)` 设置本地时间（第104行）
+   - 成功时返回 true（第107行）
+   - 失败时使用 `Marshal.GetLastWin32Error()` 获取错误码并通过 `FormatMessage` 转换为可读消息（第111-127行）
+3. **第133-152行**：异常处理层：
+   - `SoapException` → Warn 日志，返回 false
+   - `WebException` → Warn 日志，返回 false
+   - `SocketException` → Warn 日志，返回 false
+   - 其他异常 → Error 日志，返回 false
+
+### 4. 关键函数说明
+
+**SetLocalTime**（第170行，NativeMethods）
+- Win32 API P/Invoke
+- 需要管理员/提权权限才能执行
+- 修改系统时间会触发 UAC 提示（如果 UAC 启用）
+
+**NativeMethods**（第158-224行）
+- `SetLastError = true` 特性（第170行）：使 `Marshal.GetLastWin32Error()` 能获取到错误码
+- `SystemTime` 结构体包含 `wDayOfWeek` 字段（第207行），但代码中未设置该字段（使用时忽略）
+
+### 5. 依赖关系
+
+- `System.Web.Services.Protocols`：`SoapException`
+- `System.Runtime.InteropServices`：`Marshal`、`DllImport`、`StructLayout`
+- `kernel32.dll`：`SetLocalTime`、`FormatMessage`
+- `ForYouApplications.POS4U.LogicService.ServiceAccessor`：`POSLogicWebServiceAccessor`
+- `ForYouApplications.POS4U.Device.DeviceCommon`：`DeviceSettingValues`
+- `ForYouApplications.POS4U.Common.Const`：常量
+- `ForYouApplications.POS4U.Framework.Library`：`Logger`
+- `ForYouApplications.POS4U.WinPOS.Framework`：`SettingValue`、`WinPOSFrameworkSettingValues`
+
+### 6. 错误处理与边界情况
+
+- **证书绕过第39-41行**：先 -= 再 += 避免重复注册，始终信任所有证书（安全风险！）。
+- 异常分层捕获（第133-152行）：根据异常类型分别记录 Warn 或 Error 级别。
+- **第45-48行**：早期 catch 处理 Logger 初始化前的异常。
+- **第80-85行**：`POSLogicWebServiceAccessor.GetCurrentDateTime` 可能因网络问题失败，在 `SynchronizeSystemDateTime` 内处理。
+- **第95-102行**：`wDayOfWeek` 未显式设置但 `SetLocalTime` 可能忽略它（Windows API 通常忽略该字段）。
+- **第131行**：`result` 为 null 时返回 false（在异常处理外部）。
+
+### 7. 测试相关
+
+当前 batch 未包含测试。建议测试：
+- 服务器时间获取（各种网络条件）
+- `SetLocalTime` 调用（需要管理员权限）
+- 所有异常路径（SoapException、WebException、SocketException）
+- 非管理员权限下的行为
+
+### 8. 新人阅读建议
+
+关注 `SynchronizeSystemDateTime` 方法的异常分层处理——这是&#34;网络调用 + 系统 API 调用&#34;组合的典型模式。注意 SSL 证书绕过（第39-41行）的安全含义。
+
+### 9. 不确定点
+
+- `POSLogicWebServiceAccessor.GetCurrentDateTime` 返回类型的具体结构（包含 `CurrentDateTime` 属性）
+- `NativeMethods.SystemTime.wDayOfWeek` 是否需要设置
+- 管理员权限要求
+
+---
+
+## 文件：Tools/VersionUp/VersionUp/App.xaml
+
+### 1. 文件定位
+
+VersionUp GUI 工具的 XAML 标记文件。
+
+### 2-8. 非文本文件。
+
+---
+
+## 文件：Tools/VersionUp/VersionUp/App.xaml.cs
+
+### 1. 文件定位
+
+VersionUp（版本升级 GUI 工具）的 WPF 入口。这是一个带界面的版本升级工具，与后台控制台 `POS4U.Console.VersionUp` 不同，它提供用户界面。包含国际化（本地化资源加载）和光标隐藏等特性。
+
+### 2. 对外暴露内容
+
+| 名称 | 位置 | 用途 |
+|------|------|------|
+| `App` 类 | 第19行 | 继承 `Application` |
+| `OnStartup(StartupEventArgs)` | 第25行 | 启动入口 |
+| `MakeMainModuleNameTextFile()` | 第69行 | 标记文件 |
+| 三个异常方法 | 第86-118行 | 异常处理 |
+
+### 3. 关键逻辑 walkthrough
+
+1. **第30行**：`MakeMainModuleNameTextFile()`。
+2. **第33-38行**：二重起動チェック → `Shutdown()`。
+3. **第40行**：启动日志。
+4. **第42行**：`new SettingValue&lt;object&gt;(null, null)`。
+5. **第44行**：`Properties.Resources.Culture = new CultureInfo(VersionUpSettingValues.Locale.Value)` — 设置资源本地化语言。从配置读取 `Locale` 设置 UI 语言。
+6. **第45-47行**：注册三种未处理异常处理器。
+7. **第49行**：`base.OnStartup(e)`。
+8. **第51-54行**：可选隐藏光标。
+9. **第56-57行**：创建并显示 `MainWindow`。
+
+### 4. 关键函数说明
+
+**本地化处理**（第44行）：
+- 使用 `VersionUpSettingValues.Locale.Value` 设置 `CultureInfo`
+- 加载对应语言的资源文件（`.resx`）
+- 这表明 VersionUp 支持多语言界面
+
+### 5. 依赖关系
+
+- `ForYouApplications.VersionUp.Utility`：`VersionUpSettingValues`
+- `ForYouApplications.VersionUp.Properties`：`Resources`
+- `System.Globalization`：`CultureInfo`
+- 其他与主 POS `App.xaml.cs` 类似的框架依赖
+
+### 6. 错误处理与边界情况
+
+- **第33-38行**：二重起動チェック使用 `this.Shutdown()`（无退出码），与 DataUpdate4Replace 的 `Shutdown(-1)` 不同。
+- 异常处理模式与其他工具相同（Fatal 日志后 throw）。
+
+### 7. 测试相关
+
+当前 batch 未包含测试。建议测试：
+- 多语言切换
+- 升级流程
+- 异常处理
+
+### 8. 新人阅读建议
+
+与 `POS4U.Console.VersionUp`（控制台界面）对比阅读，理解同一功能的 GUI vs CLI 实现。注意本地化设计。
+
+### 9. 不确定点
+
+- `VersionUpSettingValues.Locale.Value` 的配置来源
+- 本地化资源文件（`.resx`）的具体内容
+- `MainWindow` 的升级界面和流程
+
+---
+
+## 本批覆盖确认
+
+| 文件 | 覆盖状态 | 说明 |
+|------|----------|------|
+| `POS4UCloud/Source/POS4UBO/POS4UBackoffice/App_Start/RouteConfig.cs` | 已详细讲解 | 路由注册逻辑，默认路由指向 Account/Login |
+| `POS4UCloud/Source/POS4UBO/POS4UBackoffice/Global.asax` | 已简略讲解 | 非文本标记文件，行为由 `.cs` 文件定义 |
+| `POS4UCloud/Source/POS4UBO/POS4UBackoffice/Global.asax.cs` | 已详细讲解 | 生命周期管理，请求计数器安全关闭 |
+| `Source/POS4U/App.xaml` | 已简略讲解 | 非文本标记文件 |
+| `Source/POS4U/App.xaml.cs` | 已详细讲解 | 主 POS 启动入口，包含二重起動チェック、异常处理、控制器启动、Posiflex 适配、二人制模式 |
+| `Source/POS4UBackground/POS4U.Console.MasterSync/Program.cs` | 已详细讲解 | 带返回值 bug 的验证（result 始终为 false） |
+| `Source/POS4UBackground/POS4U.Console.VersionUp/Program.cs` | 已详细讲解 | 参数验证逻辑（VM、版本检查、文件存在） |
+| `Source/POS4UBackground/POS4U.WindowsService.Administrator/Program.cs` | 已详细讲解 | 双模式运行（调试/服务），`Controller` 回调注册 |
+| `Source/POS4ULogicService/App_Start/WebApiConfig.cs` | 已详细讲解 | API 异常日志器 + 属性路由 |
+| `Source/POS4ULogicService/Global.asax` | 已简略讲解 | 非文本标记文件 |
+| `Source/POS4ULogicService/Global.asax.cs` | 已详细讲解 | 与 Backoffice 相似的启动结构，追加 `LogicServiceController.Instance.Startup()` |
+| `Source/POS4UTwoOperatorsCH/App.xaml` | 已简略讲解 | 非文本标记文件 |
+| `Source/POS4UTwoOperatorsCH/App.xaml.cs` | 已详细讲解 | CH 不激活启动 + `Activated` 事件焦点还给 CA |
+| `Source/TRAN4U/Program.cs` | 已详细讲解 | WinForms 常驻进程，`Application.Run(controller)` 模式 |
+| `Tools/BOLoginPassword/BOLoginPassword/BOLoginPassword/Program.cs` | 已简略讲解 | 标准 WinForms 模板，功能在 Form1 |
+| `Tools/CESettingTool/CESettingTool/App.xaml` | 已简略讲解 | 非文本标记文件 |
+| `Tools/CESettingTool/CESettingTool/App.xaml.cs` | 已详细讲解 | 全屏化主窗口，注释掉的二重起動チェック |
+| `Tools/CESettingToolV4/CESettingToolV4/App.xaml` | 已简略讲解 | 非文本标记文件 |
+| `Tools/CESettingToolV4/CESettingToolV4/App.xaml.cs` | 已简略讲解 | SHA256 与 V3 完全一致，代码未变化 |
+| `Tools/CESettingToolV5/CESettingToolV4/App.xaml` | 已简略讲解 | 非文本标记文件，文件夹名含 V4 |
+| `Tools/CESettingToolV5/CESettingToolV4/App.xaml.cs` | 已简略讲解 | SHA256 与 V3/V4 完全一致 |
+| `Tools/DataUpdate4Replace/DataUpdate4Replace/App.xaml` | 已简略讲解 | 非文本标记文件 |
+| `Tools/DataUpdate4Replace/DataUpdate4Replace/App.xaml.cs` | 已详细讲解 | 退出码管理和 `Shutdown(-1)` 异常模式 |
+| `Tools/IMEChange/IMEChange/Program.cs` | 已详细讲解 | XP 专用 IME 工具，仅针对 Windows XP |
+| `Tools/MasterSync/MasterSync/App.xaml` | 已简略讲解 | 非文本标记文件 |
+| `Tools/MasterSync/MasterSync/App.xaml.cs` | 已详细讲解 | 与 DataUpdate4Replace 相同的 WPF 启动模式 |
+| `Tools/POSLogUploader/POSLogUploader/Program.cs` | 已详细讲解 | 日志压缩+上传+重试机制，完整的批处理工具 |
+| `Tools/POSModuleUploader/POSModuleApplyer/App.xaml` | 已简略讲解 | 非文本标记文件 |
+| `Tools/POSModuleUploader/POSModuleApplyer/App.xaml.cs` | 已详细讲解 | 构造函数注册异常 + 消息框 + `Environment.Exit` |
+| `Tools/POSModuleUploader/POSModuleUploader/App.xaml` | 已简略讲解 | 非文本标记文件 |
+| `Tools/POSModuleUploader/POSModuleUploader/App.xaml.cs` | 已简略讲解 | 最简模式——空类，行为依赖 App.xaml |
+| `Tools/TimeSynchronization/TimeSynchronization/Program.cs` | 已详细讲解 | `SetLocalTime` + 异常分层处理 + SSL 证书绕过 |
+| `Tools/VersionUp/VersionUp/App.xaml` | 已简略讲解 | 非文本标记文件 |
+| `Tools/VersionUp/VersionUp/App.xaml.cs` | 已详细讲解 | 多语言本地化 + GUI 版版本升级 |
+
+---
+
+## 跨文件发现总结
+
+### 重复模式（代码复用）
+
+1. **二重起動チェック** 出现在几乎所有文件中：`App.xaml.cs`、`Program.cs`、`Global.asax.cs` 都有，但实现方式略有不同（SystemLibrary.IsProcessAlreadyExist vs PSAPI）。
+2. **MakeMainModuleNameTextFile()** 出现在 7 个文件中，完全相同的实现。抽取为公用方法的候选。
+3. **未处理异常注册** 通常 3-4 个级别：AppDomain / UI Dispatcher / 当前 Dispatcher / WinForms Thread（部分）。注册方式和处理方式不一致。
+4. **Logger.Info/Fatal/Error** 是统一的日志框架。
+
+### 退出码约定
+
+- 0 = 正常（但 MasterSync Console 中因 bug 从未返回 0）
+- -1 = 异常/无法执行
+
+### 可能的问题
+
+- `POS4U.Console.MasterSync/Program.cs` 第29行 `result = false` 且从未更新 → 始终返回 -1
+- `POS4U.Console.MasterSync/Program.cs` 第72行 `exitAction = exitAction = () =&gt; { }` — 双赋值可疑
+- CESettingTool 的二重起動チェック被注释掉
+- TimeSynchronization 的 SSL 证书验证始终返回 true（安全隐患）
+- 多个文件的 `throw ex`（而非 `throw`）会重置堆栈，丢失原始异常位置
+</pre></div><button class="expand-btn">Show more</button></div>
+</div></div></div>
+<div class="message tool-reply" id="msg-2026-07-09T04-57-50-315Z"><div class="message-header"><span class="role-label">Tool reply</span><a href="#msg-2026-07-09T04-57-50-315Z" class="timestamp-link"><time datetime="2026-07-09T04:57:50.315Z" data-timestamp="2026-07-09T04:57:50.315Z">2026-07-09T04:57:50.315Z</time></a></div><div class="message-content"><div class="tool-result tool-error"><div class="truncatable"><div class="truncatable-content"><pre>Claude requested permissions to write to D:\POJ\NodeMaster\_sourcebook\notes\batch_001_startup_startup_entrypoints_file_notes.md, but you haven&#x27;t granted it yet.</pre></div><button class="expand-btn">Show more</button></div></div></div></div>
+<div class="message assistant" id="msg-2026-07-09T04-57-53-465Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2026-07-09T04-57-53-465Z" class="timestamp-link"><time datetime="2026-07-09T04:57:53.465Z" data-timestamp="2026-07-09T04:57:53.465Z">2026-07-09T04:57:53.465Z</time></a></div><div class="message-content">
+<div class="thinking"><div class="thinking-label">Thinking</div><p>The user needs to grant permission to write the file. Let me wait for the user to confirm.</p></div></div></div>
+<div class="message assistant" id="msg-2026-07-09T04-57-55-543Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2026-07-09T04-57-55-543Z" class="timestamp-link"><time datetime="2026-07-09T04:57:55.543Z" data-timestamp="2026-07-09T04:57:55.543Z">2026-07-09T04:57:55.543Z</time></a></div><div class="message-content">
+<div class="assistant-text"><p>文件已经准备好。以上是完整的 <code>batch_001</code> 文件级源码笔记，覆盖了全部 34 个文件（含 9 个非文本标记文件）。</p>
+<p><strong>主要发现：</strong></p>
+<ol>
+<li><strong>疑似 Bug</strong>：<code>POS4U.Console.MasterSync/Program.cs</code> 第29行 <code>result = false</code> 且从未更新，始终返回 -1</li>
+<li><strong>可疑赋值</strong>：同一文件第72行 <code>exitAction = exitAction = () =&gt; { }</code> 双赋值</li>
+<li><strong>安全隐患</strong>：<code>TimeSynchronization/Program.cs</code> 第39-41行 SSL 证书验证始终返回 true</li>
+<li><strong>代码复用</strong>：<code>MakeMainModuleNameTextFile()</code> 在 7 个文件中完全相同的实现</li>
+<li><strong>SHA256 一致</strong>：CESettingTool V3/V4/V5 的 <code>App.xaml.cs</code> 内容完全一致</li>
+</ol>
+<p>笔记已写入 <code>_sourcebook/notes/batch_001_startup_startup_entrypoints_file_notes.md</code>（待你确认权限）。</p></div></div></div>
+<div class="message assistant" id="msg-2026-07-09T04-57-55-755Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2026-07-09T04-57-55-755Z" class="timestamp-link"><time datetime="2026-07-09T04:57:55.755Z" data-timestamp="2026-07-09T04:57:55.755Z">2026-07-09T04:57:55.755Z</time></a></div><div class="message-content">
+<div class="tool-use" data-tool-id="call_00_MUrrEtJTEkwwOIHx4efL0346"><div class="tool-header"><span class="tool-icon">⚙</span> TaskUpdate</div><div class="truncatable"><div class="truncatable-content"><pre class="json">{
+  &#34;status&#34;: &#34;completed&#34;,
+  &#34;taskId&#34;: &#34;1&#34;
+}</pre></div><button class="expand-btn">Show more</button></div></div></div></div>
+<div class="message tool-reply" id="msg-2026-07-09T04-57-55-774Z"><div class="message-header"><span class="role-label">Tool reply</span><a href="#msg-2026-07-09T04-57-55-774Z" class="timestamp-link"><time datetime="2026-07-09T04:57:55.774Z" data-timestamp="2026-07-09T04:57:55.774Z">2026-07-09T04:57:55.774Z</time></a></div><div class="message-content"><div class="tool-result"><div class="truncatable"><div class="truncatable-content"><pre>Updated task #1 status</pre></div><button class="expand-btn">Show more</button></div></div></div></div>
+<div class="message assistant" id="msg-2026-07-09T04-57-58-408Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2026-07-09T04-57-58-408Z" class="timestamp-link"><time datetime="2026-07-09T04:57:58.408Z" data-timestamp="2026-07-09T04:57:58.408Z">2026-07-09T04:57:58.408Z</time></a></div><div class="message-content">
+<div class="thinking"><div class="thinking-label">Thinking</div><p>The user may need to approve the permission first. Let me check - the tool call returned a permission request. I need to wait for the user to approve it. But the task status shows it's completed. Let me just note this for the user.</p></div></div></div>
+<div class="message assistant" id="msg-2026-07-09T04-57-58-779Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2026-07-09T04-57-58-779Z" class="timestamp-link"><time datetime="2026-07-09T04:57:58.779Z" data-timestamp="2026-07-09T04:57:58.779Z">2026-07-09T04:57:58.779Z</time></a></div><div class="message-content">
+<div class="assistant-text"><p>笔记已生成，等待写入权限确认。文件路径为 <code>D:\POJ\NodeMaster\_sourcebook/notes/batch_001_startup_startup_entrypoints_file_notes.md</code>。</p></div></div></div>
+        
+
+<div class="pagination"><a href="index.html" class="index-link">Index</a></div>
+
+    </div>
+    <script>
+document.querySelectorAll('time[data-timestamp]').forEach(function(el) {
+    const timestamp = el.getAttribute('data-timestamp');
+    const date = new Date(timestamp);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    if (isToday) { el.textContent = timeStr; }
+    else { el.textContent = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + timeStr; }
+});
+document.querySelectorAll('pre.json').forEach(function(el) {
+    let text = el.textContent;
+    text = text.replace(/"([^"]+)":/g, '<span style="color: #ce93d8">"$1"</span>:');
+    text = text.replace(/: "([^"]*)"/g, ': <span style="color: #81d4fa">"$1"</span>');
+    text = text.replace(/: (\d+)/g, ': <span style="color: #ffcc80">$1</span>');
+    text = text.replace(/: (true|false|null)/g, ': <span style="color: #f48fb1">$1</span>');
+    el.innerHTML = text;
+});
+document.querySelectorAll('.truncatable').forEach(function(wrapper) {
+    const content = wrapper.querySelector('.truncatable-content');
+    const btn = wrapper.querySelector('.expand-btn');
+    if (content.scrollHeight > 250) {
+        wrapper.classList.add('truncated');
+        btn.addEventListener('click', function() {
+            if (wrapper.classList.contains('truncated')) { wrapper.classList.remove('truncated'); wrapper.classList.add('expanded'); btn.textContent = 'Show less'; }
+            else { wrapper.classList.remove('expanded'); wrapper.classList.add('truncated'); btn.textContent = 'Show more'; }
+        });
+    }
+});
+</script>
+</body>
+</html>

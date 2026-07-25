@@ -1,0 +1,2938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code transcript - Index</title>
+    <style>
+:root { --bg-color: #f5f5f5; --card-bg: #ffffff; --user-bg: #e3f2fd; --user-border: #1976d2; --assistant-bg: #f5f5f5; --assistant-border: #9e9e9e; --thinking-bg: #fff8e1; --thinking-border: #ffc107; --thinking-text: #666; --tool-bg: #f3e5f5; --tool-border: #9c27b0; --tool-result-bg: #e8f5e9; --tool-error-bg: #ffebee; --text-color: #212121; --text-muted: #757575; --code-bg: #263238; --code-text: #aed581; }
+* { box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 16px; line-height: 1.6; }
+.container { max-width: 800px; margin: 0 auto; }
+h1 { font-size: 1.5rem; margin-bottom: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--user-border); }
+.header-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 2px solid var(--user-border); padding-bottom: 8px; margin-bottom: 24px; }
+.header-row h1 { border-bottom: none; padding-bottom: 0; margin-bottom: 0; flex: 1; min-width: 200px; }
+.message { margin-bottom: 16px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.message.user { background: var(--user-bg); border-left: 4px solid var(--user-border); }
+.message.assistant { background: var(--card-bg); border-left: 4px solid var(--assistant-border); }
+.message.tool-reply { background: #fff8e1; border-left: 4px solid #ff9800; }
+.tool-reply .role-label { color: #e65100; }
+.tool-reply .tool-result { background: transparent; padding: 0; margin: 0; }
+.tool-reply .tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff8e1); }
+.message-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: rgba(0,0,0,0.03); font-size: 0.85rem; }
+.role-label { font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.user .role-label { color: var(--user-border); }
+time { color: var(--text-muted); font-size: 0.8rem; }
+.timestamp-link { color: inherit; text-decoration: none; }
+.timestamp-link:hover { text-decoration: underline; }
+.message:target { animation: highlight 2s ease-out; }
+@keyframes highlight { 0% { background-color: rgba(25, 118, 210, 0.2); } 100% { background-color: transparent; } }
+.message-content { padding: 16px; }
+.message-content p { margin: 0 0 12px 0; }
+.message-content p:last-child { margin-bottom: 0; }
+.thinking { background: var(--thinking-bg); border: 1px solid var(--thinking-border); border-radius: 8px; padding: 12px; margin: 12px 0; font-size: 0.9rem; color: var(--thinking-text); }
+.thinking-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #f57c00; margin-bottom: 8px; }
+.thinking p { margin: 8px 0; }
+.assistant-text { margin: 8px 0; }
+.tool-use { background: var(--tool-bg); border: 1px solid var(--tool-border); border-radius: 8px; padding: 12px; margin: 12px 0; }
+.tool-header { font-weight: 600; color: var(--tool-border); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.tool-icon { font-size: 1.1rem; }
+.tool-description { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 8px; font-style: italic; }
+.tool-result { background: var(--tool-result-bg); border-radius: 8px; padding: 12px; margin: 12px 0; }
+.tool-result.tool-error { background: var(--tool-error-bg); }
+.file-tool { border-radius: 8px; padding: 12px; margin: 12px 0; }
+.write-tool { background: linear-gradient(135deg, #e3f2fd 0%, #e8f5e9 100%); border: 1px solid #4caf50; }
+.edit-tool { background: linear-gradient(135deg, #fff3e0 0%, #fce4ec 100%); border: 1px solid #ff9800; }
+.file-tool-header { font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.write-header { color: #2e7d32; }
+.edit-header { color: #e65100; }
+.file-tool-icon { font-size: 1rem; }
+.file-tool-path { font-family: monospace; background: rgba(0,0,0,0.08); padding: 2px 8px; border-radius: 4px; }
+.file-tool-fullpath { font-family: monospace; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px; word-break: break-all; }
+.file-content { margin: 0; }
+.edit-section { display: flex; margin: 4px 0; border-radius: 4px; overflow: hidden; }
+.edit-label { padding: 8px 12px; font-weight: bold; font-family: monospace; display: flex; align-items: flex-start; }
+.edit-old { background: #fce4ec; }
+.edit-old .edit-label { color: #b71c1c; background: #f8bbd9; }
+.edit-old .edit-content { color: #880e4f; }
+.edit-new { background: #e8f5e9; }
+.edit-new .edit-label { color: #1b5e20; background: #a5d6a7; }
+.edit-new .edit-content { color: #1b5e20; }
+.edit-content { margin: 0; flex: 1; background: transparent; font-size: 0.85rem; }
+.edit-replace-all { font-size: 0.75rem; font-weight: normal; color: var(--text-muted); }
+.write-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #e6f4ea); }
+.edit-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff0e5); }
+.todo-list { background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); border: 1px solid #81c784; border-radius: 8px; padding: 12px; margin: 12px 0; }
+.todo-header { font-weight: 600; color: #2e7d32; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.todo-items { list-style: none; margin: 0; padding: 0; }
+.todo-item { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.06); font-size: 0.9rem; }
+.todo-item:last-child { border-bottom: none; }
+.todo-icon { flex-shrink: 0; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 50%; }
+.todo-completed .todo-icon { color: #2e7d32; background: rgba(46, 125, 50, 0.15); }
+.todo-completed .todo-content { color: #558b2f; text-decoration: line-through; }
+.todo-in-progress .todo-icon { color: #f57c00; background: rgba(245, 124, 0, 0.15); }
+.todo-in-progress .todo-content { color: #e65100; font-weight: 500; }
+.todo-pending .todo-icon { color: #757575; background: rgba(0,0,0,0.05); }
+.todo-pending .todo-content { color: #616161; }
+pre { background: var(--code-bg); color: var(--code-text); padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; line-height: 1.5; margin: 8px 0; white-space: pre-wrap; word-wrap: break-word; }
+pre.json { color: #e0e0e0; }
+code { background: rgba(0,0,0,0.08); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+pre code { background: none; padding: 0; }
+.user-content { margin: 0; }
+.truncatable { position: relative; }
+.truncatable.truncated .truncatable-content { max-height: 200px; overflow: hidden; }
+.truncatable.truncated::after { content: ''; position: absolute; bottom: 32px; left: 0; right: 0; height: 60px; background: linear-gradient(to bottom, transparent, var(--card-bg)); pointer-events: none; }
+.message.user .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--user-bg)); }
+.message.tool-reply .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff8e1); }
+.tool-use .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-bg)); }
+.tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-result-bg)); }
+.expand-btn { display: none; width: 100%; padding: 8px 16px; margin-top: 4px; background: rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; cursor: pointer; font-size: 0.85rem; color: var(--text-muted); }
+.expand-btn:hover { background: rgba(0,0,0,0.1); }
+.truncatable.truncated .expand-btn, .truncatable.expanded .expand-btn { display: block; }
+.pagination { display: flex; justify-content: center; gap: 8px; margin: 24px 0; flex-wrap: wrap; }
+.pagination a, .pagination span { padding: 5px 10px; border-radius: 6px; text-decoration: none; font-size: 0.85rem; }
+.pagination a { background: var(--card-bg); color: var(--user-border); border: 1px solid var(--user-border); }
+.pagination a:hover { background: var(--user-bg); }
+.pagination .current { background: var(--user-border); color: white; }
+.pagination .disabled { color: var(--text-muted); border: 1px solid #ddd; }
+.pagination .index-link { background: var(--user-border); color: white; }
+details.continuation { margin-bottom: 16px; }
+details.continuation summary { cursor: pointer; padding: 12px 16px; background: var(--user-bg); border-left: 4px solid var(--user-border); border-radius: 12px; font-weight: 500; color: var(--text-muted); }
+details.continuation summary:hover { background: rgba(25, 118, 210, 0.15); }
+details.continuation[open] summary { border-radius: 12px 12px 0 0; margin-bottom: 0; }
+.index-item { margin-bottom: 16px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); background: var(--user-bg); border-left: 4px solid var(--user-border); }
+.index-item a { display: block; text-decoration: none; color: inherit; }
+.index-item a:hover { background: rgba(25, 118, 210, 0.1); }
+.index-item-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: rgba(0,0,0,0.03); font-size: 0.85rem; }
+.index-item-number { font-weight: 600; color: var(--user-border); }
+.index-item-content { padding: 16px; }
+.index-item-stats { padding: 8px 16px 12px 32px; font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid rgba(0,0,0,0.06); }
+.index-item-commit { margin-top: 6px; padding: 4px 8px; background: #fff3e0; border-radius: 4px; font-size: 0.85rem; color: #e65100; }
+.index-item-commit code { background: rgba(0,0,0,0.08); padding: 1px 4px; border-radius: 3px; font-size: 0.8rem; margin-right: 6px; }
+.commit-card { margin: 8px 0; padding: 10px 14px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 6px; }
+.commit-card a { text-decoration: none; color: #5d4037; display: block; }
+.commit-card a:hover { color: #e65100; }
+.commit-card-hash { font-family: monospace; color: #e65100; font-weight: 600; margin-right: 8px; }
+.index-commit { margin-bottom: 12px; padding: 10px 16px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+.index-commit a { display: block; text-decoration: none; color: inherit; }
+.index-commit a:hover { background: rgba(255, 152, 0, 0.1); margin: -10px -16px; padding: 10px 16px; border-radius: 8px; }
+.index-commit-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; margin-bottom: 4px; }
+.index-commit-hash { font-family: monospace; color: #e65100; font-weight: 600; }
+.index-commit-msg { color: #5d4037; }
+.index-item-long-text { margin-top: 8px; padding: 12px; background: var(--card-bg); border-radius: 8px; border-left: 3px solid var(--assistant-border); }
+.index-item-long-text .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--card-bg)); }
+.index-item-long-text-content { color: var(--text-color); }
+#search-box { display: none; align-items: center; gap: 8px; }
+#search-box input { padding: 6px 12px; border: 1px solid var(--assistant-border); border-radius: 6px; font-size: 16px; width: 180px; }
+#search-box button, #modal-search-btn, #modal-close-btn { background: var(--user-border); color: white; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+#search-box button:hover, #modal-search-btn:hover { background: #1565c0; }
+#modal-close-btn { background: var(--text-muted); margin-left: 8px; }
+#modal-close-btn:hover { background: #616161; }
+#search-modal[open] { border: none; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.2); padding: 0; width: 90vw; max-width: 900px; height: 80vh; max-height: 80vh; display: flex; flex-direction: column; }
+#search-modal::backdrop { background: rgba(0,0,0,0.5); }
+.search-modal-header { display: flex; align-items: center; gap: 8px; padding: 16px; border-bottom: 1px solid var(--assistant-border); background: var(--bg-color); border-radius: 12px 12px 0 0; }
+.search-modal-header input { flex: 1; padding: 8px 12px; border: 1px solid var(--assistant-border); border-radius: 6px; font-size: 16px; }
+#search-status { padding: 8px 16px; font-size: 0.85rem; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); }
+#search-results { flex: 1; overflow-y: auto; padding: 16px; }
+.search-result { margin-bottom: 16px; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.search-result a { display: block; text-decoration: none; color: inherit; }
+.search-result a:hover { background: rgba(25, 118, 210, 0.05); }
+.search-result-page { padding: 6px 12px; background: rgba(0,0,0,0.03); font-size: 0.8rem; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); }
+.search-result-content { padding: 12px; }
+.search-result mark { background: #fff59d; padding: 1px 2px; border-radius: 2px; }
+@media (max-width: 600px) { body { padding: 8px; } .message, .index-item { border-radius: 8px; } .message-content, .index-item-content { padding: 12px; } pre { font-size: 0.8rem; padding: 8px; } #search-box input { width: 120px; } #search-modal[open] { width: 95vw; height: 90vh; } }
+</style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-row">
+            <h1>Claude Code transcript</h1>
+            <div id="search-box">
+                <input type="text" id="search-input" placeholder="Search..." aria-label="Search transcripts">
+                <button id="search-btn" type="button" aria-label="Search">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+                </button>
+            </div>
+        </div>
+        
+
+<div class="pagination">
+<span class="current">Index</span>
+<span class="disabled">&larr; Prev</span>
+<a href="page-001.html">1</a>
+<a href="page-001.html">Next &rarr;</a>
+</div>
+
+        <p style="color: var(--text-muted); margin-bottom: 24px;">1 prompts · 3 messages · 0 tool calls · 0 commits · 1 pages</p>
+        
+<div class="index-item"><a href="page-001.html#msg-2026-07-09T06-20-14-723Z"><div class="index-item-header"><span class="index-item-number">#1</span><time datetime="2026-07-09T06:20:14.723Z" data-timestamp="2026-07-09T06:20:14.723Z">2026-07-09T06:20:14.723Z</time></div><div class="index-item-content"><p>IMPORTANT EXECUTION MODE FOR CLAUDE CLI:
+- Do not use tools.
+- Do not read or write files.
+- Do not ask for permissions.
+- Produce the requested final markdown directly on stdout.
+- The workflow runner will save stdout to the output path.
+- Ignore any instruction that implies you should write the output file yourself; instead print the full content.</p>
+<p>BEGIN ORIGINAL PROMPT</p>
+<p>你是源码教材项目的信息提取员，不是散文作者。</p>
+<p>任务：根据下面的带行号源码，为本 batch 中的每个文件生成“文件级源码讲解笔记”。</p>
+<p>Batch 信息：
+- Batch ID: batch_024
+- Batch Name: config_config_pos4u
+- Module: config
+- Purpose: 解释项目配置、构建配置、依赖配置和运行时配置加载线索
+- Related Runtime Flows: 需要进一步分析
+- Output Note Path: _sourcebook/notes/batch_024_config_config_pos4u_file_notes.md</p>
+<p>本批文件：
+- Source/POS4U/Settings/MainMenuListGoSemiSelfPaymentStation.xml
+- Source/POS4U/Settings/MainMenuListGoSemiSelfRegister.xml
+- Source/POS4U/Settings/MainMenuListLaneSelfPaymentStation.xml
+- Source/POS4U/Settings/MainMenuListLocalPOS.xml
+- Source/POS4U/Settings/MainMenuListOTCDrug.xml</p>
+<p>本批任务目标：
+- 为本批每个文件生成可追溯到源码行号的文件级笔记。
+- 重点说明文件职责、对外暴露内容、关键逻辑、依赖关系、错误处理、测试建议和不确定点。
+- 只做文件级源码笔记，不写最终教材正文。</p>
+<p>硬性规则：</p>
+<ol>
+<li>必须基于实际源码。</li>
+<li>每一条技术事实都要引用文件路径和行号。</li>
+<li>不允许编造不存在的函数、参数、返回值、配置项、业务逻辑。</li>
+<li>如果无法确定，请写“需要结合其他文件确认”。</li>
+<li>不要只讲核心函数，小工具函数、边界处理、异常处理也要说明。</li>
+<li>每个文件必须单独成节。</li>
+<li>不要写最终教材章节，只写文件级源码笔记。</li>
+<li>不要省略本批任何文件。</li>
+<li>如果某个文件很简单，也要说明它为什么简单、在项目中承担什么角色。</li>
+<li>如果发现当前 batch 缺少理解该文件所需的上下文，请在“不确定点”中明确列出需要结合哪些文件。</li>
+</ol>
+<p>质量规则：
+- 优先解释运行时行为和业务意图，再补充语法层面的说明。
+- 遇到配置、SQL、脚本、文档、二进制占位文件，也必须说明它对项目理解的作用。
+- 对非文本文件、缺失文件或无法从当前 batch 判断的内容，必须标记“需要结合其他文件确认”或“需要人工确认”，不要猜。
+- 入口、配置加载、请求处理、数据读写、错误处理、日志、测试相关线索要特别标出。
+- 输出中不要出现未引用行号的技术断言。</p>
+<p>覆盖确认要求：
+- 结尾必须输出“本批覆盖确认”表。
+- 表中必须逐一列出本批所有文件。
+- 覆盖状态只能使用：已详细讲解 / 已简略讲解 / 需要结合其他文件确认。</p>
+<p>输出格式：</p>
+<h1>文件级源码笔记：config_config_pos4u</h1>
+<h2>Batch 信息</h2>
+<ul>
+<li>Batch ID: batch_024</li>
+<li>Batch Name: config_config_pos4u</li>
+<li>Module: config</li>
+<li>Purpose: 解释项目配置、构建配置、依赖配置和运行时配置加载线索</li>
+</ul>
+<hr />
+<h2>文件：<path></h2>
+<h3>1. 文件定位</h3>
+<p>说明这个文件在项目中的角色，属于哪个模块，解决什么问题。</p>
+<h3>2. 对外暴露内容</h3>
+<p>列出 class / function / component / API / command / config / export。</p>
+<p>每一项都要包含：
+- 名称
+- 文件路径 + 行号
+- 用途</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>按代码执行顺序解释关键逻辑。</p>
+<p>要求：
+- 引用文件路径和行号
+- 解释运行时会发生什么
+- 不要只翻译代码，要说明代码意图</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>逐个说明：
+- 名称
+- 位置：文件路径 + 行号
+- 输入
+- 输出
+- 副作用
+- 调用关系
+- 边界情况
+- 可能的坑</p>
+<h3>5. 依赖关系</h3>
+<p>说明它依赖哪些文件、库、配置、类型、组件，以及这些依赖的用途。</p>
+<h3>6. 错误处理与边界情况</h3>
+<p>必须引用源码行号。</p>
+<p>如果没有明显错误处理，也要说明“当前文件没有显式错误处理”，并指出可能依赖哪里处理。</p>
+<h3>7. 测试相关</h3>
+<p>说明：
+- 当前输入中是否包含对应测试
+- 如果有，测试覆盖了什么
+- 如果没有，应该如何测试这个文件</p>
+<h3>8. 新人阅读建议</h3>
+<p>告诉新人应该如何理解这个文件，阅读时先看哪里，再看哪里。</p>
+<h3>9. 不确定点</h3>
+<p>列出不能从当前 batch 确认的问题，不要猜。</p>
+<hr />
+<h2>本批覆盖确认</h2>
+<p>请列出本批所有文件，并标记：</p>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>覆盖状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>path</td>
+<td>已详细讲解 / 已简略讲解 / 需要结合其他文件确认</td>
+<td>说明</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p>下面是本批源码：</p>
+<p>FILE: Source/POS4U/Settings/MainMenuListGoSemiSelfPaymentStation.xml
+SHA256: a3ceafc1568ce77061754194456f6f1700b92702345c7456c79844adc8794430
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8" ?>
+00002: <MainMenuDataSet xmlns="http://tempuri.org/MainMenuDataSet.xsd">
+00003:   <Menu>
+00004:     <MenuNumber>1</MenuNumber>
+00005:     <Description>メインメニュー</Description>
+00006:     <MenuPage>
+00007:       <MenuNumber>1</MenuNumber>
+00008:       <PageNumber>1</PageNumber>
+00009:       <MenuButton>
+00010:         <MenuNumber>1</MenuNumber>
+00011:         <PageNumber>1</PageNumber>
+00012:         <ButtonNumber>1</ButtonNumber>
+00013:         <Description>会計機</Description>
+00014:         <ButtonType>1</ButtonType>
+00015:         <EventCode>411</EventCode>
+00016:         <InputData>SemiSelf</InputData>
+00017:         <AddInfos>Opened</AddInfos>
+00018:       </MenuButton>
+00019:       <MenuButton>
+00020:         <MenuNumber>1</MenuNumber>
+00021:         <PageNumber>1</PageNumber>
+00022:         <ButtonNumber>2</ButtonNumber>
+00023:         <Description>現金入金</Description>
+00024:         <ButtonType>1</ButtonType>
+00025:         <EventCode>206</EventCode>
+00026:         <InputData></InputData>
+00027:         <AddInfos>Opened</AddInfos>
+00028:       </MenuButton>
+00029:       <MenuButton>
+00030:         <MenuNumber>1</MenuNumber>
+00031:         <PageNumber>1</PageNumber>
+00032:         <ButtonNumber>3</ButtonNumber>
+00033:         <Description>領収証発行</Description>
+00034:         <ButtonType>2</ButtonType>
+00035:         <InputData>2</InputData>
+00036:       </MenuButton>
+00037:       <MenuButton>
+00038:         <MenuNumber>1</MenuNumber>
+00039:         <PageNumber>1</PageNumber>
+00040:         <ButtonNumber>4</ButtonNumber>
+00041:         <Description>返品業務</Description>
+00042:         <ButtonType>2</ButtonType>
+00043:         <InputData>3</InputData>
+00044:       </MenuButton>
+00045:       <MenuButton>
+00046:         <MenuNumber>1</MenuNumber>
+00047:         <PageNumber>1</PageNumber>
+00048:         <ButtonNumber>5</ButtonNumber>
+00049:         <Description>余剰金回収</Description>
+00050:         <ButtonType>1</ButtonType>
+00051:         <EventCode>161</EventCode>
+00052:         <InputData></InputData>
+00053:         <AddInfos>Opened</AddInfos>
+00054:       </MenuButton>
+00055:       <MenuButton>
+00056:         <MenuNumber>1</MenuNumber>
+00057:         <PageNumber>1</PageNumber>
+00058:         <ButtonNumber>6</ButtonNumber>
+00059:         <Description>在高確認</Description>
+00060:         <ButtonType>1</ButtonType>
+00061:         <EventCode>231</EventCode>
+00062:         <InputData></InputData>
+00063:         <AddInfos>Opened</AddInfos>
+00064:       </MenuButton>
+00065:       <MenuButton>
+00066:         <MenuNumber>1</MenuNumber>
+00067:         <PageNumber>1</PageNumber>
+00068:         <ButtonNumber>7</ButtonNumber>
+00069:         <Description>両替</Description>
+00070:         <ButtonType>1</ButtonType>
+00071:         <EventCode>246</EventCode>
+00072:         <InputData></InputData>
+00073:         <AddInfos>Opened</AddInfos>
+00074:       </MenuButton>
+00075:       <MenuButton>
+00076:         <MenuNumber>1</MenuNumber>
+00077:         <PageNumber>1</PageNumber>
+00078:         <ButtonNumber>9</ButtonNumber>
+00079:         <Description>筐体オープン</Description>
+00080:         <ButtonType>1</ButtonType>
+00081:         <EventCode>431</EventCode>
+00082:         <InputData></InputData>
+00083:         <AddInfos>Opened,SelfCover</AddInfos>
+00084:       </MenuButton>
+00085:       <MenuButton>
+00086:         <MenuNumber>1</MenuNumber>
+00087:         <PageNumber>1</PageNumber>
+00088:         <ButtonNumber>10</ButtonNumber>
+00089:         <Description>プリンタオープン</Description>
+00090:         <ButtonType>1</ButtonType>
+00091:         <EventCode>432</EventCode>
+00092:         <InputData></InputData>
+00093:         <AddInfos>Opened,SelfCover</AddInfos>
+00094:       </MenuButton>
+00095:     </MenuPage>
+00096:     <MenuPage>
+00097:       <MenuNumber>1</MenuNumber>
+00098:       <PageNumber>2</PageNumber>
+00099:       <MenuButton>
+00100:         <MenuNumber>1</MenuNumber>
+00101:         <PageNumber>2</PageNumber>
+00102:         <ButtonNumber>1</ButtonNumber>
+00103:         <Description>ジャーナル検索</Description>
+00104:         <ButtonType>1</ButtonType>
+00105:         <EventCode>404</EventCode>
+00106:         <InputData></InputData>
+00107:         <AddInfos></AddInfos>
+00108:       </MenuButton>
+00109:       <MenuButton>
+00110:         <MenuNumber>1</MenuNumber>
+00111:         <PageNumber>2</PageNumber>
+00112:         <ButtonNumber>4</ButtonNumber>
+00113:         <Description>開設</Description>
+00114:         <ButtonType>1</ButtonType>
+00115:         <EventCode>149</EventCode>
+00116:         <InputData></InputData>
+00117:       </MenuButton>
+00118:       <MenuButton>
+00119:         <MenuNumber>1</MenuNumber>
+00120:         <PageNumber>2</PageNumber>
+00121:         <ButtonNumber>5</ButtonNumber>
+00122:         <Description>休止</Description>
+00123:         <ButtonType>1</ButtonType>
+00124:         <EventCode>174</EventCode>
+00125:         <InputData></InputData>
+00126:       </MenuButton>
+00127:       <MenuButton>
+00128:         <MenuNumber>1</MenuNumber>
+00129:         <PageNumber>2</PageNumber>
+00130:         <ButtonNumber>6</ButtonNumber>
+00131:         <Description>精算業務</Description>
+00132:         <ButtonType>2</ButtonType>
+00133:         <InputData>4</InputData>
+00134:       </MenuButton>
+00135:       <MenuButton>
+00136:         <MenuNumber>1</MenuNumber>
+00137:         <PageNumber>2</PageNumber>
+00138:         <ButtonNumber>7</ButtonNumber>
+00139:         <Description>売上フラッシュ</Description>
+00140:         <ButtonType>1</ButtonType>
+00141:         <EventCode>169</EventCode>
+00142:         <InputData>Report_SalesFlash</InputData>
+00143:       </MenuButton>
+00144:       <MenuButton>
+00145:         <MenuNumber>1</MenuNumber>
+00146:         <PageNumber>2</PageNumber>
+00147:         <ButtonNumber>9</ButtonNumber>
+00148:         <Description>手動操作</Description>
+00149:         <ButtonType>2</ButtonType>
+00150:         <InputData>5</InputData>
+00151:       </MenuButton>
+00152:       <MenuButton>
+00153:         <MenuNumber>1</MenuNumber>
+00154:         <PageNumber>2</PageNumber>
+00155:         <ButtonNumber>10</ButtonNumber>
+00156:         <Description>デバイス設定</Description>
+00157:         <ButtonType>1</ButtonType>
+00158:         <EventCode>184</EventCode>
+00159:         <InputData></InputData>
+00160:       </MenuButton>
+00161:     </MenuPage>
+00162:     <MenuPage>
+00163:       <MenuNumber>1</MenuNumber>
+00164:       <PageNumber>3</PageNumber>
+00165:       <MenuButton>
+00166:         <MenuNumber>1</MenuNumber>
+00167:         <PageNumber>3</PageNumber>
+00168:         <ButtonNumber>1</ButtonNumber>
+00169:         <Description>会計機&#xa;(練習モード)</Description>
+00170:         <ButtonType>1</ButtonType>
+00171:         <EventCode>411</EventCode>
+00172:         <InputData>Training,SemiSelf</InputData>
+00173:         <AddInfos>Opened</AddInfos>
+00174:       </MenuButton>
+00175:     </MenuPage>
+00176:   </Menu>
+00177:   <Menu>
+00178:     <MenuNumber>2</MenuNumber>
+00179:     <Description>領収証発行メニュー</Description>
+00180:     <MenuPage>
+00181:       <MenuNumber>2</MenuNumber>
+00182:       <PageNumber>1</PageNumber>
+00183:       <MenuButton>
+00184:         <MenuNumber>2</MenuNumber>
+00185:         <PageNumber>1</PageNumber>
+00186:         <ButtonNumber>1</ButtonNumber>
+00187:         <Description>領収証&#xa;アイテム指定領収証</Description>
+00188:         <ButtonType>1</ButtonType>
+00189:         <EventCode>444</EventCode>
+00190:         <InputData></InputData>
+00191:         <AddInfos>Opened</AddInfos>
+00192:       </MenuButton>
+00193:       <MenuButton>
+00194:         <MenuNumber>2</MenuNumber>
+00195:         <PageNumber>1</PageNumber>
+00196:         <ButtonNumber>4</ButtonNumber>
+00197:         <Description>領収証・アイテム指定&#xa;(練習モード)</Description>
+00198:         <ButtonType>1</ButtonType>
+00199:         <EventCode>444</EventCode>
+00200:         <InputData>Training</InputData>
+00201:         <AddInfos>Opened</AddInfos>
+00202:       </MenuButton>
+00203:       <MenuButton>
+00204:         <MenuNumber>2</MenuNumber>
+00205:         <PageNumber>1</PageNumber>
+00206:         <ButtonNumber>6</ButtonNumber>
+00207:         <Description>合算領収証</Description>
+00208:         <ButtonType>1</ButtonType>
+00209:         <EventCode>444</EventCode>
+00210:         <InputData>Sum</InputData>
+00211:         <AddInfos>Opened</AddInfos>
+00212:       </MenuButton>
+00213:       <MenuButton>
+00214:         <MenuNumber>2</MenuNumber>
+00215:         <PageNumber>1</PageNumber>
+00216:         <ButtonNumber>9</ButtonNumber>
+00217:         <Description>合算領収証&#xa;(練習モード)</Description>
+00218:         <ButtonType>1</ButtonType>
+00219:         <EventCode>444</EventCode>
+00220:         <InputData>Training,Sum</InputData>
+00221:         <AddInfos>Opened</AddInfos>
+00222:       </MenuButton>
+00223:       <MenuButton>
+00224:         <MenuNumber>2</MenuNumber>
+00225:         <PageNumber>1</PageNumber>
+00226:         <ButtonNumber>10</ButtonNumber>
+00227:         <Description>戻る</Description>
+00228:         <ButtonType>2</ButtonType>
+00229:         <InputData>1</InputData>
+00230:       </MenuButton>
+00231:     </MenuPage>
+00232:   </Menu>
+00233:   <Menu>
+00234:     <MenuNumber>3</MenuNumber>
+00235:     <Description>返品業務メニュー</Description>
+00236:     <MenuPage>
+00237:       <MenuNumber>3</MenuNumber>
+00238:       <PageNumber>1</PageNumber>
+00239:       <MenuButton>
+00240:         <MenuNumber>3</MenuNumber>
+00241:         <PageNumber>1</PageNumber>
+00242:         <ButtonNumber>1</ButtonNumber>
+00243:         <Description>一か月以内返品</Description>
+00244:         <ButtonType>1</ButtonType>
+00245:         <EventCode>208</EventCode>
+00246:         <InputData></InputData>
+00247:         <AddInfos>Opened</AddInfos>
+00248:       </MenuButton>
+00249:       <MenuButton>
+00250:         <MenuNumber>3</MenuNumber>
+00251:         <PageNumber>1</PageNumber>
+00252:         <ButtonNumber>4</ButtonNumber>
+00253:         <Description>一か月以内返品&#xa;(練習モード)</Description>
+00254:         <ButtonType>1</ButtonType>
+00255:         <EventCode>208</EventCode>
+00256:         <InputData>Training</InputData>
+00257:         <AddInfos>Opened</AddInfos>
+00258:       </MenuButton>
+00259:       <MenuButton>
+00260:         <MenuNumber>3</MenuNumber>
+00261:         <PageNumber>1</PageNumber>
+00262:         <ButtonNumber>6</ButtonNumber>
+00263:         <Description>返品</Description>
+00264:         <ButtonType>1</ButtonType>
+00265:         <EventCode>124</EventCode>
+00266:         <InputData></InputData>
+00267:         <AddInfos>Opened</AddInfos>
+00268:       </MenuButton>
+00269:       <MenuButton>
+00270:         <MenuNumber>3</MenuNumber>
+00271:         <PageNumber>1</PageNumber>
+00272:         <ButtonNumber>9</ButtonNumber>
+00273:         <Description>返品&#xa;(練習モード)</Description>
+00274:         <ButtonType>1</ButtonType>
+00275:         <EventCode>124</EventCode>
+00276:         <InputData>Training</InputData>
+00277:         <AddInfos>Opened</AddInfos>
+00278:       </MenuButton>
+00279:       <MenuButton>
+00280:         <MenuNumber>3</MenuNumber>
+00281:         <PageNumber>1</PageNumber>
+00282:         <ButtonNumber>10</ButtonNumber>
+00283:         <Description>戻る</Description>
+00284:         <ButtonType>2</ButtonType>
+00285:         <InputData>1</InputData>
+00286:       </MenuButton>
+00287:     </MenuPage>
+00288:   </Menu>
+00289:   <Menu>
+00290:     <MenuNumber>4</MenuNumber>
+00291:     <Description>精算業務メニュー</Description>
+00292:     <MenuPage>
+00293:       <MenuNumber>4</MenuNumber>
+00294:       <PageNumber>1</PageNumber>
+00295:       <MenuButton>
+00296:         <MenuNumber>4</MenuNumber>
+00297:         <PageNumber>1</PageNumber>
+00298:         <ButtonNumber>1</ButtonNumber>
+00299:         <Description>釣銭機在高レポート</Description>
+00300:         <ButtonType>1</ButtonType>
+00301:         <EventCode>169</EventCode>
+00302:         <InputData>Report_CalculatedCash</InputData>
+00303:       </MenuButton>
+00304:       <MenuButton>
+00305:         <MenuNumber>4</MenuNumber>
+00306:         <PageNumber>1</PageNumber>
+00307:         <ButtonNumber>2</ButtonNumber>
+00308:         <Description>在高確認</Description>
+00309:         <ButtonType>1</ButtonType>
+00310:         <EventCode>231</EventCode>
+00311:         <InputData></InputData>
+00312:         <AddInfos>Opened</AddInfos>
+00313:       </MenuButton>
+00314:       <MenuButton>
+00315:         <MenuNumber>4</MenuNumber>
+00316:         <PageNumber>1</PageNumber>
+00317:         <ButtonNumber>3</ButtonNumber>
+00318:         <Description>余剰金回収</Description>
+00319:         <ButtonType>1</ButtonType>
+00320:         <EventCode>161</EventCode>
+00321:         <InputData></InputData>
+00322:         <AddInfos>Opened</AddInfos>
+00323:       </MenuButton>
+00324:       <MenuButton>
+00325:         <MenuNumber>4</MenuNumber>
+00326:         <PageNumber>1</PageNumber>
+00327:         <ButtonNumber>4</ButtonNumber>
+00328:         <Description>現金外在高確認</Description>
+00329:         <ButtonType>1</ButtonType>
+00330:         <EventCode>269</EventCode>
+00331:         <InputData></InputData>
+00332:         <AddInfos>Opened</AddInfos>
+00333:       </MenuButton>
+00334:       <MenuButton>
+00335:         <MenuNumber>4</MenuNumber>
+00336:         <PageNumber>1</PageNumber>
+00337:         <ButtonNumber>5</ButtonNumber>
+00338:         <Description>精算</Description>
+00339:         <ButtonType>1</ButtonType>
+00340:         <EventCode>150</EventCode>
+00341:         <InputData></InputData>
+00342:         <AddInfos>Opened</AddInfos>
+00343:       </MenuButton>
+00344:       <MenuButton>
+00345:         <MenuNumber>4</MenuNumber>
+00346:         <PageNumber>1</PageNumber>
+00347:         <ButtonNumber>10</ButtonNumber>
+00348:         <Description>戻る</Description>
+00349:         <ButtonType>2</ButtonType>
+00350:         <InputData>1</InputData>
+00351:       </MenuButton>
+00352:     </MenuPage>
+00353:   </Menu>
+00354:   <Menu>
+00355:     <MenuNumber>5</MenuNumber>
+00356:     <Description>手動操作メニュー</Description>
+00357:     <MenuPage>
+00358:       <MenuNumber>5</MenuNumber>
+00359:       <PageNumber>1</PageNumber>
+00360:       <MenuButton>
+00361:         <MenuNumber>5</MenuNumber>
+00362:         <PageNumber>1</PageNumber>
+00363:         <ButtonNumber>1</ButtonNumber>
+00364:         <Description>出金</Description>
+00365:         <ButtonType>1</ButtonType>
+00366:         <EventCode>258</EventCode>
+00367:         <InputData>CashOut</InputData>
+00368:         <AddInfos>Opened</AddInfos>
+00369:       </MenuButton>
+00370:       <MenuButton>
+00371:         <MenuNumber>5</MenuNumber>
+00372:         <PageNumber>1</PageNumber>
+00373:         <ButtonNumber>6</ButtonNumber>
+00374:         <Description>入金</Description>
+00375:         <ButtonType>1</ButtonType>
+00376:         <EventCode>258</EventCode>
+00377:         <InputData>CashIn</InputData>
+00378:         <AddInfos>Opened</AddInfos>
+00379:       </MenuButton>
+00380:       <MenuButton>
+00381:         <MenuNumber>5</MenuNumber>
+00382:         <PageNumber>1</PageNumber>
+00383:         <ButtonNumber>10</ButtonNumber>
+00384:         <Description>戻る</Description>
+00385:         <ButtonType>2</ButtonType>
+00386:         <InputData>1</InputData>
+00387:       </MenuButton>
+00388:     </MenuPage>
+00389:   </Menu>
+00390: </MainMenuDataSet></p>
+<hr />
+<p>FILE: Source/POS4U/Settings/MainMenuListGoSemiSelfRegister.xml
+SHA256: d34ffc5ffd3a4453ea9c91c1b5449109dd9fd6e9e081a5a213013a1ab26d495f
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8" ?>
+00002: <MainMenuDataSet xmlns="http://tempuri.org/MainMenuDataSet.xsd">
+00003:   <Menu>
+00004:     <MenuNumber>1</MenuNumber>
+00005:     <Description>メインメニュー</Description>
+00006:     <MenuPage>
+00007:       <MenuNumber>1</MenuNumber>
+00008:       <PageNumber>1</PageNumber>
+00009:       <MenuButton>
+00010:         <MenuNumber>1</MenuNumber>
+00011:         <PageNumber>1</PageNumber>
+00012:         <ButtonNumber>1</ButtonNumber>
+00013:         <Description>登録機</Description>
+00014:         <ButtonType>1</ButtonType>
+00015:         <EventCode>411</EventCode>
+00016:         <InputData></InputData>
+00017:         <AddInfos>Opened</AddInfos>
+00018:       </MenuButton>
+00019:       <MenuButton>
+00020:         <MenuNumber>1</MenuNumber>
+00021:         <PageNumber>1</PageNumber>
+00022:         <ButtonNumber>3</ButtonNumber>
+00023:         <Description>中間取引削除</Description>
+00024:         <ButtonType>1</ButtonType>
+00025:         <EventCode>554</EventCode>
+00026:         <InputData></InputData>
+00027:         <AddInfos>Opened,IsHyBridMode</AddInfos>
+00028:       </MenuButton>
+00029:       <MenuButton>
+00030:         <MenuNumber>1</MenuNumber>
+00031:         <PageNumber>1</PageNumber>
+00032:         <ButtonNumber>4</ButtonNumber>
+00033:         <Description>開設</Description>
+00034:         <ButtonType>1</ButtonType>
+00035:         <EventCode>149</EventCode>
+00036:         <InputData></InputData>
+00037:       </MenuButton>
+00038:       <MenuButton>
+00039:         <MenuNumber>1</MenuNumber>
+00040:         <PageNumber>1</PageNumber>
+00041:         <ButtonNumber>5</ButtonNumber>
+00042:         <Description>休止</Description>
+00043:         <ButtonType>1</ButtonType>
+00044:         <EventCode>174</EventCode>
+00045:         <InputData></InputData>
+00046:       </MenuButton>
+00047:       <MenuButton>
+00048:         <MenuNumber>1</MenuNumber>
+00049:         <PageNumber>1</PageNumber>
+00050:         <ButtonNumber>8</ButtonNumber>
+00051:         <Description>精算</Description>
+00052:         <ButtonType>1</ButtonType>
+00053:         <EventCode>150</EventCode>
+00054:         <InputData></InputData>
+00055:         <AddInfos>Opened</AddInfos>
+00056:       </MenuButton>
+00057:       <MenuButton>
+00058:         <MenuNumber>1</MenuNumber>
+00059:         <PageNumber>1</PageNumber>
+00060:         <ButtonNumber>10</ButtonNumber>
+00061:         <Description>デバイス設定</Description>
+00062:         <ButtonType>1</ButtonType>
+00063:         <EventCode>184</EventCode>
+00064:         <InputData></InputData>
+00065:       </MenuButton>
+00066:     </MenuPage>
+00067:     <MenuPage>
+00068:       <MenuNumber>1</MenuNumber>
+00069:       <PageNumber>2</PageNumber>
+00070:       <MenuButton>
+00071:         <MenuNumber>1</MenuNumber>
+00072:         <PageNumber>2</PageNumber>
+00073:         <ButtonNumber>1</ButtonNumber>
+00074:         <Description>登録機&#xa;(練習モード)</Description>
+00075:         <ButtonType>1</ButtonType>
+00076:         <EventCode>411</EventCode>
+00077:         <InputData>Training</InputData>
+00078:         <AddInfos>Opened</AddInfos>
+00079:       </MenuButton>
+00080:     </MenuPage>
+00081:   </Menu>
+00082: </MainMenuDataSet></p>
+<hr />
+<p>FILE: Source/POS4U/Settings/MainMenuListLaneSelfPaymentStation.xml
+SHA256: a3ceafc1568ce77061754194456f6f1700b92702345c7456c79844adc8794430
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8" ?>
+00002: <MainMenuDataSet xmlns="http://tempuri.org/MainMenuDataSet.xsd">
+00003:   <Menu>
+00004:     <MenuNumber>1</MenuNumber>
+00005:     <Description>メインメニュー</Description>
+00006:     <MenuPage>
+00007:       <MenuNumber>1</MenuNumber>
+00008:       <PageNumber>1</PageNumber>
+00009:       <MenuButton>
+00010:         <MenuNumber>1</MenuNumber>
+00011:         <PageNumber>1</PageNumber>
+00012:         <ButtonNumber>1</ButtonNumber>
+00013:         <Description>会計機</Description>
+00014:         <ButtonType>1</ButtonType>
+00015:         <EventCode>411</EventCode>
+00016:         <InputData>SemiSelf</InputData>
+00017:         <AddInfos>Opened</AddInfos>
+00018:       </MenuButton>
+00019:       <MenuButton>
+00020:         <MenuNumber>1</MenuNumber>
+00021:         <PageNumber>1</PageNumber>
+00022:         <ButtonNumber>2</ButtonNumber>
+00023:         <Description>現金入金</Description>
+00024:         <ButtonType>1</ButtonType>
+00025:         <EventCode>206</EventCode>
+00026:         <InputData></InputData>
+00027:         <AddInfos>Opened</AddInfos>
+00028:       </MenuButton>
+00029:       <MenuButton>
+00030:         <MenuNumber>1</MenuNumber>
+00031:         <PageNumber>1</PageNumber>
+00032:         <ButtonNumber>3</ButtonNumber>
+00033:         <Description>領収証発行</Description>
+00034:         <ButtonType>2</ButtonType>
+00035:         <InputData>2</InputData>
+00036:       </MenuButton>
+00037:       <MenuButton>
+00038:         <MenuNumber>1</MenuNumber>
+00039:         <PageNumber>1</PageNumber>
+00040:         <ButtonNumber>4</ButtonNumber>
+00041:         <Description>返品業務</Description>
+00042:         <ButtonType>2</ButtonType>
+00043:         <InputData>3</InputData>
+00044:       </MenuButton>
+00045:       <MenuButton>
+00046:         <MenuNumber>1</MenuNumber>
+00047:         <PageNumber>1</PageNumber>
+00048:         <ButtonNumber>5</ButtonNumber>
+00049:         <Description>余剰金回収</Description>
+00050:         <ButtonType>1</ButtonType>
+00051:         <EventCode>161</EventCode>
+00052:         <InputData></InputData>
+00053:         <AddInfos>Opened</AddInfos>
+00054:       </MenuButton>
+00055:       <MenuButton>
+00056:         <MenuNumber>1</MenuNumber>
+00057:         <PageNumber>1</PageNumber>
+00058:         <ButtonNumber>6</ButtonNumber>
+00059:         <Description>在高確認</Description>
+00060:         <ButtonType>1</ButtonType>
+00061:         <EventCode>231</EventCode>
+00062:         <InputData></InputData>
+00063:         <AddInfos>Opened</AddInfos>
+00064:       </MenuButton>
+00065:       <MenuButton>
+00066:         <MenuNumber>1</MenuNumber>
+00067:         <PageNumber>1</PageNumber>
+00068:         <ButtonNumber>7</ButtonNumber>
+00069:         <Description>両替</Description>
+00070:         <ButtonType>1</ButtonType>
+00071:         <EventCode>246</EventCode>
+00072:         <InputData></InputData>
+00073:         <AddInfos>Opened</AddInfos>
+00074:       </MenuButton>
+00075:       <MenuButton>
+00076:         <MenuNumber>1</MenuNumber>
+00077:         <PageNumber>1</PageNumber>
+00078:         <ButtonNumber>9</ButtonNumber>
+00079:         <Description>筐体オープン</Description>
+00080:         <ButtonType>1</ButtonType>
+00081:         <EventCode>431</EventCode>
+00082:         <InputData></InputData>
+00083:         <AddInfos>Opened,SelfCover</AddInfos>
+00084:       </MenuButton>
+00085:       <MenuButton>
+00086:         <MenuNumber>1</MenuNumber>
+00087:         <PageNumber>1</PageNumber>
+00088:         <ButtonNumber>10</ButtonNumber>
+00089:         <Description>プリンタオープン</Description>
+00090:         <ButtonType>1</ButtonType>
+00091:         <EventCode>432</EventCode>
+00092:         <InputData></InputData>
+00093:         <AddInfos>Opened,SelfCover</AddInfos>
+00094:       </MenuButton>
+00095:     </MenuPage>
+00096:     <MenuPage>
+00097:       <MenuNumber>1</MenuNumber>
+00098:       <PageNumber>2</PageNumber>
+00099:       <MenuButton>
+00100:         <MenuNumber>1</MenuNumber>
+00101:         <PageNumber>2</PageNumber>
+00102:         <ButtonNumber>1</ButtonNumber>
+00103:         <Description>ジャーナル検索</Description>
+00104:         <ButtonType>1</ButtonType>
+00105:         <EventCode>404</EventCode>
+00106:         <InputData></InputData>
+00107:         <AddInfos></AddInfos>
+00108:       </MenuButton>
+00109:       <MenuButton>
+00110:         <MenuNumber>1</MenuNumber>
+00111:         <PageNumber>2</PageNumber>
+00112:         <ButtonNumber>4</ButtonNumber>
+00113:         <Description>開設</Description>
+00114:         <ButtonType>1</ButtonType>
+00115:         <EventCode>149</EventCode>
+00116:         <InputData></InputData>
+00117:       </MenuButton>
+00118:       <MenuButton>
+00119:         <MenuNumber>1</MenuNumber>
+00120:         <PageNumber>2</PageNumber>
+00121:         <ButtonNumber>5</ButtonNumber>
+00122:         <Description>休止</Description>
+00123:         <ButtonType>1</ButtonType>
+00124:         <EventCode>174</EventCode>
+00125:         <InputData></InputData>
+00126:       </MenuButton>
+00127:       <MenuButton>
+00128:         <MenuNumber>1</MenuNumber>
+00129:         <PageNumber>2</PageNumber>
+00130:         <ButtonNumber>6</ButtonNumber>
+00131:         <Description>精算業務</Description>
+00132:         <ButtonType>2</ButtonType>
+00133:         <InputData>4</InputData>
+00134:       </MenuButton>
+00135:       <MenuButton>
+00136:         <MenuNumber>1</MenuNumber>
+00137:         <PageNumber>2</PageNumber>
+00138:         <ButtonNumber>7</ButtonNumber>
+00139:         <Description>売上フラッシュ</Description>
+00140:         <ButtonType>1</ButtonType>
+00141:         <EventCode>169</EventCode>
+00142:         <InputData>Report_SalesFlash</InputData>
+00143:       </MenuButton>
+00144:       <MenuButton>
+00145:         <MenuNumber>1</MenuNumber>
+00146:         <PageNumber>2</PageNumber>
+00147:         <ButtonNumber>9</ButtonNumber>
+00148:         <Description>手動操作</Description>
+00149:         <ButtonType>2</ButtonType>
+00150:         <InputData>5</InputData>
+00151:       </MenuButton>
+00152:       <MenuButton>
+00153:         <MenuNumber>1</MenuNumber>
+00154:         <PageNumber>2</PageNumber>
+00155:         <ButtonNumber>10</ButtonNumber>
+00156:         <Description>デバイス設定</Description>
+00157:         <ButtonType>1</ButtonType>
+00158:         <EventCode>184</EventCode>
+00159:         <InputData></InputData>
+00160:       </MenuButton>
+00161:     </MenuPage>
+00162:     <MenuPage>
+00163:       <MenuNumber>1</MenuNumber>
+00164:       <PageNumber>3</PageNumber>
+00165:       <MenuButton>
+00166:         <MenuNumber>1</MenuNumber>
+00167:         <PageNumber>3</PageNumber>
+00168:         <ButtonNumber>1</ButtonNumber>
+00169:         <Description>会計機&#xa;(練習モード)</Description>
+00170:         <ButtonType>1</ButtonType>
+00171:         <EventCode>411</EventCode>
+00172:         <InputData>Training,SemiSelf</InputData>
+00173:         <AddInfos>Opened</AddInfos>
+00174:       </MenuButton>
+00175:     </MenuPage>
+00176:   </Menu>
+00177:   <Menu>
+00178:     <MenuNumber>2</MenuNumber>
+00179:     <Description>領収証発行メニュー</Description>
+00180:     <MenuPage>
+00181:       <MenuNumber>2</MenuNumber>
+00182:       <PageNumber>1</PageNumber>
+00183:       <MenuButton>
+00184:         <MenuNumber>2</MenuNumber>
+00185:         <PageNumber>1</PageNumber>
+00186:         <ButtonNumber>1</ButtonNumber>
+00187:         <Description>領収証&#xa;アイテム指定領収証</Description>
+00188:         <ButtonType>1</ButtonType>
+00189:         <EventCode>444</EventCode>
+00190:         <InputData></InputData>
+00191:         <AddInfos>Opened</AddInfos>
+00192:       </MenuButton>
+00193:       <MenuButton>
+00194:         <MenuNumber>2</MenuNumber>
+00195:         <PageNumber>1</PageNumber>
+00196:         <ButtonNumber>4</ButtonNumber>
+00197:         <Description>領収証・アイテム指定&#xa;(練習モード)</Description>
+00198:         <ButtonType>1</ButtonType>
+00199:         <EventCode>444</EventCode>
+00200:         <InputData>Training</InputData>
+00201:         <AddInfos>Opened</AddInfos>
+00202:       </MenuButton>
+00203:       <MenuButton>
+00204:         <MenuNumber>2</MenuNumber>
+00205:         <PageNumber>1</PageNumber>
+00206:         <ButtonNumber>6</ButtonNumber>
+00207:         <Description>合算領収証</Description>
+00208:         <ButtonType>1</ButtonType>
+00209:         <EventCode>444</EventCode>
+00210:         <InputData>Sum</InputData>
+00211:         <AddInfos>Opened</AddInfos>
+00212:       </MenuButton>
+00213:       <MenuButton>
+00214:         <MenuNumber>2</MenuNumber>
+00215:         <PageNumber>1</PageNumber>
+00216:         <ButtonNumber>9</ButtonNumber>
+00217:         <Description>合算領収証&#xa;(練習モード)</Description>
+00218:         <ButtonType>1</ButtonType>
+00219:         <EventCode>444</EventCode>
+00220:         <InputData>Training,Sum</InputData>
+00221:         <AddInfos>Opened</AddInfos>
+00222:       </MenuButton>
+00223:       <MenuButton>
+00224:         <MenuNumber>2</MenuNumber>
+00225:         <PageNumber>1</PageNumber>
+00226:         <ButtonNumber>10</ButtonNumber>
+00227:         <Description>戻る</Description>
+00228:         <ButtonType>2</ButtonType>
+00229:         <InputData>1</InputData>
+00230:       </MenuButton>
+00231:     </MenuPage>
+00232:   </Menu>
+00233:   <Menu>
+00234:     <MenuNumber>3</MenuNumber>
+00235:     <Description>返品業務メニュー</Description>
+00236:     <MenuPage>
+00237:       <MenuNumber>3</MenuNumber>
+00238:       <PageNumber>1</PageNumber>
+00239:       <MenuButton>
+00240:         <MenuNumber>3</MenuNumber>
+00241:         <PageNumber>1</PageNumber>
+00242:         <ButtonNumber>1</ButtonNumber>
+00243:         <Description>一か月以内返品</Description>
+00244:         <ButtonType>1</ButtonType>
+00245:         <EventCode>208</EventCode>
+00246:         <InputData></InputData>
+00247:         <AddInfos>Opened</AddInfos>
+00248:       </MenuButton>
+00249:       <MenuButton>
+00250:         <MenuNumber>3</MenuNumber>
+00251:         <PageNumber>1</PageNumber>
+00252:         <ButtonNumber>4</ButtonNumber>
+00253:         <Description>一か月以内返品&#xa;(練習モード)</Description>
+00254:         <ButtonType>1</ButtonType>
+00255:         <EventCode>208</EventCode>
+00256:         <InputData>Training</InputData>
+00257:         <AddInfos>Opened</AddInfos>
+00258:       </MenuButton>
+00259:       <MenuButton>
+00260:         <MenuNumber>3</MenuNumber>
+00261:         <PageNumber>1</PageNumber>
+00262:         <ButtonNumber>6</ButtonNumber>
+00263:         <Description>返品</Description>
+00264:         <ButtonType>1</ButtonType>
+00265:         <EventCode>124</EventCode>
+00266:         <InputData></InputData>
+00267:         <AddInfos>Opened</AddInfos>
+00268:       </MenuButton>
+00269:       <MenuButton>
+00270:         <MenuNumber>3</MenuNumber>
+00271:         <PageNumber>1</PageNumber>
+00272:         <ButtonNumber>9</ButtonNumber>
+00273:         <Description>返品&#xa;(練習モード)</Description>
+00274:         <ButtonType>1</ButtonType>
+00275:         <EventCode>124</EventCode>
+00276:         <InputData>Training</InputData>
+00277:         <AddInfos>Opened</AddInfos>
+00278:       </MenuButton>
+00279:       <MenuButton>
+00280:         <MenuNumber>3</MenuNumber>
+00281:         <PageNumber>1</PageNumber>
+00282:         <ButtonNumber>10</ButtonNumber>
+00283:         <Description>戻る</Description>
+00284:         <ButtonType>2</ButtonType>
+00285:         <InputData>1</InputData>
+00286:       </MenuButton>
+00287:     </MenuPage>
+00288:   </Menu>
+00289:   <Menu>
+00290:     <MenuNumber>4</MenuNumber>
+00291:     <Description>精算業務メニュー</Description>
+00292:     <MenuPage>
+00293:       <MenuNumber>4</MenuNumber>
+00294:       <PageNumber>1</PageNumber>
+00295:       <MenuButton>
+00296:         <MenuNumber>4</MenuNumber>
+00297:         <PageNumber>1</PageNumber>
+00298:         <ButtonNumber>1</ButtonNumber>
+00299:         <Description>釣銭機在高レポート</Description>
+00300:         <ButtonType>1</ButtonType>
+00301:         <EventCode>169</EventCode>
+00302:         <InputData>Report_CalculatedCash</InputData>
+00303:       </MenuButton>
+00304:       <MenuButton>
+00305:         <MenuNumber>4</MenuNumber>
+00306:         <PageNumber>1</PageNumber>
+00307:         <ButtonNumber>2</ButtonNumber>
+00308:         <Description>在高確認</Description>
+00309:         <ButtonType>1</ButtonType>
+00310:         <EventCode>231</EventCode>
+00311:         <InputData></InputData>
+00312:         <AddInfos>Opened</AddInfos>
+00313:       </MenuButton>
+00314:       <MenuButton>
+00315:         <MenuNumber>4</MenuNumber>
+00316:         <PageNumber>1</PageNumber>
+00317:         <ButtonNumber>3</ButtonNumber>
+00318:         <Description>余剰金回収</Description>
+00319:         <ButtonType>1</ButtonType>
+00320:         <EventCode>161</EventCode>
+00321:         <InputData></InputData>
+00322:         <AddInfos>Opened</AddInfos>
+00323:       </MenuButton>
+00324:       <MenuButton>
+00325:         <MenuNumber>4</MenuNumber>
+00326:         <PageNumber>1</PageNumber>
+00327:         <ButtonNumber>4</ButtonNumber>
+00328:         <Description>現金外在高確認</Description>
+00329:         <ButtonType>1</ButtonType>
+00330:         <EventCode>269</EventCode>
+00331:         <InputData></InputData>
+00332:         <AddInfos>Opened</AddInfos>
+00333:       </MenuButton>
+00334:       <MenuButton>
+00335:         <MenuNumber>4</MenuNumber>
+00336:         <PageNumber>1</PageNumber>
+00337:         <ButtonNumber>5</ButtonNumber>
+00338:         <Description>精算</Description>
+00339:         <ButtonType>1</ButtonType>
+00340:         <EventCode>150</EventCode>
+00341:         <InputData></InputData>
+00342:         <AddInfos>Opened</AddInfos>
+00343:       </MenuButton>
+00344:       <MenuButton>
+00345:         <MenuNumber>4</MenuNumber>
+00346:         <PageNumber>1</PageNumber>
+00347:         <ButtonNumber>10</ButtonNumber>
+00348:         <Description>戻る</Description>
+00349:         <ButtonType>2</ButtonType>
+00350:         <InputData>1</InputData>
+00351:       </MenuButton>
+00352:     </MenuPage>
+00353:   </Menu>
+00354:   <Menu>
+00355:     <MenuNumber>5</MenuNumber>
+00356:     <Description>手動操作メニュー</Description>
+00357:     <MenuPage>
+00358:       <MenuNumber>5</MenuNumber>
+00359:       <PageNumber>1</PageNumber>
+00360:       <MenuButton>
+00361:         <MenuNumber>5</MenuNumber>
+00362:         <PageNumber>1</PageNumber>
+00363:         <ButtonNumber>1</ButtonNumber>
+00364:         <Description>出金</Description>
+00365:         <ButtonType>1</ButtonType>
+00366:         <EventCode>258</EventCode>
+00367:         <InputData>CashOut</InputData>
+00368:         <AddInfos>Opened</AddInfos>
+00369:       </MenuButton>
+00370:       <MenuButton>
+00371:         <MenuNumber>5</MenuNumber>
+00372:         <PageNumber>1</PageNumber>
+00373:         <ButtonNumber>6</ButtonNumber>
+00374:         <Description>入金</Description>
+00375:         <ButtonType>1</ButtonType>
+00376:         <EventCode>258</EventCode>
+00377:         <InputData>CashIn</InputData>
+00378:         <AddInfos>Opened</AddInfos>
+00379:       </MenuButton>
+00380:       <MenuButton>
+00381:         <MenuNumber>5</MenuNumber>
+00382:         <PageNumber>1</PageNumber>
+00383:         <ButtonNumber>10</ButtonNumber>
+00384:         <Description>戻る</Description>
+00385:         <ButtonType>2</ButtonType>
+00386:         <InputData>1</InputData>
+00387:       </MenuButton>
+00388:     </MenuPage>
+00389:   </Menu>
+00390: </MainMenuDataSet></p>
+<hr />
+<p>FILE: Source/POS4U/Settings/MainMenuListLocalPOS.xml
+SHA256: 5fecd7b2c177dd5d3ff55eaa0e38e1498b7bd62a4e58c2aa1a79f213029030e8
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8" ?>
+00002: <MainMenuDataSet xmlns="http://tempuri.org/MainMenuDataSet.xsd">
+00003:   <Menu>
+00004:     <MenuNumber>1</MenuNumber>
+00005:     <Description>メインメニュー</Description>
+00006:     <MenuPage>
+00007:       <MenuNumber>1</MenuNumber>
+00008:       <PageNumber>1</PageNumber>
+00009:       <MenuButton>
+00010:         <MenuNumber>1</MenuNumber>
+00011:         <PageNumber>1</PageNumber>
+00012:         <ButtonNumber>1</ButtonNumber>
+00013:         <Description>売上</Description>
+00014:         <ButtonType>1</ButtonType>
+00015:         <EventCode>411</EventCode>
+00016:         <InputData></InputData>
+00017:         <AddInfos>Opened</AddInfos>
+00018:       </MenuButton>
+00019:       <MenuButton>
+00020:         <MenuNumber>1</MenuNumber>
+00021:         <PageNumber>1</PageNumber>
+00022:         <ButtonNumber>2</ButtonNumber>
+00023:         <Description>現金入金</Description>
+00024:         <ButtonType>1</ButtonType>
+00025:         <EventCode>206</EventCode>
+00026:         <InputData></InputData>
+00027:         <AddInfos>Opened</AddInfos>
+00028:       </MenuButton>
+00029:       <MenuButton>
+00030:         <MenuNumber>1</MenuNumber>
+00031:         <PageNumber>1</PageNumber>
+00032:         <ButtonNumber>3</ButtonNumber>
+00033:         <Description>領収証発行</Description>
+00034:         <ButtonType>2</ButtonType>
+00035:         <InputData>2</InputData>
+00036:       </MenuButton>
+00037:       <MenuButton>
+00038:         <MenuNumber>1</MenuNumber>
+00039:         <PageNumber>1</PageNumber>
+00040:         <ButtonNumber>4</ButtonNumber>
+00041:         <Description>返品業務</Description>
+00042:         <ButtonType>2</ButtonType>
+00043:         <InputData>3</InputData>
+00044:       </MenuButton>
+00045:       <MenuButton>
+00046:         <MenuNumber>1</MenuNumber>
+00047:         <PageNumber>1</PageNumber>
+00048:         <ButtonNumber>5</ButtonNumber>
+00049:         <Description>余剰金回収</Description>
+00050:         <ButtonType>1</ButtonType>
+00051:         <EventCode>161</EventCode>
+00052:         <InputData></InputData>
+00053:         <AddInfos>Opened</AddInfos>
+00054:       </MenuButton>
+00055:       <MenuButton>
+00056:         <MenuNumber>1</MenuNumber>
+00057:         <PageNumber>1</PageNumber>
+00058:         <ButtonNumber>6</ButtonNumber>
+00059:         <Description>在高確認</Description>
+00060:         <ButtonType>1</ButtonType>
+00061:         <EventCode>231</EventCode>
+00062:         <InputData></InputData>
+00063:         <AddInfos>Opened</AddInfos>
+00064:       </MenuButton>
+00065:       <MenuButton>
+00066:         <MenuNumber>1</MenuNumber>
+00067:         <PageNumber>1</PageNumber>
+00068:         <ButtonNumber>7</ButtonNumber>
+00069:         <Description>両替</Description>
+00070:         <ButtonType>1</ButtonType>
+00071:         <EventCode>246</EventCode>
+00072:         <InputData></InputData>
+00073:         <AddInfos>Opened</AddInfos>
+00074:       </MenuButton>
+00075:       <MenuButton>
+00076:         <MenuNumber>1</MenuNumber>
+00077:         <PageNumber>1</PageNumber>
+00078:         <ButtonNumber>10</ButtonNumber>
+00079:         <Description>ドロアオープン</Description>
+00080:         <ButtonType>1</ButtonType>
+00081:         <EventCode>449</EventCode>
+00082:         <InputData></InputData>
+00083:         <AddInfos>Opened</AddInfos>
+00084:       </MenuButton>
+00085:     </MenuPage>
+00086:     <MenuPage>
+00087:       <MenuNumber>1</MenuNumber>
+00088:       <PageNumber>2</PageNumber>
+00089:       <MenuButton>
+00090:         <MenuNumber>1</MenuNumber>
+00091:         <PageNumber>2</PageNumber>
+00092:         <ButtonNumber>1</ButtonNumber>
+00093:         <Description>ジャーナル検索</Description>
+00094:         <ButtonType>1</ButtonType>
+00095:         <EventCode>404</EventCode>
+00096:         <InputData></InputData>
+00097:         <AddInfos></AddInfos>
+00098:       </MenuButton>
+00099:       <MenuButton>
+00100:         <MenuNumber>1</MenuNumber>
+00101:         <PageNumber>2</PageNumber>
+00102:         <ButtonNumber>4</ButtonNumber>
+00103:         <Description>開設</Description>
+00104:         <ButtonType>1</ButtonType>
+00105:         <EventCode>149</EventCode>
+00106:         <InputData></InputData>
+00107:       </MenuButton>
+00108:       <MenuButton>
+00109:         <MenuNumber>1</MenuNumber>
+00110:         <PageNumber>2</PageNumber>
+00111:         <ButtonNumber>5</ButtonNumber>
+00112:         <Description>休止</Description>
+00113:         <ButtonType>1</ButtonType>
+00114:         <EventCode>174</EventCode>
+00115:         <InputData></InputData>
+00116:       </MenuButton>
+00117:       <MenuButton>
+00118:         <MenuNumber>1</MenuNumber>
+00119:         <PageNumber>2</PageNumber>
+00120:         <ButtonNumber>6</ButtonNumber>
+00121:         <Description>精算業務</Description>
+00122:         <ButtonType>2</ButtonType>
+00123:         <InputData>4</InputData>
+00124:       </MenuButton>
+00125:       <MenuButton>
+00126:         <MenuNumber>1</MenuNumber>
+00127:         <PageNumber>2</PageNumber>
+00128:         <ButtonNumber>7</ButtonNumber>
+00129:         <Description>売上フラッシュ</Description>
+00130:         <ButtonType>1</ButtonType>
+00131:         <EventCode>169</EventCode>
+00132:         <InputData>Report_SalesFlash</InputData>
+00133:       </MenuButton>
+00134:       <MenuButton>
+00135:         <MenuNumber>1</MenuNumber>
+00136:         <PageNumber>2</PageNumber>
+00137:         <ButtonNumber>9</ButtonNumber>
+00138:         <Description>手動操作</Description>
+00139:         <ButtonType>2</ButtonType>
+00140:         <InputData>5</InputData>
+00141:       </MenuButton>
+00142:       <MenuButton>
+00143:         <MenuNumber>1</MenuNumber>
+00144:         <PageNumber>2</PageNumber>
+00145:         <ButtonNumber>10</ButtonNumber>
+00146:         <Description>デバイス設定</Description>
+00147:         <ButtonType>1</ButtonType>
+00148:         <EventCode>184</EventCode>
+00149:         <InputData></InputData>
+00150:       </MenuButton>
+00151:     </MenuPage>
+00152:     <MenuPage>
+00153:       <MenuNumber>1</MenuNumber>
+00154:       <PageNumber>3</PageNumber>
+00155:       <MenuButton>
+00156:         <MenuNumber>1</MenuNumber>
+00157:         <PageNumber>3</PageNumber>
+00158:         <ButtonNumber>1</ButtonNumber>
+00159:         <Description>売上&#xa;(練習モード)</Description>
+00160:         <ButtonType>1</ButtonType>
+00161:         <EventCode>411</EventCode>
+00162:         <InputData>Training</InputData>
+00163:         <AddInfos>Opened</AddInfos>
+00164:       </MenuButton>
+00165:     </MenuPage>
+00166:   </Menu>
+00167:   <Menu>
+00168:     <MenuNumber>2</MenuNumber>
+00169:     <Description>領収証発行メニュー</Description>
+00170:     <MenuPage>
+00171:       <MenuNumber>2</MenuNumber>
+00172:       <PageNumber>1</PageNumber>
+00173:       <MenuButton>
+00174:         <MenuNumber>2</MenuNumber>
+00175:         <PageNumber>1</PageNumber>
+00176:         <ButtonNumber>1</ButtonNumber>
+00177:         <Description>領収証&#xa;アイテム指定領収証</Description>
+00178:         <ButtonType>1</ButtonType>
+00179:         <EventCode>444</EventCode>
+00180:         <InputData></InputData>
+00181:         <AddInfos>Opened</AddInfos>
+00182:       </MenuButton>
+00183:       <MenuButton>
+00184:         <MenuNumber>2</MenuNumber>
+00185:         <PageNumber>1</PageNumber>
+00186:         <ButtonNumber>4</ButtonNumber>
+00187:         <Description>領収証・アイテム指定&#xa;(練習モード)</Description>
+00188:         <ButtonType>1</ButtonType>
+00189:         <EventCode>444</EventCode>
+00190:         <InputData>Training</InputData>
+00191:         <AddInfos>Opened</AddInfos>
+00192:       </MenuButton>
+00193:       <MenuButton>
+00194:         <MenuNumber>2</MenuNumber>
+00195:         <PageNumber>1</PageNumber>
+00196:         <ButtonNumber>6</ButtonNumber>
+00197:         <Description>合算領収証</Description>
+00198:         <ButtonType>1</ButtonType>
+00199:         <EventCode>444</EventCode>
+00200:         <InputData>Sum</InputData>
+00201:         <AddInfos>Opened</AddInfos>
+00202:       </MenuButton>
+00203:       <MenuButton>
+00204:         <MenuNumber>2</MenuNumber>
+00205:         <PageNumber>1</PageNumber>
+00206:         <ButtonNumber>9</ButtonNumber>
+00207:         <Description>合算領収証&#xa;(練習モード)</Description>
+00208:         <ButtonType>1</ButtonType>
+00209:         <EventCode>444</EventCode>
+00210:         <InputData>Training,Sum</InputData>
+00211:         <AddInfos>Opened</AddInfos>
+00212:       </MenuButton>
+00213:       <MenuButton>
+00214:         <MenuNumber>2</MenuNumber>
+00215:         <PageNumber>1</PageNumber>
+00216:         <ButtonNumber>10</ButtonNumber>
+00217:         <Description>戻る</Description>
+00218:         <ButtonType>2</ButtonType>
+00219:         <InputData>1</InputData>
+00220:       </MenuButton>
+00221:     </MenuPage>
+00222:   </Menu>
+00223:   <Menu>
+00224:     <MenuNumber>3</MenuNumber>
+00225:     <Description>返品業務メニュー</Description>
+00226:     <MenuPage>
+00227:       <MenuNumber>3</MenuNumber>
+00228:       <PageNumber>1</PageNumber>
+00229:       <MenuButton>
+00230:         <MenuNumber>3</MenuNumber>
+00231:         <PageNumber>1</PageNumber>
+00232:         <ButtonNumber>1</ButtonNumber>
+00233:         <Description>一か月以内返品</Description>
+00234:         <ButtonType>1</ButtonType>
+00235:         <EventCode>208</EventCode>
+00236:         <InputData></InputData>
+00237:         <AddInfos>Opened</AddInfos>
+00238:       </MenuButton>
+00239:       <MenuButton>
+00240:         <MenuNumber>3</MenuNumber>
+00241:         <PageNumber>1</PageNumber>
+00242:         <ButtonNumber>4</ButtonNumber>
+00243:         <Description>一か月以内返品&#xa;(練習モード)</Description>
+00244:         <ButtonType>1</ButtonType>
+00245:         <EventCode>208</EventCode>
+00246:         <InputData>Training</InputData>
+00247:         <AddInfos>Opened</AddInfos>
+00248:       </MenuButton>
+00249:       <MenuButton>
+00250:         <MenuNumber>3</MenuNumber>
+00251:         <PageNumber>1</PageNumber>
+00252:         <ButtonNumber>6</ButtonNumber>
+00253:         <Description>返品</Description>
+00254:         <ButtonType>1</ButtonType>
+00255:         <EventCode>124</EventCode>
+00256:         <InputData></InputData>
+00257:         <AddInfos>Opened</AddInfos>
+00258:       </MenuButton>
+00259:       <MenuButton>
+00260:         <MenuNumber>3</MenuNumber>
+00261:         <PageNumber>1</PageNumber>
+00262:         <ButtonNumber>7</ButtonNumber>
+00263:         <Description>チャージ取消</Description>
+00264:         <ButtonType>1</ButtonType>
+00265:         <EventCode>462</EventCode>
+00266:         <InputData></InputData>
+00267:         <AddInfos>Opened</AddInfos>
+00268:       </MenuButton>
+00269:       <MenuButton>
+00270:         <MenuNumber>3</MenuNumber>
+00271:         <PageNumber>1</PageNumber>
+00272:         <ButtonNumber>9</ButtonNumber>
+00273:         <Description>返品&#xa;(練習モード)</Description>
+00274:         <ButtonType>1</ButtonType>
+00275:         <EventCode>124</EventCode>
+00276:         <InputData>Training</InputData>
+00277:         <AddInfos>Opened</AddInfos>
+00278:       </MenuButton>
+00279:       <MenuButton>
+00280:         <MenuNumber>3</MenuNumber>
+00281:         <PageNumber>1</PageNumber>
+00282:         <ButtonNumber>10</ButtonNumber>
+00283:         <Description>戻る</Description>
+00284:         <ButtonType>2</ButtonType>
+00285:         <InputData>1</InputData>
+00286:       </MenuButton>
+00287:     </MenuPage>
+00288:   </Menu>
+00289:   <Menu>
+00290:     <MenuNumber>4</MenuNumber>
+00291:     <Description>精算業務メニュー</Description>
+00292:     <MenuPage>
+00293:       <MenuNumber>4</MenuNumber>
+00294:       <PageNumber>1</PageNumber>
+00295:       <MenuButton>
+00296:         <MenuNumber>4</MenuNumber>
+00297:         <PageNumber>1</PageNumber>
+00298:         <ButtonNumber>1</ButtonNumber>
+00299:         <Description>釣銭機在高レポート</Description>
+00300:         <ButtonType>1</ButtonType>
+00301:         <EventCode>169</EventCode>
+00302:         <InputData>Report_CalculatedCash</InputData>
+00303:       </MenuButton>
+00304:       <MenuButton>
+00305:         <MenuNumber>4</MenuNumber>
+00306:         <PageNumber>1</PageNumber>
+00307:         <ButtonNumber>2</ButtonNumber>
+00308:         <Description>在高確認</Description>
+00309:         <ButtonType>1</ButtonType>
+00310:         <EventCode>231</EventCode>
+00311:         <InputData></InputData>
+00312:         <AddInfos>Opened</AddInfos>
+00313:       </MenuButton>
+00314:       <MenuButton>
+00315:         <MenuNumber>4</MenuNumber>
+00316:         <PageNumber>1</PageNumber>
+00317:         <ButtonNumber>3</ButtonNumber>
+00318:         <Description>余剰金回収</Description>
+00319:         <ButtonType>1</ButtonType>
+00320:         <EventCode>161</EventCode>
+00321:         <InputData></InputData>
+00322:         <AddInfos>Opened</AddInfos>
+00323:       </MenuButton>
+00324:       <MenuButton>
+00325:         <MenuNumber>4</MenuNumber>
+00326:         <PageNumber>1</PageNumber>
+00327:         <ButtonNumber>4</ButtonNumber>
+00328:         <Description>現金外在高確認</Description>
+00329:         <ButtonType>1</ButtonType>
+00330:         <EventCode>269</EventCode>
+00331:         <InputData></InputData>
+00332:         <AddInfos>Opened</AddInfos>
+00333:       </MenuButton>
+00334:       <MenuButton>
+00335:         <MenuNumber>4</MenuNumber>
+00336:         <PageNumber>1</PageNumber>
+00337:         <ButtonNumber>5</ButtonNumber>
+00338:         <Description>精算</Description>
+00339:         <ButtonType>1</ButtonType>
+00340:         <EventCode>150</EventCode>
+00341:         <InputData></InputData>
+00342:         <AddInfos>Opened</AddInfos>
+00343:       </MenuButton>
+00344:       <MenuButton>
+00345:         <MenuNumber>4</MenuNumber>
+00346:         <PageNumber>1</PageNumber>
+00347:         <ButtonNumber>10</ButtonNumber>
+00348:         <Description>戻る</Description>
+00349:         <ButtonType>2</ButtonType>
+00350:         <InputData>1</InputData>
+00351:       </MenuButton>
+00352:     </MenuPage>
+00353:   </Menu>
+00354:   <Menu>
+00355:     <MenuNumber>5</MenuNumber>
+00356:     <Description>手動操作メニュー</Description>
+00357:     <MenuPage>
+00358:       <MenuNumber>5</MenuNumber>
+00359:       <PageNumber>1</PageNumber>
+00360:       <MenuButton>
+00361:         <MenuNumber>5</MenuNumber>
+00362:         <PageNumber>1</PageNumber>
+00363:         <ButtonNumber>1</ButtonNumber>
+00364:         <Description>出金</Description>
+00365:         <ButtonType>1</ButtonType>
+00366:         <EventCode>258</EventCode>
+00367:         <InputData>CashOut</InputData>
+00368:         <AddInfos>Opened</AddInfos>
+00369:       </MenuButton>
+00370:       <MenuButton>
+00371:         <MenuNumber>5</MenuNumber>
+00372:         <PageNumber>1</PageNumber>
+00373:         <ButtonNumber>6</ButtonNumber>
+00374:         <Description>入金</Description>
+00375:         <ButtonType>1</ButtonType>
+00376:         <EventCode>258</EventCode>
+00377:         <InputData>CashIn</InputData>
+00378:         <AddInfos>Opened</AddInfos>
+00379:       </MenuButton>
+00380:       <MenuButton>
+00381:         <MenuNumber>5</MenuNumber>
+00382:         <PageNumber>1</PageNumber>
+00383:         <ButtonNumber>10</ButtonNumber>
+00384:         <Description>戻る</Description>
+00385:         <ButtonType>2</ButtonType>
+00386:         <InputData>1</InputData>
+00387:       </MenuButton>
+00388:     </MenuPage>
+00389:   </Menu>
+00390: </MainMenuDataSet></p>
+<hr />
+<p>FILE: Source/POS4U/Settings/MainMenuListOTCDrug.xml
+SHA256: 1acc76c26089dc3f5a755271c73efefbdee464b9f342d0f28bf41d2474344d90
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8" ?>
+00002: <MainMenuDataSet xmlns="http://tempuri.org/MainMenuDataSet.xsd">
+00003:   <Menu>
+00004:     <MenuNumber>1</MenuNumber>
+00005:     <Description>メインメニュー</Description>
+00006:     <MenuPage>
+00007:       <MenuNumber>1</MenuNumber>
+00008:       <PageNumber>1</PageNumber>
+00009:       <MenuButton>
+00010:         <MenuNumber>1</MenuNumber>
+00011:         <PageNumber>1</PageNumber>
+00012:         <ButtonNumber>1</ButtonNumber>
+00013:         <Description>売上</Description>
+00014:         <ButtonType>1</ButtonType>
+00015:         <EventCode>411</EventCode>
+00016:         <InputData></InputData>
+00017:         <AddInfos>Opened</AddInfos>
+00018:       </MenuButton>
+00019:       <MenuButton>
+00020:         <MenuNumber>1</MenuNumber>
+00021:         <PageNumber>1</PageNumber>
+00022:         <ButtonNumber>2</ButtonNumber>
+00023:         <Description>現金入金</Description>
+00024:         <ButtonType>1</ButtonType>
+00025:         <EventCode>206</EventCode>
+00026:         <InputData></InputData>
+00027:         <AddInfos>Opened</AddInfos>
+00028:       </MenuButton>
+00029:       <MenuButton>
+00030:         <MenuNumber>1</MenuNumber>
+00031:         <PageNumber>1</PageNumber>
+00032:         <ButtonNumber>3</ButtonNumber>
+00033:         <Description>領収証発行</Description>
+00034:         <ButtonType>2</ButtonType>
+00035:         <InputData>2</InputData>
+00036:       </MenuButton>
+00037:       <MenuButton>
+00038:         <MenuNumber>1</MenuNumber>
+00039:         <PageNumber>1</PageNumber>
+00040:         <ButtonNumber>4</ButtonNumber>
+00041:         <Description>返品業務</Description>
+00042:         <ButtonType>2</ButtonType>
+00043:         <InputData>3</InputData>
+00044:       </MenuButton>
+00045:       <MenuButton>
+00046:         <MenuNumber>1</MenuNumber>
+00047:         <PageNumber>1</PageNumber>
+00048:         <ButtonNumber>5</ButtonNumber>
+00049:         <Description>余剰金回収</Description>
+00050:         <ButtonType>1</ButtonType>
+00051:         <EventCode>161</EventCode>
+00052:         <InputData></InputData>
+00053:         <AddInfos>Opened</AddInfos>
+00054:       </MenuButton>
+00055:       <MenuButton>
+00056:         <MenuNumber>1</MenuNumber>
+00057:         <PageNumber>1</PageNumber>
+00058:         <ButtonNumber>6</ButtonNumber>
+00059:         <Description>在高確認</Description>
+00060:         <ButtonType>1</ButtonType>
+00061:         <EventCode>231</EventCode>
+00062:         <InputData></InputData>
+00063:         <AddInfos>Opened</AddInfos>
+00064:       </MenuButton>
+00065:       <MenuButton>
+00066:         <MenuNumber>1</MenuNumber>
+00067:         <PageNumber>1</PageNumber>
+00068:         <ButtonNumber>7</ButtonNumber>
+00069:         <Description>両替</Description>
+00070:         <ButtonType>1</ButtonType>
+00071:         <EventCode>246</EventCode>
+00072:         <InputData></InputData>
+00073:         <AddInfos>Opened</AddInfos>
+00074:       </MenuButton>
+00075:     </MenuPage>
+00076:     <MenuPage>
+00077:       <MenuNumber>1</MenuNumber>
+00078:       <PageNumber>2</PageNumber>
+00079:       <MenuButton>
+00080:         <MenuNumber>1</MenuNumber>
+00081:         <PageNumber>2</PageNumber>
+00082:         <ButtonNumber>1</ButtonNumber>
+00083:         <Description>ジャーナル検索</Description>
+00084:         <ButtonType>1</ButtonType>
+00085:         <EventCode>404</EventCode>
+00086:         <InputData></InputData>
+00087:         <AddInfos></AddInfos>
+00088:       </MenuButton>
+00089:       <MenuButton>
+00090:         <MenuNumber>1</MenuNumber>
+00091:         <PageNumber>2</PageNumber>
+00092:         <ButtonNumber>4</ButtonNumber>
+00093:         <Description>開設</Description>
+00094:         <ButtonType>1</ButtonType>
+00095:         <EventCode>149</EventCode>
+00096:         <InputData></InputData>
+00097:       </MenuButton>
+00098:       <MenuButton>
+00099:         <MenuNumber>1</MenuNumber>
+00100:         <PageNumber>2</PageNumber>
+00101:         <ButtonNumber>5</ButtonNumber>
+00102:         <Description>休止</Description>
+00103:         <ButtonType>1</ButtonType>
+00104:         <EventCode>174</EventCode>
+00105:         <InputData></InputData>
+00106:       </MenuButton>
+00107:       <MenuButton>
+00108:         <MenuNumber>1</MenuNumber>
+00109:         <PageNumber>2</PageNumber>
+00110:         <ButtonNumber>6</ButtonNumber>
+00111:         <Description>精算業務</Description>
+00112:         <ButtonType>2</ButtonType>
+00113:         <InputData>4</InputData>
+00114:       </MenuButton>
+00115:       <MenuButton>
+00116:         <MenuNumber>1</MenuNumber>
+00117:         <PageNumber>2</PageNumber>
+00118:         <ButtonNumber>7</ButtonNumber>
+00119:         <Description>売上フラッシュ</Description>
+00120:         <ButtonType>1</ButtonType>
+00121:         <EventCode>169</EventCode>
+00122:         <InputData>Report_SalesFlash</InputData>
+00123:       </MenuButton>
+00124:       <MenuButton>
+00125:         <MenuNumber>1</MenuNumber>
+00126:         <PageNumber>2</PageNumber>
+00127:         <ButtonNumber>9</ButtonNumber>
+00128:         <Description>手動操作</Description>
+00129:         <ButtonType>2</ButtonType>
+00130:         <InputData>5</InputData>
+00131:       </MenuButton>
+00132:       <MenuButton>
+00133:         <MenuNumber>1</MenuNumber>
+00134:         <PageNumber>2</PageNumber>
+00135:         <ButtonNumber>10</ButtonNumber>
+00136:         <Description>デバイス設定</Description>
+00137:         <ButtonType>1</ButtonType>
+00138:         <EventCode>184</EventCode>
+00139:         <InputData></InputData>
+00140:       </MenuButton>
+00141:     </MenuPage>
+00142:     <MenuPage>
+00143:       <MenuNumber>1</MenuNumber>
+00144:       <PageNumber>3</PageNumber>
+00145:       <MenuButton>
+00146:         <MenuNumber>1</MenuNumber>
+00147:         <PageNumber>3</PageNumber>
+00148:         <ButtonNumber>1</ButtonNumber>
+00149:         <Description>売上&#xa;(練習モード)</Description>
+00150:         <ButtonType>1</ButtonType>
+00151:         <EventCode>411</EventCode>
+00152:         <InputData>Training</InputData>
+00153:         <AddInfos>Opened</AddInfos>
+00154:       </MenuButton>
+00155:     </MenuPage>
+00156:   </Menu>
+00157:   <Menu>
+00158:     <MenuNumber>2</MenuNumber>
+00159:     <Description>領収証発行メニュー</Description>
+00160:     <MenuPage>
+00161:       <MenuNumber>2</MenuNumber>
+00162:       <PageNumber>1</PageNumber>
+00163:       <MenuButton>
+00164:         <MenuNumber>2</MenuNumber>
+00165:         <PageNumber>1</PageNumber>
+00166:         <ButtonNumber>1</ButtonNumber>
+00167:         <Description>領収証&#xa;アイテム指定領収証</Description>
+00168:         <ButtonType>1</ButtonType>
+00169:         <EventCode>444</EventCode>
+00170:         <InputData></InputData>
+00171:         <AddInfos>Opened</AddInfos>
+00172:       </MenuButton>
+00173:       <MenuButton>
+00174:         <MenuNumber>2</MenuNumber>
+00175:         <PageNumber>1</PageNumber>
+00176:         <ButtonNumber>4</ButtonNumber>
+00177:         <Description>領収証・アイテム指定&#xa;(練習モード)</Description>
+00178:         <ButtonType>1</ButtonType>
+00179:         <EventCode>444</EventCode>
+00180:         <InputData>Training</InputData>
+00181:         <AddInfos>Opened</AddInfos>
+00182:       </MenuButton>
+00183:       <MenuButton>
+00184:         <MenuNumber>2</MenuNumber>
+00185:         <PageNumber>1</PageNumber>
+00186:         <ButtonNumber>6</ButtonNumber>
+00187:         <Description>合算領収証</Description>
+00188:         <ButtonType>1</ButtonType>
+00189:         <EventCode>444</EventCode>
+00190:         <InputData>Sum</InputData>
+00191:         <AddInfos>Opened</AddInfos>
+00192:       </MenuButton>
+00193:       <MenuButton>
+00194:         <MenuNumber>2</MenuNumber>
+00195:         <PageNumber>1</PageNumber>
+00196:         <ButtonNumber>9</ButtonNumber>
+00197:         <Description>合算領収証&#xa;(練習モード)</Description>
+00198:         <ButtonType>1</ButtonType>
+00199:         <EventCode>444</EventCode>
+00200:         <InputData>Training,Sum</InputData>
+00201:         <AddInfos>Opened</AddInfos>
+00202:       </MenuButton>
+00203:       <MenuButton>
+00204:         <MenuNumber>2</MenuNumber>
+00205:         <PageNumber>1</PageNumber>
+00206:         <ButtonNumber>10</ButtonNumber>
+00207:         <Description>戻る</Description>
+00208:         <ButtonType>2</ButtonType>
+00209:         <InputData>1</InputData>
+00210:       </MenuButton>
+00211:     </MenuPage>
+00212:   </Menu>
+00213:   <Menu>
+00214:     <MenuNumber>3</MenuNumber>
+00215:     <Description>返品業務メニュー</Description>
+00216:     <MenuPage>
+00217:       <MenuNumber>3</MenuNumber>
+00218:       <PageNumber>1</PageNumber>
+00219:       <MenuButton>
+00220:         <MenuNumber>3</MenuNumber>
+00221:         <PageNumber>1</PageNumber>
+00222:         <ButtonNumber>1</ButtonNumber>
+00223:         <Description>一か月以内返品</Description>
+00224:         <ButtonType>1</ButtonType>
+00225:         <EventCode>208</EventCode>
+00226:         <InputData></InputData>
+00227:         <AddInfos>Opened</AddInfos>
+00228:       </MenuButton>
+00229:       <MenuButton>
+00230:         <MenuNumber>3</MenuNumber>
+00231:         <PageNumber>1</PageNumber>
+00232:         <ButtonNumber>4</ButtonNumber>
+00233:         <Description>一か月以内返品&#xa;(練習モード)</Description>
+00234:         <ButtonType>1</ButtonType>
+00235:         <EventCode>208</EventCode>
+00236:         <InputData>Training</InputData>
+00237:         <AddInfos>Opened</AddInfos>
+00238:       </MenuButton>
+00239:       <MenuButton>
+00240:         <MenuNumber>3</MenuNumber>
+00241:         <PageNumber>1</PageNumber>
+00242:         <ButtonNumber>6</ButtonNumber>
+00243:         <Description>返品</Description>
+00244:         <ButtonType>1</ButtonType>
+00245:         <EventCode>124</EventCode>
+00246:         <InputData></InputData>
+00247:         <AddInfos>Opened</AddInfos>
+00248:       </MenuButton>
+00249:       <MenuButton>
+00250:         <MenuNumber>3</MenuNumber>
+00251:         <PageNumber>1</PageNumber>
+00252:         <ButtonNumber>7</ButtonNumber>
+00253:         <Description>チャージ取消</Description>
+00254:         <ButtonType>1</ButtonType>
+00255:         <EventCode>462</EventCode>
+00256:         <InputData></InputData>
+00257:         <AddInfos>Opened</AddInfos>
+00258:       </MenuButton>
+00259:       <MenuButton>
+00260:         <MenuNumber>3</MenuNumber>
+00261:         <PageNumber>1</PageNumber>
+00262:         <ButtonNumber>9</ButtonNumber>
+00263:         <Description>返品&#xa;(練習モード)</Description>
+00264:         <ButtonType>1</ButtonType>
+00265:         <EventCode>124</EventCode>
+00266:         <InputData>Training</InputData>
+00267:         <AddInfos>Opened</AddInfos>
+00268:       </MenuButton>
+00269:       <MenuButton>
+00270:         <MenuNumber>3</MenuNumber>
+00271:         <PageNumber>1</PageNumber>
+00272:         <ButtonNumber>10</ButtonNumber>
+00273:         <Description>戻る</Description>
+00274:         <ButtonType>2</ButtonType>
+00275:         <InputData>1</InputData>
+00276:       </MenuButton>
+00277:     </MenuPage>
+00278:   </Menu>
+00279:   <Menu>
+00280:     <MenuNumber>4</MenuNumber>
+00281:     <Description>精算業務メニュー</Description>
+00282:     <MenuPage>
+00283:       <MenuNumber>4</MenuNumber>
+00284:       <PageNumber>1</PageNumber>
+00285:       <MenuButton>
+00286:         <MenuNumber>4</MenuNumber>
+00287:         <PageNumber>1</PageNumber>
+00288:         <ButtonNumber>1</ButtonNumber>
+00289:         <Description>釣銭機在高レポート</Description>
+00290:         <ButtonType>1</ButtonType>
+00291:         <EventCode>169</EventCode>
+00292:         <InputData>Report_CalculatedCash</InputData>
+00293:       </MenuButton>
+00294:       <MenuButton>
+00295:         <MenuNumber>4</MenuNumber>
+00296:         <PageNumber>1</PageNumber>
+00297:         <ButtonNumber>2</ButtonNumber>
+00298:         <Description>在高確認</Description>
+00299:         <ButtonType>1</ButtonType>
+00300:         <EventCode>231</EventCode>
+00301:         <InputData></InputData>
+00302:         <AddInfos>Opened</AddInfos>
+00303:       </MenuButton>
+00304:       <MenuButton>
+00305:         <MenuNumber>4</MenuNumber>
+00306:         <PageNumber>1</PageNumber>
+00307:         <ButtonNumber>3</ButtonNumber>
+00308:         <Description>余剰金回収</Description>
+00309:         <ButtonType>1</ButtonType>
+00310:         <EventCode>161</EventCode>
+00311:         <InputData></InputData>
+00312:         <AddInfos>Opened</AddInfos>
+00313:       </MenuButton>
+00314:       <MenuButton>
+00315:         <MenuNumber>4</MenuNumber>
+00316:         <PageNumber>1</PageNumber>
+00317:         <ButtonNumber>4</ButtonNumber>
+00318:         <Description>現金外在高確認</Description>
+00319:         <ButtonType>1</ButtonType>
+00320:         <EventCode>269</EventCode>
+00321:         <InputData></InputData>
+00322:         <AddInfos>Opened</AddInfos>
+00323:       </MenuButton>
+00324:       <MenuButton>
+00325:         <MenuNumber>4</MenuNumber>
+00326:         <PageNumber>1</PageNumber>
+00327:         <ButtonNumber>5</ButtonNumber>
+00328:         <Description>精算</Description>
+00329:         <ButtonType>1</ButtonType>
+00330:         <EventCode>150</EventCode>
+00331:         <InputData></InputData>
+00332:         <AddInfos>Opened</AddInfos>
+00333:       </MenuButton>
+00334:       <MenuButton>
+00335:         <MenuNumber>4</MenuNumber>
+00336:         <PageNumber>1</PageNumber>
+00337:         <ButtonNumber>10</ButtonNumber>
+00338:         <Description>戻る</Description>
+00339:         <ButtonType>2</ButtonType>
+00340:         <InputData>1</InputData>
+00341:       </MenuButton>
+00342:     </MenuPage>
+00343:   </Menu>
+00344:   <Menu>
+00345:     <MenuNumber>5</MenuNumber>
+00346:     <Description>手動操作メニュー</Description>
+00347:     <MenuPage>
+00348:       <MenuNumber>5</MenuNumber>
+00349:       <PageNumber>1</PageNumber>
+00350:       <MenuButton>
+00351:         <MenuNumber>5</MenuNumber>
+00352:         <PageNumber>1</PageNumber>
+00353:         <ButtonNumber>1</ButtonNumber>
+00354:         <Description>出金</Description>
+00355:         <ButtonType>1</ButtonType>
+00356:         <EventCode>258</EventCode>
+00357:         <InputData>CashOut</InputData>
+00358:         <AddInfos>Opened</AddInfos>
+00359:       </MenuButton>
+00360:       <MenuButton>
+00361:         <MenuNumber>5</MenuNumber>
+00362:         <PageNumber>1</PageNumber>
+00363:         <ButtonNumber>6</ButtonNumber>
+00364:         <Description>入金</Description>
+00365:         <ButtonType>1</ButtonType>
+00366:         <EventCode>258</EventCode>
+00367:         <InputData>CashIn</InputData>
+00368:         <AddInfos>Opened</AddInfos>
+00369:       </MenuButton>
+00370:       <MenuButton>
+00371:         <MenuNumber>5</MenuNumber>
+00372:         <PageNumber>1</PageNumber>
+00373:         <ButtonNumber>10</ButtonNumber>
+00374:         <Description>戻る</Description>
+00375:         <ButtonType>2</ButtonType>
+00376:         <InputData>1</InputData>
+00377:       </MenuButton>
+00378:     </MenuPage>
+00379:   </Menu>
+00380: </MainMenuDataSet></p>
+<p>END ORIGINAL PROMPT</p></div></a><div class="index-item-stats">
+<div class="index-item-long-text"><div class="truncatable"><div class="truncatable-content"><div class="index-item-long-text-content"><h1>文件级源码笔记：config_config_pos4u</h1>
+<h2>Batch 信息</h2>
+<ul>
+<li>Batch ID: batch_024</li>
+<li>Batch Name: config_config_pos4u</li>
+<li>Module: config</li>
+<li>Purpose: 解释项目配置、构建配置、依赖配置和运行时配置加载线索</li>
+</ul>
+<hr />
+<h2>文件：Source/POS4U/Settings/MainMenuListGoSemiSelfPaymentStation.xml</h2>
+<h3>1. 文件定位</h3>
+<p>本文件是 <strong>Go 系列半自助结账台（Semi Self Payment Station）</strong> 的主菜单配置。它定义了该终端类型在触摸屏上显示的全部菜单结构、按钮布局、事件映射和子菜单导航关系。文件属于 <code>config</code> 模块下的运行时配置层，被菜单渲染引擎加载后生成交互界面。</p>
+<p>从文件名命名模式 <code>MainMenuList{FunctionFlag}.xml</code> 推断，项目通过切换不同的 XML 文件来实现不同终端模式的功能菜单差异化，属于 <strong>配置驱动菜单</strong> 模式。</p>
+<p><strong>重要发现</strong>：本文件与 <code>MainMenuListLaneSelfPaymentStation.xml</code> 的 SHA256 完全一致（<code>a3ceafc1568ce77061754194456f6f1700b92702345c7456c79844adc8794430</code>），说明两者当前内容完全相同（第 1–390 行），但文件名暗示它们服务于不同的业务场景。需要结合场景选择逻辑确认是否存在运行时的差异来源（如其他配置文件或代码层处理逻辑）。</p>
+<h3>2. 对外暴露内容</h3>
+<p>本文件是纯 XML 配置数据，不导出 class/function。其对外暴露的是菜单数据集合，由解析组件按照以下结构消费：</p>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>位置</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&lt;MainMenuDataSet&gt;</code></td>
+<td>第 2 行</td>
+<td>根元素，命名空间 <code>http://tempuri.org/MainMenuDataSet.xsd</code>，是主菜单数据集的容器。一个文件包含多个 <code>&lt;Menu&gt;</code> 元素。</td>
+</tr>
+<tr>
+<td><code>&lt;Menu&gt;</code> (MenuNumber=1)</td>
+<td>第 3–176 行</td>
+<td><strong>主菜单</strong>（メインメニュー），包含 3 个页面（PageNumber 1/2/3），覆盖结账、现金、领收证、返品、余剰金回收、在高確認、両替、筐体/打印机开启及练习模式入口。</td>
+</tr>
+<tr>
+<td><code>&lt;Menu&gt;</code> (MenuNumber=2)</td>
+<td>第 177–232 行</td>
+<td><strong>领收证发行菜单</strong>（領収証発行メニュー），提供单据发行操作入口和练习模式。</td>
+</tr>
+<tr>
+<td><code>&lt;Menu&gt;</code> (MenuNumber=3)</td>
+<td>第 233–288 行</td>
+<td><strong>返品业务菜单</strong>（返品業務メニュー），提供退货操作入口和练习模式。</td>
+</tr>
+<tr>
+<td><code>&lt;Menu&gt;</code> (MenuNumber=4)</td>
+<td>第 289–353 行</td>
+<td><strong>精算业务菜单</strong>（精算業務メニュー），提供现金结算、回收、报告、精算等操作。</td>
+</tr>
+<tr>
+<td><code>&lt;Menu&gt;</code> (MenuNumber=5)</td>
+<td>第 354–389 行</td>
+<td><strong>手动操作菜单</strong>（手動操作メニュー），提供手动出金/入金操作。</td>
+</tr>
+</tbody>
+</table>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>本文件是静态数据，没有执行逻辑。运行时行为由菜单渲染引擎驱动：</p>
+<ol>
+<li><strong>菜单加载</strong>：系统启动或切换模式时，根据终端类型标识（本场景为 <code>GoSemiSelfPaymentStation</code>）加载对应的 XML 文件。</li>
+<li><strong>根节点解析</strong>：从 <code>&lt;MainMenuDataSet&gt;</code>（第 2 行）开始遍历所有 <code>&lt;Menu&gt;</code> 子节点。</li>
+<li><strong>菜单渲染</strong>：每个 <code>&lt;Menu&gt;</code> 渲染为一个独立的功能菜单页，<code>&lt;Description&gt;</code>（第 5 行）作为标题显示。</li>
+<li><strong>页面分页</strong>：一个 Menu 下包含多个 <code>&lt;MenuPage&gt;</code>，<code>PageNumber</code> 决定按钮的分页归属：</li>
+<li>第 1 页（第 6–95 行）：包含 8 个按钮，覆盖会計機、現金入金、領収証発行等核心业务。</li>
+<li>第 2 页（第 96–161 行）：包含 7 个按钮，覆盖ジャーナル検索、開設、休止、精算業務等管理功能。</li>
+<li>第 3 页（第 162–175 行）：仅 1 个"会計機（练习模式）"按钮。</li>
+<li><strong>按钮分发</strong>：每个 <code>&lt;MenuButton&gt;</code> 根据 <code>ButtonType</code> 决定行为路径：</li>
+<li><strong>ButtonType=1</strong>（第 13 行等）：触发事件，由 <code>EventCode</code> 指定的编号派发到对应事件处理逻辑。</li>
+<li><strong>ButtonType=2</strong>（第 34 行等）：子菜单导航，<code>InputData</code> 指向目标 <code>MenuNumber</code>。</li>
+<li><strong>条件控制</strong>：<code>&lt;AddInfos&gt;</code> 和 <code>&lt;InputData&gt;</code> 中的逗号分隔值作为附加参数传递给事件处理，用于权限校验或功能开关。例如：</li>
+<li><code>Opened</code>（第 17 行）：指示按钮需要特定权限才可操作。</li>
+<li><code>SelfCover</code>（第 83 行）：标记该操作需要 Self Cover（自助盖）装置。</li>
+</ol>
+<h3>4. 关键类 / 组件说明</h3>
+<p>本文件是数据文件，没有程序类。但有若干关键的<strong>数据模式</strong>值得说明：</p>
+<h4>4.1 按钮类型机制（ButtonType）</h4>
+<table>
+<thead>
+<tr>
+<th>位置</th>
+<th>值</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>第 13 行等</td>
+<td><code>1</code></td>
+<td><strong>事件按钮</strong>。点击后触发 <code>EventCode</code> 指定的系统事件。这是最主要的按钮类型，覆盖卖上、现金、查询等所有业务操作。</td>
+</tr>
+<tr>
+<td>第 34 行等</td>
+<td><code>2</code></td>
+<td><strong>子菜单导航按钮</strong>。<code>InputData</code> 存放目标 <code>MenuNumber</code>（如 <code>2</code> 指向领收证发行菜单），实现菜单层级导航。典型用例是所有"戻る"按钮。</td>
+</tr>
+</tbody>
+</table>
+<h4>4.2 事件编码体系（EventCode）</h4>
+<p>本文件引用了大量数字事件码，它们作为系统级消息 ID 被分发给事件处理框架：</p>
+<table>
+<thead>
+<tr>
+<th>EventCode</th>
+<th>按钮文字</th>
+<th>行号</th>
+<th>推测用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>411</code></td>
+<td>会計機</td>
+<td>第 15 行</td>
+<td>进入结账（会計）会话</td>
+</tr>
+<tr>
+<td><code>206</code></td>
+<td>現金入金</td>
+<td>第 25 行</td>
+<td>现金存入操作</td>
+</tr>
+<tr>
+<td><code>161</code></td>
+<td>余剰金回収</td>
+<td>第 51 行</td>
+<td>回收超出部分的现金</td>
+</tr>
+<tr>
+<td><code>231</code></td>
+<td>在高確認</td>
+<td>第 61 行</td>
+<td>查询当前现金持有额</td>
+</tr>
+<tr>
+<td><code>246</code></td>
+<td>両替</td>
+<td>第 71 行</td>
+<td>货币兑换操作</td>
+</tr>
+<tr>
+<td><code>431</code></td>
+<td>筐体オープン</td>
+<td>第 81 行</td>
+<td>开启设备外壳</td>
+</tr>
+<tr>
+<td><code>432</code></td>
+<td>プリンタオープン</td>
+<td>第 91 行</td>
+<td>开启打印机</td>
+</tr>
+<tr>
+<td><code>404</code></td>
+<td>ジャーナル検索</td>
+<td>第 105 行</td>
+<td>日志查询</td>
+</tr>
+<tr>
+<td><code>149</code></td>
+<td>開設</td>
+<td>第 115 行</td>
+<td>开业操作</td>
+</tr>
+<tr>
+<td><code>174</code></td>
+<td>休止</td>
+<td>第 124 行</td>
+<td>暂停营业</td>
+</tr>
+<tr>
+<td><code>169</code></td>
+<td>売上フラッシュ / 釣銭機在高レポート</td>
+<td>第 141/301 行</td>
+<td>生成销售或现金报告</td>
+</tr>
+<tr>
+<td><code>184</code></td>
+<td>デバイス設定</td>
+<td>第 158 行</td>
+<td>打开设备设置</td>
+</tr>
+<tr>
+<td><code>444</code></td>
+<td>（領収証相关）</td>
+<td>第 189 行</td>
+<td>领收证发行</td>
+</tr>
+<tr>
+<td><code>150</code></td>
+<td>精算</td>
+<td>第 339 行</td>
+<td>结账结算</td>
+</tr>
+<tr>
+<td><code>124</code></td>
+<td>返品</td>
+<td>第 265 行</td>
+<td>退货操作</td>
+</tr>
+<tr>
+<td><code>208</code></td>
+<td>一か月以内返品</td>
+<td>第 245 行</td>
+<td>一个月内退货</td>
+</tr>
+<tr>
+<td><code>258</code></td>
+<td>出金/入金</td>
+<td>第 366 行</td>
+<td>手动现金处理</td>
+</tr>
+<tr>
+<td><code>269</code></td>
+<td>現金外在高確認</td>
+<td>第 330 行</td>
+<td>非现金资产确认</td>
+</tr>
+</tbody>
+</table>
+<h4>4.3 InputData 模式</h4>
+<p><code>&lt;InputData&gt;</code> 在 ButtonType=1 时提供事件参数，在 ButtonType=2 时提供目标 MenuNumber：</p>
+<ul>
+<li><strong>空值</strong>（第 26 行等）：无附加参数，使用事件的默认行为。</li>
+<li><strong><code>Training</code></strong>（第 172 行等）：进入练习模式。</li>
+<li><strong><code>SemiSelf</code></strong>（第 16 行等）：标记为半自助模式。</li>
+<li><strong><code>Sum</code></strong>（第 210 行等）：合算（合并）发行模式。</li>
+<li><strong><code>Report_SalesFlash</code></strong>（第 142 行）：触发销售快报报告。</li>
+<li><strong><code>Report_CalculatedCash</code></strong>（第 302 行）：触发计算现金报告。</li>
+<li><strong><code>CashOut</code> / <code>CashIn</code></strong>（第 367/377 行）：手动操作模式参数。</li>
+<li><strong>数字字符串</strong>（如 <code>2</code>, <code>3</code>, <code>4</code>, <code>5</code>）：ButtonType=2 时的目标菜单编号。</li>
+</ul>
+<h3>5. 依赖关系</h3>
+<table>
+<thead>
+<tr>
+<th>依赖类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>XML Schema</strong></td>
+<td><code>http://tempuri.org/MainMenuDataSet.xsd</code>（第 2 行）。定义了 <code>MainMenuDataSet</code> 的合法结构。实际项目应包含此 XSD 文件用于校验。</td>
+</tr>
+<tr>
+<td><strong>菜单渲染引擎</strong></td>
+<td>需要结合其他文件确认。解析此 XML 的 C# 组件（推测在 <code>WinPOS4U</code> 或 <code>Settings</code> 相关模块），需从 <code>&lt;MainMenuDataSet&gt;</code> 反序列化为内存对象。</td>
+</tr>
+<tr>
+<td><strong>事件处理框架</strong></td>
+<td>需要结合其他文件确认。<code>EventCode</code> 映射到具体的事件处理 handler。</td>
+</tr>
+<tr>
+<td><strong>权限/条件框架</strong></td>
+<td><code>AddInfos</code> 如 <code>Opened</code>, <code>SelfCover</code>, <code>IsHyBridMode</code> 需要对应的权限系统支持，需要结合其他文件确认。</td>
+</tr>
+</tbody>
+</table>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li><strong>当前文件没有显式错误处理</strong>：作为纯 XML 配置，本文件没有错误处理机制。</li>
+<li><strong>依赖的校验点</strong>：菜单渲染引擎应在加载时校验 XML 格式是否正确、<code>EventCode</code> 是否有对应注册的 handler、<code>MenuNumber</code> 是否在 <code>InputData</code> 中正确引用。</li>
+<li><strong>潜在风险</strong>：<code>AddInfos</code> 中的逗号分隔值（如 <code>Opened,SelfCover</code> 第 83 行）若分隔符处理不当可能导致条件判断错误。</li>
+</ul>
+<h3>7. 测试相关</h3>
+<ul>
+<li><strong>当前输入中不包含对应测试</strong>。</li>
+<li><strong>建议的测试方向</strong>：</li>
+<li><strong>Schema 合规测试</strong>：验证 XML 结构与 XSD 一致。</li>
+<li><strong>引用完整性测试</strong>：验证所有 ButtonType=2 的 <code>InputData</code> 引用的 <code>MenuNumber</code> 都存在。</li>
+<li><strong>差异对比测试</strong>：与同批次其他文件（尤其 <code>LaneSelfPaymentStation.xml</code>）对比一致性。</li>
+<li><strong>事件码注册测试</strong>：验证文件中所有 <code>EventCode</code> 都有对应的 handler 注册。</li>
+</ul>
+<h3>8. 新人阅读建议</h3>
+<ol>
+<li>先看整体结构：留意 <code>&lt;Menu&gt;</code> 的 <code>MenuNumber</code>（1–5）和 <code>&lt;Description&gt;</code> 的标题，理解菜单层级树。</li>
+<li>关注按钮模式：区分 <code>ButtonType=1</code>（事件触发）和 <code>ButtonType=2</code>（子菜单导航），这是理解界面导航的关键。</li>
+<li>对比理解 <code>InputData</code>：同一个 EventCode 配合不同 InputData（如 <code>411</code> + <code>SemiSelf</code> 与 <code>411</code> + <code>Training,SemiSelf</code>）产生不同行为，说明 EventCode 是行为大类，InputData 是参数细化。</li>
+<li>留意 <code>AddInfos</code> 的修饰作用：<code>Opened</code>、<code>SelfCover</code> 等标记影响按钮的可用/可见状态。</li>
+</ol>
+<h3>9. 不确定点</h3>
+<ol>
+<li>需要结合其他文件确认 <code>EventCode</code>（如 <code>411</code>、<code>206</code> 等）的具体 handler 定义在哪个模块。</li>
+<li>需要结合其他文件确认 <code>AddInfos</code> 中 <code>Opened</code>、<code>SelfCover</code> 等标记的具体实现逻辑。</li>
+<li>需要结合其他文件确认菜单加载机制——系统如何根据终端类型选择对应的 <code>MainMenuList*.xml</code>。</li>
+<li>本文件与 <code>MainMenuListLaneSelfPaymentStation.xml</code> SHA256 完全一致，需要确认这是设计如此（有意复用配置）还是部署时的拷贝错误。文件名暗示了不同的业务场景（GoSemiSelf vs LaneSelf），但内容一致可能意味着两者在菜单层面无差异。</li>
+</ol>
+<hr />
+<h2>文件：Source/POS4U/Settings/MainMenuListGoSemiSelfRegister.xml</h2>
+<h3>1. 文件定位</h3>
+<p>本文件是 <strong>Go 系列半自助登録机（Semi Self Register）</strong> 的主菜单配置。与 Payment Station（结账台）不同，Register（登録机）主要承担商品扫描/登记的职责，而非收款。因此其菜单结构非常精简（仅 2 个 Menu 共 2 个页面），不含现金操作、领收证、返品等子菜单，反映了登録机在业务流中只负责入口登记的定位。</p>
+<p>文件仅有 82 行，是本批 5 个文件中最小的一个。</p>
+<h3>2. 对外暴露内容</h3>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>位置</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&lt;MainMenuDataSet&gt;</code></td>
+<td>第 2 行</td>
+<td>根元素，同 schema。</td>
+</tr>
+<tr>
+<td><code>&lt;Menu&gt;</code> (MenuNumber=1)</td>
+<td>第 3–81 行</td>
+<td><strong>主菜单</strong>（メインメニュー），仅此一个顶层菜单，包含 2 个页面，覆盖登録、中間取引削除、開設、休止、精算、デバイス設定及练习模式。</td>
+</tr>
+</tbody>
+</table>
+<p>本文件没有定义子菜单（MenuNumber=2/3/4/5），所有操作都在一个菜单层级内。</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<ol>
+<li><strong>菜单渲染</strong>：加载后渲染为一个菜单（"メインメニュー"），分两页显示按钮。</li>
+<li><strong>第 1 页（第 6–66 行）</strong>：包含 6 个按钮：</li>
+<li>"登録機"（第 13 行）：EventCode=<code>411</code>，进入登记会话（无 <code>SemiSelf</code> 参数，与 PaymentStation 不同）。</li>
+<li>"中間取引削除"（第 23 行）：EventCode=<code>554</code>，中间交易删除。<code>AddInfos</code> 包含 <code>IsHyBridMode</code>，暗示该功能仅在混合模式（Hybrid Mode）下可用。</li>
+<li>"開設"（第 33 行）：开业操作。</li>
+<li>"休止"（第 41 行）：暂停操作。</li>
+<li>"精算"（第 50 行）：结算操作。</li>
+<li>"デバイス設定"（第 60 行）：设备设置。</li>
+<li><strong>第 2 页（第 67–80 行）</strong>：仅 1 个按钮：</li>
+<li>"登録機 (練習モード)"（第 73 行）：训练模式下的登记功能。</li>
+</ol>
+<h3>4. 关键数据组件说明</h3>
+<h4>4.1 特殊按钮：中間取引削除（EventCode=554）</h4>
+<p>位于第 22–28 行，是本文件与其他文件最大的差异之一：</p>
+<ul>
+<li><strong>EventCode <code>554</code></strong>：仅在 Register 模式中出现，用于删除中间交易（即在交易尚未完成时取消的部分交易记录）。</li>
+<li><strong><code>&lt;AddInfos&gt;Opened,IsHyBridMode&lt;/AddInfos&gt;</code></strong>（第 27 行）：</li>
+<li><code>Opened</code>：需要开启状态权限。</li>
+<li><code>IsHyBridMode</code>：<strong>仅在混合模式下显示</strong>。Hybrid Mode 可能是指该登録机同时支持自助和收银员辅助的混合工作模式。这个标记是本文件的独有条件之一。</li>
+</ul>
+<h4>4.2 无现金相关功能</h4>
+<p>与 PaymentStation 和 LocalPOS 不同，本文件不包含：
+- 現金入金（EventCode=206）
+- 在高確認（EventCode=231）
+- 両替（EventCode=246）
+- 余剰金回収（EventCode=161）
+- 領収証発行関連</p>
+<p>这符合"登録机不处理现金"的业务假设：登録机只负责登记商品，收款由 PaymentStation 完成。</p>
+<h4>4.3 无多级子菜单</h4>
+<p><code>MenuNumber=1</code> 外的所有菜单均未定义，文件结构仅包含一个 <code>Menu</code> 元素。这意味着 Register 的菜单是扁平的，所有操作都集中在一个菜单中。</p>
+<h3>5. 依赖关系</h3>
+<table>
+<thead>
+<tr>
+<th>依赖类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>XML Schema</strong></td>
+<td>同批次其他文件，<code>http://tempuri.org/MainMenuDataSet.xsd</code>（第 2 行）。</td>
+</tr>
+<tr>
+<td><strong>IsHyBridMode 条件框架</strong></td>
+<td><code>AddInfos</code> 中的 <code>IsHyBridMode</code> 需要项目有混合模式判定逻辑，需要结合其他文件确认。</td>
+</tr>
+<tr>
+<td><strong>EventCode 554</strong></td>
+<td>中间交易删除的事件 handler，本文件独有，需要结合其他文件确认。</td>
+</tr>
+</tbody>
+</table>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li><strong>当前文件没有显式错误处理</strong>。</li>
+<li><strong>边界情况</strong>：文件极短（82 行），如果菜单引擎强依赖多菜单结构，可能需要在加载时对缺失的 <code>&lt;Menu&gt;</code> 做缺省处理。</li>
+</ul>
+<h3>7. 测试相关</h3>
+<ul>
+<li><strong>当前输入中不包含对应测试</strong>。</li>
+<li><strong>建议的测试方向</strong>：</li>
+<li><strong>回归测试</strong>：验证 Register 模式下菜单仅显示本文件定义的按钮，不出现其他模式的按钮。</li>
+<li><strong>IsHyBridMode 条件测试</strong>：验证 Hybrid Mode 开关正确控制"中間取引削除"按钮的可见性。</li>
+<li><strong>菜单精简验证</strong>：确认 Register 没有意外继承其他模式的功能按钮。</li>
+</ul>
+<h3>8. 新人阅读建议</h3>
+<ol>
+<li>先与 <code>GoSemiSelfPaymentStation.xml</code> 对比，理解 Register 和 PaymentStation 的职责分离。</li>
+<li>关注 <code>IsHyBridMode</code> 这个独特的条件标记，理解项目对混合工作模式的支持。</li>
+<li>注意"中間取引削除"按钮的存在及其独特性，这是 Register 特有的业务功能。</li>
+</ol>
+<h3>9. 不确定点</h3>
+<ol>
+<li>需要结合其他文件确认 <code>IsHyBridMode</code> 条件框架的定义与实现。</li>
+<li>需要结合其他文件确认 EventCode <code>554</code>（中間取引削除）的具体 handler 逻辑。</li>
+<li>需要结合其他文件确认系统如何区分"GoSemiSelfRegister"与"GoSemiSelfPaymentStation"两种终端类型。</li>
+<li>需要确认 Register 模式下实际的收款流程：如果 Register 不处理现金，那么客户在何处完成支付？是否与中国 POS 业务模式（如扫码支付）有关？</li>
+</ol>
+<hr />
+<h2>文件：Source/POS4U/Settings/MainMenuListLaneSelfPaymentStation.xml</h2>
+<h3>1. 文件定位</h3>
+<p>本文件是 <strong>Lane 系列（通道式）半自助结账台（Lane Self Payment Station）</strong> 的主菜单配置。文件的含义是其应用于通道式（Lane）布局下的半自助收款机。</p>
+<p><strong>重要发现</strong>：本文件与前文 <code>MainMenuListGoSemiSelfPaymentStation.xml</code> 的内容完全一致（SHA256 相同，全部 390 行完全一致）。这意味着在当前版本的代码库中，Lane 和 Go 系列的 SemiSelf PaymentStation 使用了完全相同的菜单配置。</p>
+<h3>2. 对外暴露内容</h3>
+<p>与 <code>MainMenuListGoSemiSelfPaymentStation.xml</code> 完全一致，见前文。</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>与 <code>MainMenuListGoSemiSelfPaymentStation.xml</code> 完全一致，见前文。</p>
+<h3>4. 关键数据组件说明</h3>
+<h4>4.1 文件存在本身的价值</h4>
+<p>虽然内容与其他文件一致，但文件的存在本身传递了重要信息：
+- 项目具有 Lane 和 Go 两种硬件平台（或柜台布局）的产品线。
+- 当前菜单配置层面两者没有差异，但不排除未来将会产生差异（这是配置分离的前瞻性设计）。
+- 其他运行时设置（如设备配置、OPOS 配置等）可能在 Lane 和 Go 之间有区别。</p>
+<h3>5. 依赖关系</h3>
+<p>同前文 <code>MainMenuListGoSemiSelfPaymentStation.xml</code>。</p>
+<h3>6. 错误处理与边界情况</h3>
+<p>同前文。</p>
+<h3>7. 测试相关</h3>
+<ul>
+<li><strong>建议重点测试</strong>：针对 Lane 与 Go 的差异测试，如果项目有其他配置或代码区分两者，需要验证菜单层面不产生错误耦合。如果内容无差异，可考虑重构为共享配置（但需确认历史原因）。</li>
+</ul>
+<h3>8. 新人阅读建议</h3>
+<ol>
+<li>重点关注文件的<strong>存在意义而非内容</strong>：内容与 Go 版本一致，但文件名不同，表明产品线存在硬件/布局差异。这个文件是未来功能分化的预留点。</li>
+<li>结合物理设备配置（如 OposConfig、DeviceConfig 等）理解 Lane 和 Go 的区别。</li>
+</ol>
+<h3>9. 不确定点</h3>
+<ol>
+<li><strong>SHA256 一致需要确认是设计还是错误</strong>：Lane 和 Go 的 Payment Station 当前菜单配置完全相同。需要确认这是业务上确实不需要差异，还是工程上的欠债。</li>
+<li>需要结合其他文件确认 Lane 和 Go 在设备配置（SettingWinPOSDevice.xml 或类似配置）层面是否存在差异。</li>
+<li>需要结合其他文件确认系统选择 <code>LaneSelfPaymentStation</code> 还是 <code>GoSemiSelfPaymentStation</code> 的文件选择逻辑。</li>
+</ol>
+<hr />
+<h2>文件：Source/POS4U/Settings/MainMenuListLocalPOS.xml</h2>
+<h3>1. 文件定位</h3>
+<p>本文件是 <strong>LocalPOS（本地 POS）</strong> 模式的主菜单配置。LocalPOS 是指传统的收银员操作 POS 模式（对应 Go 和 Lane 的自动/半自助模式）。它是一个完整功能的全功能 POS 终端，覆盖卖上、现金、领收证、返品、结算等全部业务流程。</p>
+<p>在 5 个文件中，本文件是最接近传统 POS 收银机的配置。它不含 SemiSelf、SelfCover 等自助设备标记。</p>
+<h3>2. 对外暴露内容</h3>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>位置</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&lt;MainMenuDataSet&gt;</code></td>
+<td>第 2 行</td>
+<td>根元素。</td>
+</tr>
+<tr>
+<td><code>&lt;Menu&gt;</code> (MenuNumber=1)</td>
+<td>第 3–166 行</td>
+<td><strong>主菜单</strong>（メインメニュー），3 个页面。</td>
+</tr>
+<tr>
+<td><code>&lt;Menu&gt;</code> (MenuNumber=2)</td>
+<td>第 167–222 行</td>
+<td><strong>领收证发行菜单</strong>。</td>
+</tr>
+<tr>
+<td><code>&lt;Menu&gt;</code> (MenuNumber=3)</td>
+<td>第 223–288 行</td>
+<td><strong>返品业务菜单</strong>（含"チャージ取消"）。</td>
+</tr>
+<tr>
+<td><code>&lt;Menu&gt;</code> (MenuNumber=4)</td>
+<td>第 289–353 行</td>
+<td><strong>精算业务菜单</strong>。</td>
+</tr>
+<tr>
+<td><code>&lt;Menu&gt;</code> (MenuNumber=5)</td>
+<td>第 354–389 行</td>
+<td><strong>手动操作菜单</strong>。</td>
+</tr>
+</tbody>
+</table>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>整体结构与 GoSemiSelfPaymentStation 相同（5 个 Menu，3 个 Page 的主菜单），但有重要差异：</p>
+<h4>3.1 首页第 1 个按钮（第 13 行）</h4>
+<ul>
+<li><strong>"売上"</strong>（Sales），EventCode=<code>411</code>，无 <code>SemiSelf</code> 参数。</li>
+<li>对比 PaymentStation 的"会計機"（Accounting Machine），名称不同但 EventCode 相同（<code>411</code>），说明后端可能复用同一处理逻辑但前端显示不同的业务标签。</li>
+</ul>
+<h4>3.2 首页第 10 个按钮（第 78 行）</h4>
+<ul>
+<li><strong>"ドロアオープン"</strong>（Drawer Open），EventCode=<code>449</code>，<code>AddInfos</code>=<code>Opened</code>。</li>
+<li>这是现金抽屉（cash drawer）的物理开启按钮，是本地 POS 模式下收银员手动控制现金抽屉的入口。PaymentStation 对应位置是"筐体オープン"（EventCode=431）和"プリンタオープン"（EventCode=432），反映了不同的硬件配置。</li>
+</ul>
+<h4>3.3 返品菜单中的"チャージ取消"（第 263 行）</h4>
+<ul>
+<li><strong>"チャージ取消"</strong>（Charge Cancel），EventCode=<code>462</code>，<code>AddInfos</code>=<code>Opened</code>。</li>
+<li>在其他文件中未出现，是 LocalPOS 特有功能，可能用于取消已发生的账务充值/收费。</li>
+</ul>
+<h3>4. 关键数据组件说明</h3>
+<h4>4.1 EventCode 449（ドロアオープン）</h4>
+<p>位于第 80–83 行：
+- 仅 LocalPOS 有此按钮（位于首页第 10 位，ButtonNumber=10）。
+- 说明 LocalPOS 模式下有物理现金抽屉，这是传统 POS 机的标准硬件配置。
+- PaymentStation 对应的"筐体オープン"（431）和"プリンタオープン"（432）在本文件中不存在。</p>
+<h4>4.2 EventCode 462（チャージ取消）</h4>
+<p>位于第 264–267 行：
+- 仅 LocalPOS 和 OTCDrug 有"チャージ取消"按钮（返品菜单中，第 7 个按钮位置）。
+- 可能用于取消误操作产生的收费，或退款场景下的账务冲正。
+- 在 PaymentStation 配置的返品菜单中，该位置被"返品（练习模式）"占用。</p>
+<h3>5. 依赖关系</h3>
+<p>同前文，但额外依赖：
+- <strong>EventCode 449 的 handler</strong>：需要结合其他文件确认抽屉开启的硬件控制逻辑。
+- <strong>EventCode 462 的 handler</strong>：需要结合其他文件确认取消收费的业务逻辑。</p>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li><strong>当前文件没有显式错误处理</strong>。</li>
+<li><strong>差异带来的风险</strong>：不同模式下菜单按钮位置和功能不同，若事件系统未正确处理 <code>EventCode</code> 的缺失注册，可能导致按钮点击后无响应或异常。</li>
+</ul>
+<h3>7. 测试相关</h3>
+<ul>
+<li><strong>建议的测试方向</strong>：</li>
+<li><strong>差异验证</strong>：确认 LocalPOS 独有的"ドロアオープン"和"チャージ取消"按钮功能正常，且不在 PaymentStation 等模式中意外出现。</li>
+<li><strong>功能回归</strong>：验证 <code>411</code> 事件码在 "売上" 和 "会計機" 两种标签下都正常工作。</li>
+</ul>
+<h3>8. 新人阅读建议</h3>
+<ol>
+<li>与 <code>GoSemiSelfPaymentStation.xml</code> 逐行对比，理解传统 POS 与半自助 POS 的菜单差异。</li>
+<li>重点关注"ドロアオープン"和"チャージ取消"两个冗余功能，理解它们体现的物理硬件差异。</li>
+<li>理解"売上"（LocalPOS）和"会計機"（PaymentStation）尽管标签不同，但 EventCode 相同（<code>411</code>），说明事件驱动系统的灵活性。</li>
+</ol>
+<h3>9. 不确定点</h3>
+<ol>
+<li>需要结合其他文件确认 EventCode <code>449</code> 的抽屉打开逻辑是否通过 OPOS 驱动实现。</li>
+<li>需要结合其他文件确认 EventCode <code>462</code>（チャージ取消）的业务含义和 handle 逻辑。</li>
+<li>需要确认 LocalPOS 环境是否需要 OPOS 设备配置（SettingWinPOSDevice.xml）与 PaymentStation 不同。</li>
+</ol>
+<hr />
+<h2>文件：Source/POS4U/Settings/MainMenuListOTCDrug.xml</h2>
+<h3>1. 文件定位</h3>
+<p>本文件是 <strong>OTC（Over-The-Counter）药品销售模式</strong> 的主菜单配置。OTCDrug 模式是项目面向药局/药品销售场景的终端配置。其菜单结构与 LocalPOS 高度相似，但略去了"ドロアオープン"按钮（只有 7 个主页面按钮），体现了药品销售场景下不需要频繁开启现金抽屉的特点。</p>
+<p>文件共 380 行，比 LocalPOS 少 10 行（首页少了一个按钮）。</p>
+<h3>2. 对外暴露内容</h3>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>位置</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&lt;MainMenuDataSet&gt;</code></td>
+<td>第 2 行</td>
+<td>根元素。</td>
+</tr>
+<tr>
+<td><code>&lt;Menu&gt;</code> (MenuNumber=1)</td>
+<td>第 3–156 行</td>
+<td><strong>主菜单</strong>，3 个页面，首页仅有 7 个按钮（无"ドロアオープン"）。</td>
+</tr>
+<tr>
+<td><code>&lt;Menu&gt;</code> (MenuNumber=2)</td>
+<td>第 157–212 行</td>
+<td><strong>领收证发行菜单</strong>。</td>
+</tr>
+<tr>
+<td><code>&lt;Menu&gt;</code> (MenuNumber=3)</td>
+<td>第 213–278 行</td>
+<td><strong>返品业务菜单</strong>（含"チャージ取消"）。</td>
+</tr>
+<tr>
+<td><code>&lt;Menu&gt;</code> (MenuNumber=4)</td>
+<td>第 279–343 行</td>
+<td><strong>精算业务菜单</strong>。</td>
+</tr>
+<tr>
+<td><code>&lt;Menu&gt;</code> (MenuNumber=5)</td>
+<td>第 344–379 行</td>
+<td><strong>手动操作菜单</strong>。</td>
+</tr>
+</tbody>
+</table>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>整体结构与 LocalPOS 类似，但主菜单第 1 页只有 7 个按钮（第 9–74 行），比 LocalPOS 少 1 个。关键差异：</p>
+<ol>
+<li><strong>无"ドロアオープン"（抽屉开启）按钮</strong>：OTCDrug 模式下首页没有抽屉开启按钮。这可能是药品 POS 场景中现金管理策略不同（如药局使用共享现金柜而非个人抽屉）。</li>
+<li><strong>保留了"チャージ取消"</strong>（第 253 行）：说明 OTCDrug 模式支持取消收费操作。</li>
+<li><strong>第 1 页按钮编号</strong>：ButtonNumber 从 1 到 7（第 12–74 行），没有 LocalPOS 的第 10 号按钮。按钮编号不再连续（缺 8、9、10 号），暗示按钮编号是固定位置的坐标引用，而非紧凑排列。</li>
+</ol>
+<h3>4. 关键数据组件说明</h3>
+<h4>4.1 无"ドロアオープン"按钮</h4>
+<ul>
+<li>OTCDrug 的主菜单首页第 10 号位置无按钮（第 75 行空行），直接跳转到第 2 页（第 76 行）。</li>
+<li>对比 LocalPOS 的第 10 号按钮"ドロアオープン"（EventCode=449），OTCDrug 模式下没有物理现金抽屉控制入口。</li>
+</ul>
+<h4>4.2 返品菜单的"チャージ取消"</h4>
+<ul>
+<li>与 LocalPOS 一致，位于返品菜单第 7 号位置（第 253 行），EventCode=462。</li>
+<li>说明 OTCDrug 和 LocalPOS 共享相同的返品业务逻辑。</li>
+</ul>
+<h3>5. 依赖关系</h3>
+<p>同 LocalPOS，但不需要依赖抽屉开启功能（EventCode=449）。</p>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li><strong>当前文件没有显式错误处理</strong>。</li>
+<li><strong>空按钮位置的边界</strong>：ButtonNumber=8、9、10 在主菜单页面上缺失，渲染引擎需要正确处理空位（不渲染空白按钮），按目前风格推测框架支持空按钮位置跳过。</li>
+</ul>
+<h3>7. 测试相关</h3>
+<ul>
+<li><strong>建议的测试方向</strong>：</li>
+<li><strong>验证空按钮位置渲染</strong>：确认首页 7 个按钮正确显示，不因数据缺失出现布局错乱。</li>
+<li><strong>验证其他结构共享</strong>：返品菜单、精算菜单等与 LocalPOS 保持一致。</li>
+<li><strong>场景验证</strong>：OTCDrug 模式在实际药局场景中的功能覆盖是否完整。</li>
+</ul>
+<h3>8. 新人阅读建议</h3>
+<ol>
+<li>与 <code>LocalPOS.xml</code> 进行逐页对比，关注 OTCDrug 去掉了哪些功能、保留了哪些功能。</li>
+<li>特别关注"チャージ取消"功能在药局场景中的特殊意义（如处方药取消收费）。</li>
+<li>注意按钮编号的不连续性，理解渲染引擎对空位的处理策略。</li>
+</ol>
+<h3>9. 不确定点</h3>
+<ol>
+<li>需要结合其他文件确认"ドロアオープン"在 OTCDrug 模式下被移除是业务决定（药局不需要抽屉）还是硬件决定（药局使用其他现金管理方式）。</li>
+<li>需要结合其他文件确认 OTCDrug 模式下的现金处理流程：如果收银员不使用抽屉，现金如何处理？</li>
+<li>需要结合其他文件确认 EventCode <code>462</code>（チャージ取消）在药局场景下的业务约束（如处方药退货的限制）。</li>
+</ol>
+<hr />
+<h2>本批覆盖确认</h2>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>覆盖状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Source/POS4U/Settings/MainMenuListGoSemiSelfPaymentStation.xml</code></td>
+<td>已详细讲解</td>
+<td>完整分析了 5 级菜单结构、按钮类型/事件体系、InputData 和 AddInfos 模式。标注了与 Lane 版本 SHA256 一致的问题。</td>
+</tr>
+<tr>
+<td><code>Source/POS4U/Settings/MainMenuListGoSemiSelfRegister.xml</code></td>
+<td>已详细讲解</td>
+<td>完整分析了登録机模式的精简菜单结构、IsHyBridMode 条件标记、EventCode=554 中间交易删除功能、以及无现金业务的设计意图。</td>
+</tr>
+<tr>
+<td><code>Source/POS4U/Settings/MainMenuListLaneSelfPaymentStation.xml</code></td>
+<td>已简略讲解</td>
+<td>内容与 GoSemiSelfPaymentStation 完全一致（SHA256 相同），因此仅简略分析，重点说明 Lane vs Go 的产品线分层和不确定点。</td>
+</tr>
+<tr>
+<td><code>Source/POS4U/Settings/MainMenuListLocalPOS.xml</code></td>
+<td>已详细讲解</td>
+<td>完整分析了传统 POS 模式的菜单结构，重点讲解了"ドロアオープン"（EventCode=449）和"チャージ取消"（EventCode=462）两个特色功能。</td>
+</tr>
+<tr>
+<td><code>Source/POS4U/Settings/MainMenuListOTCDrug.xml</code></td>
+<td>已详细讲解</td>
+<td>完整分析了 OTC 药品模式的菜单结构，重点讲解了无抽屉开启的设计差异、按钮编号不连续性，以及与 LocalPOS 的相似度。</td>
+</tr>
+</tbody>
+</table></div></div><button class="expand-btn">Show more</button></div></div>
+</div></div>
+        
+
+<div class="pagination">
+<span class="current">Index</span>
+<span class="disabled">&larr; Prev</span>
+<a href="page-001.html">1</a>
+<a href="page-001.html">Next &rarr;</a>
+</div>
+
+
+        <dialog id="search-modal">
+            <div class="search-modal-header">
+                <input type="text" id="modal-search-input" placeholder="Search..." aria-label="Search transcripts">
+                <button id="modal-search-btn" type="button" aria-label="Search">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+                </button>
+                <button id="modal-close-btn" type="button" aria-label="Close">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+                </button>
+            </div>
+            <div id="search-status"></div>
+            <div id="search-results"></div>
+        </dialog>
+        <script>
+(function() {
+    var totalPages = 1;
+    var searchBox = document.getElementById('search-box');
+    var searchInput = document.getElementById('search-input');
+    var searchBtn = document.getElementById('search-btn');
+    var modal = document.getElementById('search-modal');
+    var modalInput = document.getElementById('modal-search-input');
+    var modalSearchBtn = document.getElementById('modal-search-btn');
+    var modalCloseBtn = document.getElementById('modal-close-btn');
+    var searchStatus = document.getElementById('search-status');
+    var searchResults = document.getElementById('search-results');
+
+    if (!searchBox || !modal) return;
+
+    // Hide search on file:// protocol (doesn't work due to CORS restrictions)
+    if (window.location.protocol === 'file:') return;
+
+    // Show search box (progressive enhancement)
+    searchBox.style.display = 'flex';
+
+    // Gist preview support - detect if we're on gisthost.github.io or gistpreview.github.io
+    var hostname = window.location.hostname;
+    var isGistPreview = hostname === 'gisthost.github.io' || hostname === 'gistpreview.github.io';
+    var gistId = null;
+    var gistOwner = null;
+    var gistInfoLoaded = false;
+
+    if (isGistPreview) {
+        // Extract gist ID from URL query string like ?78a436a8a9e7a2e603738b8193b95410/index.html
+        var queryMatch = window.location.search.match(/^\?([a-f0-9]+)/i);
+        if (queryMatch) {
+            gistId = queryMatch[1];
+        }
+    }
+
+    async function loadGistInfo() {
+        if (!isGistPreview || !gistId || gistInfoLoaded) return;
+        try {
+            var response = await fetch('https://api.github.com/gists/' + gistId);
+            if (response.ok) {
+                var info = await response.json();
+                gistOwner = info.owner.login;
+                gistInfoLoaded = true;
+            }
+        } catch (e) {
+            console.error('Failed to load gist info:', e);
+        }
+    }
+
+    function getPageFetchUrl(pageFile) {
+        if (isGistPreview && gistOwner && gistId) {
+            // Use raw gist URL for fetching content
+            return 'https://gist.githubusercontent.com/' + gistOwner + '/' + gistId + '/raw/' + pageFile;
+        }
+        return pageFile;
+    }
+
+    function getPageLinkUrl(pageFile) {
+        if (isGistPreview && gistId) {
+            // Use gistpreview URL format for navigation links
+            return '?' + gistId + '/' + pageFile;
+        }
+        return pageFile;
+    }
+
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function escapeRegex(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function openModal(query) {
+        modalInput.value = query || '';
+        searchResults.innerHTML = '';
+        searchStatus.textContent = '';
+        modal.showModal();
+        modalInput.focus();
+        if (query) {
+            performSearch(query);
+        }
+    }
+
+    function closeModal() {
+        modal.close();
+        // Update URL to remove search fragment, preserving path and query string
+        if (window.location.hash.startsWith('#search=')) {
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+    }
+
+    function updateUrlHash(query) {
+        if (query) {
+            // Preserve path and query string when adding hash
+            history.replaceState(null, '', window.location.pathname + window.location.search + '#search=' + encodeURIComponent(query));
+        }
+    }
+
+    function highlightTextNodes(element, searchTerm) {
+        var walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
+        var nodesToReplace = [];
+
+        while (walker.nextNode()) {
+            var node = walker.currentNode;
+            if (node.nodeValue.toLowerCase().indexOf(searchTerm.toLowerCase()) !== -1) {
+                nodesToReplace.push(node);
+            }
+        }
+
+        nodesToReplace.forEach(function(node) {
+            var text = node.nodeValue;
+            var regex = new RegExp('(' + escapeRegex(searchTerm) + ')', 'gi');
+            var parts = text.split(regex);
+            if (parts.length > 1) {
+                var span = document.createElement('span');
+                parts.forEach(function(part) {
+                    if (part.toLowerCase() === searchTerm.toLowerCase()) {
+                        var mark = document.createElement('mark');
+                        mark.textContent = part;
+                        span.appendChild(mark);
+                    } else {
+                        span.appendChild(document.createTextNode(part));
+                    }
+                });
+                node.parentNode.replaceChild(span, node);
+            }
+        });
+    }
+
+    function fixInternalLinks(element, pageFile) {
+        // Update all internal anchor links to include the page file
+        var links = element.querySelectorAll('a[href^="#"]');
+        links.forEach(function(link) {
+            var href = link.getAttribute('href');
+            link.setAttribute('href', pageFile + href);
+        });
+    }
+
+    function processPage(pageFile, html, query) {
+        var parser = new DOMParser();
+        var doc = parser.parseFromString(html, 'text/html');
+        var resultsFromPage = 0;
+
+        // Find all message blocks
+        var messages = doc.querySelectorAll('.message');
+        messages.forEach(function(msg) {
+            var text = msg.textContent || '';
+            if (text.toLowerCase().indexOf(query.toLowerCase()) !== -1) {
+                resultsFromPage++;
+
+                // Get the message ID for linking
+                var msgId = msg.id || '';
+                var pageLinkUrl = getPageLinkUrl(pageFile);
+                var link = pageLinkUrl + (msgId ? '#' + msgId : '');
+
+                // Clone the message HTML and highlight matches
+                var clone = msg.cloneNode(true);
+                // Fix internal links to include the page file
+                fixInternalLinks(clone, pageLinkUrl);
+                highlightTextNodes(clone, query);
+
+                var resultDiv = document.createElement('div');
+                resultDiv.className = 'search-result';
+                resultDiv.innerHTML = '<a href="' + link + '">' +
+                    '<div class="search-result-page">' + escapeHtml(pageFile) + '</div>' +
+                    '<div class="search-result-content">' + clone.innerHTML + '</div>' +
+                    '</a>';
+                searchResults.appendChild(resultDiv);
+            }
+        });
+
+        return resultsFromPage;
+    }
+
+    async function performSearch(query) {
+        if (!query.trim()) {
+            searchStatus.textContent = 'Enter a search term';
+            return;
+        }
+
+        updateUrlHash(query);
+        searchResults.innerHTML = '';
+        searchStatus.textContent = 'Searching...';
+
+        // Load gist info if on gistpreview (needed for constructing URLs)
+        if (isGistPreview && !gistInfoLoaded) {
+            searchStatus.textContent = 'Loading gist info...';
+            await loadGistInfo();
+            if (!gistOwner) {
+                searchStatus.textContent = 'Failed to load gist info. Search unavailable.';
+                return;
+            }
+        }
+
+        var resultsFound = 0;
+        var pagesSearched = 0;
+
+        // Build list of pages to fetch
+        var pagesToFetch = [];
+        for (var i = 1; i <= totalPages; i++) {
+            pagesToFetch.push('page-' + String(i).padStart(3, '0') + '.html');
+        }
+
+        searchStatus.textContent = 'Searching...';
+
+        // Process pages in batches of 3, but show results immediately as each completes
+        var batchSize = 3;
+        for (var i = 0; i < pagesToFetch.length; i += batchSize) {
+            var batch = pagesToFetch.slice(i, i + batchSize);
+
+            // Create promises that process results immediately when each fetch completes
+            var promises = batch.map(function(pageFile) {
+                return fetch(getPageFetchUrl(pageFile))
+                    .then(function(response) {
+                        if (!response.ok) throw new Error('Failed to fetch');
+                        return response.text();
+                    })
+                    .then(function(html) {
+                        // Process and display results immediately
+                        var count = processPage(pageFile, html, query);
+                        resultsFound += count;
+                        pagesSearched++;
+                        searchStatus.textContent = 'Found ' + resultsFound + ' result(s) in ' + pagesSearched + '/' + totalPages + ' pages...';
+                    })
+                    .catch(function() {
+                        pagesSearched++;
+                        searchStatus.textContent = 'Found ' + resultsFound + ' result(s) in ' + pagesSearched + '/' + totalPages + ' pages...';
+                    });
+            });
+
+            // Wait for this batch to complete before starting the next
+            await Promise.all(promises);
+        }
+
+        searchStatus.textContent = 'Found ' + resultsFound + ' result(s) in ' + totalPages + ' pages';
+    }
+
+    // Event listeners
+    searchBtn.addEventListener('click', function() {
+        openModal(searchInput.value);
+    });
+
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            openModal(searchInput.value);
+        }
+    });
+
+    modalSearchBtn.addEventListener('click', function() {
+        performSearch(modalInput.value);
+    });
+
+    modalInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            performSearch(modalInput.value);
+        }
+    });
+
+    modalCloseBtn.addEventListener('click', closeModal);
+
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+
+    // Check for #search= in URL on page load
+    if (window.location.hash.startsWith('#search=')) {
+        var query = decodeURIComponent(window.location.hash.substring(8));
+        if (query) {
+            searchInput.value = query;
+            openModal(query);
+        }
+    }
+})();
+        </script>
+    </div>
+    <script>
+document.querySelectorAll('time[data-timestamp]').forEach(function(el) {
+    const timestamp = el.getAttribute('data-timestamp');
+    const date = new Date(timestamp);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    if (isToday) { el.textContent = timeStr; }
+    else { el.textContent = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + timeStr; }
+});
+document.querySelectorAll('pre.json').forEach(function(el) {
+    let text = el.textContent;
+    text = text.replace(/"([^"]+)":/g, '<span style="color: #ce93d8">"$1"</span>:');
+    text = text.replace(/: "([^"]*)"/g, ': <span style="color: #81d4fa">"$1"</span>');
+    text = text.replace(/: (\d+)/g, ': <span style="color: #ffcc80">$1</span>');
+    text = text.replace(/: (true|false|null)/g, ': <span style="color: #f48fb1">$1</span>');
+    el.innerHTML = text;
+});
+document.querySelectorAll('.truncatable').forEach(function(wrapper) {
+    const content = wrapper.querySelector('.truncatable-content');
+    const btn = wrapper.querySelector('.expand-btn');
+    if (content.scrollHeight > 250) {
+        wrapper.classList.add('truncated');
+        btn.addEventListener('click', function() {
+            if (wrapper.classList.contains('truncated')) { wrapper.classList.remove('truncated'); wrapper.classList.add('expanded'); btn.textContent = 'Show less'; }
+            else { wrapper.classList.remove('expanded'); wrapper.classList.add('truncated'); btn.textContent = 'Show more'; }
+        });
+    }
+});
+</script>
+</body>
+</html>

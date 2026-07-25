@@ -1,0 +1,104 @@
+id: pos-buy-bag-checkout-001
+name: 购买一个垃圾袋并使用现金完成结账
+mode: explicit
+target_id: win10-test-01
+timeout_seconds: 300
+
+# Feature 003 (FR-024): declarative run-start precondition — a generic named
+# fact evaluated via the same VerificationSpec engine used for step
+# assertions below. This business content (cart starts at 0 items) lives
+# only in this testcase file, per Constitution v1.1.0 Principle VI — core
+# has no notion of "cart" at all.
+precondition:
+  facts:
+    - key: cart_item_count
+      spec:
+        operator: all
+        conditions:
+          - type: visual_question
+            value: >-
+              画面左侧“合計”区域中，绿色商品数量是否明确为 0 個？
+              仅当画面明确显示 0 個时回答 passed；数量非 0 或无法确认时不要回答 passed。
+
+# Feature 003 (FR-027): declarative action-tag audit — testcase-declared,
+# core hardcodes no fixed category.
+action_tags:
+  - tag: add_to_bag
+    matcher:
+      action_type: click
+      target_text_contains: "袋"
+  - tag: subtotal
+    matcher:
+      action_type: click
+      target_text_contains: "小計"
+  - tag: cash_start
+    matcher:
+      action_type: click
+      target_text_contains: "預/現計"
+  - tag: cash_finalize
+    matcher:
+      action_type: click
+      target_text_contains: "確定"
+
+steps:
+  - id: add-shopping-bag
+    name: 加入购物袋商品
+    intent: 点击"レジ袋"（购物袋）按钮，将一个购物袋商品加入购物车
+    max_retries: 2
+    verification_mode: business
+    expected:
+      operator: all
+      conditions:
+        - type: text_appears
+          value: "1"
+        - type: text_appears
+          value: "5"
+        - type: text_appears
+          value: "袋"
+
+  - id: calc-subtotal
+    name: 计算合计金额
+    intent: 点击"小計"（小计）按钮，计算本次购买的合计金额
+    max_retries: 2
+    verification_mode: business
+    expected:
+      operator: all
+      conditions:
+        - type: text_appears
+          value: "不足"
+
+  - id: start-cash-payment
+    name: 启动现金支付并等待自动入金
+    intent: >-
+      点击 POS 主画面的"預/現計"按钮启动现金支付。找零机模拟器会自动投入现金，
+      不要点击或操作模拟器画面；等待 POS 的现金入金对话框显示自动入金结果。
+    max_retries: 2
+    verification_mode: business
+    expected:
+      operator: all
+      conditions:
+        - type: text_appears
+          value: "10,000"
+        - type: text_appears
+          value: "9,995"
+        - type: visual_question
+          value: >-
+            POS 主画面的现金入金对话框是否已经显示自动入金结果：預り金为 10,000，
+            お釣り为 9,995，并且 POS 对话框中的“確定”按钮可点击？
+            仅当以上三项都明确成立时回答 passed；不要检查或操作找零机模拟器窗口。
+
+  - id: finalize-cash-payment
+    name: 在 POS 对话框确认并完成交易
+    intent: >-
+      点击 POS 主画面现金入金对话框中的"確定"按钮完成现金结账；
+      不要点击或操作找零机模拟器画面。
+    max_retries: 2
+    verification_mode: business
+    expected:
+      operator: all
+      conditions:
+        - type: visual_question
+          value: >-
+            POS 主画面的商品明细区域是否已经出现醒目的大号红色“済”完成标记，
+            表示本次现金交易已经固定并完成？仅当“済”标记明确可见时回答 passed；
+            如果仍显示现金入金对话框、尚未完成或无法确认，则不要回答 passed。

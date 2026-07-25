@@ -1,0 +1,2873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code transcript - Index</title>
+    <style>
+:root { --bg-color: #f5f5f5; --card-bg: #ffffff; --user-bg: #e3f2fd; --user-border: #1976d2; --assistant-bg: #f5f5f5; --assistant-border: #9e9e9e; --thinking-bg: #fff8e1; --thinking-border: #ffc107; --thinking-text: #666; --tool-bg: #f3e5f5; --tool-border: #9c27b0; --tool-result-bg: #e8f5e9; --tool-error-bg: #ffebee; --text-color: #212121; --text-muted: #757575; --code-bg: #263238; --code-text: #aed581; }
+* { box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 16px; line-height: 1.6; }
+.container { max-width: 800px; margin: 0 auto; }
+h1 { font-size: 1.5rem; margin-bottom: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--user-border); }
+.header-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 2px solid var(--user-border); padding-bottom: 8px; margin-bottom: 24px; }
+.header-row h1 { border-bottom: none; padding-bottom: 0; margin-bottom: 0; flex: 1; min-width: 200px; }
+.message { margin-bottom: 16px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.message.user { background: var(--user-bg); border-left: 4px solid var(--user-border); }
+.message.assistant { background: var(--card-bg); border-left: 4px solid var(--assistant-border); }
+.message.tool-reply { background: #fff8e1; border-left: 4px solid #ff9800; }
+.tool-reply .role-label { color: #e65100; }
+.tool-reply .tool-result { background: transparent; padding: 0; margin: 0; }
+.tool-reply .tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff8e1); }
+.message-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: rgba(0,0,0,0.03); font-size: 0.85rem; }
+.role-label { font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.user .role-label { color: var(--user-border); }
+time { color: var(--text-muted); font-size: 0.8rem; }
+.timestamp-link { color: inherit; text-decoration: none; }
+.timestamp-link:hover { text-decoration: underline; }
+.message:target { animation: highlight 2s ease-out; }
+@keyframes highlight { 0% { background-color: rgba(25, 118, 210, 0.2); } 100% { background-color: transparent; } }
+.message-content { padding: 16px; }
+.message-content p { margin: 0 0 12px 0; }
+.message-content p:last-child { margin-bottom: 0; }
+.thinking { background: var(--thinking-bg); border: 1px solid var(--thinking-border); border-radius: 8px; padding: 12px; margin: 12px 0; font-size: 0.9rem; color: var(--thinking-text); }
+.thinking-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #f57c00; margin-bottom: 8px; }
+.thinking p { margin: 8px 0; }
+.assistant-text { margin: 8px 0; }
+.tool-use { background: var(--tool-bg); border: 1px solid var(--tool-border); border-radius: 8px; padding: 12px; margin: 12px 0; }
+.tool-header { font-weight: 600; color: var(--tool-border); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.tool-icon { font-size: 1.1rem; }
+.tool-description { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 8px; font-style: italic; }
+.tool-result { background: var(--tool-result-bg); border-radius: 8px; padding: 12px; margin: 12px 0; }
+.tool-result.tool-error { background: var(--tool-error-bg); }
+.file-tool { border-radius: 8px; padding: 12px; margin: 12px 0; }
+.write-tool { background: linear-gradient(135deg, #e3f2fd 0%, #e8f5e9 100%); border: 1px solid #4caf50; }
+.edit-tool { background: linear-gradient(135deg, #fff3e0 0%, #fce4ec 100%); border: 1px solid #ff9800; }
+.file-tool-header { font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.write-header { color: #2e7d32; }
+.edit-header { color: #e65100; }
+.file-tool-icon { font-size: 1rem; }
+.file-tool-path { font-family: monospace; background: rgba(0,0,0,0.08); padding: 2px 8px; border-radius: 4px; }
+.file-tool-fullpath { font-family: monospace; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px; word-break: break-all; }
+.file-content { margin: 0; }
+.edit-section { display: flex; margin: 4px 0; border-radius: 4px; overflow: hidden; }
+.edit-label { padding: 8px 12px; font-weight: bold; font-family: monospace; display: flex; align-items: flex-start; }
+.edit-old { background: #fce4ec; }
+.edit-old .edit-label { color: #b71c1c; background: #f8bbd9; }
+.edit-old .edit-content { color: #880e4f; }
+.edit-new { background: #e8f5e9; }
+.edit-new .edit-label { color: #1b5e20; background: #a5d6a7; }
+.edit-new .edit-content { color: #1b5e20; }
+.edit-content { margin: 0; flex: 1; background: transparent; font-size: 0.85rem; }
+.edit-replace-all { font-size: 0.75rem; font-weight: normal; color: var(--text-muted); }
+.write-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #e6f4ea); }
+.edit-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff0e5); }
+.todo-list { background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); border: 1px solid #81c784; border-radius: 8px; padding: 12px; margin: 12px 0; }
+.todo-header { font-weight: 600; color: #2e7d32; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.todo-items { list-style: none; margin: 0; padding: 0; }
+.todo-item { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.06); font-size: 0.9rem; }
+.todo-item:last-child { border-bottom: none; }
+.todo-icon { flex-shrink: 0; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 50%; }
+.todo-completed .todo-icon { color: #2e7d32; background: rgba(46, 125, 50, 0.15); }
+.todo-completed .todo-content { color: #558b2f; text-decoration: line-through; }
+.todo-in-progress .todo-icon { color: #f57c00; background: rgba(245, 124, 0, 0.15); }
+.todo-in-progress .todo-content { color: #e65100; font-weight: 500; }
+.todo-pending .todo-icon { color: #757575; background: rgba(0,0,0,0.05); }
+.todo-pending .todo-content { color: #616161; }
+pre { background: var(--code-bg); color: var(--code-text); padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; line-height: 1.5; margin: 8px 0; white-space: pre-wrap; word-wrap: break-word; }
+pre.json { color: #e0e0e0; }
+code { background: rgba(0,0,0,0.08); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+pre code { background: none; padding: 0; }
+.user-content { margin: 0; }
+.truncatable { position: relative; }
+.truncatable.truncated .truncatable-content { max-height: 200px; overflow: hidden; }
+.truncatable.truncated::after { content: ''; position: absolute; bottom: 32px; left: 0; right: 0; height: 60px; background: linear-gradient(to bottom, transparent, var(--card-bg)); pointer-events: none; }
+.message.user .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--user-bg)); }
+.message.tool-reply .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff8e1); }
+.tool-use .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-bg)); }
+.tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-result-bg)); }
+.expand-btn { display: none; width: 100%; padding: 8px 16px; margin-top: 4px; background: rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; cursor: pointer; font-size: 0.85rem; color: var(--text-muted); }
+.expand-btn:hover { background: rgba(0,0,0,0.1); }
+.truncatable.truncated .expand-btn, .truncatable.expanded .expand-btn { display: block; }
+.pagination { display: flex; justify-content: center; gap: 8px; margin: 24px 0; flex-wrap: wrap; }
+.pagination a, .pagination span { padding: 5px 10px; border-radius: 6px; text-decoration: none; font-size: 0.85rem; }
+.pagination a { background: var(--card-bg); color: var(--user-border); border: 1px solid var(--user-border); }
+.pagination a:hover { background: var(--user-bg); }
+.pagination .current { background: var(--user-border); color: white; }
+.pagination .disabled { color: var(--text-muted); border: 1px solid #ddd; }
+.pagination .index-link { background: var(--user-border); color: white; }
+details.continuation { margin-bottom: 16px; }
+details.continuation summary { cursor: pointer; padding: 12px 16px; background: var(--user-bg); border-left: 4px solid var(--user-border); border-radius: 12px; font-weight: 500; color: var(--text-muted); }
+details.continuation summary:hover { background: rgba(25, 118, 210, 0.15); }
+details.continuation[open] summary { border-radius: 12px 12px 0 0; margin-bottom: 0; }
+.index-item { margin-bottom: 16px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); background: var(--user-bg); border-left: 4px solid var(--user-border); }
+.index-item a { display: block; text-decoration: none; color: inherit; }
+.index-item a:hover { background: rgba(25, 118, 210, 0.1); }
+.index-item-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: rgba(0,0,0,0.03); font-size: 0.85rem; }
+.index-item-number { font-weight: 600; color: var(--user-border); }
+.index-item-content { padding: 16px; }
+.index-item-stats { padding: 8px 16px 12px 32px; font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid rgba(0,0,0,0.06); }
+.index-item-commit { margin-top: 6px; padding: 4px 8px; background: #fff3e0; border-radius: 4px; font-size: 0.85rem; color: #e65100; }
+.index-item-commit code { background: rgba(0,0,0,0.08); padding: 1px 4px; border-radius: 3px; font-size: 0.8rem; margin-right: 6px; }
+.commit-card { margin: 8px 0; padding: 10px 14px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 6px; }
+.commit-card a { text-decoration: none; color: #5d4037; display: block; }
+.commit-card a:hover { color: #e65100; }
+.commit-card-hash { font-family: monospace; color: #e65100; font-weight: 600; margin-right: 8px; }
+.index-commit { margin-bottom: 12px; padding: 10px 16px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+.index-commit a { display: block; text-decoration: none; color: inherit; }
+.index-commit a:hover { background: rgba(255, 152, 0, 0.1); margin: -10px -16px; padding: 10px 16px; border-radius: 8px; }
+.index-commit-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; margin-bottom: 4px; }
+.index-commit-hash { font-family: monospace; color: #e65100; font-weight: 600; }
+.index-commit-msg { color: #5d4037; }
+.index-item-long-text { margin-top: 8px; padding: 12px; background: var(--card-bg); border-radius: 8px; border-left: 3px solid var(--assistant-border); }
+.index-item-long-text .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--card-bg)); }
+.index-item-long-text-content { color: var(--text-color); }
+#search-box { display: none; align-items: center; gap: 8px; }
+#search-box input { padding: 6px 12px; border: 1px solid var(--assistant-border); border-radius: 6px; font-size: 16px; width: 180px; }
+#search-box button, #modal-search-btn, #modal-close-btn { background: var(--user-border); color: white; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+#search-box button:hover, #modal-search-btn:hover { background: #1565c0; }
+#modal-close-btn { background: var(--text-muted); margin-left: 8px; }
+#modal-close-btn:hover { background: #616161; }
+#search-modal[open] { border: none; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.2); padding: 0; width: 90vw; max-width: 900px; height: 80vh; max-height: 80vh; display: flex; flex-direction: column; }
+#search-modal::backdrop { background: rgba(0,0,0,0.5); }
+.search-modal-header { display: flex; align-items: center; gap: 8px; padding: 16px; border-bottom: 1px solid var(--assistant-border); background: var(--bg-color); border-radius: 12px 12px 0 0; }
+.search-modal-header input { flex: 1; padding: 8px 12px; border: 1px solid var(--assistant-border); border-radius: 6px; font-size: 16px; }
+#search-status { padding: 8px 16px; font-size: 0.85rem; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); }
+#search-results { flex: 1; overflow-y: auto; padding: 16px; }
+.search-result { margin-bottom: 16px; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.search-result a { display: block; text-decoration: none; color: inherit; }
+.search-result a:hover { background: rgba(25, 118, 210, 0.05); }
+.search-result-page { padding: 6px 12px; background: rgba(0,0,0,0.03); font-size: 0.8rem; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); }
+.search-result-content { padding: 12px; }
+.search-result mark { background: #fff59d; padding: 1px 2px; border-radius: 2px; }
+@media (max-width: 600px) { body { padding: 8px; } .message, .index-item { border-radius: 8px; } .message-content, .index-item-content { padding: 12px; } pre { font-size: 0.8rem; padding: 8px; } #search-box input { width: 120px; } #search-modal[open] { width: 95vw; height: 90vh; } }
+</style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-row">
+            <h1>Claude Code transcript</h1>
+            <div id="search-box">
+                <input type="text" id="search-input" placeholder="Search..." aria-label="Search transcripts">
+                <button id="search-btn" type="button" aria-label="Search">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+                </button>
+            </div>
+        </div>
+        
+
+<div class="pagination">
+<span class="current">Index</span>
+<span class="disabled">&larr; Prev</span>
+<a href="page-001.html">1</a>
+<a href="page-001.html">Next &rarr;</a>
+</div>
+
+        <p style="color: var(--text-muted); margin-bottom: 24px;">1 prompts · 3 messages · 0 tool calls · 0 commits · 1 pages</p>
+        
+<div class="index-item"><a href="page-001.html#msg-2026-07-09T06-34-42-841Z"><div class="index-item-header"><span class="index-item-number">#1</span><time datetime="2026-07-09T06:34:42.841Z" data-timestamp="2026-07-09T06:34:42.841Z">2026-07-09T06:34:42.841Z</time></div><div class="index-item-content"><p>IMPORTANT EXECUTION MODE FOR CLAUDE CLI:
+- Do not use tools.
+- Do not read or write files.
+- Do not ask for permissions.
+- Produce the requested final markdown directly on stdout.
+- The workflow runner will save stdout to the output path.
+- Ignore any instruction that implies you should write the output file yourself; instead print the full content.</p>
+<p>BEGIN ORIGINAL PROMPT</p>
+<p>你是源码教材项目的信息提取员，不是散文作者。</p>
+<p>任务：根据下面的带行号源码，为本 batch 中的每个文件生成“文件级源码讲解笔记”。</p>
+<p>Batch 信息：
+- Batch ID: batch_036
+- Batch Name: config_config_cesettingtoolv4
+- Module: config
+- Purpose: 解释项目配置、构建配置、依赖配置和运行时配置加载线索
+- Related Runtime Flows: 需要进一步分析
+- Output Note Path: _sourcebook/notes/batch_036_config_config_cesettingtoolv4_file_notes.md</p>
+<p>本批文件：
+- Tools/CESettingToolV5/CESettingToolV4/App.config
+- Tools/CESettingToolV5/CESettingToolV4/CESettingToolV4.csproj
+- Tools/CESettingToolV5/CESettingToolV4/CESettings/ACE100_CafisArch_PluginDevice.xml
+- Tools/CESettingToolV5/CESettingToolV4/CESettings/ACE100_CafisArch_SettingWinPOSDevice.xml
+- Tools/CESettingToolV5/CESettingToolV4/CESettings/ACE100_PluginDevice.xml
+- Tools/CESettingToolV5/CESettingToolV4/CESettings/ACE100_SettingWinPOSDevice.xml
+- Tools/CESettingToolV5/CESettingToolV4/CESettings/CESettingToolSettingV4.xml
+- Tools/CESettingToolV5/CESettingToolV4/CESettings/Charge_CafisArch_PluginDevice.xml
+- Tools/CESettingToolV5/CESettingToolV4/CESettings/Charge_PluginDevice.xml
+- Tools/CESettingToolV5/CESettingToolV4/CESettings/Charge_SettingWinPOSDevice.xml
+- Tools/CESettingToolV5/CESettingToolV4/CESettings/ECS77_PluginDevice.xml
+- Tools/CESettingToolV5/CESettingToolV4/CESettings/ECS77_SettingWinPOSDevice.xml
+- Tools/CESettingToolV5/CESettingToolV4/CESettings/Payment_PluginDevice.xml
+- Tools/CESettingToolV5/CESettingToolV4/CESettings/Payment_SettingWinPOSDevice.xml
+- Tools/CESettingToolV5/CESettingToolV4/CESettings/SS900_PluginDevice.xml
+- Tools/CESettingToolV5/CESettingToolV4/CESettings/SS900_SettingWinPOSDevice.xml
+- Tools/CESettingToolV5/CESettingToolV4/CESettings/Simulator_PluginDevice.xml
+- Tools/CESettingToolV5/CESettingToolV4/CESettings/Simulator_SettingWinPOSDevice.xml
+- Tools/CESettingToolV5/CESettingToolV4/Properties/Settings.settings
+- Tools/CESettingToolV5/CESettingToolV4/packages.config</p>
+<p>本批任务目标：
+- 为本批每个文件生成可追溯到源码行号的文件级笔记。
+- 重点说明文件职责、对外暴露内容、关键逻辑、依赖关系、错误处理、测试建议和不确定点。
+- 只做文件级源码笔记，不写最终教材正文。</p>
+<p>硬性规则：</p>
+<ol>
+<li>必须基于实际源码。</li>
+<li>每一条技术事实都要引用文件路径和行号。</li>
+<li>不允许编造不存在的函数、参数、返回值、配置项、业务逻辑。</li>
+<li>如果无法确定，请写“需要结合其他文件确认”。</li>
+<li>不要只讲核心函数，小工具函数、边界处理、异常处理也要说明。</li>
+<li>每个文件必须单独成节。</li>
+<li>不要写最终教材章节，只写文件级源码笔记。</li>
+<li>不要省略本批任何文件。</li>
+<li>如果某个文件很简单，也要说明它为什么简单、在项目中承担什么角色。</li>
+<li>如果发现当前 batch 缺少理解该文件所需的上下文，请在“不确定点”中明确列出需要结合哪些文件。</li>
+</ol>
+<p>质量规则：
+- 优先解释运行时行为和业务意图，再补充语法层面的说明。
+- 遇到配置、SQL、脚本、文档、二进制占位文件，也必须说明它对项目理解的作用。
+- 对非文本文件、缺失文件或无法从当前 batch 判断的内容，必须标记“需要结合其他文件确认”或“需要人工确认”，不要猜。
+- 入口、配置加载、请求处理、数据读写、错误处理、日志、测试相关线索要特别标出。
+- 输出中不要出现未引用行号的技术断言。</p>
+<p>覆盖确认要求：
+- 结尾必须输出“本批覆盖确认”表。
+- 表中必须逐一列出本批所有文件。
+- 覆盖状态只能使用：已详细讲解 / 已简略讲解 / 需要结合其他文件确认。</p>
+<p>输出格式：</p>
+<h1>文件级源码笔记：config_config_cesettingtoolv4</h1>
+<h2>Batch 信息</h2>
+<ul>
+<li>Batch ID: batch_036</li>
+<li>Batch Name: config_config_cesettingtoolv4</li>
+<li>Module: config</li>
+<li>Purpose: 解释项目配置、构建配置、依赖配置和运行时配置加载线索</li>
+</ul>
+<hr />
+<h2>文件：<path></h2>
+<h3>1. 文件定位</h3>
+<p>说明这个文件在项目中的角色，属于哪个模块，解决什么问题。</p>
+<h3>2. 对外暴露内容</h3>
+<p>列出 class / function / component / API / command / config / export。</p>
+<p>每一项都要包含：
+- 名称
+- 文件路径 + 行号
+- 用途</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>按代码执行顺序解释关键逻辑。</p>
+<p>要求：
+- 引用文件路径和行号
+- 解释运行时会发生什么
+- 不要只翻译代码，要说明代码意图</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>逐个说明：
+- 名称
+- 位置：文件路径 + 行号
+- 输入
+- 输出
+- 副作用
+- 调用关系
+- 边界情况
+- 可能的坑</p>
+<h3>5. 依赖关系</h3>
+<p>说明它依赖哪些文件、库、配置、类型、组件，以及这些依赖的用途。</p>
+<h3>6. 错误处理与边界情况</h3>
+<p>必须引用源码行号。</p>
+<p>如果没有明显错误处理，也要说明“当前文件没有显式错误处理”，并指出可能依赖哪里处理。</p>
+<h3>7. 测试相关</h3>
+<p>说明：
+- 当前输入中是否包含对应测试
+- 如果有，测试覆盖了什么
+- 如果没有，应该如何测试这个文件</p>
+<h3>8. 新人阅读建议</h3>
+<p>告诉新人应该如何理解这个文件，阅读时先看哪里，再看哪里。</p>
+<h3>9. 不确定点</h3>
+<p>列出不能从当前 batch 确认的问题，不要猜。</p>
+<hr />
+<h2>本批覆盖确认</h2>
+<p>请列出本批所有文件，并标记：</p>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>覆盖状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>path</td>
+<td>已详细讲解 / 已简略讲解 / 需要结合其他文件确认</td>
+<td>说明</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p>下面是本批源码：</p>
+<p>FILE: Tools/CESettingToolV5/CESettingToolV4/App.config
+00001: [非文本文件，未内联源码。size_bytes=3198, extension=.config，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Tools/CESettingToolV5/CESettingToolV4/CESettingToolV4.csproj
+00001: [非文本文件，未内联源码。size_bytes=20397, extension=.csproj，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Tools/CESettingToolV5/CESettingToolV4/CESettings/ACE100_CafisArch_PluginDevice.xml
+SHA256: 05394d4daf1e438e2363589b9f18d92165f0cda628968662b64cf48c2a61debe
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8" ?>
+00002: <Extension>
+00003:   <Group
+00004:     Id="Device">
+00005:     <!-- IdはDeviceId -->
+00006:     <Plugin
+00007:       Id="PointService"
+00008:       Assembly="Device.PointService, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00009:       Class="ForYouApplications.POS4U.Device.PointService.PointService"/>
+00010:     <Plugin
+00011:       Id="ValueCard"
+00012:       Assembly="Device.ValueCard, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00013:       Class="ForYouApplications.POS4U.Device.ValueCard.ValueCard"/>
+00014:     <Plugin
+00015:       Id="CashChanger"
+00016:       Assembly="Device.CashChangerLADYf, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00017:       Class="ForYouApplications.POS4U.Device.CashChanger.CashChangerLADYf"/>
+00018:     <Plugin
+00019:       Id="Scanner1"
+00020:       Assembly="Device.Scanner4DotNet, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00021:       Class="ForYouApplications.POS4U.Device.Scanner.Scanner4DotNet"/>
+00022:     <Plugin
+00023:       Id="POSPrinter"
+00024:       Assembly="Device.POSPrinter4DotNet, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00025:       Class="ForYouApplications.POS4U.Device.POSPrinter.POSPrinter4DotNet"/>
+00026:     <Plugin
+00027:       Id="LogicServiceClient"
+00028:       Assembly="Device.LogicServiceClient, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00029:       Class="ForYouApplications.POS4U.Device.LogicServiceClient.LogicServiceClient"/>
+00030:     <Plugin
+00031:       Id="BeepSound"
+00032:       Assembly="Device.BeepSound, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00033:       Class=" ForYouApplications.POS4U.Device.BeepSound.BeepSouncConsole"/>
+00034:     <Plugin
+00035:       Id="ErrorBeepSound"
+00036:       Assembly="Device.BeepSound, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00037:       Class=" ForYouApplications.POS4U.Device.BeepSound.ErrorBeepSouncConsole"/>
+00038:     <Plugin
+00039:       Id="VoiceGuidance"
+00040:       Assembly="Device.BeepSound, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00041:       Class=" ForYouApplications.POS4U.Device.BeepSound.VoiceGuidance"/>
+00042:     <Plugin
+00043:       Id="CAFISArch"
+00044:       Assembly="Device.CAFISArch, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00045:       Class="ForYouApplications.POS4U.Device.CAFISArch.CAFISArchJTC31"/>
+00046:     <Plugin
+00047:       Id="StateManagementService"
+00048:       Assembly="Device.StateManagementService, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00049:       Class="ForYouApplications.POS4U.Device.StateManagementService.StateManagementService"/>
+00050:   </Group>
+00051: </Extension></p>
+<hr />
+<p>FILE: Tools/CESettingToolV5/CESettingToolV4/CESettings/ACE100_CafisArch_SettingWinPOSDevice.xml
+SHA256: 7779ec8b6daf5bd088de298cdff742d8e51668d4f7e2eb86364700cd100ab723
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8"?>
+00002: <Settings>
+00003:   <!-- Device -->
+00004:   <Setting Key="CashChangerName" Value="ACE-100A" />
+00005:   <Setting Key="Scanner1Name" Value="Scanner_FPCPHS1" />
+00006:   <Setting Key="Scanner2Name" Value="USBSCANNER.EX" />
+00007:   <Setting Key="POSPrinterName" Value="POSPrinter_FPS1DPR11_1" />
+00008:   <Setting Key="DeviceCompatibilitiesString" Value="OposAndCompatibilityLevel1" />
+00009:   <Setting Key="LaneLightPortName" Value="COM7" />
+00010:   <Setting Key="GuidanceLEDPortName1" Value="COM8" />
+00011:   <Setting Key="GuidanceLEDPortName2" Value="COM9" />
+00012:   <Setting Key="CAFISArchPortName" Value="COM7" />
+00013:   <Setting Key="LogoStampFilePath" Value="C:\POS4UGO\Settings\TopLogo.bmp" />
+00014:   <Setting Key="POSPrinterFeedLine" Value="1" />
+00015:   <Setting Key="CashChangerUseChangePreceding" Value="false" />
+00016:   <Setting Key="VoiceGuidanceFilePath" Value=".\VoiceGuidances\" />
+00017:   <Setting Key="LogicServiceTerminalNo" Value="110" />
+00018:   <Setting Key="LogicServiceBaseAddress" Value="http://localhost:63526" />
+00019:   <Setting Key="MSRName" Value="MSR_FP7PKA" />
+00020:   <Setting Key="CAFISArchMode" Value="0" />
+00021:   <!-- CAFISArch無操作タイムアウト設定(0:無制限　1以上:秒指定) -->
+00022:   <Setting Key="CAFISArchSalesRequestTimeoutSeconds" Value="0" />
+00023:   <!-- 釣銭機回収 回収先設定(1:出金口/4:回収庫) -->
+00024:   <Setting Key="CashChangerRecoverCashCurrentExit" Value="4" />
+00025:   <!-- 釣銭機両替 回収先設定(1:出金口/4:回収庫) -->
+00026:   <Setting Key="CashChangerExchangeCashCurrentExit" Value="4" />
+00027:   <!-- 釣銭機回収非同期モード設定(true:非同期/false:同期)(ECS-77使用時有効) -->
+00028:   <Setting Key="CashChangerRecoverCashAsyncMode" Value="false" />
+00029:   <!-- MSRTECSS900 -->
+00030:   <!-- MSRの接続状態 True：接続 / False：未接続 -->
+00031:   <Setting Key="MsrConnect" Value="True" />
+00032:   <Setting Key="Msr2Connect" Value="True" />
+00033:   <!--MSRポート番号-->
+00034:   <Setting Key="MsrPortNo" Value="COM8" />
+00035:   <!--MSRボーレート-->
+00036:   <Setting Key="MsrBaudrate" Value="9600" />
+00037:   <!--MSRコマンドタイムアウト(単位msec)-->
+00038:   <Setting Key="MsrCommandTimeout" Value="1000" />
+00039:   <!--MSRカード監視間隔(単位msec)-->
+00040:   <Setting Key="MsrCardMonitoringInterval" Value="1000" />
+00041:   <!--MSRカード抜き忘れ通知までの時間(単位sec)-->
+00042:   <Setting Key="MsrForgotRemoveCardInterval" Value="10" />
+00043:   <!--MSRコマンドリトライ回数-->
+00044:   <Setting Key="MsrCommandRetry" Value="10" />
+00045:   <!-- MSRTECSS900 -->
+00046:   <!--釣銭機入金再開設定(SS900) True:入金再開する/False:入金再開しない-->
+00047:   <Setting Key="IsDepositRestart" Value="True" />
+00048:   <!-- MTranServiceListener使用設定(true:使用/false:不使用)(店内の他端末からの中間取引通信を受信する場合にtrue) -->
+00049:   <Setting Key="IsEnableMTranServiceListener" Value="true" />
+00050:   <Setting Key="MTranServicePort" Value="8080" />
+00051:   <Setting Key="CashDrawerName" Value="CashDrawerName" />
+00052:   <Setting Key="PosKeyboard2Name" Value="LS780KEYUB" />
+00053: </Settings></p>
+<hr />
+<p>FILE: Tools/CESettingToolV5/CESettingToolV4/CESettings/ACE100_PluginDevice.xml
+SHA256: 9999b1b87318373890b6bbdad08ac9a83dc7f7239fe212f6afaf16af073bc4c7
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8" ?>
+00002: <Extension>
+00003:   <Group
+00004:     Id="Device">
+00005:     <!-- IdはDeviceId -->
+00006:     <Plugin
+00007:       Id="PointService"
+00008:       Assembly="Device.PointService, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00009:       Class="ForYouApplications.POS4U.Device.PointService.PointService"/>
+00010:     <Plugin
+00011:       Id="ValueCard"
+00012:       Assembly="Device.ValueCard, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00013:       Class="ForYouApplications.POS4U.Device.ValueCard.ValueCard"/>
+00014:     <Plugin
+00015:       Id="CashChanger"
+00016:       Assembly="Device.CashChangerLADYf, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00017:       Class="ForYouApplications.POS4U.Device.CashChanger.CashChangerLADYf"/>
+00018:     <Plugin
+00019:       Id="Scanner1"
+00020:       Assembly="Device.Scanner4DotNet, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00021:       Class="ForYouApplications.POS4U.Device.Scanner.Scanner4DotNet"/>
+00022:     <Plugin
+00023:       Id="POSPrinter"
+00024:       Assembly="Device.POSPrinter4DotNet, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00025:       Class="ForYouApplications.POS4U.Device.POSPrinter.POSPrinter4DotNet"/>
+00026:     <Plugin
+00027:       Id="LogicServiceClient"
+00028:       Assembly="Device.LogicServiceClient, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00029:       Class="ForYouApplications.POS4U.Device.LogicServiceClient.LogicServiceClient"/>
+00030:     <Plugin
+00031:       Id="BeepSound"
+00032:       Assembly="Device.BeepSound, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00033:       Class=" ForYouApplications.POS4U.Device.BeepSound.BeepSouncConsole"/>
+00034:     <Plugin
+00035:       Id="ErrorBeepSound"
+00036:       Assembly="Device.BeepSound, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00037:       Class=" ForYouApplications.POS4U.Device.BeepSound.ErrorBeepSouncConsole"/>
+00038:     <Plugin
+00039:       Id="VoiceGuidance"
+00040:       Assembly="Device.BeepSound, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00041:       Class=" ForYouApplications.POS4U.Device.BeepSound.VoiceGuidance"/>
+00042:     <Plugin
+00043:       Id="StateManagementService"
+00044:       Assembly="Device.StateManagementService, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00045:       Class="ForYouApplications.POS4U.Device.StateManagementService.StateManagementService"/>
+00046:   </Group>
+00047: </Extension></p>
+<hr />
+<p>FILE: Tools/CESettingToolV5/CESettingToolV4/CESettings/ACE100_SettingWinPOSDevice.xml
+SHA256: 7779ec8b6daf5bd088de298cdff742d8e51668d4f7e2eb86364700cd100ab723
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8"?>
+00002: <Settings>
+00003:   <!-- Device -->
+00004:   <Setting Key="CashChangerName" Value="ACE-100A" />
+00005:   <Setting Key="Scanner1Name" Value="Scanner_FPCPHS1" />
+00006:   <Setting Key="Scanner2Name" Value="USBSCANNER.EX" />
+00007:   <Setting Key="POSPrinterName" Value="POSPrinter_FPS1DPR11_1" />
+00008:   <Setting Key="DeviceCompatibilitiesString" Value="OposAndCompatibilityLevel1" />
+00009:   <Setting Key="LaneLightPortName" Value="COM7" />
+00010:   <Setting Key="GuidanceLEDPortName1" Value="COM8" />
+00011:   <Setting Key="GuidanceLEDPortName2" Value="COM9" />
+00012:   <Setting Key="CAFISArchPortName" Value="COM7" />
+00013:   <Setting Key="LogoStampFilePath" Value="C:\POS4UGO\Settings\TopLogo.bmp" />
+00014:   <Setting Key="POSPrinterFeedLine" Value="1" />
+00015:   <Setting Key="CashChangerUseChangePreceding" Value="false" />
+00016:   <Setting Key="VoiceGuidanceFilePath" Value=".\VoiceGuidances\" />
+00017:   <Setting Key="LogicServiceTerminalNo" Value="110" />
+00018:   <Setting Key="LogicServiceBaseAddress" Value="http://localhost:63526" />
+00019:   <Setting Key="MSRName" Value="MSR_FP7PKA" />
+00020:   <Setting Key="CAFISArchMode" Value="0" />
+00021:   <!-- CAFISArch無操作タイムアウト設定(0:無制限　1以上:秒指定) -->
+00022:   <Setting Key="CAFISArchSalesRequestTimeoutSeconds" Value="0" />
+00023:   <!-- 釣銭機回収 回収先設定(1:出金口/4:回収庫) -->
+00024:   <Setting Key="CashChangerRecoverCashCurrentExit" Value="4" />
+00025:   <!-- 釣銭機両替 回収先設定(1:出金口/4:回収庫) -->
+00026:   <Setting Key="CashChangerExchangeCashCurrentExit" Value="4" />
+00027:   <!-- 釣銭機回収非同期モード設定(true:非同期/false:同期)(ECS-77使用時有効) -->
+00028:   <Setting Key="CashChangerRecoverCashAsyncMode" Value="false" />
+00029:   <!-- MSRTECSS900 -->
+00030:   <!-- MSRの接続状態 True：接続 / False：未接続 -->
+00031:   <Setting Key="MsrConnect" Value="True" />
+00032:   <Setting Key="Msr2Connect" Value="True" />
+00033:   <!--MSRポート番号-->
+00034:   <Setting Key="MsrPortNo" Value="COM8" />
+00035:   <!--MSRボーレート-->
+00036:   <Setting Key="MsrBaudrate" Value="9600" />
+00037:   <!--MSRコマンドタイムアウト(単位msec)-->
+00038:   <Setting Key="MsrCommandTimeout" Value="1000" />
+00039:   <!--MSRカード監視間隔(単位msec)-->
+00040:   <Setting Key="MsrCardMonitoringInterval" Value="1000" />
+00041:   <!--MSRカード抜き忘れ通知までの時間(単位sec)-->
+00042:   <Setting Key="MsrForgotRemoveCardInterval" Value="10" />
+00043:   <!--MSRコマンドリトライ回数-->
+00044:   <Setting Key="MsrCommandRetry" Value="10" />
+00045:   <!-- MSRTECSS900 -->
+00046:   <!--釣銭機入金再開設定(SS900) True:入金再開する/False:入金再開しない-->
+00047:   <Setting Key="IsDepositRestart" Value="True" />
+00048:   <!-- MTranServiceListener使用設定(true:使用/false:不使用)(店内の他端末からの中間取引通信を受信する場合にtrue) -->
+00049:   <Setting Key="IsEnableMTranServiceListener" Value="true" />
+00050:   <Setting Key="MTranServicePort" Value="8080" />
+00051:   <Setting Key="CashDrawerName" Value="CashDrawerName" />
+00052:   <Setting Key="PosKeyboard2Name" Value="LS780KEYUB" />
+00053: </Settings></p>
+<hr />
+<p>FILE: Tools/CESettingToolV5/CESettingToolV4/CESettings/CESettingToolSettingV4.xml
+SHA256: 8982fef836014411b095646a532ab92844e18141c35d28bcd8fb8a33ba108fc1
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8"?>
+00002: <Settings>
+00003:   <!-- 起動パスワード -->
+00004:   <Setting Key="StartPassword"
+00005:            Value=""/>
+00006:   <Setting Key="ExternalServiceVisible"
+00007:            Value="False"/>
+00008: <br />
+00009:   <!--共通設定-->
+00010:   <Setting Key="DefaultComanyCode"
+00011:            Value="1"/>
+00012:   <Setting Key="DefaultManagedNo"
+00013:            Value="0"/>
+00014: 
+00015:   <!-- チャージ機固有のデフォルト設定 -->
+00016:   <Setting Key="ChargeDefaultCashChangerName"
+00017:            Value="ACE-100A"/>
+00018:   <Setting Key="ChargeDefaultPOSPrinterName"
+00019:            Value="POSPrinter_FPS1DPR11_1"/>
+00020: 
+00021:   <!-- 会計機固有のデフォルト設定 -->
+00022:   <Setting Key="PaymentDefaultCashChangerName"
+00023:            Value="ECS-77"/>
+00024:   <Setting Key="PaymentDefaultPOSPrinterName"
+00025:            Value="FP2000USBPRT"/>
+00026: 
+00027:   <!--LogicServiceアドレス-->
+00028:   <Setting Key="LogicServiceBaseMercury"
+00029:            Value="https://trialmercury.posaas.net"/>
+00030:   <Setting Key="LogicServiceBaseVenus"
+00031:            Value="https://trialvenus.posaas.net"/>
+00032:   <Setting Key="LogicServiceBaseTest"
+00033:           Value="https://testtrialappgw.japanwest.cloudapp.azure.com"/>
+00034:   <Setting Key="LogicServiceBaseLocal"
+00035:         Value="http://localhost:63526"/>
+00036: 
+00037:   <!--LogicServiceアクセスコード-->
+00038:   <Setting Key="AccessCodeMercury"
+00039:            Value="181023"/>
+00040:   <Setting Key="AccessCodeVenus"
+00041:            Value="181023"/>
+00042:   <Setting Key="AccessCodeTest"
+00043:            Value="012345"/>
+00044:   <Setting Key="AccessCodeLocal"
+00045:            Value="012345"/>
+00046: <br />
+00047:   <!--ValueServiceへの接続アクセスキー（AES暗号化）-->
+00048:   <Setting Key="ValueCardAccessKeyMercury"
+00049:            Value="1ZOM0QTVU3TWkaRLAGrvaB3euLdSmMx+DIDr6XqpBOA="/>
+00050:   <Setting Key="ValueCardAccessKeyVenus"
+00051:            Value="1ZOM0QTVU3TWkaRLAGrvaB3euLdSmMx+DIDr6XqpBOA="/>
+00052:   <Setting Key="ValueCardAccessKeyTest"
+00053:            Value="O5bp6rRWS9hfrh178T3ICHIvNOO2KSheRyVDBhJgAw0="/>
+00054:   <Setting Key="ValueCardAccessKeyLocal"
+00055:            Value="O5bp6rRWS9hfrh178T3ICHIvNOO2KSheRyVDBhJgAw0="/>
+00056: 
+00057:   <!--ValueServiceへの接続URL-->
+00058:   <Setting Key="ValueCardDealServiceURLMercury"
+00059:            Value="https://sys3.valuecardservice.net:443/soap/services/DealServiceWithPoint"/>
+00060:   <Setting Key="ValueCardDealServiceURLVenus"
+00061:            Value="https://sys3.valuecardservice.net:443/soap/services/DealServiceWithPoint"/>
+00062:   <Setting Key="ValueCardDealServiceURLTest"
+00063:            Value="https://dev.valuecardservice.biz:443/soap/services/DealServiceWithPoint"/>
+00064:   <Setting Key="ValueCardDealServiceURLLocal"
+00065:          Value="https://dev.valuecardservice.biz:443/soap/services/DealServiceWithPoint"/>
+00066: 
+00067:   <!-- 釣銭機 回収先デフォルト設定(1:出金口/4:回収庫) -->
+00068:   <Setting Key="CashChangerCashCurrentExit"
+00069:          Value="4"/>
+00070: <br />
+00071:   <!--PointServiceへの接続先-->
+00072:   <!--IPアドレス-->
+00073:   <Setting Key="PointServiceIPAddressMercury"
+00074:            Value="10.2.8.30"/>
+00075:   <Setting Key="PointServiceIPAddressVenus"
+00076:            Value="10.2.8.30"/>
+00077:   <Setting Key="PointServiceIPAddressTest"
+00078:            Value="10.2.10.10"/>
+00079:   <Setting Key="PointServiceIPAddressLocal"
+00080:            Value="10.2.10.10"/>
+00081:   <!--ポート番号-->
+00082:   <Setting Key="PointServicePortNoMercury"
+00083:            Value="51001"/>
+00084:   <Setting Key="PointServicePortNoVenus"
+00085:            Value="51001"/>
+00086:   <Setting Key="PointServicePortNoTest"
+00087:            Value="51001"/>
+00088:   <Setting Key="PointServicePortNoLocal"
+00089:            Value="51001"/>
+00090: 
+00091:   <!--CRMPointServiceへの接続アクセストークン（MD5暗号化）-->
+00092:   <Setting Key="CRMPointServiceAccessTokenMercury"
+00093:            Value="s8b3n9"/>
+00094:   <Setting Key="CRMPointServiceAccessTokenVenus"
+00095:            Value="s8b3n9"/>
+00096:   <Setting Key="CRMPointServiceAccessTokenTest"
+00097:            Value="82b33ca1cdd8b7abe4d16795c0ccc3bd"/>
+00098:   <Setting Key="CRMPointServiceAccessTokenLocal"
+00099:            Value="82b33ca1cdd8b7abe4d16795c0ccc3bd"/>
+00100: <br />
+00101:   <!--CRMPointServiceへの接続URL-->
+00102:   <Setting Key="CRMPointServiceURLMercury"
+00103:            Value="http://10.2.9.4/CRM/Service.asmx?op=setAdjustmentPointInfo"/>
+00104:   <Setting Key="CRMPointServiceURLVenus"
+00105:            Value="http://10.2.9.4/CRM/Service.asmx?op=setAdjustmentPointInfo"/>
+00106:   <Setting Key="CRMPointServiceURLTest"
+00107:            Value="http://172.17.1.32/PPM_Dev/Service.asmx"/>
+00108:   <Setting Key="CRMPointServiceURLLocal"
+00109:            Value="http://172.17.1.32/PPM_Dev/Service.asmx"/>
+00110: <br />
+00111:   <!--RetailMediaServiceへの接続URL-->
+00112:   <Setting Key="RetailMediaServiceBaseURLMercury"
+00113:            Value="https://www-api.retailmedia.jp"/>
+00114:   <Setting Key="RetailMediaServiceBaseURLVenus"
+00115:            Value="https://www-api.retailmedia.jp"/>
+00116:   <Setting Key="RetailMediaServiceBaseURLTest"
+00117:            Value="https://dev-api2.retailmedia.jp"/>
+00118:   <Setting Key="RetailMediaServiceBaseURLLocal"
+00119:            Value="https://dev-api2.retailmedia.jp"/>
+00120: <br />
+00121:   <!--RetailMediaServiceへの接続アクセスコード（AES暗号化）-->
+00122:   <Setting Key="RetailMediaServiceAccessCodeMercury"
+00123:            Value="oCeNO3iYKbwKgDTV0dTIQCd4K5nDtsx+R0mWjXWjiqA="/>
+00124:   <Setting Key="RetailMediaServiceAccessCodeVenus"
+00125:            Value="oCeNO3iYKbwKgDTV0dTIQCd4K5nDtsx+R0mWjXWjiqA="/>
+00126:   <Setting Key="RetailMediaServiceAccessCodeTest"
+00127:            Value="hxG9rzPcEGuth8ND489jdw=="/>
+00128:   <Setting Key="RetailMediaServiceAccessCodeLocal"
+00129:            Value="hxG9rzPcEGuth8ND489jdw=="/>
+00130: <br />
+00131:   <!--ロゴファイルフォルダ取得パス-->
+00132:   <Setting Key="LogoFolderPath"
+00133:            Value=".\CESettings\TopLogo\"/><br />
+00134:   <!--ロゴファイル移動先フォルダパス-->
+00135:   <Setting Key="LogoFilePath"
+00136:            Value="C:\POS4UGO\Settings\"/>
+00137:   <!--ロゴファイル名-->
+00138:   <Setting Key="LogoFileName"
+00139:            Value="TopLogo.bmp"/>
+00140: 
+00141:   <!--店舗コードUPDATE対象テーブルリストファイル名-->
+00142:   <Setting Key="UpdateStoreCodeTable"
+00143:            Value="CESettingTool_UpdateTableList.txt"/>
+00144: 
+00145:   <!--DELETE対象テーブルリストファイル名-->
+00146:   <Setting Key="DeleteTable"
+00147:            Value="CESettingTool_DeleteTableList.txt"/>
+00148: 
+00149:   <!--接続確認ボタン表示・非表示(true:表示／false:非表示)-->
+00150:   <Setting Key="BtnConnectionVisibility"
+00151:            Value="true"/>
+00152: <br />
+00153:   <!--端末番号(会計機)-->
+00154:   <Setting Key="TerminalNoTopNumber"
+00155:            Value="45"/>
+00156: 
+00157:   <!--端末SUB番号(会計機)-->
+00158:   <Setting Key="SubTerminalNoTopNumber"
+00159:            Value="40"/>
+00160: 
+00161:   <!-- POS機種名称 -->
+00162:   <Setting Key="PluginDeviceSettings"
+00163:            Value="会計機ECS77,会計機SS900,チャージ機ACE100,チャージ機ACE100(CafisArch),シミュレータ"/>
+00164:   <!-- PluginDeviceSettingsとPluginDeviceSettingsFileNamesの数は揃えてください。
+00165:   PluginDeviceSettingsにはツールで表示される名称、
+00166:   PluginDeviceSettingsFileNamesにはコピーするファイル名を設定してください。
+00167:   ファイル名は、xxx_PluginDevice.xml、xxx_SettingWinPOSDevice.xml のxxxをPluginDeviceSettingsFileNamesと合わせてください-->
+00168:   <!-- POS機種名称_日本語 -->
+00169:   <Setting Key="PluginDeviceSettingsFileNames"
+00170:            Value="ECS77,SS900,ACE100,ACE100_CafisArch,Simulator"/>
+00171: <br />
+00172: </Settings></p>
+<hr />
+<p>FILE: Tools/CESettingToolV5/CESettingToolV4/CESettings/Charge_CafisArch_PluginDevice.xml
+SHA256: 31c38d890694d8e740715df22cc10b42099a85bb2f3410f2406ec18e1c8bddab
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8" ?>
+00002: <Extension>
+00003:   <Group
+00004:     Id="Device">
+00005:     <!-- IdはDeviceId -->
+00006:     <Plugin
+00007:       Id="PointService"
+00008:       Assembly="Device.PointService, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00009:       Class="ForYouApplications.POS4U.Device.PointService.PointService"/>
+00010:     <Plugin
+00011:       Id="ValueCard"
+00012:       Assembly="Device.ValueCard, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00013:       Class="ForYouApplications.POS4U.Device.ValueCard.ValueCard"/>
+00014:     <Plugin
+00015:       Id="CashChanger"
+00016:       Assembly="Device.CashChangerLADYf, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00017:       Class="ForYouApplications.POS4U.Device.CashChanger.CashChangerLADYf"/>
+00018:     <Plugin
+00019:       Id="Scanner1"
+00020:       Assembly="Device.Scanner4DotNet, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00021:       Class="ForYouApplications.POS4U.Device.Scanner.Scanner4DotNet"/>
+00022:     <Plugin
+00023:       Id="POSPrinter"
+00024:       Assembly="Device.POSPrinter4DotNet, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00025:       Class="ForYouApplications.POS4U.Device.POSPrinter.POSPrinter4DotNet"/>
+00026:     <Plugin
+00027:       Id="LogicServiceClient"
+00028:       Assembly="Device.LogicServiceClient, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00029:       Class="ForYouApplications.POS4U.Device.LogicServiceClient.LogicServiceClient"/>
+00030:     <Plugin
+00031:       Id="BeepSound"
+00032:       Assembly="Device.BeepSound, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00033:       Class=" ForYouApplications.POS4U.Device.BeepSound.BeepSouncConsole"/>
+00034:     <Plugin
+00035:       Id="ErrorBeepSound"
+00036:       Assembly="Device.BeepSound, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00037:       Class=" ForYouApplications.POS4U.Device.BeepSound.ErrorBeepSouncConsole"/>
+00038:     <Plugin
+00039:       Id="VoiceGuidance"
+00040:       Assembly="Device.BeepSound, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00041:       Class=" ForYouApplications.POS4U.Device.BeepSound.VoiceGuidance"/>
+00042:     <Plugin
+00043:       Id="CAFISArch"
+00044:       Assembly="Device.CAFISArch, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00045:       Class="ForYouApplications.POS4U.Device.CAFISArch.CAFISArchJTC31"/>
+00046:   </Group>
+00047: </Extension></p>
+<hr />
+<p>FILE: Tools/CESettingToolV5/CESettingToolV4/CESettings/Charge_PluginDevice.xml
+SHA256: 822385af65b8cdcc60c0d63aa9cb84c50399b7c481f78ad6dafcb7a11a984181
+================================================================================
+00001: <?xml version="1.0" encoding="utf-8" ?>
+00002: <Extension>
+00003:   <Group
+00004:     Id="Device">
+00005:     <!-- IdはDeviceId -->
+00006:     <Plugin
+00007:       Id="PointService"
+00008:       Assembly="Device.PointService, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00009:       Class="ForYouApplications.POS4U.Device.PointService.PointService"/>
+00010:     <Plugin
+00011:       Id="ValueCard"
+00012:       Assembly="Device.ValueCard, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00013:       Class="ForYouApplications.POS4U.Device.ValueCard.ValueCard"/>
+00014:     <Plugin
+00015:       Id="CashChanger"
+00016:       Assembly="Device.CashChangerLADYf, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00017:       Class="ForYouApplications.POS4U.Device.CashChanger.CashChangerLADYf"/>
+00018:     <Plugin
+00019:       Id="Scanner1"
+00020:       Assembly="Device.Scanner4DotNet, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00021:       Class="ForYouApplications.POS4U.Device.Scanner.Scanner4DotNet"/>
+00022:     <Plugin
+00023:       Id="POSPrinter"
+00024:       Assembly="Device.POSPrinter4DotNet, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00025:       Class="ForYouApplications.POS4U.Device.POSPrinter.POSPrinter4DotNet"/>
+00026:     <Plugin
+00027:       Id="LogicServiceClient"
+00028:       Assembly="Device.LogicServiceClient, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00029:       Class="ForYouApplications.POS4U.Device.LogicServiceClient.LogicServiceClient"/>
+00030:     <Plugin
+00031:       Id="BeepSound"
+00032:       Assembly="Device.BeepSound, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00033:       Class=" ForYouApplications.POS4U.Device.BeepSound.BeepSouncConsole"/>
+00034:     <Plugin
+00035:       Id="ErrorBeepSound"
+00036:       Assembly="Device.BeepSound, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00037:       Class=" ForYouApplications.POS4U.Device.BeepSound.ErrorBeepSouncConsole"/>
+00038:     <Plugin
+00039:       Id="VoiceGuidance"
+00040:       Assembly="Device.BeepSound, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00041:       Class=" ForYouApplications.POS4U.Device.BeepSound.VoiceGuidance"/>
+00042:   </Group>
+00043: </Extension></p>
+<hr />
+<p>FILE: Tools/CESettingToolV5/CESettingToolV4/CESettings/Charge_SettingWinPOSDevice.xml
+SHA256: 262bde632d3c6ec3d4f5c6d97de62fe1b66492efc511afdaafac0e27fb410402
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8"?>
+00002: <Settings>
+00003:   <!-- Device -->
+00004:   <Setting Key="CashChangerName" Value="ECS-77" />
+00005:   <Setting Key="Scanner1Name" Value="Scanner_FPCPHS1" />
+00006:   <Setting Key="Scanner2Name" Value="USBSCANNER.EX" />
+00007:   <Setting Key="POSPrinterName" Value="FP2000USBPRT" />
+00008:   <Setting Key="DeviceCompatibilitiesString" Value="OposAndCompatibilityLevel1" />
+00009:   <Setting Key="LaneLightPortName" Value="COM7" />
+00010:   <Setting Key="GuidanceLEDPortName1" Value="COM8" />
+00011:   <Setting Key="GuidanceLEDPortName2" Value="COM9" />
+00012:   <Setting Key="CAFISArchPortName" Value="COM7" />
+00013:   <Setting Key="LogoStampFilePath" Value="C:\POS4UGO\Settings\TopLogo.bmp" />
+00014:   <Setting Key="POSPrinterFeedLine" Value="1" />
+00015:   <Setting Key="CashChangerUseChangePreceding" Value="false" />
+00016:   <Setting Key="VoiceGuidanceFilePath" Value=".\VoiceGuidances\" />
+00017:   <Setting Key="LogicServiceTerminalNo" Value="110" />
+00018:   <Setting Key="LogicServiceBaseAddress" Value="http://localhost:63526" />
+00019:   <Setting Key="MSRName" Value="MSR_FP7PKA" />
+00020:   <Setting Key="CAFISArchMode" Value="0" />
+00021:   <!-- CAFISArch無操作タイムアウト設定(0:無制限　1以上:秒指定) -->
+00022:   <Setting Key="CAFISArchSalesRequestTimeoutSeconds" Value="0" />
+00023:   <!-- 釣銭機回収 回収先設定(1:出金口/4:回収庫) -->
+00024:   <Setting Key="CashChangerRecoverCashCurrentExit" Value="4" />
+00025:   <!-- 釣銭機両替 回収先設定(1:出金口/4:回収庫) -->
+00026:   <Setting Key="CashChangerExchangeCashCurrentExit" Value="4" />
+00027:   <!-- 釣銭機回収非同期モード設定(true:非同期/false:同期)(ECS-77使用時有効) -->
+00028:   <Setting Key="CashChangerRecoverCashAsyncMode" Value="false" />
+00029:   <!-- MSRTECSS900 -->
+00030:   <!-- MSRの接続状態 True：接続 / False：未接続 -->
+00031:   <Setting Key="MsrConnect" Value="True" />
+00032:   <Setting Key="Msr2Connect" Value="True" />
+00033:   <!--MSRポート番号-->
+00034:   <Setting Key="MsrPortNo" Value="COM8" />
+00035:   <!--MSRボーレート-->
+00036:   <Setting Key="MsrBaudrate" Value="9600" />
+00037:   <!--MSRコマンドタイムアウト(単位msec)-->
+00038:   <Setting Key="MsrCommandTimeout" Value="1000" />
+00039:   <!--MSRカード監視間隔(単位msec)-->
+00040:   <Setting Key="MsrCardMonitoringInterval" Value="1000" />
+00041:   <!--MSRカード抜き忘れ通知までの時間(単位sec)-->
+00042:   <Setting Key="MsrForgotRemoveCardInterval" Value="10" />
+00043:   <!--MSRコマンドリトライ回数-->
+00044:   <Setting Key="MsrCommandRetry" Value="10" />
+00045:   <!-- MSRTECSS900 -->
+00046:   <!--釣銭機入金再開設定(SS900) True:入金再開する/False:入金再開しない-->
+00047:   <Setting Key="IsDepositRestart" Value="True" />
+00048:   <!-- MTranServiceListener使用設定(true:使用/false:不使用)(店内の他端末からの中間取引通信を受信する場合にtrue) -->
+00049:   <Setting Key="IsEnableMTranServiceListener" Value="true" />
+00050:   <Setting Key="MTranServicePort" Value="8080" />
+00051:   <Setting Key="CashDrawerName" Value="CashDrawerName" />
+00052:   <Setting Key="PosKeyboard2Name" Value="LS780KEYUB" />
+00053: </Settings></p>
+<hr />
+<p>FILE: Tools/CESettingToolV5/CESettingToolV4/CESettings/ECS77_PluginDevice.xml
+SHA256: 2bb76e2acbb159c1dbbb62c82a4416ae289f6cec679e880be26cb2f8058a71ee
+================================================================================
+00001: <?xml version="1.0" encoding="utf-8" ?>
+00002: <Extension>
+00003:   <Group
+00004:     Id="Device">
+00005:     <!-- IdはDeviceId -->
+00006:     <Plugin
+00007:       Id="PointService"
+00008:       Assembly="Device.PointService, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00009:       Class="ForYouApplications.POS4U.Device.PointService.PointService"/>
+00010:     <Plugin
+00011:       Id="ValueCard"
+00012:       Assembly="Device.ValueCard, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00013:       Class="ForYouApplications.POS4U.Device.ValueCard.ValueCard"/>
+00014:     <Plugin
+00015:       Id="CashChanger"
+00016:       Assembly="Device.CashChangerECS7, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00017:       Class="ForYouApplications.POS4U.Device.CashChanger.CashChanger"/>
+00018:     <Plugin
+00019:       Id="Scanner1"
+00020:       Assembly="Device.Scanner4DotNet, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00021:       Class="ForYouApplications.POS4U.Device.Scanner.Scanner4DotNet"/>
+00022:     <Plugin
+00023:       Id="POSPrinter"
+00024:       Assembly="Device.POSPrinterFP2000, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00025:       Class="ForYouApplications.POS4U.Device.POSPrinter.POSPrinterFP2000"/>
+00026:     <Plugin
+00027:       Id="LogicServiceClient"
+00028:       Assembly="Device.LogicServiceClient, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00029:       Class="ForYouApplications.POS4U.Device.LogicServiceClient.LogicServiceClient"/>
+00030:     <Plugin
+00031:       Id="LaneLight"
+00032:       Assembly="Device.LaneLight, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00033:       Class="ForYouApplications.POS4U.Device.LaneLight.LaneLight"/>
+00034:     <Plugin
+00035:       Id="GuidanceLED"
+00036:       Assembly="Device.GuidanceLED, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00037:       Class="ForYouApplications.POS4U.Device.GuidanceLED.GuidanceLED"/>
+00038:     <Plugin
+00039:       Id="BeepSound"
+00040:       Assembly="Device.BeepSound, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00041:       Class=" ForYouApplications.POS4U.Device.BeepSound.BeepSouncConsole"/>
+00042:     <Plugin
+00043:       Id="ErrorBeepSound"
+00044:       Assembly="Device.BeepSound, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00045:       Class=" ForYouApplications.POS4U.Device.BeepSound.ErrorBeepSouncConsole"/>
+00046:     <Plugin
+00047:       Id="VoiceGuidance"
+00048:       Assembly="Device.BeepSound, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00049:       Class=" ForYouApplications.POS4U.Device.BeepSound.VoiceGuidance"/>
+00050:     <Plugin
+00051:       Id="StateManagementService"
+00052:       Assembly="Device.StateManagementService, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00053:       Class="ForYouApplications.POS4U.Device.StateManagementService.StateManagementService"/>
+00054:   </Group>
+00055: </Extension></p>
+<hr />
+<p>FILE: Tools/CESettingToolV5/CESettingToolV4/CESettings/ECS77_SettingWinPOSDevice.xml
+SHA256: 262bde632d3c6ec3d4f5c6d97de62fe1b66492efc511afdaafac0e27fb410402
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8"?>
+00002: <Settings>
+00003:   <!-- Device -->
+00004:   <Setting Key="CashChangerName" Value="ECS-77" />
+00005:   <Setting Key="Scanner1Name" Value="Scanner_FPCPHS1" />
+00006:   <Setting Key="Scanner2Name" Value="USBSCANNER.EX" />
+00007:   <Setting Key="POSPrinterName" Value="FP2000USBPRT" />
+00008:   <Setting Key="DeviceCompatibilitiesString" Value="OposAndCompatibilityLevel1" />
+00009:   <Setting Key="LaneLightPortName" Value="COM7" />
+00010:   <Setting Key="GuidanceLEDPortName1" Value="COM8" />
+00011:   <Setting Key="GuidanceLEDPortName2" Value="COM9" />
+00012:   <Setting Key="CAFISArchPortName" Value="COM7" />
+00013:   <Setting Key="LogoStampFilePath" Value="C:\POS4UGO\Settings\TopLogo.bmp" />
+00014:   <Setting Key="POSPrinterFeedLine" Value="1" />
+00015:   <Setting Key="CashChangerUseChangePreceding" Value="false" />
+00016:   <Setting Key="VoiceGuidanceFilePath" Value=".\VoiceGuidances\" />
+00017:   <Setting Key="LogicServiceTerminalNo" Value="110" />
+00018:   <Setting Key="LogicServiceBaseAddress" Value="http://localhost:63526" />
+00019:   <Setting Key="MSRName" Value="MSR_FP7PKA" />
+00020:   <Setting Key="CAFISArchMode" Value="0" />
+00021:   <!-- CAFISArch無操作タイムアウト設定(0:無制限　1以上:秒指定) -->
+00022:   <Setting Key="CAFISArchSalesRequestTimeoutSeconds" Value="0" />
+00023:   <!-- 釣銭機回収 回収先設定(1:出金口/4:回収庫) -->
+00024:   <Setting Key="CashChangerRecoverCashCurrentExit" Value="4" />
+00025:   <!-- 釣銭機両替 回収先設定(1:出金口/4:回収庫) -->
+00026:   <Setting Key="CashChangerExchangeCashCurrentExit" Value="4" />
+00027:   <!-- 釣銭機回収非同期モード設定(true:非同期/false:同期)(ECS-77使用時有効) -->
+00028:   <Setting Key="CashChangerRecoverCashAsyncMode" Value="false" />
+00029:   <!-- MSRTECSS900 -->
+00030:   <!-- MSRの接続状態 True：接続 / False：未接続 -->
+00031:   <Setting Key="MsrConnect" Value="True" />
+00032:   <Setting Key="Msr2Connect" Value="True" />
+00033:   <!--MSRポート番号-->
+00034:   <Setting Key="MsrPortNo" Value="COM8" />
+00035:   <!--MSRボーレート-->
+00036:   <Setting Key="MsrBaudrate" Value="9600" />
+00037:   <!--MSRコマンドタイムアウト(単位msec)-->
+00038:   <Setting Key="MsrCommandTimeout" Value="1000" />
+00039:   <!--MSRカード監視間隔(単位msec)-->
+00040:   <Setting Key="MsrCardMonitoringInterval" Value="1000" />
+00041:   <!--MSRカード抜き忘れ通知までの時間(単位sec)-->
+00042:   <Setting Key="MsrForgotRemoveCardInterval" Value="10" />
+00043:   <!--MSRコマンドリトライ回数-->
+00044:   <Setting Key="MsrCommandRetry" Value="10" />
+00045:   <!-- MSRTECSS900 -->
+00046:   <!--釣銭機入金再開設定(SS900) True:入金再開する/False:入金再開しない-->
+00047:   <Setting Key="IsDepositRestart" Value="True" />
+00048:   <!-- MTranServiceListener使用設定(true:使用/false:不使用)(店内の他端末からの中間取引通信を受信する場合にtrue) -->
+00049:   <Setting Key="IsEnableMTranServiceListener" Value="true" />
+00050:   <Setting Key="MTranServicePort" Value="8080" />
+00051:   <Setting Key="CashDrawerName" Value="CashDrawerName" />
+00052:   <Setting Key="PosKeyboard2Name" Value="LS780KEYUB" />
+00053: </Settings></p>
+<hr />
+<p>FILE: Tools/CESettingToolV5/CESettingToolV4/CESettings/Payment_PluginDevice.xml
+SHA256: 43bb556f11823c306793891175d181f3fa992c39b1a306da22feff3d2e108b5c
+================================================================================
+00001: <?xml version="1.0" encoding="utf-8" ?>
+00002: <Extension>
+00003:   <Group
+00004:     Id="Device">
+00005:     <!-- IdはDeviceId -->
+00006:     <Plugin
+00007:       Id="PointService"
+00008:       Assembly="Device.PointService, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00009:       Class="ForYouApplications.POS4U.Device.PointService.PointService"/>
+00010:     <Plugin
+00011:       Id="ValueCard"
+00012:       Assembly="Device.ValueCard, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00013:       Class="ForYouApplications.POS4U.Device.ValueCard.ValueCard"/>
+00014:     <Plugin
+00015:       Id="CashChanger"
+00016:       Assembly="Device.CashChangerECS7, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00017:       Class="ForYouApplications.POS4U.Device.CashChanger.CashChanger"/>
+00018:     <Plugin
+00019:       Id="Scanner1"
+00020:       Assembly="Device.Scanner4DotNet, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00021:       Class="ForYouApplications.POS4U.Device.Scanner.Scanner4DotNet"/>
+00022:     <Plugin
+00023:       Id="POSPrinter"
+00024:       Assembly="Device.POSPrinterFP2000, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00025:       Class="ForYouApplications.POS4U.Device.POSPrinter.POSPrinterFP2000"/>
+00026:     <Plugin
+00027:       Id="LogicServiceClient"
+00028:       Assembly="Device.LogicServiceClient, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00029:       Class="ForYouApplications.POS4U.Device.LogicServiceClient.LogicServiceClient"/>
+00030:     <Plugin
+00031:       Id="LaneLight"
+00032:       Assembly="Device.LaneLight, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00033:       Class="ForYouApplications.POS4U.Device.LaneLight.LaneLight"/>
+00034:     <Plugin
+00035:       Id="GuidanceLED"
+00036:       Assembly="Device.GuidanceLED, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00037:       Class="ForYouApplications.POS4U.Device.GuidanceLED.GuidanceLED"/>
+00038:     <Plugin
+00039:       Id="BeepSound"
+00040:       Assembly="Device.BeepSound, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00041:       Class=" ForYouApplications.POS4U.Device.BeepSound.BeepSouncConsole"/>
+00042:     <Plugin
+00043:       Id="ErrorBeepSound"
+00044:       Assembly="Device.BeepSound, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00045:       Class=" ForYouApplications.POS4U.Device.BeepSound.ErrorBeepSouncConsole"/>
+00046:     <Plugin
+00047:       Id="VoiceGuidance"
+00048:       Assembly="Device.BeepSound, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00049:       Class=" ForYouApplications.POS4U.Device.BeepSound.VoiceGuidance"/>
+00050:   </Group>
+00051: </Extension></p>
+<hr />
+<p>FILE: Tools/CESettingToolV5/CESettingToolV4/CESettings/Payment_SettingWinPOSDevice.xml
+SHA256: 262bde632d3c6ec3d4f5c6d97de62fe1b66492efc511afdaafac0e27fb410402
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8"?>
+00002: <Settings>
+00003:   <!-- Device -->
+00004:   <Setting Key="CashChangerName" Value="ECS-77" />
+00005:   <Setting Key="Scanner1Name" Value="Scanner_FPCPHS1" />
+00006:   <Setting Key="Scanner2Name" Value="USBSCANNER.EX" />
+00007:   <Setting Key="POSPrinterName" Value="FP2000USBPRT" />
+00008:   <Setting Key="DeviceCompatibilitiesString" Value="OposAndCompatibilityLevel1" />
+00009:   <Setting Key="LaneLightPortName" Value="COM7" />
+00010:   <Setting Key="GuidanceLEDPortName1" Value="COM8" />
+00011:   <Setting Key="GuidanceLEDPortName2" Value="COM9" />
+00012:   <Setting Key="CAFISArchPortName" Value="COM7" />
+00013:   <Setting Key="LogoStampFilePath" Value="C:\POS4UGO\Settings\TopLogo.bmp" />
+00014:   <Setting Key="POSPrinterFeedLine" Value="1" />
+00015:   <Setting Key="CashChangerUseChangePreceding" Value="false" />
+00016:   <Setting Key="VoiceGuidanceFilePath" Value=".\VoiceGuidances\" />
+00017:   <Setting Key="LogicServiceTerminalNo" Value="110" />
+00018:   <Setting Key="LogicServiceBaseAddress" Value="http://localhost:63526" />
+00019:   <Setting Key="MSRName" Value="MSR_FP7PKA" />
+00020:   <Setting Key="CAFISArchMode" Value="0" />
+00021:   <!-- CAFISArch無操作タイムアウト設定(0:無制限　1以上:秒指定) -->
+00022:   <Setting Key="CAFISArchSalesRequestTimeoutSeconds" Value="0" />
+00023:   <!-- 釣銭機回収 回収先設定(1:出金口/4:回収庫) -->
+00024:   <Setting Key="CashChangerRecoverCashCurrentExit" Value="4" />
+00025:   <!-- 釣銭機両替 回収先設定(1:出金口/4:回収庫) -->
+00026:   <Setting Key="CashChangerExchangeCashCurrentExit" Value="4" />
+00027:   <!-- 釣銭機回収非同期モード設定(true:非同期/false:同期)(ECS-77使用時有効) -->
+00028:   <Setting Key="CashChangerRecoverCashAsyncMode" Value="false" />
+00029:   <!-- MSRTECSS900 -->
+00030:   <!-- MSRの接続状態 True：接続 / False：未接続 -->
+00031:   <Setting Key="MsrConnect" Value="True" />
+00032:   <Setting Key="Msr2Connect" Value="True" />
+00033:   <!--MSRポート番号-->
+00034:   <Setting Key="MsrPortNo" Value="COM8" />
+00035:   <!--MSRボーレート-->
+00036:   <Setting Key="MsrBaudrate" Value="9600" />
+00037:   <!--MSRコマンドタイムアウト(単位msec)-->
+00038:   <Setting Key="MsrCommandTimeout" Value="1000" />
+00039:   <!--MSRカード監視間隔(単位msec)-->
+00040:   <Setting Key="MsrCardMonitoringInterval" Value="1000" />
+00041:   <!--MSRカード抜き忘れ通知までの時間(単位sec)-->
+00042:   <Setting Key="MsrForgotRemoveCardInterval" Value="10" />
+00043:   <!--MSRコマンドリトライ回数-->
+00044:   <Setting Key="MsrCommandRetry" Value="10" />
+00045:   <!-- MSRTECSS900 -->
+00046:   <!--釣銭機入金再開設定(SS900) True:入金再開する/False:入金再開しない-->
+00047:   <Setting Key="IsDepositRestart" Value="True" />
+00048:   <!-- MTranServiceListener使用設定(true:使用/false:不使用)(店内の他端末からの中間取引通信を受信する場合にtrue) -->
+00049:   <Setting Key="IsEnableMTranServiceListener" Value="true" />
+00050:   <Setting Key="MTranServicePort" Value="8080" />
+00051:   <Setting Key="CashDrawerName" Value="CashDrawerName" />
+00052:   <Setting Key="PosKeyboard2Name" Value="LS780KEYUB" />
+00053: </Settings></p>
+<hr />
+<p>FILE: Tools/CESettingToolV5/CESettingToolV4/CESettings/SS900_PluginDevice.xml
+SHA256: 461520fc1121bb9c31d80f942f76650bbbc869d2639cb140abac30efa3adbe1c
+================================================================================
+00001: <?xml version="1.0" encoding="utf-8" ?>
+00002: <Extension>
+00003:   <Group
+00004:     Id="Device">
+00005:     <!-- IdはDeviceId -->
+00006:     <Plugin
+00007:       Id="PointService"
+00008:       Assembly="Device.PointService, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00009:       Class="ForYouApplications.POS4U.Device.PointService.PointService"/>
+00010:     <Plugin
+00011:       Id="ValueCard"
+00012:       Assembly="Device.ValueCard, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00013:       Class="ForYouApplications.POS4U.Device.ValueCard.ValueCard"/>
+00014:     <Plugin
+00015:       Id="CashChanger"
+00016:       Assembly="Device.CashChangerVT280, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00017:       Class="ForYouApplications.POS4U.Device.CashChanger.CashChanger"/>
+00018:     <Plugin
+00019:       Id="Scanner1"
+00020:       Assembly="Device.Scanner4DotNet, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00021:       Class="ForYouApplications.POS4U.Device.Scanner.Scanner4DotNet"/>
+00022:     <Plugin
+00023:       Id="POSPrinter"
+00024:       Assembly="Device.POSPrinterTECSS900, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00025:       Class="ForYouApplications.POS4U.Device.POSPrinter.POSPrinterTECSS900"/>
+00026:     <Plugin
+00027:       Id="LogicServiceClient"
+00028:       Assembly="Device.LogicServiceClient, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00029:       Class="ForYouApplications.POS4U.Device.LogicServiceClient.LogicServiceClient"/>
+00030:     <Plugin
+00031:       Id="LaneLight"
+00032:       Assembly="Device.SelfCheckoutTECSS900, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00033:       Class="ForYouApplications.POS4U.Device.SelfCheckout.LaneLight"/>
+00034:     <Plugin
+00035:       Id="GuidanceLED"
+00036:       Assembly="Device.SelfCheckoutTECSS900, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00037:       Class="ForYouApplications.POS4U.Device.SelfCheckout.GuidanceLED"/>
+00038:     <Plugin
+00039:       Id="BeepSound"
+00040:       Assembly="Device.BeepSound, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00041:       Class=" ForYouApplications.POS4U.Device.BeepSound.BeepSouncConsole"/>
+00042:     <Plugin
+00043:       Id="ErrorBeepSound"
+00044:       Assembly="Device.BeepSound, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00045:       Class=" ForYouApplications.POS4U.Device.BeepSound.ErrorBeepSouncConsole"/>
+00046:     <Plugin
+00047:       Id="VoiceGuidance"
+00048:       Assembly="Device.BeepSound, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00049:       Class=" ForYouApplications.POS4U.Device.BeepSound.VoiceGuidance"/>
+00050:     <Plugin
+00051:       Id="StateManagementService"
+00052:       Assembly="Device.StateManagementService, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00053:       Class="ForYouApplications.POS4U.Device.StateManagementService.StateManagementService"/>
+00054:   </Group>
+00055: </Extension></p>
+<hr />
+<p>FILE: Tools/CESettingToolV5/CESettingToolV4/CESettings/SS900_SettingWinPOSDevice.xml
+SHA256: 6e7b24ca04b00c159dc3d8cf33bcaec3c2d8ea49a6a38ca63cbe27b936cbacf8
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8"?>
+00002: <Settings>
+00003:   <!-- Device -->
+00004:   <Setting Key="CashChangerName" Value="VT100" />
+00005:   <Setting Key="Scanner1Name" Value="USBSCANNER" />
+00006:   <Setting Key="Scanner2Name" Value="USBSCANNER.EX" />
+00007:   <Setting Key="POSPrinterName" Value="TRST57U" />
+00008:   <Setting Key="DeviceCompatibilitiesString" Value="OposAndCompatibilityLevel1" />
+00009:   <Setting Key="LaneLightPortName" Value="COM4" />
+00010:   <Setting Key="GuidanceLEDPortName1" Value="COM4" />
+00011:   <Setting Key="GuidanceLEDPortName2" Value="COM4" />
+00012:   <Setting Key="CAFISArchPortName" Value="COM7" />
+00013:   <Setting Key="LogoStampFilePath" Value="C:\POS4UGO\Settings\TopLogo.bmp" />
+00014:   <Setting Key="POSPrinterFeedLine" Value="1" />
+00015:   <Setting Key="CashChangerUseChangePreceding" Value="false" />
+00016:   <Setting Key="VoiceGuidanceFilePath" Value=".\VoiceGuidances\" />
+00017:   <Setting Key="LogicServiceTerminalNo" Value="110" />
+00018:   <Setting Key="LogicServiceBaseAddress" Value="http://localhost:63526" />
+00019:   <Setting Key="MSRName" Value="MSR_FP7PKA" />
+00020:   <Setting Key="CAFISArchMode" Value="0" />
+00021:   <!-- CAFISArch無操作タイムアウト設定(0:無制限　1以上:秒指定) -->
+00022:   <Setting Key="CAFISArchSalesRequestTimeoutSeconds" Value="0" />
+00023:   <!-- 釣銭機回収 回収先設定(1:出金口/4:回収庫) -->
+00024:   <Setting Key="CashChangerRecoverCashCurrentExit" Value="4" />
+00025:   <!-- 釣銭機両替 回収先設定(1:出金口/4:回収庫) -->
+00026:   <Setting Key="CashChangerExchangeCashCurrentExit" Value="4" />
+00027:   <!-- 釣銭機回収非同期モード設定(true:非同期/false:同期)(ECS-77使用時有効) -->
+00028:   <Setting Key="CashChangerRecoverCashAsyncMode" Value="false" />
+00029:   <!-- MSRTECSS900 -->
+00030:   <!-- MSRの接続状態 True：接続 / False：未接続 -->
+00031:   <Setting Key="MsrConnect" Value="True" />
+00032:   <Setting Key="Msr2Connect" Value="True" />
+00033:   <!--MSRポート番号-->
+00034:   <Setting Key="MsrPortNo" Value="COM8" />
+00035:   <!--MSRボーレート-->
+00036:   <Setting Key="MsrBaudrate" Value="9600" />
+00037:   <!--MSRコマンドタイムアウト(単位msec)-->
+00038:   <Setting Key="MsrCommandTimeout" Value="1000" />
+00039:   <!--MSRカード監視間隔(単位msec)-->
+00040:   <Setting Key="MsrCardMonitoringInterval" Value="1000" />
+00041:   <!--MSRカード抜き忘れ通知までの時間(単位sec)-->
+00042:   <Setting Key="MsrForgotRemoveCardInterval" Value="10" />
+00043:   <!--MSRコマンドリトライ回数-->
+00044:   <Setting Key="MsrCommandRetry" Value="10" />
+00045:   <!-- MSRTECSS900 -->
+00046:   <!--釣銭機入金再開設定(SS900) True:入金再開する/False:入金再開しない-->
+00047:   <Setting Key="IsDepositRestart" Value="True" />
+00048:   <!-- MTranServiceListener使用設定(true:使用/false:不使用)(店内の他端末からの中間取引通信を受信する場合にtrue) -->
+00049:   <Setting Key="IsEnableMTranServiceListener" Value="true" />
+00050:   <Setting Key="MTranServicePort" Value="8080" />
+00051:   <Setting Key="CashDrawerName" Value="CashDrawerName" />
+00052:   <Setting Key="PosKeyboard2Name" Value="LS780KEYUB" />
+00053: </Settings></p>
+<hr />
+<p>FILE: Tools/CESettingToolV5/CESettingToolV4/CESettings/Simulator_PluginDevice.xml
+SHA256: 5a698b93cbd4b557d7c110a465bf3f2b7bb19b15c3977342276f70dbafd34911
+================================================================================
+00001: <?xml version="1.0" encoding="utf-8" ?>
+00002: <Extension>
+00003:   <Group
+00004:     Id="Device">
+00005:     <!-- IdはDeviceId -->
+00006:     <Plugin
+00007:       Id="PointService"
+00008:       Assembly="Device.PointServiceSimulator, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00009:       Class="ForYouApplications.POS4U.Device.PointServiceSimulator.PointServiceSimulator"/>
+00010:     <Plugin
+00011:       Id="ValueCard"
+00012:       Assembly="Device.ValueCardSimulator, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00013:       Class="ForYouApplications.POS4U.Device.ValueCardSimulator.ValueCardSimulator"/>
+00014:     <Plugin
+00015:       Id="CashChanger"
+00016:       Assembly="Device.CashChangerSimulator, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00017:       Class="ForYouApplications.POS4U.Device.CashChangerSimulator.CashChangerSimulator"/>
+00018:     <!--<Plugin
+00019:       Id="CashDrawer"
+00020:       Assembly="Device.CashDrawerSimulator, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00021:       Class="ForYouApplications.POS4U.Device.CashDrawerSimulator.CashDrawerSimulator"/>-->
+00022:     <Plugin
+00023:       Id="Scanner1"
+00024:       Assembly="Device.ScannerSimulator, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00025:       Class="ForYouApplications.POS4U.Device.ScannerSimulator.ScannerSimulator"/>
+00026:     <Plugin
+00027:       Id="POSPrinter"
+00028:       Assembly="Device.POSPrinterSimulator, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00029:       Class="ForYouApplications.POS4U.Device.POSPrinterSimulator.POSPrinterSimulator"/>
+00030:     <Plugin
+00031:       Id="LogicServiceClient"
+00032:       Assembly="Device.LogicServiceClient, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00033:       Class="ForYouApplications.POS4U.Device.LogicServiceClient.LogicServiceClient"/>
+00034:     <Plugin
+00035:       Id="LaneLight"
+00036:       Assembly="Device.LaneLightSimulator, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00037:       Class="ForYouApplications.POS4U.Device.LaneLightSimulator.LaneLightSimulator"/>
+00038:     <Plugin
+00039:       Id="GuidanceLED"
+00040:       Assembly="Device.GuidanceLEDSimulator, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00041:       Class="ForYouApplications.POS4U.Device.GuidanceLED.GuidanceLEDSimulator"/>
+00042:     <Plugin
+00043:       Id="BeepSound"
+00044:       Assembly="Device.BeepSound, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00045:       Class=" ForYouApplications.POS4U.Device.BeepSound.BeepSouncConsole"/>
+00046:     <Plugin
+00047:       Id="ErrorBeepSound"
+00048:       Assembly="Device.BeepSound, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00049:       Class=" ForYouApplications.POS4U.Device.BeepSound.ErrorBeepSouncConsole"/>
+00050:     <Plugin
+00051:       Id="VoiceGuidance"
+00052:       Assembly="Device.BeepSound, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00053:       Class=" ForYouApplications.POS4U.Device.BeepSound.VoiceGuidance"/>
+00054:     <Plugin
+00055:       Id="CAFISArch"
+00056:       Assembly="Device.CAFISArchSimulator, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00057:       Class="ForYouApplications.POS4U.Device.CAFISArchSimulator.CAFISArchSimulator"/>
+00058:     <Plugin
+00059:       Id="StateManagementService"
+00060:       Assembly="Device.StateManagementSimulator, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00061:       Class="ForYouApplications.POS4U.Device.StateManagementSimulator.StateManagementSimulator"/>
+00062:     <Plugin
+00063:       Id="SelfApiConnectionService"
+00064:       Assembly="Device.SelfApiConnectionService, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00065:       Class="ForYouApplications.POS4U.Device.SelfApiConnectionService.SelfApiConnectionService"/>
+00066:     <Plugin
+00067:       Id="MTranService"
+00068:       Assembly="Device.MTranService, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00069:       Class="ForYouApplications.POS4U.Device.MTranService.MTranServiceWinPOS"/>
+00070:     <Plugin
+00071:       Id="RetailMediaService"
+00072:       Assembly="Device.RetailMediaService, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00073:       Class="ForYouApplications.POS4U.Device.RetailMediaService.RetailMediaService"/>
+00074:   </Group>
+00075: </Extension></p>
+<hr />
+<p>FILE: Tools/CESettingToolV5/CESettingToolV4/CESettings/Simulator_SettingWinPOSDevice.xml
+SHA256: 2cf27fa1f8583af84e0d355f4dc0f384ef9fbc2d56be1ec91e5f5870bbb43d6b
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8" ?>
+00002: <Settings>
+00003: 
+00004:   <!-- Device -->
+00005:   <Setting Key="CashChangerName"
+00006:            Value="ECS-77"/>
+00007:   <Setting Key="Scanner1Name"
+00008:            Value="Scanner_FPCPHS1"/>
+00009:   <Setting Key="Scanner2Name"
+00010:            Value="USBSCANNER.EX"/>
+00011:   <Setting Key="POSPrinterName"
+00012:            Value="FP2000USBPRT"/>
+00013:   <Setting Key="DeviceCompatibilitiesString"
+00014:            Value="OposAndCompatibilityLevel1"/>
+00015:   <Setting Key="LaneLightPortName"
+00016:            Value="COM7"/>
+00017:   <Setting Key="GuidanceLEDPortName1"
+00018:            Value="COM8"/>
+00019:   <Setting Key="GuidanceLEDPortName2"
+00020:            Value="COM9"/>
+00021:   <Setting Key="CAFISArchPortName"
+00022:            Value="COM7"/>
+00023:   <Setting Key="LogoStampFilePath"
+00024:            Value="C:\POS4UGO\Settings\TopLogo.bmp"/>
+00025:   <Setting Key="POSPrinterFeedLine"
+00026:            Value="1"/>
+00027:   <Setting Key="CashChangerUseChangePreceding"
+00028:            Value="false"/>
+00029:   <Setting Key="VoiceGuidanceFilePath"
+00030:            Value=".\VoiceGuidances\"/>
+00031:   <Setting Key="LogicServiceTerminalNo"
+00032:            Value="110"/>
+00033:   <Setting Key="LogicServiceBaseAddress"
+00034:            Value="http://localhost:63526"/>
+00035:   <Setting Key="MSRName"
+00036:            Value="MSR_FP7PKA"/>
+00037:   <Setting Key="CAFISArchMode"
+00038:            Value="0"/>
+00039:   <!-- CAFISArch無操作タイムアウト設定(0:無制限　1以上:秒指定) -->
+00040:   <Setting Key="CAFISArchSalesRequestTimeoutSeconds"
+00041:            Value="0"/>
+00042:   <!-- 釣銭機回収 回収先設定(1:出金口/4:回収庫) -->
+00043:   <Setting Key="CashChangerRecoverCashCurrentExit"
+00044:          Value="4"/>
+00045:   <!-- 釣銭機両替 回収先設定(1:出金口/4:回収庫) -->
+00046:   <Setting Key="CashChangerExchangeCashCurrentExit"
+00047:          Value="1"/>
+00048:   <!-- 釣銭機回収非同期モード設定(true:非同期/false:同期)(ECS-77使用時有効) -->
+00049:   <Setting Key="CashChangerRecoverCashAsyncMode"
+00050:            Value="false"/>
+00051:   <!-- MSRTECSS900 -->
+00052:   <!-- MSRの接続状態 True：接続 / False：未接続 -->
+00053:   <Setting Key="MsrConnect"
+00054:            Value="True"/>
+00055:   <Setting Key="Msr2Connect"
+00056:            Value="True"/>
+00057:   <!--MSRポート番号-->
+00058:   <Setting Key="MsrPortNo"
+00059:            Value="COM8"/>
+00060:   <!--MSRボーレート-->
+00061:   <Setting Key="MsrBaudrate"
+00062:            Value="9600"/>
+00063:   <!--MSRコマンドタイムアウト(単位msec)-->
+00064:   <Setting Key="MsrCommandTimeout"
+00065:            Value="1000"/>
+00066:   <!--MSRカード監視間隔(単位msec)-->
+00067:   <Setting Key="MsrCardMonitoringInterval"
+00068:            Value="1000"/>
+00069:   <!--MSRカード抜き忘れ通知までの時間(単位sec)-->
+00070:   <Setting Key="MsrForgotRemoveCardInterval"
+00071:            Value="10"/>
+00072:   <!--MSRコマンドリトライ回数-->
+00073:   <Setting Key="MsrCommandRetry"
+00074:            Value="10"/>
+00075:   <!-- MSRTECSS900 -->
+00076:   <!--釣銭機入金再開設定(SS900) True:入金再開する/False:入金再開しない-->
+00077:   <Setting Key="IsDepositRestart"
+00078:            Value="True"/>         <br />
+00079:   <!-- MTranServiceListener使用設定(true:使用/false:不使用)(店内の他端末からの中間取引通信を受信する場合にtrue) -->
+00080:   <Setting Key="IsEnableMTranServiceListener"
+00081:            Value="true"/>
+00082:   <Setting Key="MTranServicePort"
+00083:            Value="8080"/>
+00084:   <Setting Key="CashDrawerName"
+00085:            Value="CashDrawerName"/>
+00086:   <Setting Key="PosKeyboard2Name"
+00087:            Value="LS780KEYUB"/>
+00088: </Settings></p>
+<hr />
+<p>FILE: Tools/CESettingToolV5/CESettingToolV4/Properties/Settings.settings
+00001: [非文本文件，未内联源码。size_bytes=1036, extension=.settings，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Tools/CESettingToolV5/CESettingToolV4/packages.config
+00001: [非文本文件，未内联源码。size_bytes=171, extension=.config，需要人工确认其教材处理方式]</p>
+<p>END ORIGINAL PROMPT</p></div></a><div class="index-item-stats">
+<div class="index-item-long-text"><div class="truncatable"><div class="truncatable-content"><div class="index-item-long-text-content"><h1>文件级源码笔记：config_config_cesettingtoolv4</h1>
+<h2>Batch 信息</h2>
+<ul>
+<li>Batch ID: batch_036</li>
+<li>Batch Name: config_config_cesettingtoolv4</li>
+<li>Module: config</li>
+<li>Purpose: 解释项目配置、构建配置、依赖配置和运行时配置加载线索</li>
+</ul>
+<hr />
+<h2>文件：Tools/CESettingToolV5/CESettingToolV4/App.config</h2>
+<h3>1. 文件定位</h3>
+<p>App.config 是 .NET Framework 应用程序的运行时配置文件。本 batch 未内联该文件的源码（标记为非文本文件，size_bytes=3198），但根据其所在项目路径（CESettingToolV4），它承担 CESettingToolV4 可执行程序启动时的 .NET 运行时配置角色。</p>
+<p>该文件典型用途包括：指定 SQL Server 连接字符串、WCF 终结点、appSettings 自定义键值对、程序集重定向绑定、.NET 运行时版本等。</p>
+<h3>2. 对外暴露内容</h3>
+<ul>
+<li><strong>connectionStrings 节</strong>：可能包含数据库连接字符串（SQL Server 连接字符串等），用于工具的数据访问层。</li>
+<li><strong>appSettings 节</strong>：可能包含 CESettingToolV4 工具自身的运行时参数（覆盖工具内部默认值）。</li>
+<li><strong>runtime 节</strong>：可能包含程序集重定向（assemblyBinding），处理依赖项版本冲突。</li>
+<li><strong>startup 节</strong>：可能指定支持的 .NET Framework 运行时版本。</li>
+</ul>
+<p>由于未内联源码，以上内容均为根据文件扩展名和路径的项目惯例推断。</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>无法执行——未内联源码。App.config 由 .NET 的 ConfigurationManager 在进程启动时自动加载，无需手动调用代码。运行时行为取决于文件内容。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无。App.config 是声明式配置，不包含代码定义。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li><strong>System.Configuration.dll</strong>：.NET Framework 标准配置 API，运行时自动读取 App.config。</li>
+<li><strong>依赖文件的引用</strong>：如果包含 connectionStrings，则依赖对应的数据库提供程序；如果包含 WCF 终结点，则依赖对应服务程序集。</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li>当前 batch 无法判断是否包含错误处理逻辑，因为文件内容不可见。</li>
+<li>典型风险：App.config 格式错误会导致应用程序启动时抛出 <code>ConfigurationErrorsException</code>。</li>
+</ul>
+<h3>7. 测试相关</h3>
+<ul>
+<li>当前 batch 不含对应测试文件。</li>
+<li>测试建议：检查配置节是否与代码中的 ConfigurationManager 调用匹配；验证 connectionStrings 和目标数据库是否可达；验证 assemblyBinding 重定向是否正确解析所有依赖程序集版本。</li>
+</ul>
+<h3>8. 新人阅读建议</h3>
+<p>先理解 CESettingToolV4 的代码入口（Program.cs / Main 方法），再反向跟踪代码中哪些位置使用了 <code>ConfigurationManager.AppSettings</code> 或 <code>ConfigurationManager.ConnectionStrings</code>；从那里反推 App.config 是在何处被消费的。当前 batch 未包含 CESettingToolV4 的 C# 源码，因此需要结合 runtime batch 确认。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>需要人工确认文件的编码格式和实际内容（是否包含 connectionStrings、appSettings、runtime 等节）。</li>
+<li>需要结合 CESettingToolV4 的 C# 源码（本 batch 未包含）来验证哪些配置项在代码中被实际读取。</li>
+<li>需要确认是否有对应的 App.Debug.config / App.Release.config 用于构建时配置转换。</li>
+</ul>
+<hr />
+<h2>文件：Tools/CESettingToolV5/CESettingToolV4/CESettingToolV4.csproj</h2>
+<h3>1. 文件定位</h3>
+<p>CESettingToolV4.csproj 是 Visual Studio 项目文件（.NET Framework 格式），定义了 CESettingToolV4 工具的构建配置、程序集元数据、编译选项、引用程序集列表和 NuGet 包依赖。本 batch 未内联其源码（size_bytes=20397，表明是非平凡的项目文件），但其规模和文件名说明它是该工具的完整 MsBuild 项目定义。</p>
+<h3>2. 对外暴露内容</h3>
+<ul>
+<li><strong>ProjectGuid</strong>：项目唯一标识符，用于解决方案引用。</li>
+<li><strong>OutputType</strong>：指定输出类型（推测为 WinExe 或 Exe，因为这是工具程序）。</li>
+<li><strong>TargetFrameworkVersion</strong>：可能为 v4.6.x 或 v4.7.x。</li>
+<li><strong>Reference 项</strong>：包含对项目编译所需的 .NET Framework 程序集和第三方 DLL 的引用。</li>
+<li><strong>Content / EmbeddedResource 项</strong>：定义哪些文件被嵌入或复制到输出目录（如 XML 配置文件）。</li>
+<li><strong>NuGet 包引用</strong>：通过 packages.config（本 batch 另一文件）或 PackageReference 管理。</li>
+</ul>
+<p>由于未内联，以上内容根据常见 .csproj 结构推断。</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>MsBuild 引擎在构建时解析 .csproj 文件，顺序执行以下逻辑：</p>
+<ol>
+<li>加载属性（PropertyGroup）：配置目标框架、输出路径、程序集名称、签名等。</li>
+<li>解析引用程序集（Reference 项）：确定编译时依赖的 DLL 路径。</li>
+<li>编译源文件（Compile 项）：将 .cs 文件传递给 C# 编译器。</li>
+<li>处理内容文件（Content 项）：将 XML 配置文件等标记为“复制到输出目录”。</li>
+<li>输出最终可执行文件。</li>
+</ol>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无代码定义。.csproj 是 XML 格式的 MsBuild 脚本。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li><strong>Microsoft.CSharp.targets</strong> / <strong>Microsoft.NETFramework.targets</strong>：MsBuild 内置的 C# / .NET Framework 目标。</li>
+<li><strong>packages.config</strong>：声明 NuGet 依赖（本 batch 包含该文件，但未内联）。</li>
+<li><strong>App.config</strong>：项目可能通过构建时配置转换与 App.config 关联。</li>
+<li><strong>项目中所有 .cs 文件</strong>（当前 batch 未提供）构成编译输入。</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li>当前文件没有显式错误处理。构建错误由 MsBuild 引擎报告。</li>
+<li>需要关注的点：如果引用程序集路径不存在或版本不匹配，构建将失败。</li>
+</ul>
+<h3>7. 测试相关</h3>
+<ul>
+<li>当前 batch 不含对应测试文件。</li>
+<li>测试建议：执行 <code>msbuild</code> 或 Visual Studio 构建确认无编译错误；检查输出目录是否包含所有预期的 DLL 和配置文件。</li>
+</ul>
+<h3>8. 新人阅读建议</h3>
+<p>在 Visual Studio 中右键项目 → "Edit Project File" 查看完整 XML；重点关注 <code>&lt;Reference&gt;</code> 节（依赖了哪些外部 DLL）、<code>&lt;Content&gt;</code> 节（哪些配置文件会被发布）、<code>&lt;TargetFrameworkVersion&gt;</code>（确定 .NET 版本）。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>需要人工确认目标 .NET Framework 版本和程序集引用列表。</li>
+<li>需要结合其它 batch 中的 C# 源码确认引用的所有 DLL 是否确实在代码中被使用。</li>
+<li>需要确认是否使用了 .NET Core / .NET 5+ 的项目文件格式（如 SDK 风格），根据文件名（.csproj）和大小（20KB）推测为传统格式。</li>
+</ul>
+<hr />
+<h2>文件：Tools/CESettingToolV5/CESettingToolV4/CESettings/ACE100_CafisArch_PluginDevice.xml</h2>
+<h3>1. 文件定位</h3>
+<p>该文件定义了 ACE-100（一种自助结账/钓鱼机硬件平台）+ CAFISArch（信用卡结算处理架构）组合的<strong>设备插件注册清单</strong>。它是 CESettingToolV4 工具在生成为特定 POS 机型生成的配置时所参考的设备组件白名单。文件位于 CESettings 目录下，属于工具的配置模板数据。</p>
+<h3>2. 对外暴露内容</h3>
+<p>一个 <code>&lt;Extension&gt;</code> → <code>&lt;Group Id="Device"&gt;</code> 容器，包含 11 个 <code>&lt;Plugin&gt;</code> 条目，每项注册一个设备逻辑组件的：</p>
+<ul>
+<li><strong>Id</strong>（插件标识符）</li>
+<li><strong>Assembly</strong>（强名称程序集）</li>
+<li><strong>Class</strong>（具体实现类的全名）</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Id</th>
+<th>Assembly</th>
+<th>Class</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PointService</td>
+<td>Device.PointService</td>
+<td>ForYouApplications.POS4U.Device.PointService.PointService</td>
+</tr>
+<tr>
+<td>ValueCard</td>
+<td>Device.ValueCard</td>
+<td>ForYouApplications.POS4U.Device.ValueCard.ValueCard</td>
+</tr>
+<tr>
+<td>CashChanger</td>
+<td>Device.CashChangerLADYf</td>
+<td>ForYouApplications.POS4U.Device.CashChanger.CashChangerLADYf</td>
+</tr>
+<tr>
+<td>Scanner1</td>
+<td>Device.Scanner4DotNet</td>
+<td>ForYouApplications.POS4U.Device.Scanner.Scanner4DotNet</td>
+</tr>
+<tr>
+<td>POSPrinter</td>
+<td>Device.POSPrinter4DotNet</td>
+<td>ForYouApplications.POS4U.Device.POSPrinter.POSPrinter4DotNet</td>
+</tr>
+<tr>
+<td>LogicServiceClient</td>
+<td>Device.LogicServiceClient</td>
+<td>ForYouApplications.POS4U.Device.LogicServiceClient.LogicServiceClient</td>
+</tr>
+<tr>
+<td>BeepSound</td>
+<td>Device.BeepSound</td>
+<td>ForYouApplications.POS4U.Device.BeepSound.BeepSouncConsole</td>
+</tr>
+<tr>
+<td>ErrorBeepSound</td>
+<td>Device.BeepSound</td>
+<td>ForYouApplications.POS4U.Device.BeepSound.ErrorBeepSouncConsole</td>
+</tr>
+<tr>
+<td>VoiceGuidance</td>
+<td>Device.BeepSound</td>
+<td>ForYouApplications.POS4U.Device.BeepSound.VoiceGuidance</td>
+</tr>
+<tr>
+<td>CAFISArch</td>
+<td>Device.CAFISArch</td>
+<td>ForYouApplications.POS4U.Device.CAFISArch.CAFISArchJTC31</td>
+</tr>
+<tr>
+<td>StateManagementService</td>
+<td>Device.StateManagementService</td>
+<td>ForYouApplications.POS4U.Device.StateManagementService.StateManagementService</td>
+</tr>
+</tbody>
+</table>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>CESettingToolV4 工具在运行时读取此文件，通过解析 XML 中的 Plugin 条目来生成目标 POS 机型的"设备可用性列表"。</p>
+<p><strong>运行时行为</strong>：
+1. 工具遍历 <code>&lt;Group Id="Device"&gt;</code>（第 3-4 行）下的所有 <code>&lt;Plugin&gt;</code> 元素（第 6-49 行）。
+2. 对每个 Plugin，读取 Id、Assembly、Class 三个属性。
+3. 将这些条目注册为"该机型可用的设备"。当最终部署到 POS 机时，POS4U 运行时加载器会通过这些 Assembly + Class 信息完成设备驱动的动态加载。
+4. 不属于本文件列表的设备在该机型上被视为不可用。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>没有代码函数。所有元素均为声明式 XML 数据。</p>
+<p><strong>关键数据项说明：</strong></p>
+<ul>
+<li><strong>PublicKeyToken=7f613065d93c5dd1</strong>（第 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48 行）：所有程序集共享同一个强名称公钥令牌，表明它们属于同一产品系列（ForYouApplications.POS4U）。</li>
+<li><strong>Id 命名规则</strong>（第 3 行注释"Id はDeviceId"）：明确说明 Id 即为设备 ID，与运行时设备查找逻辑中的标识符对应。</li>
+<li><strong>CashChanger = CashChangerLADYf</strong>（第 16-17 行）：ACE-100 使用的钓銭机驱动为 LADYf 系列（Lady bird / 特定型号），区别于 ECS-77 的 CashChangerECS7 和 SS900 的 CashChangerVT280。</li>
+</ul>
+<h3>5. 依赖关系</h3>
+<ul>
+<li><strong>Device.*.dll</strong>（所有引用的 11 个程序集）：运行时会从 GAC 或应用程序目录加载这些 DLL。若缺失则设备初始化失败。</li>
+<li><strong>CESettingToolV4 的 C# 加载代码</strong>（本 batch 未包含）：需要结合工具源码确认 XML 解析和 Plugin 注册的入口函数。</li>
+<li><strong>ACE100_CafisArch_SettingWinPOSDevice.xml</strong>（本 batch 包含）：该文件的 SettingWinPOSDevice 配置与此 PluginDevice 配置配对使用，前者提供参数值，后者提供类型定义。</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li><strong>当前文件没有显式错误处理</strong>：它只是声明式数据，解析错误（如 XML 格式损坏、缺少必填属性）由调用它的 C# 代码处理。</li>
+<li><strong>潜在问题</strong>：如果引用的程序集（如 Device.CAFISArch, Version=1.0.0.0）在目标系统中未安装，POS 运行时的设备加载会失败。该文件不负责验证程序集是否存在。</li>
+</ul>
+<h3>7. 测试相关</h3>
+<ul>
+<li>当前 batch 不含对应测试文件。</li>
+<li>测试建议：</li>
+<li>编写单元测试验证 CESettingToolV4 能正确解析该 XML 并生成 PluginDevice 列表。</li>
+<li>验证所有引用的 Assembly 强名称是否在测试环境中可解析。</li>
+<li>验证每个 Plugin 的 Id 在系统中唯一（无重复注册）。</li>
+</ul>
+<h3>8. 新人阅读建议</h3>
+<p>将 PluginDevice.xml 理解为"设备驱动的配置清单"——它告诉系统"这台 POS 机接了什么外设、每个外设的驱动是哪个 DLL 中的哪个类"。对比 ACE100_CafisArch 和 ACE100 两个版本（后者没有 CAFISArch 和 StateManagementService）可以帮助理解不同机型的能力差异。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>需要结合 CESettingToolV4 的 C# 源码确认 XML 解析的具体实现（使用 XDocument / XmlDocument / 反序列化？）。</li>
+<li>需要确认 <code>PublicKeyToken=7f613065d93c5dd1</code> 是否在所有环境中一致（可能是开发签名，正式发布时可能变更）。</li>
+<li>需要确认 Class 属性值前缀有空格是否是问题（第 33, 37, 41 行 " ForYou..." 前面有一个空格）。</li>
+</ul>
+<hr />
+<h2>文件：Tools/CESettingToolV5/CESettingToolV4/CESettings/ACE100_CafisArch_SettingWinPOSDevice.xml</h2>
+<h3>1. 文件定位</h3>
+<p>该文件是 ACE-100 带 CAFISArch 机型的外设参数配置文件（SettingWinPOSDevice）。它定义了 POS 设备在运行时的所有具体配置参数——设备名称、COM 端口、波特率、超时设定、文件路径等。这类文件是设备初始化时实际读取的配置源。</p>
+<h3>2. 对外暴露内容</h3>
+<p>一组 Key-Value 形式的 <code>&lt;Setting&gt;</code> 条目（共 53 行，52 个配置项），按功能域归类如下：</p>
+<p><strong>设备名称映射</strong>：
+- CashChangerName = "ACE-100A"（第 4 行）
+- Scanner1Name = "Scanner_FPCPHS1"（第 5 行）
+- Scanner2Name = "USBSCANNER.EX"（第 6 行）
+- POSPrinterName = "POSPrinter_FPS1DPR11_1"（第 7 行）
+- MSRName = "MSR_FP7PKA"（第 19 行）
+- CashDrawerName = "CashDrawerName"（第 51 行）
+- PosKeyboard2Name = "LS780KEYUB"（第 52 行）</p>
+<p><strong>连接端口</strong>：
+- LaneLightPortName = "COM7"（第 9 行）
+- GuidanceLEDPortName1 = "COM8"（第 10 行）
+- GuidanceLEDPortName2 = "COM9"（第 11 行）
+- CAFISArchPortName = "COM7"（第 12 行）
+- MsrPortNo = "COM8"（第 34 行）</p>
+<p><strong>设备兼容性与模式</strong>：
+- DeviceCompatibilitiesString = "OposAndCompatibilityLevel1"（第 8 行）
+- CashChangerUseChangePreceding = "false"（第 15 行）
+- CAFISArchMode = "0"（第 20 行）
+- CashChangerRecoverCashAsyncMode = "false"（第 28 行）
+- IsDepositRestart = "True"（第 47 行）
+- IsEnableMTranServiceListener = "true"（第 49 行）</p>
+<p><strong>MSR（磁卡读卡器）设置</strong>（第 30-45 行）：
+- MsrConnect / Msr2Connect = True
+- MsrBaudrate = 9600
+- MsrCommandTimeout = 1000ms
+- MsrCardMonitoringInterval = 1000ms
+- MsrForgotRemoveCardInterval = 10sec
+- MsrCommandRetry = 10</p>
+<p><strong>路径与地址</strong>：
+- LogoStampFilePath = "C:\POS4UGO\Settings\TopLogo.bmp"（第 13 行）
+- VoiceGuidanceFilePath = ".\VoiceGuidances\"（第 16 行）
+- LogicServiceBaseAddress = "http://localhost:63526"（第 18 行）</p>
+<p><strong>数值参数</strong>：
+- POSPrinterFeedLine = "1"（第 14 行）
+- LogicServiceTerminalNo = "110"（第 17 行）
+- CAFISArchSalesRequestTimeoutSeconds = "0"（第 22 行，0=无限制）
+- CashChangerRecoverCashCurrentExit = "4"（第 24 行，回收库）
+- CashChangerExchangeCashCurrentExit = "4"（第 26 行，回收库）
+- MTranServicePort = "8080"（第 50 行）</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>此文件不包含执行逻辑。运行时，CESettingToolV4（或下游的 POS4U 运行时框架）在设备初始化阶段执行以下步骤：</p>
+<ol>
+<li>定位到当前使用的机型配置目录。</li>
+<li>读入 <code>{机型}_SettingWinPOSDevice.xml</code> 文件。</li>
+<li>顺序解析所有 <code>&lt;Setting Key="..." Value="..."&gt;</code> 元素。</li>
+<li>将 Key 作为配置项名称、Value 作为配置值，存入运行时配置字典。</li>
+<li>各设备插件在初始化时通过 Key 查找自己的配置（如 CashChanger 插件读取 CashChangerName、CashChangerUseChangePreceding 等）。</li>
+</ol>
+<p><strong>第 22 行注释</strong>（CAFISArch 无操作超时设定）：0 表示无限制，大于 0 为秒数——这是一个关键的安全边界参数，影响信用卡交易等待时长。</p>
+<p><strong>第 23-26 行注释</strong>（钓銭机回收/两替回收先设定）：1=出金口（吐钞口）、4=回收库（保险箱）。ACE-100 两处均配置为 4（回收库），意味着回收操作时现金进入保险箱而非出金口。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无代码函数。所有配置项以 Key-Value 形式对外暴露。</p>
+<p><strong>需特别关注的配置项</strong>：</p>
+<ul>
+<li><strong>CashChangerRecoverCashAsyncMode</strong>（第 27-28 行）：仅在使用 ECS-77 时有效（注释说明）。ACE-100 配置为 false，但此值对 ACE-100 可能被忽略——这是一个需要结合源码确认的边界。</li>
+<li><strong>LogicServiceBaseAddress</strong>（第 18 行）：指向 localhost:63526，表明 LogicService（逻辑服务器）在同一台机器上运行。</li>
+<li><strong>DeviceCompatibilitiesString</strong>（第 8 行）：值为 "OposAndCompatibilityLevel1"，表明兼容模式同时支持 OPOS（OLE for Retail POS）标准和 Level 1 兼容性。</li>
+</ul>
+<h3>5. 依赖关系</h3>
+<ul>
+<li><strong>ACE100_CafisArch_PluginDevice.xml</strong>（本 batch）：插件类型白名单，与配置配对使用。</li>
+<li><strong>CESettingToolSettingV4.xml</strong>（本 batch）：工具本身的设置（如默认值），可能与此文件的配置有覆盖关系。</li>
+<li><strong>POS4U 运行时的配置加载器代码</strong>（本 batch 未包含）：负责解析此 XML。</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li>当前文件没有显式错误处理。它是纯数据。</li>
+<li>潜在边界问题：如果某个 Key 被重复定义（如两个 CashChangerName），后一个会覆盖前一个——但这取决于解析器的实现。</li>
+<li>如果文件路径（LogoStampFilePath, VoiceGuidanceFilePath）指向不存在的目录，运行时需要处理 FileNotFound 异常。</li>
+<li>串口号（COM7/8/9）应与实际硬件连接一致，否则设备初始化失败。</li>
+</ul>
+<h3>7. 测试相关</h3>
+<ul>
+<li>当前 batch 不含对应测试文件。</li>
+<li>测试建议：</li>
+<li>验证所有配置 Key 值在 CESettingToolV4 的 C# 代码中都有对应的读取点。</li>
+<li>验证 ACE-100 硬件平台上这些端口的物理连接与配置一致。</li>
+<li>检查 CashChangerRecoverCashAsyncMode=false 对 ACE-100 的实际影响（注释说明仅 ECS-77 生效）。</li>
+</ul>
+<h3>8. 新人阅读建议</h3>
+<p>将此文件视为"某台 POS 机的外设接线图和参数表"。先关注设备名称（CashChangerName、Scanner1Name、POSPrinterName）来了解机上接了什么硬件，再看 COM 端口映射，最后看各种超时/模式开关。与 PluginDevice.xml 配合阅读——前者说"有什么设备"，后者说"设备叫什么、接哪个口、用什么参数"。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>需要结合 POS4U 运行时源码确认这个文件的所有配置项中哪些是必需（影响系统启动）的，哪些是可选（有默认值）的。</li>
+<li>需要确认 "OposAndCompatibilityLevel1" 的完整语义和兼容性矩阵。</li>
+<li>第 51 行 CashDrawerName = "CashDrawerName" 看起来像占位符而非实际设备名，需要确认是否有对应的物理钱箱。</li>
+<li>第 19 行 MSRName = "MSR_FP7PKA" 和第 34-44 行的 MSR 设置属于 TEC SS900 页面注释标注（第 29、45 行 "MSRTECSS900"），但 ACE-100 机型也包含这些配置——需要确认这些配置是否在 ACE-100 上被使用。</li>
+</ul>
+<hr />
+<h2>文件：Tools/CESettingToolV5/CESettingToolV4/CESettings/ACE100_PluginDevice.xml</h2>
+<h3>1. 文件定位</h3>
+<p>该文件是 ACE-100 机型（不带 CAFISArch 信用卡处理）的设备插件注册清单。与 ACE100_CafisArch_PluginDevice.xml 相比，此版本<strong>不包含 CAFISArch 和 StateManagementService</strong> 插件，适用于不需要信用卡支付功能的 ACE-100 部署场景。</p>
+<h3>2. 对外暴露内容</h3>
+<p>一个 <code>&lt;Extension&gt;</code> → <code>&lt;Group Id="Device"&gt;</code> 容器，包含 <strong>9 个</strong> <code>&lt;Plugin&gt;</code> 条目。与 ACE100_CafisArch 版本对照：</p>
+<p><strong>相同（9 个）</strong>：PointService、ValueCard、CashChangerLADYf、Scanner1、POSPrinter4DotNet、LogicServiceClient、BeepSound(3 variants)</p>
+<p><strong>缺失（2 个）</strong>：
+- CAFISArch（第 42-45 行在 CafisArch 版本中）
+- StateManagementService（第 46-49 行在 CafisArch 版本中）</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>运行时行为与 ACE100_CafisArch_PluginDevice.xml 完全相同，唯一的区别是运行时加载器不会为本机型注册 CAFISArch 和 StateManagementService 这两个设备。</p>
+<p>这意味着：
+- 在 UI 配置界面中，信用卡处理相关的设置项不会出现。
+- POS 运行时不会初始化 CAFISArch 设备和状态管理服务。
+- 此机型只能使用现金/POS 积分/电子货币（不包含信用卡结算）。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无代码函数。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>同 ACE100_CafisArch_PluginDevice.xml，但少依赖 Device.CAFISArch 和 Device.StateManagementService。</li>
+<li>配对的设置文件：ACE100_SettingWinPOSDevice.xml（本 batch 包含）。</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li>同前——声明式数据，无显式错误处理。</li>
+<li>边界情况：如果用户实际硬件有 CAFISArch 设备但使用了此文件配置，CAFISArch 将无法初始化。这是容量配置问题而非程序错误。</li>
+</ul>
+<h3>7. 测试相关</h3>
+<ul>
+<li>当前 batch 不含对应测试文件。</li>
+<li>测试建议：验证工具在选择"ACE-100（不带 CAFISArch）"时正确使用此文件而非 ACE100_CafisArch 版本。</li>
+</ul>
+<h3>8. 新人阅读建议</h3>
+<p>与 ACE100_CafisArch_PluginDevice.xml 逐行对比，理解"有/无 CAFISArch"两种配置的区别。这是了解 POS 机型配置灵活性的典型入口。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>需要确认 StateManagementService 的具体用途——它在 CAFISArch 版本中出现但在非 CAFISArch 版本中缺失，可能与 CAFISArch 有关联还是独立功能？需要结合 Device.StateManagementService 源码确认。</li>
+<li>需要确认是否有"ACE-100 带 StateManagementService 但不带 CAFISArch"的配置版本。</li>
+</ul>
+<hr />
+<h2>文件：Tools/CESettingToolV5/CESettingToolV4/CESettings/ACE100_SettingWinPOSDevice.xml</h2>
+<h3>1. 文件定位</h3>
+<p>ACE-100（不带 CAFISArch）机型的设备参数配置。SHA256 与 ACE100_CafisArch_SettingWinPOSDevice.xml 完全一致（7779ec8b6...），意味着<strong>两份文件内容完全相同</strong>。</p>
+<h3>2. 对外暴露内容</h3>
+<p>与 ACE100_CafisArch_SettingWinPOSDevice.xml 完全相同（52 个配置项，完全一致）。包含：
+- CashChangerName = "ACE-100A"
+- Scanner1Name = "Scanner_FPCPHS1"
+- POSPrinterName = "POSPrinter_FPS1DPR11_1"
+- 所有 COM 端口、MSR 设置、LogicService 地址等完全相同</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>运行时行为与 ACE100_CafisArch_SettingWinPOSDevice.xml 完全一致。虽然对应的 PluginDevice 缺少 CAFISArch 插件，但此设置文件中仍包含 CAFISArch 的配置项（CAFISArchPortName、CAFISArchMode、CAFISArchSalesRequestTimeoutSeconds），这些在无 CAFISArch 的场景下不会被读取——但这体现了一个设计选择：<strong>设置文件保持统一，只通过 PluginDevice 控制设备是否启用</strong>。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li><strong>ACE100_PluginDevice.xml</strong>（本 batch）：与之配对的插件列表。</li>
+<li><strong>CESettingToolSettingV4.xml</strong>（本 batch）：可能覆盖此文件的某些默认值。</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li>既然两份 SettingWinPOSDevice 文件内容完全一致，一个潜在问题是：未来修改其中一个时必须同步修改另一个，否则会导致同一机型的不同配置文件差异。</li>
+<li>此文件包含 CAFISArch 相关配置，但它对应的 PluginDevice 中没有 CAFISArch——这种"冗余配置"可能造成维护困惑。</li>
+</ul>
+<h3>7. 测试相关</h3>
+<ul>
+<li>当前 batch 不含对应测试文件。</li>
+<li>测试建议：验证工具是否确实使用了此文件（而不是错误地使用了 ACE100_CafisArch 版本）。建议在项目中添加自动化检查，确保两份文件的一致性（或明确设计文档说明一致的原因）。</li>
+</ul>
+<h3>8. 新人阅读建议</h3>
+<p>注意：虽然文件名有"ACE100"和"ACE100_CafisArch"之分，但设置文件内容完全相同。新人应关注：<strong>配置文件是否冗余取决于业务需求</strong>——如果两台机型的硬件接线确实一样（除 CAFISArch 信用卡模块外），则共享同一份设置文件是合理的。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>需要人工确认：ACE-100 和 ACE-100 (CafisArch) 的物理硬件接线是否确实一致？尤其是 CAFISArch 是否使用的是 COM7 端口，而如果去掉 CAFISArch 后 COM7 是否被其他设备复用？</li>
+<li>需要确认是否有历史原因导致两份文件 SHA 相同——可能是从同一个模板复制而来，也可能是自动生成的。</li>
+</ul>
+<hr />
+<h2>文件：Tools/CESettingToolV5/CESettingToolV4/CESettings/CESettingToolSettingV4.xml</h2>
+<h3>1. 文件定位</h3>
+<p>这是 CESettingToolV4 工具自身的<strong>主配置文件</strong>，定义了工具运行所需的所有环境参数、服务端点、访问凭据、默认值和 UI 行为。它与机型配置文件（SettingWinPOSDevice）不同：后者描述目标 POS 机的设备参数，而此文件描述工具本身——包括它应该连接哪个服务器、使用什么访问密钥、显示哪些按钮等。</p>
+<h3>2. 对外暴露内容</h3>
+<p>共约 80 个 <code>&lt;Setting&gt;</code> 条目，按功能域梳理如下：</p>
+<p><strong>安全与可见性</strong>（第 3-7 行）：
+- StartPassword（第 4 行）：启动密码（当前为空——无密码启动）
+- ExternalServiceVisible（第 6 行）：外部服务面板可见性（False——默认隐藏）</p>
+<p><strong>默认组织代码</strong>（第 9-13 行）：
+- DefaultComanyCode = "1"（注意：原文为 ComanyCode，疑似 typo，应为 CompanyCode）
+- DefaultManagedNo = "0"</p>
+<p><strong>机型默认设备名称</strong>（第 15-25 行）：
+- Charge 机型：CashChangerName = "ACE-100A"、POSPrinterName = "POSPrinter_FPS1DPR11_1"
+- Payment 机型：CashChangerName = "ECS-77"、POSPrinterName = "FP2000USBPRT"</p>
+<p><strong>LogicService 端点</strong>（4 个环境，第 27-35 行）：
+- Mercury（本番）：https://trialmercury.posaas.net（第 28-29 行）
+- Venus（本番）：https://trialvenus.posaas.net（第 30-31 行）
+- Test：https://testtrialappgw.japanwest.cloudapp.azure.com（第 32-33 行）
+- Local：http://localhost:63526（第 34-35 行）</p>
+<p><strong>LogicService 访问码</strong>（4 个环境，第 37-45 行）：
+- Mercury/Venus = "181023"
+- Test/Local = "012345"</p>
+<p><strong>ValueCard 连接密钥</strong>（AES 加密，第 47-55 行）：
+- Mercury/Venus 共享一个密文
+- Test/Local 共享另一个密文</p>
+<p><strong>ValueCard 服务 URL</strong>（第 57-65 行）：
+- Mercury/Venus 指向 sys3.valuecardservice.net:443
+- Test/Local 指向 dev.valuecardservice.biz:443</p>
+<p><strong>钓鱼机回收默认</strong>（第 67-69 行）：
+- CashChangerCashCurrentExit = "4"（回收库）</p>
+<p><strong>PointService 连接</strong>（4 环境，第 71-89 行）：
+- IP 地址：Mercury/Venus=10.2.8.30, Test/Local=10.2.10.10
+- 端口号：全环境统一 51001</p>
+<p><strong>CRMPointService 连接</strong>（第 91-109 行）：
+- 访问令牌：Mercury/Venus="s8b3n9", Test/Local=MD5 哈希值
+- URL：Mercury/Venus→生产内网地址，Test/Local→开发地址</p>
+<p><strong>RetailMediaService 连接</strong>（第 111-129 行）：
+- Base URL：生产→www-api.retailmedia.jp，测试→dev-api2.retailmedia.jp
+- 访问代码（AES 加密）：Mercury/Venus 与 Test/Local 不同</p>
+<p><strong>Logo 文件操作</strong>（第 131-139 行）：
+- LogoFolderPath = ".\CESettings\TopLogo\"（来源路径）
+- LogoFilePath = "C:\POS4UGO\Settings\"（目标路径）
+- LogoFileName = "TopLogo.bmp"</p>
+<p><strong>数据库表操作列表</strong>（第 141-147 行）：
+- UpdateStoreCodeTable = "CESettingTool_UpdateTableList.txt"
+- DeleteTable = "CESettingTool_DeleteTableList.txt"</p>
+<p><strong>UI 控制</strong>（第 149-151 行）：
+- BtnConnectionVisibility = "true"（连接确认按钮可见）</p>
+<p><strong>终端编号</strong>（第 153-159 行）：
+- TerminalNoTopNumber = "45"（会计机端末番号）
+- SubTerminalNoTopNumber = "40"（会计机端末 SUB 番号）</p>
+<p><strong>POS 机型选择列表</strong>（第 161-170 行）：
+- PluginDeviceSettings（第 162 行）= "会計機ECS77,会計機SS900,チャージ機ACE100,チャージ機ACE100(CafisArch),シミュレータ"
+- PluginDeviceSettingsFileNames（第 169 行）= "ECS77,SS900,ACE100,ACE100_CafisArch,Simulator"</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>CESettingToolV4 启动时的配置加载序列（推断）：</p>
+<ol>
+<li><strong>加载工具自身设置</strong>：工具启动时首先读取 CESettingToolSettingV4.xml。</li>
+<li><strong>读取 StartPassword</strong>（第 4-5 行）：如果值非空，工具要求用户输入密码才能继续操作（当前为空，跳过）。</li>
+<li><strong>初始化 UI</strong>：读取 BtnConnectionVisibility（第 150 行）决定是否显示"连接确认"按钮。</li>
+<li><strong>生成机型选择列表</strong>：</li>
+<li>读取 PluginDeviceSettings（第 162 行）获取可供用户选择的机型名称列表。</li>
+<li>读取 PluginDeviceSettingsFileNames（第 169 行）获取对应的文件名前缀。</li>
+<li>运行时将这两个列表配对使用：当用户选择"会計機ECS77"时，工具自动找到 ECS77_PluginDevice.xml 和 ECS77_SettingWinPOSDevice.xml。</li>
+<li><strong>服务连接配置</strong>：根据用户选择的环境（Mercury/Venus/Test/Local），读取对应的 LogicServiceBase 地址、AccessCode、ValueCard URL、PointService 地址等。</li>
+</ol>
+<p><strong>第 64-66 行注释</strong>特别重要：明确说明了 PluginDeviceSettings 和 PluginDeviceSettingsFileNames 必须数量对齐，并且文件名命名规则是 <code>{前缀}_PluginDevice.xml</code> 和 <code>{前缀}_SettingWinPOSDevice.xml</code>。这是工具实现机型配置文件自动发现的命名约定。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无代码函数，但有两个关键配置组需要特别注意：</p>
+<p><strong>环境切换机制</strong>（第 27-115 行）：为 Mercury（水星）、Venus（金星）、Test、Local 四个环境提供各自的：
+- LogicService 地址
+- LogicService 访问码
+- ValueCard 连接密钥（AES 加密）
+- ValueCard Deal Service URL
+- PointService IP 和端口
+- CRMPointService 令牌和 URL
+- RetailMediaService URL 和访问码</p>
+<p>这种设计表明工具可以一键切换目标环境，通常通过 UI 下拉菜单实现。</p>
+<p><strong>AES 密文配置</strong>（第 48-55 行、第 121-129 行）：这些配置值不是明文而是加密后的 Base64 字符串。工具在运行时需要读取这些值并执行 AES 解密才能得到实际的访问密钥。密文的生产环境和开发环境不同。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li><strong>所有的 {prefix}_PluginDevice.xml 和 {prefix}_SettingWinPOSDevice.xml 文件</strong>（本 batch 包含全部）：通过 PluginDeviceSettingsFileNames 列表引用。</li>
+<li><strong>UpdateTableList.txt 和 DeleteTableList.txt</strong>（第 141-147 行）：数据库表操作的黑名单/白名单文件，本 batch 未包含。</li>
+<li><strong>Logo 文件</strong>（第 132-139 行）：\CESettings\TopLogo\TopLogo.bmp 源文件，本 batch 未包含。</li>
+<li><strong>CESettingToolV4 的 C# 源码</strong>（本 batch 未包含）：负责解析此 XML 的代码。</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li>当前文件没有显式错误处理——纯数据文件。</li>
+<li><strong>关键边界</strong>：如果 PluginDeviceSettings 和 PluginDeviceSettingsFileNames 的元素数量不匹配（第 64 行注释警告），工具在 UI 中显示的机型列表可能与实际可用的配置文件不一致。</li>
+<li><strong>密码为空</strong>（第 4-5 行）：StartPassword 当前为空，意味着任何人均可启动工具。如果生产环境需要安全保护，此值需要设置。</li>
+<li><strong>停止字符文件</strong>：UpdateTableList.txt 和 DeleteTableList.txt 如果缺失，工具在尝试执行数据库更新/删除操作时可能会失败。</li>
+</ul>
+<h3>7. 测试相关</h3>
+<ul>
+<li>当前 batch 不含对应测试文件。</li>
+<li>测试建议：</li>
+<li>验证工具正确读取 PluginDeviceSettings 和 PluginDeviceSettingsFileNames 的对应关系。</li>
+<li>验证环境切换（Mercury/Venus/Test/Local）时所有相关配置项都被正确更新。</li>
+<li>验证 AES 加密值的解密逻辑——确保 ValueCardAccessKey 能被正确解密为实际密钥。</li>
+</ul>
+<h3>8. 新人阅读建议</h3>
+<p>此文件是理解 CESettingToolV4 整体架构的<strong>核心入口</strong>。建议阅读顺序：
+1. 先看第 161-170 行（PluginDeviceSettings 和 PluginDeviceSettingsFileNames）——了解本工具有哪些 POS 机型的配置。
+2. 再看第 27-35 行（环境地址）——了解工具连接了哪些后端服务。
+3. 再看第 3-7 行（安全和可见性）——了解工具的安全保护状态。
+4. 最后看其他具体配置项。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>需要结合 CESettingToolV4 的 C# 源码确认环境切换的 UI 实现（下拉框？选项卡？）以及"ExternalServiceVisible=False"时具体隐藏了哪些 UI 元素。</li>
+<li>需要确认 ValueCardAccessKey 的 AES 解密密钥存储在哪里（hardcoded? 另一个配置?）。</li>
+<li>第 10 行 "DefaultComanyCode" 可能是 CompanyCode 的拼写错误——需要确认源码中实际读取的是哪个 Key 名。</li>
+<li>需要确认 Logo 文件从 .\CESettings\TopLogo\ 复制到 C:\POS4UGO\Settings\ 的时机（工具启动时？用户手动触发？）。</li>
+<li>需要结合 UpdateTableList.txt 和 DeleteTableList.txt 确认数据库表操作的范围和实现。</li>
+</ul>
+<hr />
+<h2>文件：Tools/CESettingToolV5/CESettingToolV4/CESettings/Charge_CafisArch_PluginDevice.xml</h2>
+<h3>1. 文件定位</h3>
+<p>Charge（チャージ機，充值机）+ CAFISArch 机型的设备插件注册清单。Charge 机型和 ACE-100 共享某些硬件特性（都使用 CashChangerLADYf 和 POSPrinter4DotNet），但也有关键差异——此版本包含 CAFISArch 但<strong>不包含 StateManagementService</strong>。</p>
+<h3>2. 对外暴露内容</h3>
+<p>包含 <strong>10 个</strong> <code>&lt;Plugin&gt;</code> 条目：</p>
+<table>
+<thead>
+<tr>
+<th>Id</th>
+<th>程序集</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PointService</td>
+<td>Device.PointService</td>
+</tr>
+<tr>
+<td>ValueCard</td>
+<td>Device.ValueCard</td>
+</tr>
+<tr>
+<td>CashChanger</td>
+<td>Device.CashChangerLADYf</td>
+</tr>
+<tr>
+<td>Scanner1</td>
+<td>Device.Scanner4DotNet</td>
+</tr>
+<tr>
+<td>POSPrinter</td>
+<td>Device.POSPrinter4DotNet</td>
+</tr>
+<tr>
+<td>LogicServiceClient</td>
+<td>Device.LogicServiceClient</td>
+</tr>
+<tr>
+<td>BeepSound(×3)</td>
+<td>Device.BeepSound</td>
+</tr>
+<tr>
+<td>CAFISArch</td>
+<td>Device.CAFISArch</td>
+</tr>
+</tbody>
+</table>
+<p>对比 ACE100_CafisArch：缺少 StateManagementService（第 46-49 行）；对比 Charge（无 CAFISArch）：多了 CAFISArch（第 42-45 行）。</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>运行时与同类 PluginDevice.xml 一致。关键差异信号：Charge_CafisArch 专门为"需要信用卡支付的充值机"场景设计——它既需要 CAFISArch 处理信用卡，又不需要 StateManagementService（该服务可能关联到其他机型功能如会计/结算）。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li><strong>Charge_CafisArch_SettingWinPOSDevice.xml</strong>：本 batch 未直接提供（文件清单中有 Charge_SettingWinPOSDevice.xml，但无 Charge_CafisArch_SettingWinPOSDevice.xml——需确认是否存在不同版本或共用）。</li>
+<li><strong>Device.CashChangerLADYf/Device.POSPrinter4DotNet</strong>：Charge 机型使用与 ACE-100 相同的钓銭机驱动和打印机驱动。</li>
+<li><strong>Device.CAFISArch</strong>：CAFISArchJTC31 类（第 45 行）。</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li>声明式数据，无错误处理。</li>
+<li>边界：硬件上安装了 CAFISArch 模块但使用了不包含 CAFISArch 插件的配置（如 Charge_PluginDevice.xml），则信用卡功能不可用。</li>
+</ul>
+<h3>7. 测试相关</h3>
+<ul>
+<li>当前 batch 不含对应测试文件。测试建议同前。</li>
+</ul>
+<h3>8. 新人阅读建议</h3>
+<p>对比以下三个文件理解机型差异：
+- Charge_PluginDevice.xml（无 CAFISArch，共 9 个插件）
+- Charge_CafisArch_PluginDevice.xml（有 CAFISArch，共 10 个插件）
+- ACE100_CafisArch_PluginDevice.xml（有 CAFISArch + StateManagementService，共 11 个插件）</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>需要确认 Charge 机型是否有对应的 "Charge_CafisArch_SettingWinPOSDevice.xml" 文件（本 batch 文件清单中未列出），还是它使用通用的 Charge_SettingWinPOSDevice.xml。</li>
+<li>需要确认 StateManagementService 的具体功能，以及为什么 Charge 机型不包含它但 ACE-100 和 ECS-77 包含。</li>
+</ul>
+<hr />
+<h2>文件：Tools/CESettingToolV5/CESettingToolV4/CESettings/Charge_PluginDevice.xml</h2>
+<h3>1. 文件定位</h3>
+<p>Charge 机型（不带 CAFISArch）的设备插件注册清单。这是 Charge 机型的<strong>最小配置</strong>——仅包含基础 POS 设备（点服务、电子货币、钓銭机、扫描器、打印机、逻辑服务客户端、蜂鸣器/语音引导），不包含 CAFISArch（信用卡处理）、StateManagementService（状态管理服务）以及 LaneLight/GuidanceLED（车道指示灯/引导 LED）。</p>
+<h3>2. 对外暴露内容</h3>
+<p>包含 <strong>9 个</strong> <code>&lt;Plugin&gt;</code> 条目：
+- PointService、ValueCard、CashChangerLADYf、Scanner1、POSPrinter4DotNet、LogicServiceClient、BeepSound(×3)</p>
+<p>这是本 batch 中<strong>插件数量最少</strong>的配置之一（仅 9 个，且全为基础设备）。</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>运行时行为同前。本配置适用于仅做现金+电子货币充值的充值机，不需要信用卡支付和控制外部指示灯。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li><strong>Charge_SettingWinPOSDevice.xml</strong>（本 batch）：配对设置文件。</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li>同前。注意：Charge 机型的 CashChanger 驱动使用 CashChangerLADYf，与 ACE-100 相同，但与 ECS-77/Payment 的 CashChangerECS7 不同。</li>
+</ul>
+<h3>7. 测试相关</h3>
+<ul>
+<li>当前 batch 不含对应测试文件。</li>
+</ul>
+<h3>8. 新人阅读建议</h3>
+<p>Charge_PluginDevice.xml 是了解 POS 设备插件"基线集"的好例子——哪些设备是每个 POS 机都必备的（PointService、ValueCard、CashChanger、Scanner、POSPrinter、LogicServiceClient、声音输出）。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>需要确认 Charge 机型在无 CAFISArch 的情况下如何进行信用卡充值（如果业务上不需要信用卡充值，则配置正确；如果需要，则可能是配置错误）。</li>
+<li>需要确认设备组合中为什么没有 CashDrawer（钱箱）插件——Charge 机是否需要钱箱。</li>
+</ul>
+<hr />
+<h2>文件：Tools/CESettingToolV5/CESettingToolV4/CESettings/Charge_SettingWinPOSDevice.xml</h2>
+<h3>1. 文件定位</h3>
+<p>Charge 机型的设备参数配置文件。SHA256 与 ECS77_SettingWinPOSDevice.xml 和 Payment_SettingWinPOSDevice.xml 完全一致（262bde632d3c...），表明三个机型的设备参数配置完全相同。</p>
+<h3>2. 对外暴露内容</h3>
+<p>52 个配置项，内容与 ACE100_CafisArch_SettingWinPOSDevice.xml 基本一致，核心差异在第 4、7 行：
+- CashChangerName = <strong>"ECS-77"</strong>（第 4 行，而非 ACE-100 的 "ACE-100A"）
+- POSPrinterName = <strong>"FP2000USBPRT"</strong>（第 7 行，而非 ACE-100 的 "POSPrinter_FPS1DPR11_1"）</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>运行时同前。注意：虽然 Charge 机型的 PluginDevice 使用 CashChangerLADYf 驱动，但此设置文件中 CashChangerName 指向 "ECS-77"——这看起来有疑点（驱动类型与设备名称是否一致需要源码确认）。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li><strong>Charge_PluginDevice.xml</strong>（本 batch） 或 <strong>Charge_CafisArch_PluginDevice.xml</strong>：配对使用。</li>
+<li><strong>CESettingToolSettingV4.xml</strong>（本 batch）：其中 ChargeDefaultCashChangerName = "ACE-100A"（第 16 行），与此文件的 "ECS-77" 不一致——需要确认哪个配置优先级更高。</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li>同前。</li>
+<li>配置不一致风险：Charge 机型的 PluginDevice 使用 CashChangerLADYf 驱动类（ForYouApplications.POS4U.Device.CashChanger.CashChangerLADYf），但 SettingWinPOSDevice 中 CashChangerName = "ECS-77"（通常关联 CashChangerECS7 驱动）。这可能意味着设备名 "ECS-77" 只是 OPOS 逻辑名称，与实际驱动的 DLL 无关——但这需要结合运行时逻辑确认。</li>
+</ul>
+<h3>7. 测试相关</h3>
+<ul>
+<li>当前 batch 不含对应测试文件。</li>
+</ul>
+<h3>8. 新人阅读建议</h3>
+<p>注意 Charge 的 SettingWinPOSDevice 与 ECS77、Payment 的版本 SHA 完全相同——这三个机型共享同一套设备参数模板。Charge 的默认设备名在 CESettingToolSettingV4.xml（第 16 行 "ACE-100A"）和此文件（第 4 行 "ECS-77"）之间不一致——这是一个值得关注的歧义点。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>需要确认 CESettingToolSettingV4.xml 中的 ChargeDefaultCashChangerName（ACE-100A）和 Charge_SettingWinPOSDevice.xml 中的 CashChangerName（ECS-77）哪个被最终使用——工具的"默认值"和"设备具体设置"之间的优先级规则。</li>
+<li>需要确认 Charge 机型最终使用 CashChangerLADYf 还是 CashChangerECS7 驱动。</li>
+</ul>
+<hr />
+<h2>文件：Tools/CESettingToolV5/CESettingToolV4/CESettings/ECS77_PluginDevice.xml</h2>
+<h3>1. 文件定位</h3>
+<p>ECS-77 机型的设备插件注册清单。ECS-77 是 Glory（グローリー）公司的钓銭机机型，配置中包含 LaneLight（车道指示灯）和 GuidanceLED（引导 LED）等外设。</p>
+<h3>2. 对外暴露内容</h3>
+<p>包含 <strong>12 个</strong> <code>&lt;Plugin&gt;</code> 条目。与 Charge 版本的关键差异：</p>
+<p><strong>增加</strong>（对比 Charge_PluginDevice.xml）：
+- LaneLight（第 30-33 行）：Device.LaneLight
+- GuidanceLED（第 34-37 行）：Device.GuidanceLED
+- StateManagementService（第 50-53 行）</p>
+<p><strong>驱动差异</strong>（对比 Charge/ACE100）：
+- CashChanger（第 15-17 行）：Device.CashChangerECS7（而非 CashChangerLADYf）
+- POSPrinter（第 23-25 行）：Device.POSPrinterFP2000（而非 POSPrinter4DotNet）</p>
+<p><strong>无 CAFISArch</strong>：此配置不包含 CAFISArch 信用卡处理。</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>ECS-77 的 PluginDevice 展示了一个典型会计机（Payment/Checkout）的配置特征：
+1. 包含 LaneLight 和 GuidanceLED——这些外设在"客户结账通道"场景中使用。
+2. 使用 Glory ECS-7 系列钓銭机驱动（CashChangerECS7）。
+3. 使用 FP2000 打印机系列驱动。
+4. 包含 StateManagementService——可能用于管理设备状态生命周期。
+5. 不包含 CAFISArch——如果不是配置疏忽，说明 ECS-77 机型不支持信用卡，或信用卡通过其他方式处理。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li><strong>ECS77_SettingWinPOSDevice.xml</strong>（本 batch）：配对设置文件（SHA＝Charge_SettingWinPOSDevice.xml）。</li>
+<li><strong>Device.CashChangerECS7 / Device.POSPrinterFP2000 / Device.LaneLight / Device.GuidanceLED</strong>（其他驱动 DLL）。</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li>同前。</li>
+<li>与 Payment_PluginDevice.xml 的唯一区别：Payment 版本<strong>缺少 StateManagementService</strong>。这两份文件高度相似，差异仅一个插件。</li>
+</ul>
+<h3>7. 测试相关</h3>
+<ul>
+<li>当前 batch 不含对应测试文件。</li>
+</ul>
+<h3>8. 新人阅读建议</h3>
+<p>对比 ECS77_PluginDevice.xml 和 Payment_PluginDevice.xml（仅差 StateManagementService），理解"会计机"和"Payment"两个机型概念的业务差异——可能 ECS-77 是硬件型号，Payment 是软件角色，二者设备组合相似但微有不同。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>需要确认 ECS-77 物理硬件是否实际不包括 CAFISArch，还是说 CAFISArch 配置被放在了其他地方。</li>
+<li>需要确认 StateManagementService 在 ECS-77 和 Payment 之间的差异是否合理——是设计意图还是配置遗漏。</li>
+</ul>
+<hr />
+<h2>文件：Tools/CESettingToolV5/CESettingToolV4/CESettings/ECS77_SettingWinPOSDevice.xml</h2>
+<h3>1. 文件定位</h3>
+<p>ECS-77 机型的设备参数配置。SHA256 与 Charge_SettingWinPOSDevice.xml 和 Payment_SettingWinPOSDevice.xml 完全一致，内容完全相同。</p>
+<h3>2. 对外暴露内容</h3>
+<p>52 个配置项，与 Charge_SettingWinPOSDevice.xml 完全一致：
+- CashChangerName = "ECS-77"（第 4 行）
+- POSPrinterName = "FP2000USBPRT"（第 7 行）</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>同前。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li><strong>ECS77_PluginDevice.xml</strong>（本 batch）：配对使用。</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li>同前。</li>
+</ul>
+<h3>7. 测试相关</h3>
+<ul>
+<li>当前 batch 不含对应测试文件。</li>
+</ul>
+<h3>8. 新人阅读建议</h3>
+<p>注意：ECS-77、Charge、Payment 三个机型的 SettingWinPOSDevice 文件 SHA 完全一致。这是出于"三台机器的硬件布局一致"的假设。新人需要关注的是，如果三台机器的物理端口配置不同（例如 LaneLight 接在不同的 COM 口），这种配置共享就会出问题。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>同 Charge_SettingWinPOSDevice.xml。</li>
+</ul>
+<hr />
+<h2>文件：Tools/CESettingToolV5/CESettingToolV4/CESettings/Payment_PluginDevice.xml</h2>
+<h3>1. 文件定位</h3>
+<p>Payment（会計機，会计机）机型的设备插件注册清单。与 ECS77_PluginDevice.xml 相比仅缺少 StateManagementService 插件。</p>
+<h3>2. 对外暴露内容</h3>
+<p>包含 <strong>11 个</strong> <code>&lt;Plugin&gt;</code> 条目：</p>
+<ul>
+<li>PointService、ValueCard、CashChangerECS7、Scanner1、POSPrinterFP2000、LogicServiceClient、LaneLight、GuidanceLED、BeepSound(×3)</li>
+</ul>
+<p>与 ECS77_PluginDevice.xml 的<strong>唯一差异</strong>：缺少 StateManagementService（第 50-53 行在 ECS77 版本中）。</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>同前。注意 Payment 机型使用 CashChangerECS7（第 16 行）而非 CashChangerLADYf。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li><strong>Payment_SettingWinPOSDevice.xml</strong>（本 batch）：配对设置文件。</li>
+<li><strong>Device.CashChangerECS7 / Device.POSPrinterFP2000 / Device.LaneLight / Device.GuidanceLED</strong>。</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li>同前。</li>
+</ul>
+<h3>7. 测试相关</h3>
+<ul>
+<li>当前 batch 不含对应测试文件。</li>
+</ul>
+<h3>8. 新人阅读建议</h3>
+<p>与 ECS77_PluginDevice.xml 对比理解"同样的硬件但不同的软件角色"——Payment 机型与 ECS-77 硬件设备一致但缺少 StateManagementService，可能意味着 StateManagementService 与特定硬件特性而非软件角色相关。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>需要确认 StateManagementService 的具体业务功能——为什么 ECS-77 需要但它不需要。</li>
+<li>需要确认"Payment"和"ECS77"两种机型配置在实际部署中如何选择。</li>
+</ul>
+<hr />
+<h2>文件：Tools/CESettingToolV5/CESettingToolV4/CESettings/Payment_SettingWinPOSDevice.xml</h2>
+<h3>1. 文件定位</h3>
+<p>Payment 机型的设备参数配置。SHA256 与 ECS77/Charge 版本完全一致。</p>
+<h3>2. 对外暴露内容</h3>
+<p>与 ECS77_SettingWinPOSDevice.xml 完全一致，52 个配置项完全一致。</p>
+<h3>3-9 节</h3>
+<p>同 ECS77_SettingWinPOSDevice.xml。</p>
+<hr />
+<h2>文件：Tools/CESettingToolV5/CESettingToolV4/CESettings/SS900_PluginDevice.xml</h2>
+<h3>1. 文件定位</h3>
+<p>SS900 机型（TEC 公司 SS900 系列自助收银机）的设备插件注册清单。SS900 是一体化自助结账终端，包含 LaneLight、GuidanceLED、StateManagementService 等全套外设。</p>
+<h3>2. 对外暴露内容</h3>
+<p>包含 <strong>12 个</strong> <code>&lt;Plugin&gt;</code> 条目，与 ECS77_PluginDevice.xml 数量相同但驱动不同：</p>
+<p><strong>驱动差异</strong>（对比 ECS-77）：
+- CashChanger（第 15-17 行）：<strong>Device.CashChangerVT280</strong>（而非 CashChangerECS7）
+- POSPrinter（第 23-25 行）：<strong>Device.POSPrinterTECSS900</strong>（而非 POSPrinterFP2000）
+- LaneLight（第 31-33 行）：<strong>Device.SelfCheckoutTECSS900</strong>（专用程序集）
+- GuidanceLED（第 35-37 行）：<strong>Device.SelfCheckoutTECSS900</strong>（与 LaneLight 同一程序集）
+- 仍然包含 StateManagementService（第 50-53 行）</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>SS900 的配置展示了一个全功能自助结账终端的设备组合：</p>
+<ol>
+<li>CashChanger 使用 VT280 系列驱动——对应 TEC 系列的钓銭机。</li>
+<li>POSPrinter 使用 TEC SS900 专用打印驱动。</li>
+<li>LaneLight 和 GuidanceLED 使用 Device.SelfCheckoutTECSS900 程序集中的类，通过 SelfCheckout 命名空间表明这些 LED 控制器是内嵌在 SS900 一体机中的，而非独立的 COM 口设备。</li>
+<li>包含 CAFISArch？<strong>不包含</strong>——SS900 配置中也没有 CAFISArch 插件。</li>
+</ol>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li><strong>SS900_SettingWinPOSDevice.xml</strong>（本 batch）：配对设置文件。</li>
+<li><strong>Device.CashChangerVT280 / Device.POSPrinterTECSS900 / Device.SelfCheckoutTECSS900</strong>。</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li>同前。</li>
+</ul>
+<h3>7. 测试相关</h3>
+<ul>
+<li>当前 batch 不含对应测试文件。</li>
+</ul>
+<h3>8. 新人阅读建议</h3>
+<p>SS900 配置展示了"一体机"和"外设组装机"的配置差异——SS900 的 LaneLight 和 GuidanceLED 使用同一个专有程序集（SelfCheckoutTECSS900），而 ECS-77 使用独立的 LaneLight 和 GuidanceLED 程序集。这个概念性差异反映了硬件架构的不同。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>需要确认 SS900 是否在硬件层面内置了 LaneLight 和 GuidanceLED（无需外部 COM 口连接），以及这是否解释了为什么 SS900 的 COM 口配置（COM4）与 ECS-77（COM7/8/9）不同。</li>
+<li>需要确认 SS900 是否支持 CAFISArch——如果支持，当前的 PluginDevice 配置缺失 CAFISArch 插件可能是一个缺失。</li>
+</ul>
+<hr />
+<h2>文件：Tools/CESettingToolV5/CESettingToolV4/CESettings/SS900_SettingWinPOSDevice.xml</h2>
+<h3>1. 文件定位</h3>
+<p>SS900 机型的设备参数配置。SHA256（6e7b24ca04b00...）<strong>与其他机型不同</strong>，是唯一一份设置参数独立的文件。</p>
+<h3>2. 对外暴露内容</h3>
+<p>52 个配置项，与其他机型的核心差异：</p>
+<table>
+<thead>
+<tr>
+<th>配置项</th>
+<th>SS900</th>
+<th>ECS-77/Charge/Payment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CashChangerName</td>
+<td><strong>VT100</strong>（第 4 行）</td>
+<td>ECS-77</td>
+</tr>
+<tr>
+<td>Scanner1Name</td>
+<td><strong>USBSCANNER</strong>（第 5 行）</td>
+<td>Scanner_FPCPHS1</td>
+</tr>
+<tr>
+<td>POSPrinterName</td>
+<td><strong>TRST57U</strong>（第 7 行）</td>
+<td>FP2000USBPRT</td>
+</tr>
+<tr>
+<td>LaneLightPortName</td>
+<td><strong>COM4</strong>（第 9 行）</td>
+<td>COM7</td>
+</tr>
+<tr>
+<td>GuidanceLEDPortName1</td>
+<td><strong>COM4</strong>（第 10 行）</td>
+<td>COM8</td>
+</tr>
+<tr>
+<td>GuidanceLEDPortName2</td>
+<td><strong>COM4</strong>（第 11 行）</td>
+<td>COM9</td>
+</tr>
+</tbody>
+</table>
+<p>SS900 的 LaneLight 和 GuidanceLED 全部使用 COM4（而非其他机型的 COM7/8/9分设），印证了 SS900 是一体机而非外设组装机——LED 控制器可能通过单串口控制多组 LED。</p>
+<h3>3-9 节</h3>
+<p>基础分析与前序设备设置文件一致。SS900_SettingWinPOSDevice.xml 是本 batch 中唯一一份<strong>内容独立</strong>的设备参数配置（其他 6 份分为两组 SHA 重复）。</p>
+<hr />
+<h2>文件：Tools/CESettingToolV5/CESettingToolV4/CESettings/Simulator_PluginDevice.xml</h2>
+<h3>1. 文件定位</h3>
+<p>Simulator（シミュレータ）机型的设备插件注册清单。这是<strong>开发和测试环境</strong>使用的配置——所有外设驱动均替换为模拟器（Simulator）版本，无需真实硬件即可运行 POS 逻辑。</p>
+<h3>2. 对外暴露内容</h3>
+<p>包含 <strong>16 个</strong> <code>&lt;Plugin&gt;</code> 条目（本 batch 中最多）。与生产机型的核心差异：</p>
+<p><strong>所有主要设备均使用 Simulator 程序集</strong>：
+- PointServiceSimulator（第 7-9 行） 代替 Device.PointService
+- ValueCardSimulator（第 11-13 行） 代替 Device.ValueCard
+- CashChangerSimulator（第 15-17 行） 代替 CashChangerLADYf/ECS7/VT280
+- ScannerSimulator（第 23-25 行） 代替 Device.Scanner4DotNet
+- POSPrinterSimulator（第 27-29 行） 代替多种打印机驱动
+- LaneLightSimulator（第 35-37 行） 代替 Device.LaneLight
+- GuidanceLEDSimulator（第 39-41 行） 代替 Device.GuidanceLED（类名不同）
+- CAFISArchSimulator（第 55-57 行） 代替 Device.CAFISArch
+- StateManagementSimulator（第 59-61 行） 代替 Device.StateManagementService</p>
+<p><strong>模拟器特有插件</strong>（其他机型没有）：
+- CashDrawer（第 18-21 行）：被注释掉（<code>&lt;!-- ... --&gt;</code>），说明计划中的钱箱模拟器尚未实现或未稳定。
+- SelfApiConnectionService（第 62-65 行）：Self API 连接服务。
+- MTranService（第 66-69 行）：中间取引通信服务（回调监听）。
+- RetailMediaService（第 70-73 行）：零售媒体服务（广告/促销）。</p>
+<p><strong>公共插件</strong>（使用与实际设备相同的程序集）：
+- LogicServiceClient（第 31-33 行）：与生产环境使用相同的程序集——因为 LogicService 是网络服务，不涉及硬件交互。
+- BeepSound / ErrorBeepSound / VoiceGuidance（第 43-53 行）：与生产环境相同。</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>模拟器配置的用途：</p>
+<ol>
+<li>开发人员在没有真实硬件的开发机上运行 POS 软件。</li>
+<li>所有设备插件返回模拟结果（如 CashChangerSimulator 模拟投币/找零行为）。</li>
+<li>CAFISArchSimulator 模拟信用卡结算流程，无需连接支付网关。</li>
+<li>MTranService（第 66-69 行）和 RetailMediaService（第 70-73 行）是网络服务类插件，在模拟器中也可使用真实服务进行测试。</li>
+<li>SelfApiConnectionService（第 62-65 行）用于本机 API 连接——在模拟环境中可能连接本地测试端点。</li>
+</ol>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p><strong>特别关注的插件</strong>：</p>
+<ul>
+<li><strong>CashDrawer（注释状态）</strong>（第 18-21 行）：被注释掉的 CashDrawerSimulator 表明该设备在模拟环境中尚未准备好，或者钱箱功能在模拟环境中不重要。</li>
+<li><strong>GuidanceLEDSimulator</strong>（第 39-41 行）：类名为 <code>GuidanceLEDSimulator</code>（注意类名中包含 Simulator），与生产环境的 <code>GuidanceLED</code> 类不同——这是一个独立的模拟实现类。</li>
+<li><strong>CAFISArchSimulator</strong>（第 55-57 行）：CAFISArch 模拟器，允许测试信用卡结算流程。</li>
+<li><strong>MTranService / RetailMediaService</strong>（第 66-73 行）：这两个插件是"网络服务"类型，在模拟器配置中启用意味着可以在模拟环境中测试网络通信。</li>
+</ul>
+<h3>5. 依赖关系</h3>
+<ul>
+<li><strong>Simulator_SettingWinPOSDevice.xml</strong>（本 batch）：配对配置。</li>
+<li><strong>所有 Device.*Simulator.dll</strong>：模拟器程序集依赖（它们可能引用与生产程序集相同的接口）。</li>
+<li><strong>Device.LogicServiceClient</strong>：与生产环境相同的程序集。</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li>同前——声明式数据。</li>
+<li>注释状态（第 18-21 行）的 CashDrawer 是一个重要的维护信号：如果日后需要启用钱箱模拟功能，需要取消注释此段。</li>
+<li>模拟器与生产环境的差异可能导致"在模拟器中能运行的代码在生产环境中出错"——但这是模拟器的本质问题，不是配置问题。</li>
+</ul>
+<h3>7. 测试相关</h3>
+<ul>
+<li>当前 batch 不含对应测试文件。</li>
+<li>测试建议：验证模拟器配置是否能覆盖所有生产机型中使用的设备（确保代码在生产环境调用的设备在模拟器中都有对应模拟实现）。目前看 CAFISArchSimulator 覆盖了 CAFISArch，StateManagementSimulator 覆盖了 StateManagementService，覆盖基本完整。</li>
+</ul>
+<h3>8. 新人阅读建议</h3>
+<p>Simulator_PluginDevice.xml 是<strong>开发人员最常接触的配置</strong>。新人应该：
+1. 理解模拟器配置覆盖了哪些设备（几乎所有生产设备都有模拟版本）。
+2. 注意 CashDrawer 被注释的事实——在开发中不会测试钱箱功能。
+3. 注意 MTranService 和 RetailMediaService 是模拟器独有的——意味着这些服务在生产环境中可能集成在别的设备中，或者生产环境使用不同的配置方式。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>需要确认 SelfApiConnectionService 的功能——它是何种 API 连接服务，为什么只在模拟器配置中出现。</li>
+<li>需要确认 MTranService 和 RetailMediaService 是否应该在 ECS-77 或 SS900 的生产配置中出现，还是它们是可选的附加服务。</li>
+<li>需要确认 CashDrawer 注释状态的原因是"未实现"还是"当前版本不需要"。</li>
+</ul>
+<hr />
+<h2>文件：Tools/CESettingToolV5/CESettingToolV4/CESettings/Simulator_SettingWinPOSDevice.xml</h2>
+<h3>1. 文件定位</h3>
+<p>Simulator 机型的设备参数配置。SHA256（2cf27fa1f8583af...）唯一，与其他机型不完全相同。</p>
+<h3>2. 对外暴露内容</h3>
+<p>88 行共 32 个配置项（比其他机型少了一些配置项），核心差异：</p>
+<p><strong>与 ECS-77/Charge/Payment 相同的值</strong>：
+- CashChangerName = "ECS-77"（第 5-6 行）
+- POSPrinterName = "FP2000USBPRT"（第 11-12 行）
+- 大部分 COM 端口和其他参数相同</p>
+<p><strong>核心差异</strong>（第 45-47 行）：
+- CashChangerExchangeCashCurrentExit = <strong>"1"</strong>（对比其他机型的 "4"）</p>
+<p>这表示在模拟环境中，钓銭機両替（兑换）时现金出口设为"1（出金口/吐钞口）"而非生产环境的"4（回收库）"——模拟器可能不需要处理实际的回收库操作，或者测试时需要从出金口取出模拟现金。</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>运行时同其他设置文件。模拟器配置中的 "ECS-77" CashChangerName 并不代表它使用 CashChangerECS7 驱动——在 PluginDevice 中 CashChanger 已被替换为 CashChangerSimulator。设备名称仅用于 UI 显示和日志，不影响实际驱动加载。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li><strong>Simulator_PluginDevice.xml</strong>（本 batch）：配对使用。</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li>同前。</li>
+<li>CashChangerExchangeCashCurrentExit=1 在生产环境中可能不安全（吐出硬币/纸币到出金口而不是回收库），但在模拟环境中无实际影响——这是一个<strong>模拟环境特有的安全放松</strong>。</li>
+</ul>
+<h3>7. 测试相关</h3>
+<ul>
+<li>当前 batch 不含对应测试文件。</li>
+</ul>
+<h3>8. 新人阅读建议</h3>
+<p>注意模拟器配置文件与生产环境的细微差异（CashChangerExchangeCashCurrentExit=1 vs 4）——这说明了"测试配置可以适当简化"的设计思路。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>需要确认模拟器配置中的其他配置项（如串口号 COM7/8/9）是否在模拟环境中实际生效——模拟器可能忽略这些值而直接返回模拟结果。</li>
+</ul>
+<hr />
+<h2>文件：Tools/CESettingToolV5/CESettingToolV4/Properties/Settings.settings</h2>
+<h3>1. 文件定位</h3>
+<p>Settings.settings 是 Visual Studio 项目的设置设计器文件，定义强类型项目设置（Project Settings）。本 batch 未内联其源码（size_bytes=1036）。</p>
+<p>该文件通常与 <code>Settings.Designer.cs</code> 配对使用，自动生成强类型访问器，使代码可以通过 <code>Properties.Settings.Default.SomeKey</code> 访问配置。</p>
+<h3>2. 对外暴露内容</h3>
+<p>定义一组强类型配置项（类型、作用域、默认值）：</p>
+<ul>
+<li><strong>应用程序作用域设置</strong>（Application-scoped）：在运行时只读，通常在构建时确定。</li>
+<li><strong>用户作用域设置</strong>（User-scoped）：可在运行时读写，随用户配置保存。</li>
+<li>每个设置项包含：名称、类型、值、作用域。</li>
+</ul>
+<p>由于未内联，无法列出具体内容。</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>编译时：
+1. Visual Studio 读取 Settings.settings。
+2. 自动生成 Settings.Designer.cs 文件。
+3. 生成的代码包含 <code>internal sealed class Settings : ApplicationSettingsBase</code>。
+4. 每个设置项生成强类型属性。</p>
+<p>运行时：
+1. 首次访问 <code>Properties.Settings.Default.xxx</code> 时触发。
+2. 从 App.config 的 <code>&lt;applicationSettings&gt;</code> 节加载值（当使用默认设置提供程序时）。
+3. 返回对应类型的值。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<ul>
+<li><strong>Settings 类</strong>（由 Settings.Designer.cs 自动生成）：继承 <code>System.Configuration.ApplicationSettingsBase</code>。</li>
+</ul>
+<h3>5. 依赖关系</h3>
+<ul>
+<li><strong>App.config</strong>（本 batch）：存储实际运行时值（替代编译时默认值）。</li>
+<li><strong>Settings.Designer.cs</strong>（自动生成，本 batch 未包含）：提供强类型 API。</li>
+<li><strong>System.Configuration.dll</strong>：基底配置 API。</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li>无法从当前 batch 判断。如果 App.config 中缺少对应的配置节，运行时使用 Settings.settings 中定义的默认值。</li>
+<li>类型转换失败会抛出 <code>SettingsPropertyWrongTypeException</code>。</li>
+</ul>
+<h3>7. 测试相关</h3>
+<ul>
+<li>当前 batch 不含对应测试文件。</li>
+</ul>
+<h3>8. 新人阅读建议</h3>
+<p>结合 App.config 中对应的 <code>&lt;applicationSettings&gt;</code> 节来理解。Settings.settings 定义"有哪些设置"和"它们的默认类型"，App.config 定义"实际运行时的值"。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>需要人工确认文件内容，以了解 CESettingToolV4 使用了哪些强类型项目设置。</li>
+<li>需要确认这些设置是否与 CESettingToolSettingV4.xml 中的设置有重叠或覆盖关系。</li>
+</ul>
+<hr />
+<h2>文件：Tools/CESettingToolV5/CESettingToolV4/packages.config</h2>
+<h3>1. 文件定位</h3>
+<p>packages.config 是 NuGet 包管理器使用的依赖配置文件，声明了项目引用的 NuGet 包及其版本。本 batch 未内联其源码（size_bytes=171）。</p>
+<h3>2. 对外暴露内容</h3>
+<p>通常包含多个 <code>&lt;package id="..." version="..." /&gt;</code> 元素，每个元素定义一个 NuGet 依赖包。但文件大小仅 171 字节，推测可能只包含 1-2 个包引用（或为空）。</p>
+<p>可能的内容（根据项目类型推测）：
+- 数据库驱动（如 System.Data.SQLite）
+- WCF 相关包
+- XML 序列化/反序列化相关包
+- 日志相关包（如 log4net / NLog）</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>构建时，NuGet 还原过程读取 packages.config，下载指定的包版本到解决方案的 packages 目录，并添加程序集引用到项目中。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无。但每个声明的包对理解项目的外部依赖至关重要。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li><strong>NuGet 包源</strong>（nuget.org 或企业内部源）。</li>
+<li><strong>CESettingToolV4.csproj</strong>（本 batch）：.csproj 文件中会引用 packages.config 中声明的包。</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li>如果 packages.config 中声明的包在 NuGet 源中不可用，<code>nuget restore</code> 会失败。</li>
+<li>如果包版本冲突（如两个包依赖同一但不同版本的程序集），可能需要在 App.config 中添加 assemblyBinding 重定向。</li>
+</ul>
+<h3>7. 测试相关</h3>
+<ul>
+<li>当前 batch 不含对应测试文件。</li>
+</ul>
+<h3>8. 新人阅读建议</h3>
+<p>packages.config 是了解项目外部依赖的第一入口。建议与 .csproj 的 <code>&lt;Reference&gt;</code> 节对照阅读。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>需要人工确认文件具体内容，以了解 CESettingToolV4 具体使用了哪些 NuGet 包。</li>
+<li>文件仅 171 字节，可能仅包含少量包引用甚至仅为占位文件。</li>
+</ul>
+<hr />
+<h2>本批覆盖确认</h2>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>覆盖状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tools/CESettingToolV5/CESettingToolV4/App.config</td>
+<td>已简略讲解</td>
+<td>非文本文件，未内联源码，根据文件扩展名和项目惯例分析</td>
+</tr>
+<tr>
+<td>Tools/CESettingToolV5/CESettingToolV4/CESettingToolV4.csproj</td>
+<td>已简略讲解</td>
+<td>非文本文件，未内联源码，根据 MsBuild 项目文件结构分析</td>
+</tr>
+<tr>
+<td>Tools/CESettingToolV5/CESettingToolV4/CESettings/ACE100_CafisArch_PluginDevice.xml</td>
+<td>已详细讲解</td>
+<td>11 个插件，包含 CAFISArch + StateManagementService</td>
+</tr>
+<tr>
+<td>Tools/CESettingToolV5/CESettingToolV4/CESettings/ACE100_CafisArch_SettingWinPOSDevice.xml</td>
+<td>已详细讲解</td>
+<td>52 个配置项，设备参数完整</td>
+</tr>
+<tr>
+<td>Tools/CESettingToolV5/CESettingToolV4/CESettings/ACE100_PluginDevice.xml</td>
+<td>已详细讲解</td>
+<td>9 个插件，无 CAFISArch 和 StateManagementService</td>
+</tr>
+<tr>
+<td>Tools/CESettingToolV5/CESettingToolV4/CESettings/ACE100_SettingWinPOSDevice.xml</td>
+<td>已详细讲解</td>
+<td>与 ACE100_CafisArch 版本 SHA 完全一致</td>
+</tr>
+<tr>
+<td>Tools/CESettingToolV5/CESettingToolV4/CESettings/CESettingToolSettingV4.xml</td>
+<td>已详细讲解</td>
+<td>工具主配置文件，包含环境切换、服务端点、访问凭据、机型选择列表等约 80 个配置项</td>
+</tr>
+<tr>
+<td>Tools/CESettingToolV5/CESettingToolV4/CESettings/Charge_CafisArch_PluginDevice.xml</td>
+<td>已详细讲解</td>
+<td>10 个插件，有 CAFISArch、无 StateManagementService</td>
+</tr>
+<tr>
+<td>Tools/CESettingToolV5/CESettingToolV4/CESettings/Charge_PluginDevice.xml</td>
+<td>已详细讲解</td>
+<td>9 个插件，无 CAFISArch、无 StateManagementService</td>
+</tr>
+<tr>
+<td>Tools/CESettingToolV5/CESettingToolV4/CESettings/Charge_SettingWinPOSDevice.xml</td>
+<td>已详细讲解</td>
+<td>与 ECS77/Payment 版本 SHA 完全一致</td>
+</tr>
+<tr>
+<td>Tools/CESettingToolV5/CESettingToolV4/CESettings/ECS77_PluginDevice.xml</td>
+<td>已详细讲解</td>
+<td>12 个插件，包含 LaneLight、GuidanceLED、StateManagementService</td>
+</tr>
+<tr>
+<td>Tools/CESettingToolV5/CESettingToolV4/CESettings/ECS77_SettingWinPOSDevice.xml</td>
+<td>已详细讲解</td>
+<td>与 Charge/Payment SHA 一致</td>
+</tr>
+<tr>
+<td>Tools/CESettingToolV5/CESettingToolV4/CESettings/Payment_PluginDevice.xml</td>
+<td>已详细讲解</td>
+<td>11 个插件，与 ECS77 仅差 StateManagementService</td>
+</tr>
+<tr>
+<td>Tools/CESettingToolV5/CESettingToolV4/CESettings/Payment_SettingWinPOSDevice.xml</td>
+<td>已详细讲解</td>
+<td>与 ECS77/Charge SHA 一致</td>
+</tr>
+<tr>
+<td>Tools/CESettingToolV5/CESettingToolV4/CESettings/SS900_PluginDevice.xml</td>
+<td>已详细讲解</td>
+<td>12 个插件，专有 SelfCheckoutTECSS900 程序集</td>
+</tr>
+<tr>
+<td>Tools/CESettingToolV5/CESettingToolV4/CESettings/SS900_SettingWinPOSDevice.xml</td>
+<td>已详细讲解</td>
+<td>唯一 SHA 独立，COM4 单端口控制 LED</td>
+</tr>
+<tr>
+<td>Tools/CESettingToolV5/CESettingToolV4/CESettings/Simulator_PluginDevice.xml</td>
+<td>已详细讲解</td>
+<td>16 个插件（最多），全模拟器驱动，含 MTranService、RetailMediaService</td>
+</tr>
+<tr>
+<td>Tools/CESettingToolV5/CESettingToolV4/CESettings/Simulator_SettingWinPOSDevice.xml</td>
+<td>已详细讲解</td>
+<td>唯一 SHA，CashChangerExchangeCashCurrentExit=1（出金口）</td>
+</tr>
+<tr>
+<td>Tools/CESettingToolV5/CESettingToolV4/Properties/Settings.settings</td>
+<td>已简略讲解</td>
+<td>非文本文件，未内联源码，根据 Visual Studio 设置设计器机制分析</td>
+</tr>
+<tr>
+<td>Tools/CESettingToolV5/CESettingToolV4/packages.config</td>
+<td>已简略讲解</td>
+<td>非文本文件，未内联源码（171 字节），根据 NuGet 包管理机制分析</td>
+</tr>
+</tbody>
+</table></div></div><button class="expand-btn">Show more</button></div></div>
+</div></div>
+        
+
+<div class="pagination">
+<span class="current">Index</span>
+<span class="disabled">&larr; Prev</span>
+<a href="page-001.html">1</a>
+<a href="page-001.html">Next &rarr;</a>
+</div>
+
+
+        <dialog id="search-modal">
+            <div class="search-modal-header">
+                <input type="text" id="modal-search-input" placeholder="Search..." aria-label="Search transcripts">
+                <button id="modal-search-btn" type="button" aria-label="Search">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+                </button>
+                <button id="modal-close-btn" type="button" aria-label="Close">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+                </button>
+            </div>
+            <div id="search-status"></div>
+            <div id="search-results"></div>
+        </dialog>
+        <script>
+(function() {
+    var totalPages = 1;
+    var searchBox = document.getElementById('search-box');
+    var searchInput = document.getElementById('search-input');
+    var searchBtn = document.getElementById('search-btn');
+    var modal = document.getElementById('search-modal');
+    var modalInput = document.getElementById('modal-search-input');
+    var modalSearchBtn = document.getElementById('modal-search-btn');
+    var modalCloseBtn = document.getElementById('modal-close-btn');
+    var searchStatus = document.getElementById('search-status');
+    var searchResults = document.getElementById('search-results');
+
+    if (!searchBox || !modal) return;
+
+    // Hide search on file:// protocol (doesn't work due to CORS restrictions)
+    if (window.location.protocol === 'file:') return;
+
+    // Show search box (progressive enhancement)
+    searchBox.style.display = 'flex';
+
+    // Gist preview support - detect if we're on gisthost.github.io or gistpreview.github.io
+    var hostname = window.location.hostname;
+    var isGistPreview = hostname === 'gisthost.github.io' || hostname === 'gistpreview.github.io';
+    var gistId = null;
+    var gistOwner = null;
+    var gistInfoLoaded = false;
+
+    if (isGistPreview) {
+        // Extract gist ID from URL query string like ?78a436a8a9e7a2e603738b8193b95410/index.html
+        var queryMatch = window.location.search.match(/^\?([a-f0-9]+)/i);
+        if (queryMatch) {
+            gistId = queryMatch[1];
+        }
+    }
+
+    async function loadGistInfo() {
+        if (!isGistPreview || !gistId || gistInfoLoaded) return;
+        try {
+            var response = await fetch('https://api.github.com/gists/' + gistId);
+            if (response.ok) {
+                var info = await response.json();
+                gistOwner = info.owner.login;
+                gistInfoLoaded = true;
+            }
+        } catch (e) {
+            console.error('Failed to load gist info:', e);
+        }
+    }
+
+    function getPageFetchUrl(pageFile) {
+        if (isGistPreview && gistOwner && gistId) {
+            // Use raw gist URL for fetching content
+            return 'https://gist.githubusercontent.com/' + gistOwner + '/' + gistId + '/raw/' + pageFile;
+        }
+        return pageFile;
+    }
+
+    function getPageLinkUrl(pageFile) {
+        if (isGistPreview && gistId) {
+            // Use gistpreview URL format for navigation links
+            return '?' + gistId + '/' + pageFile;
+        }
+        return pageFile;
+    }
+
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function escapeRegex(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function openModal(query) {
+        modalInput.value = query || '';
+        searchResults.innerHTML = '';
+        searchStatus.textContent = '';
+        modal.showModal();
+        modalInput.focus();
+        if (query) {
+            performSearch(query);
+        }
+    }
+
+    function closeModal() {
+        modal.close();
+        // Update URL to remove search fragment, preserving path and query string
+        if (window.location.hash.startsWith('#search=')) {
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+    }
+
+    function updateUrlHash(query) {
+        if (query) {
+            // Preserve path and query string when adding hash
+            history.replaceState(null, '', window.location.pathname + window.location.search + '#search=' + encodeURIComponent(query));
+        }
+    }
+
+    function highlightTextNodes(element, searchTerm) {
+        var walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
+        var nodesToReplace = [];
+
+        while (walker.nextNode()) {
+            var node = walker.currentNode;
+            if (node.nodeValue.toLowerCase().indexOf(searchTerm.toLowerCase()) !== -1) {
+                nodesToReplace.push(node);
+            }
+        }
+
+        nodesToReplace.forEach(function(node) {
+            var text = node.nodeValue;
+            var regex = new RegExp('(' + escapeRegex(searchTerm) + ')', 'gi');
+            var parts = text.split(regex);
+            if (parts.length > 1) {
+                var span = document.createElement('span');
+                parts.forEach(function(part) {
+                    if (part.toLowerCase() === searchTerm.toLowerCase()) {
+                        var mark = document.createElement('mark');
+                        mark.textContent = part;
+                        span.appendChild(mark);
+                    } else {
+                        span.appendChild(document.createTextNode(part));
+                    }
+                });
+                node.parentNode.replaceChild(span, node);
+            }
+        });
+    }
+
+    function fixInternalLinks(element, pageFile) {
+        // Update all internal anchor links to include the page file
+        var links = element.querySelectorAll('a[href^="#"]');
+        links.forEach(function(link) {
+            var href = link.getAttribute('href');
+            link.setAttribute('href', pageFile + href);
+        });
+    }
+
+    function processPage(pageFile, html, query) {
+        var parser = new DOMParser();
+        var doc = parser.parseFromString(html, 'text/html');
+        var resultsFromPage = 0;
+
+        // Find all message blocks
+        var messages = doc.querySelectorAll('.message');
+        messages.forEach(function(msg) {
+            var text = msg.textContent || '';
+            if (text.toLowerCase().indexOf(query.toLowerCase()) !== -1) {
+                resultsFromPage++;
+
+                // Get the message ID for linking
+                var msgId = msg.id || '';
+                var pageLinkUrl = getPageLinkUrl(pageFile);
+                var link = pageLinkUrl + (msgId ? '#' + msgId : '');
+
+                // Clone the message HTML and highlight matches
+                var clone = msg.cloneNode(true);
+                // Fix internal links to include the page file
+                fixInternalLinks(clone, pageLinkUrl);
+                highlightTextNodes(clone, query);
+
+                var resultDiv = document.createElement('div');
+                resultDiv.className = 'search-result';
+                resultDiv.innerHTML = '<a href="' + link + '">' +
+                    '<div class="search-result-page">' + escapeHtml(pageFile) + '</div>' +
+                    '<div class="search-result-content">' + clone.innerHTML + '</div>' +
+                    '</a>';
+                searchResults.appendChild(resultDiv);
+            }
+        });
+
+        return resultsFromPage;
+    }
+
+    async function performSearch(query) {
+        if (!query.trim()) {
+            searchStatus.textContent = 'Enter a search term';
+            return;
+        }
+
+        updateUrlHash(query);
+        searchResults.innerHTML = '';
+        searchStatus.textContent = 'Searching...';
+
+        // Load gist info if on gistpreview (needed for constructing URLs)
+        if (isGistPreview && !gistInfoLoaded) {
+            searchStatus.textContent = 'Loading gist info...';
+            await loadGistInfo();
+            if (!gistOwner) {
+                searchStatus.textContent = 'Failed to load gist info. Search unavailable.';
+                return;
+            }
+        }
+
+        var resultsFound = 0;
+        var pagesSearched = 0;
+
+        // Build list of pages to fetch
+        var pagesToFetch = [];
+        for (var i = 1; i <= totalPages; i++) {
+            pagesToFetch.push('page-' + String(i).padStart(3, '0') + '.html');
+        }
+
+        searchStatus.textContent = 'Searching...';
+
+        // Process pages in batches of 3, but show results immediately as each completes
+        var batchSize = 3;
+        for (var i = 0; i < pagesToFetch.length; i += batchSize) {
+            var batch = pagesToFetch.slice(i, i + batchSize);
+
+            // Create promises that process results immediately when each fetch completes
+            var promises = batch.map(function(pageFile) {
+                return fetch(getPageFetchUrl(pageFile))
+                    .then(function(response) {
+                        if (!response.ok) throw new Error('Failed to fetch');
+                        return response.text();
+                    })
+                    .then(function(html) {
+                        // Process and display results immediately
+                        var count = processPage(pageFile, html, query);
+                        resultsFound += count;
+                        pagesSearched++;
+                        searchStatus.textContent = 'Found ' + resultsFound + ' result(s) in ' + pagesSearched + '/' + totalPages + ' pages...';
+                    })
+                    .catch(function() {
+                        pagesSearched++;
+                        searchStatus.textContent = 'Found ' + resultsFound + ' result(s) in ' + pagesSearched + '/' + totalPages + ' pages...';
+                    });
+            });
+
+            // Wait for this batch to complete before starting the next
+            await Promise.all(promises);
+        }
+
+        searchStatus.textContent = 'Found ' + resultsFound + ' result(s) in ' + totalPages + ' pages';
+    }
+
+    // Event listeners
+    searchBtn.addEventListener('click', function() {
+        openModal(searchInput.value);
+    });
+
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            openModal(searchInput.value);
+        }
+    });
+
+    modalSearchBtn.addEventListener('click', function() {
+        performSearch(modalInput.value);
+    });
+
+    modalInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            performSearch(modalInput.value);
+        }
+    });
+
+    modalCloseBtn.addEventListener('click', closeModal);
+
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+
+    // Check for #search= in URL on page load
+    if (window.location.hash.startsWith('#search=')) {
+        var query = decodeURIComponent(window.location.hash.substring(8));
+        if (query) {
+            searchInput.value = query;
+            openModal(query);
+        }
+    }
+})();
+        </script>
+    </div>
+    <script>
+document.querySelectorAll('time[data-timestamp]').forEach(function(el) {
+    const timestamp = el.getAttribute('data-timestamp');
+    const date = new Date(timestamp);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    if (isToday) { el.textContent = timeStr; }
+    else { el.textContent = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + timeStr; }
+});
+document.querySelectorAll('pre.json').forEach(function(el) {
+    let text = el.textContent;
+    text = text.replace(/"([^"]+)":/g, '<span style="color: #ce93d8">"$1"</span>:');
+    text = text.replace(/: "([^"]*)"/g, ': <span style="color: #81d4fa">"$1"</span>');
+    text = text.replace(/: (\d+)/g, ': <span style="color: #ffcc80">$1</span>');
+    text = text.replace(/: (true|false|null)/g, ': <span style="color: #f48fb1">$1</span>');
+    el.innerHTML = text;
+});
+document.querySelectorAll('.truncatable').forEach(function(wrapper) {
+    const content = wrapper.querySelector('.truncatable-content');
+    const btn = wrapper.querySelector('.expand-btn');
+    if (content.scrollHeight > 250) {
+        wrapper.classList.add('truncated');
+        btn.addEventListener('click', function() {
+            if (wrapper.classList.contains('truncated')) { wrapper.classList.remove('truncated'); wrapper.classList.add('expanded'); btn.textContent = 'Show less'; }
+            else { wrapper.classList.remove('expanded'); wrapper.classList.add('truncated'); btn.textContent = 'Show more'; }
+        });
+    }
+});
+</script>
+</body>
+</html>

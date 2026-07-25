@@ -1,0 +1,2559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code transcript - page 1</title>
+    <style>
+:root { --bg-color: #f5f5f5; --card-bg: #ffffff; --user-bg: #e3f2fd; --user-border: #1976d2; --assistant-bg: #f5f5f5; --assistant-border: #9e9e9e; --thinking-bg: #fff8e1; --thinking-border: #ffc107; --thinking-text: #666; --tool-bg: #f3e5f5; --tool-border: #9c27b0; --tool-result-bg: #e8f5e9; --tool-error-bg: #ffebee; --text-color: #212121; --text-muted: #757575; --code-bg: #263238; --code-text: #aed581; }
+* { box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 16px; line-height: 1.6; }
+.container { max-width: 800px; margin: 0 auto; }
+h1 { font-size: 1.5rem; margin-bottom: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--user-border); }
+.header-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 2px solid var(--user-border); padding-bottom: 8px; margin-bottom: 24px; }
+.header-row h1 { border-bottom: none; padding-bottom: 0; margin-bottom: 0; flex: 1; min-width: 200px; }
+.message { margin-bottom: 16px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.message.user { background: var(--user-bg); border-left: 4px solid var(--user-border); }
+.message.assistant { background: var(--card-bg); border-left: 4px solid var(--assistant-border); }
+.message.tool-reply { background: #fff8e1; border-left: 4px solid #ff9800; }
+.tool-reply .role-label { color: #e65100; }
+.tool-reply .tool-result { background: transparent; padding: 0; margin: 0; }
+.tool-reply .tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff8e1); }
+.message-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: rgba(0,0,0,0.03); font-size: 0.85rem; }
+.role-label { font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.user .role-label { color: var(--user-border); }
+time { color: var(--text-muted); font-size: 0.8rem; }
+.timestamp-link { color: inherit; text-decoration: none; }
+.timestamp-link:hover { text-decoration: underline; }
+.message:target { animation: highlight 2s ease-out; }
+@keyframes highlight { 0% { background-color: rgba(25, 118, 210, 0.2); } 100% { background-color: transparent; } }
+.message-content { padding: 16px; }
+.message-content p { margin: 0 0 12px 0; }
+.message-content p:last-child { margin-bottom: 0; }
+.thinking { background: var(--thinking-bg); border: 1px solid var(--thinking-border); border-radius: 8px; padding: 12px; margin: 12px 0; font-size: 0.9rem; color: var(--thinking-text); }
+.thinking-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #f57c00; margin-bottom: 8px; }
+.thinking p { margin: 8px 0; }
+.assistant-text { margin: 8px 0; }
+.tool-use { background: var(--tool-bg); border: 1px solid var(--tool-border); border-radius: 8px; padding: 12px; margin: 12px 0; }
+.tool-header { font-weight: 600; color: var(--tool-border); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.tool-icon { font-size: 1.1rem; }
+.tool-description { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 8px; font-style: italic; }
+.tool-result { background: var(--tool-result-bg); border-radius: 8px; padding: 12px; margin: 12px 0; }
+.tool-result.tool-error { background: var(--tool-error-bg); }
+.file-tool { border-radius: 8px; padding: 12px; margin: 12px 0; }
+.write-tool { background: linear-gradient(135deg, #e3f2fd 0%, #e8f5e9 100%); border: 1px solid #4caf50; }
+.edit-tool { background: linear-gradient(135deg, #fff3e0 0%, #fce4ec 100%); border: 1px solid #ff9800; }
+.file-tool-header { font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.write-header { color: #2e7d32; }
+.edit-header { color: #e65100; }
+.file-tool-icon { font-size: 1rem; }
+.file-tool-path { font-family: monospace; background: rgba(0,0,0,0.08); padding: 2px 8px; border-radius: 4px; }
+.file-tool-fullpath { font-family: monospace; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px; word-break: break-all; }
+.file-content { margin: 0; }
+.edit-section { display: flex; margin: 4px 0; border-radius: 4px; overflow: hidden; }
+.edit-label { padding: 8px 12px; font-weight: bold; font-family: monospace; display: flex; align-items: flex-start; }
+.edit-old { background: #fce4ec; }
+.edit-old .edit-label { color: #b71c1c; background: #f8bbd9; }
+.edit-old .edit-content { color: #880e4f; }
+.edit-new { background: #e8f5e9; }
+.edit-new .edit-label { color: #1b5e20; background: #a5d6a7; }
+.edit-new .edit-content { color: #1b5e20; }
+.edit-content { margin: 0; flex: 1; background: transparent; font-size: 0.85rem; }
+.edit-replace-all { font-size: 0.75rem; font-weight: normal; color: var(--text-muted); }
+.write-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #e6f4ea); }
+.edit-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff0e5); }
+.todo-list { background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); border: 1px solid #81c784; border-radius: 8px; padding: 12px; margin: 12px 0; }
+.todo-header { font-weight: 600; color: #2e7d32; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.todo-items { list-style: none; margin: 0; padding: 0; }
+.todo-item { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.06); font-size: 0.9rem; }
+.todo-item:last-child { border-bottom: none; }
+.todo-icon { flex-shrink: 0; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 50%; }
+.todo-completed .todo-icon { color: #2e7d32; background: rgba(46, 125, 50, 0.15); }
+.todo-completed .todo-content { color: #558b2f; text-decoration: line-through; }
+.todo-in-progress .todo-icon { color: #f57c00; background: rgba(245, 124, 0, 0.15); }
+.todo-in-progress .todo-content { color: #e65100; font-weight: 500; }
+.todo-pending .todo-icon { color: #757575; background: rgba(0,0,0,0.05); }
+.todo-pending .todo-content { color: #616161; }
+pre { background: var(--code-bg); color: var(--code-text); padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; line-height: 1.5; margin: 8px 0; white-space: pre-wrap; word-wrap: break-word; }
+pre.json { color: #e0e0e0; }
+code { background: rgba(0,0,0,0.08); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+pre code { background: none; padding: 0; }
+.user-content { margin: 0; }
+.truncatable { position: relative; }
+.truncatable.truncated .truncatable-content { max-height: 200px; overflow: hidden; }
+.truncatable.truncated::after { content: ''; position: absolute; bottom: 32px; left: 0; right: 0; height: 60px; background: linear-gradient(to bottom, transparent, var(--card-bg)); pointer-events: none; }
+.message.user .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--user-bg)); }
+.message.tool-reply .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff8e1); }
+.tool-use .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-bg)); }
+.tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-result-bg)); }
+.expand-btn { display: none; width: 100%; padding: 8px 16px; margin-top: 4px; background: rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; cursor: pointer; font-size: 0.85rem; color: var(--text-muted); }
+.expand-btn:hover { background: rgba(0,0,0,0.1); }
+.truncatable.truncated .expand-btn, .truncatable.expanded .expand-btn { display: block; }
+.pagination { display: flex; justify-content: center; gap: 8px; margin: 24px 0; flex-wrap: wrap; }
+.pagination a, .pagination span { padding: 5px 10px; border-radius: 6px; text-decoration: none; font-size: 0.85rem; }
+.pagination a { background: var(--card-bg); color: var(--user-border); border: 1px solid var(--user-border); }
+.pagination a:hover { background: var(--user-bg); }
+.pagination .current { background: var(--user-border); color: white; }
+.pagination .disabled { color: var(--text-muted); border: 1px solid #ddd; }
+.pagination .index-link { background: var(--user-border); color: white; }
+details.continuation { margin-bottom: 16px; }
+details.continuation summary { cursor: pointer; padding: 12px 16px; background: var(--user-bg); border-left: 4px solid var(--user-border); border-radius: 12px; font-weight: 500; color: var(--text-muted); }
+details.continuation summary:hover { background: rgba(25, 118, 210, 0.15); }
+details.continuation[open] summary { border-radius: 12px 12px 0 0; margin-bottom: 0; }
+.index-item { margin-bottom: 16px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); background: var(--user-bg); border-left: 4px solid var(--user-border); }
+.index-item a { display: block; text-decoration: none; color: inherit; }
+.index-item a:hover { background: rgba(25, 118, 210, 0.1); }
+.index-item-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: rgba(0,0,0,0.03); font-size: 0.85rem; }
+.index-item-number { font-weight: 600; color: var(--user-border); }
+.index-item-content { padding: 16px; }
+.index-item-stats { padding: 8px 16px 12px 32px; font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid rgba(0,0,0,0.06); }
+.index-item-commit { margin-top: 6px; padding: 4px 8px; background: #fff3e0; border-radius: 4px; font-size: 0.85rem; color: #e65100; }
+.index-item-commit code { background: rgba(0,0,0,0.08); padding: 1px 4px; border-radius: 3px; font-size: 0.8rem; margin-right: 6px; }
+.commit-card { margin: 8px 0; padding: 10px 14px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 6px; }
+.commit-card a { text-decoration: none; color: #5d4037; display: block; }
+.commit-card a:hover { color: #e65100; }
+.commit-card-hash { font-family: monospace; color: #e65100; font-weight: 600; margin-right: 8px; }
+.index-commit { margin-bottom: 12px; padding: 10px 16px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+.index-commit a { display: block; text-decoration: none; color: inherit; }
+.index-commit a:hover { background: rgba(255, 152, 0, 0.1); margin: -10px -16px; padding: 10px 16px; border-radius: 8px; }
+.index-commit-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; margin-bottom: 4px; }
+.index-commit-hash { font-family: monospace; color: #e65100; font-weight: 600; }
+.index-commit-msg { color: #5d4037; }
+.index-item-long-text { margin-top: 8px; padding: 12px; background: var(--card-bg); border-radius: 8px; border-left: 3px solid var(--assistant-border); }
+.index-item-long-text .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--card-bg)); }
+.index-item-long-text-content { color: var(--text-color); }
+#search-box { display: none; align-items: center; gap: 8px; }
+#search-box input { padding: 6px 12px; border: 1px solid var(--assistant-border); border-radius: 6px; font-size: 16px; width: 180px; }
+#search-box button, #modal-search-btn, #modal-close-btn { background: var(--user-border); color: white; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+#search-box button:hover, #modal-search-btn:hover { background: #1565c0; }
+#modal-close-btn { background: var(--text-muted); margin-left: 8px; }
+#modal-close-btn:hover { background: #616161; }
+#search-modal[open] { border: none; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.2); padding: 0; width: 90vw; max-width: 900px; height: 80vh; max-height: 80vh; display: flex; flex-direction: column; }
+#search-modal::backdrop { background: rgba(0,0,0,0.5); }
+.search-modal-header { display: flex; align-items: center; gap: 8px; padding: 16px; border-bottom: 1px solid var(--assistant-border); background: var(--bg-color); border-radius: 12px 12px 0 0; }
+.search-modal-header input { flex: 1; padding: 8px 12px; border: 1px solid var(--assistant-border); border-radius: 6px; font-size: 16px; }
+#search-status { padding: 8px 16px; font-size: 0.85rem; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); }
+#search-results { flex: 1; overflow-y: auto; padding: 16px; }
+.search-result { margin-bottom: 16px; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.search-result a { display: block; text-decoration: none; color: inherit; }
+.search-result a:hover { background: rgba(25, 118, 210, 0.05); }
+.search-result-page { padding: 6px 12px; background: rgba(0,0,0,0.03); font-size: 0.8rem; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); }
+.search-result-content { padding: 12px; }
+.search-result mark { background: #fff59d; padding: 1px 2px; border-radius: 2px; }
+@media (max-width: 600px) { body { padding: 8px; } .message, .index-item { border-radius: 8px; } .message-content, .index-item-content { padding: 12px; } pre { font-size: 0.8rem; padding: 8px; } #search-box input { width: 120px; } #search-modal[open] { width: 95vw; height: 90vh; } }
+</style>
+</head>
+<body>
+    <div class="container">
+        <h1><a href="index.html" style="color: inherit; text-decoration: none;">Claude Code transcript</a> - page 1/1</h1>
+        
+
+<div class="pagination"><a href="index.html" class="index-link">Index</a></div>
+
+        
+<div class="message user" id="msg-2026-07-09T06-17-43-330Z"><div class="message-header"><span class="role-label">User</span><a href="#msg-2026-07-09T06-17-43-330Z" class="timestamp-link"><time datetime="2026-07-09T06:17:43.330Z" data-timestamp="2026-07-09T06:17:43.330Z">2026-07-09T06:17:43.330Z</time></a></div><div class="message-content">
+<div class="user-content"><p>IMPORTANT EXECUTION MODE FOR CLAUDE CLI:
+- Do not use tools.
+- Do not read or write files.
+- Do not ask for permissions.
+- Produce the requested final markdown directly on stdout.
+- The workflow runner will save stdout to the output path.
+- Ignore any instruction that implies you should write the output file yourself; instead print the full content.</p>
+<p>BEGIN ORIGINAL PROMPT</p>
+<p>你是源码教材项目的信息提取员，不是散文作者。</p>
+<p>任务：根据下面的带行号源码，为本 batch 中的每个文件生成“文件级源码讲解笔记”。</p>
+<p>Batch 信息：
+- Batch ID: batch_020
+- Batch Name: config_config_settings
+- Module: config
+- Purpose: 解释项目配置、构建配置、依赖配置和运行时配置加载线索
+- Related Runtime Flows: 请求处理流程、错误处理流程、日志流程
+- Output Note Path: _sourcebook/notes/batch_020_config_config_settings_file_notes.md</p>
+<p>本批文件：
+- Source/POS4ULogicService/Settings/ControllerLogicService.xml
+- Source/POS4ULogicService/Settings/Message.xml
+- Source/POS4ULogicService/Settings/MessageRJ.xml
+- Source/POS4ULogicService/Settings/MessageRJ_FC.xml</p>
+<p>本批任务目标：
+- 为本批每个文件生成可追溯到源码行号的文件级笔记。
+- 重点说明文件职责、对外暴露内容、关键逻辑、依赖关系、错误处理、测试建议和不确定点。
+- 只做文件级源码笔记，不写最终教材正文。</p>
+<p>硬性规则：</p>
+<ol>
+<li>必须基于实际源码。</li>
+<li>每一条技术事实都要引用文件路径和行号。</li>
+<li>不允许编造不存在的函数、参数、返回值、配置项、业务逻辑。</li>
+<li>如果无法确定，请写“需要结合其他文件确认”。</li>
+<li>不要只讲核心函数，小工具函数、边界处理、异常处理也要说明。</li>
+<li>每个文件必须单独成节。</li>
+<li>不要写最终教材章节，只写文件级源码笔记。</li>
+<li>不要省略本批任何文件。</li>
+<li>如果某个文件很简单，也要说明它为什么简单、在项目中承担什么角色。</li>
+<li>如果发现当前 batch 缺少理解该文件所需的上下文，请在“不确定点”中明确列出需要结合哪些文件。</li>
+</ol>
+<p>质量规则：
+- 优先解释运行时行为和业务意图，再补充语法层面的说明。
+- 遇到配置、SQL、脚本、文档、二进制占位文件，也必须说明它对项目理解的作用。
+- 对非文本文件、缺失文件或无法从当前 batch 判断的内容，必须标记“需要结合其他文件确认”或“需要人工确认”，不要猜。
+- 入口、配置加载、请求处理、数据读写、错误处理、日志、测试相关线索要特别标出。
+- 输出中不要出现未引用行号的技术断言。</p>
+<p>覆盖确认要求：
+- 结尾必须输出“本批覆盖确认”表。
+- 表中必须逐一列出本批所有文件。
+- 覆盖状态只能使用：已详细讲解 / 已简略讲解 / 需要结合其他文件确认。</p>
+<p>输出格式：</p>
+<h1>文件级源码笔记：config_config_settings</h1>
+<h2>Batch 信息</h2>
+<ul>
+<li>Batch ID: batch_020</li>
+<li>Batch Name: config_config_settings</li>
+<li>Module: config</li>
+<li>Purpose: 解释项目配置、构建配置、依赖配置和运行时配置加载线索</li>
+</ul>
+<hr />
+<h2>文件：<path></h2>
+<h3>1. 文件定位</h3>
+<p>说明这个文件在项目中的角色，属于哪个模块，解决什么问题。</p>
+<h3>2. 对外暴露内容</h3>
+<p>列出 class / function / component / API / command / config / export。</p>
+<p>每一项都要包含：
+- 名称
+- 文件路径 + 行号
+- 用途</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>按代码执行顺序解释关键逻辑。</p>
+<p>要求：
+- 引用文件路径和行号
+- 解释运行时会发生什么
+- 不要只翻译代码，要说明代码意图</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>逐个说明：
+- 名称
+- 位置：文件路径 + 行号
+- 输入
+- 输出
+- 副作用
+- 调用关系
+- 边界情况
+- 可能的坑</p>
+<h3>5. 依赖关系</h3>
+<p>说明它依赖哪些文件、库、配置、类型、组件，以及这些依赖的用途。</p>
+<h3>6. 错误处理与边界情况</h3>
+<p>必须引用源码行号。</p>
+<p>如果没有明显错误处理，也要说明“当前文件没有显式错误处理”，并指出可能依赖哪里处理。</p>
+<h3>7. 测试相关</h3>
+<p>说明：
+- 当前输入中是否包含对应测试
+- 如果有，测试覆盖了什么
+- 如果没有，应该如何测试这个文件</p>
+<h3>8. 新人阅读建议</h3>
+<p>告诉新人应该如何理解这个文件，阅读时先看哪里，再看哪里。</p>
+<h3>9. 不确定点</h3>
+<p>列出不能从当前 batch 确认的问题，不要猜。</p>
+<hr />
+<h2>本批覆盖确认</h2>
+<p>请列出本批所有文件，并标记：</p>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>覆盖状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>path</td>
+<td>已详细讲解 / 已简略讲解 / 需要结合其他文件确认</td>
+<td>说明</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p>下面是本批源码：</p>
+<p>FILE: Source/POS4ULogicService/Settings/ControllerLogicService.xml
+SHA256: a0bbdbbeb3b6fbf87c339cd4bcd185b1ed880717306b6af35a0d1973eaef7c26
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8" ?>
+00002: <Controller>
+00003:   <Startup>
+00004:     <Plugin Id="InitAccessor" />
+00005:     <Plugin Id="CommandController"
+00006:             IsSingleton="True"/>
+00007:     <Plugin Id="RJManager"
+00008:             IsSingleton="True"/>
+00009:     <Plugin Id="DiscountManager"
+00010:             IsSingleton="True"/>
+00011:     <Plugin Id="TaxManager"
+00012:             IsSingleton="True"/>
+00013:     <Plugin Id="PaymentManager"
+00014:             IsSingleton="True"/>
+00015:     <Plugin Id="InitCheckDigitManager" />
+00016:     <Plugin Id="InitRoundManager" />
+00017:     <Plugin Id="DeviceManager"
+00018:             IsSingleton="True"/>
+00019:     <Plugin Id="PointManager"
+00020:             IsSingleton="True"/>
+00021:     <Plugin Id="SessionManager"
+00022:             IsSingleton="True"/>
+00023:   </Startup>
+00024:   <Exit>
+00025:   </Exit>
+00026: </Controller></p>
+<hr />
+<p>FILE: Source/POS4ULogicService/Settings/Message.xml
+SHA256: 410fe8294e5baaf5b3278fb39349198378e39e0c6755fd279d6edd85886a2b61
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8" ?>
+00002: <Messages>
+00003:   <Message Id="ErrorUnknown"
+00004:            Code="1884">POS4ULogicServiceシステムエラーが発生しました。</Message>
+00005:   <Message Id="ErrorTransactionToken"
+00006:            Code="E0001">トランザクショントークンエラー</Message>
+00007:   <Message Id="ErrorExecuteDefault"
+00008:            Code="E0002">現在この操作は行えません。もう一度、操作をやり直して下さい。</Message>
+00009:   <Message Id="InfoMessage">{0}</Message>
+00010:   <Message Id="ErrorItemNotFound"
+00011:            Code="0001">商品が見つかりませんでした。正しいコードを入力し直してください。</Message>
+00012:   <Message Id="ErrorInvalidLineNo"
+00013:            Code="0003">明細番号を正しく指定してください。</Message>
+00014:   <Message Id="ErrorInvalidBarcode"
+00015:            Code="0007">バーコードが不正です。</Message>
+00016:   <Message Id="ErrorInputCodeByCheckDigit"
+00017:            Code="0007">バーコードが不正です。</Message>
+00018:   <Message Id="ErrorCannotChangeQuantityForCanceled"
+00019:            Code="0009">明細訂正されたため数量変更できません。</Message>
+00020:   <Message Id="ErrorCannotChangePriceForCanceled"
+00021:            Code="0010">明細訂正されたため売価変更できません。</Message>
+00022:   <Message Id="ErrorCannotSubTotalForCanceled"
+00023:            Code="0011">すべての商品が明細訂正されたため小計できません。</Message>
+00024:   <Message Id="ErrorInputRangeOver"
+00025:            Code="0026">入力データが範囲を超えています。ご確認の上、再度入力してください。</Message>
+00026:   <Message Id="ErrorCannotChangeQuantityForItemDiscount"
+00027:            Code="0039">アイテム値割引されたため数量変更できません。</Message>
+00028:   <Message Id="ErrorCannotChangePriceForItemDiscount"
+00029:            Code="0040">アイテム値割引されたため売価変更できません。</Message>
+00030:   <Message Id="ErrorChangePriceProhibition"
+00031:            Code="0045">売価変更が出来ない商品です。</Message>
+00032:   <Message Id="ErrorCannotAddPayment"
+00033:            Code="0052">入力された支払方法は追加できません。PaymentCode = {0}</Message>
+00034:   <Message Id="ErrorCannotAddQuantity"
+00035:            Code="0060">明細の増数はできません。</Message>
+00036:   <Message Id="ErrorCannotRaisePrice"
+00037:            Code="0061">明細の増額はできません。</Message>
+00038:   <Message Id="ErrorCannotCancelRMTrialCouponTarget"
+00039:            Code="0062">お試しクーポン適用商品を含む明細は取消できません。LineItemNo = {0}</Message>
+00040:   <Message Id="ErrorCannotSubTotalIncreasedAmount"
+00041:            Code="0063">合計金額が元取引から増額されているため小計できません。元取引 : {0}</Message>
+00042:   <Message Id="ErrorItemQuantityMinUnder"
+00043:            Code="1808">個数に「０」は入力できません。</Message>
+00044:   <Message Id="ErrorItemQuantityMaxOver"
+00045:            Code="1809">入力された数量が最大値を超えています。</Message>
+00046:   <Message Id="ErrorItemPriceMinUnder"
+00047:            Code="1810">0円の商品は登録出来ません。</Message>
+00048:   <Message Id="ErrorItemPriceMaxOver"
+00049:            Code="1811">売価が最大値を超えています。</Message>
+00050:   <Message Id="ErrorTicketCountMaxOver"
+00051:            Code="1812">入力された券種枚数が最大値を超えています。</Message>
+00052:   <Message Id="ErrorZeroDiscount"
+00053:            Code="1816">０円値引き操作はできません。</Message>
+00054:   <Message Id="ErrorPayment"
+00055:            Code="1817">支払（払戻）内容に誤りがあります。ご確認の上、正しく入力してください。</Message>
+00056:   <Message Id="ErrorClassNotFound"
+00057:            Code="1821">該当商品のクラス情報が見つかりません。</Message>
+00058:   <Message Id="ErrorCollectionTargetItem"
+00059:            Code="1825">回収対象商品のため商品登録はできません。</Message>
+00060:   <Message Id="ErrorOTCDrugSales"
+00061:            Code="1826">この商品はOTC医薬品のため、当端末では購入できません。ドラッグ専用レジでのみ購入できます。</Message>
+00062:   <Message Id="WarningOTCDrugSales"
+00063:            Code="W1826">この商品はOTC医薬品のため、当端末では購入できません。ドラッグ専用レジでのみ購入できます。</Message>
+00064:   <Message Id="ErrorCannotChangeTaxGroup"
+00065:            Code="1828">税変更が出来ない商品です。</Message>
+00066:   <Message Id="ErrorCannotChangeTaxGroupForCanceled"
+00067:            Code="1829">明細訂正されたため税変更できません。</Message>
+00068:   <Message Id="ErrorMemberPointScanedForExistPayment"
+00069:            Code="1865">支払がすでに入力されているためカードスキャンできません。</Message>
+00070:   <Message Id="ErrorPosLogicInternal"
+00071:            Code="1884">POS4ULogicServiceシステムエラーが発生しました。</Message>
+00072:   <Message Id="ErrorPointBalance"
+00073:            Code="1890">ポイント残高が不足しています。&#xa;ポイント残高:{0}</Message>
+00074:   <Message Id="ErrorPointInputOver"
+00075:            Code="1892">入力されたポイントだと、お支払い総額がお買上金額を超過します。入力ポイント:{0}</Message>
+00076:   <Message Id="ErrorStoreNotFound"
+00077:            Code="1894">入力された店舗コードは未登録です。[StoreCode:{0}]</Message>
+00078:   <Message Id="ErrorTerminalNotFound"
+00079:            Code="1895">入力された端末番号は未登録です。[StoreCode:{0},TerminalNo:{1}]</Message>
+00080:   <Message Id="WarningRMCouponCanNotAdd"
+00081:            Code="W1896">追加できなかったRMクーポン情報があります。</Message>
+00082:   <Message Id="WarningInvalidItemCode"
+00083:            Code="W1897">商品コードリストに不正な商品コードが存在します。</Message>
+00084:   <Message Id="ErrorInvalidRMLoginPoint"
+00085:            Code="1898">入力されたログインポイント値は不正です。</Message>
+00086:   <Message Id="ErrorNotTrainingCard"
+00087:            Code="1899">練習モードでは、&#xa;練習用カード以外の使用は出来ません。</Message>
+00088:   <Message Id="ErrorTrainingCardInProduction"
+00089:            Code="1799">バーコードが不正です。</Message>
+00090:   <Message Id="WarningCannotLoadDealNo"
+00091:            Code="W1899">VD承認番号が取得できませんでした。</Message>
+00092:   <Message Id="ErrorUnavailableCancel"
+00093:            Code="1900">引去が成功しているため、取引中止ではなく取引確定を実施してください。</Message>
+00094:   <Message Id="ErrorValueGetBalanceCancelTransaction"
+00095:            Code="1901">電子マネーの残高照会の通信中にエラーが発生しました。再度取引中止を実行してください。</Message>
+00096:   <Message Id="ErrorDepositUnavailableCancel"
+00097:            Code="1902">入金が成功しているため、取引中止ではなく取引確定を実施してください。</Message>
+00098:   <Message Id="ErrorValueCardOffline"
+00099:            Code="2001">電子マネーサーバーと通信できませんでした。</Message>
+00100:   <Message Id="ErrorValueNotFoundOrPinInvalid"
+00101:            Code="2002">PINコードが不正、または入力された会員番号が電子マネーサーバーに存在しません。</Message>
+00102:   <Message Id="ErrorValueCardServerInternal"
+00103:            Code="2003">電子マネーサーバー内部処理でエラーが発生しました。</Message>
+00104:   <Message Id="ErrorValueBalance"
+00105:            Code="2004">利用額が残高を超えています。</Message>
+00106:   <Message Id="ErrorValueWithDrawTimeOut"
+00107:            Code="2005">電子マネー引去の通信中にエラーが発生しました。再度引去を実行してください。</Message>
+00108:   <Message Id="ErrorValueCheckUnfinishedTimeOut"
+00109:            Code="2006">プリカ払い中にエラーが発生したので、再実行してください。</Message>
+00110:   <Message Id="ErrorMemberPointScanedForOffLine"
+00111:            Code="2101">ポイントアーティストサーバーと通信できませんでした。</Message>
+00112:   <Message Id="ErrorMemberPointServer"
+00113:            Code="2104">ポイントアーティストサーバー内部処理でエラーが発生しました。</Message>
+00114:   <Message Id="WarningPointSetOffline"
+00115:            Code="W2105">入力された会員番号で使用されたポイントと付与されたポイントは、リアル反映されていません。</Message>
+00116:   <Message Id="WarningPointRefOffline"
+00117:            Code="W2106">現在ポイントアーティストサーバーがオフラインのため利用できません。</Message>
+00118:   <Message Id="WarningPointRefNg"
+00119:            Code="W2107">入力された会員番号は現在ポイントアーティストサーバーを利用できません。</Message>
+00120:   <Message Id="WarningPointSetNg"
+00121:            Code="W2108">入力された会員番号は現在ポイントアーティストサーバーを利用できないためポイントが付与されませんでした。</Message>
+00122:   <Message Id="ErrorValueAccessKeyOrTerminalId"
+00123:            Code="2109">電子マネーサーバー接続のアクセスキーまたは端末IDが不正です。</Message>
+00124:   <Message Id="ErrorPointServerPointNotAvailableForOffline"
+00125:            Code="2110">ポイントアーティストサーバー接続がオフラインのため、ポイントの利用はできません。</Message>
+00126:   <Message Id="ErrorPointServerPointNotAvailableForNg"
+00127:            Code="2111">ポイントアーティストサーバーが応答エラーのため、ポイントの利用はできません。</Message>
+00128:   <Message Id="ErrorValueDepositLimit"
+00129:            Code="2112">入金額が入金限度額 = {0} 円を超えています。</Message>
+00130:   <Message Id="ErrorValueDisposable"
+00131:            Code="2113">バーコードが不正です。</Message>
+00132:   <Message Id="ErrorInvalidReasonCode"
+00133:            Code="2115">理由コードが不正です。 InputReasonCode = {0}</Message>
+00134:   <Message Id="WarningPointExceptionError"
+00135:            Code="W2116">ポイント処理で予期せぬエラーが発生したため、使用ポイントと付与ポイントは、リアル反映されていません。</Message>
+00136:   <Message Id="WarningCRMPointServerPointNotAvailableForOffline"
+00137:            Code="W2117">CRMポイントサーバーがオフラインのため、ポイントの付与はできません。</Message>
+00138:   <Message Id="WarningCRMPointServerPointNotAvailableForNg"
+00139:            Code="W2118">CRMポイントサーバーが応答エラーのため、ポイントの付与はできません。ErrorMessageCD = {0}</Message>
+00140:   <Message Id="ErrorValueClassCanceled"
+00141:            Code="2119">電子マネーサーバー内部処理で&#xa;エラーが発生しました。</Message>
+00142:   <Message Id="ErrorDiscountDuplicated"
+00143:            Code="2201">併用不可値引きです。</Message>
+00144:   <Message Id="ErrorInputDecimal"
+00145:            Code="2203">少数値を入力することは出来ません。</Message>
+00146:   <Message Id="ErrorSignInOut"
+00147:            Code="2204">サインイン/アウトに失敗しました。</Message>
+00148:   <Message Id="ErrorZeroAmountSaveMTransaction"
+00149:            Code="2205">この操作を合計金額0円の取引に対して行うことはできません。</Message>
+00150:   <Message Id="ErrorTrainingSaveMTransaction"
+00151:            Code="2206">この操作をトレーニングモード中の取引に対して行うことはできません。</Message>
+00152:   <Message Id="ErrorCannotDiscountManualLineItemForCanceled"
+00153:            Code="2207">明細訂正されたため、明細手動値下げはできません。</Message>
+00154:   <Message Id="ErrorCannotDiscountManualLineItem"
+00155:            Code="2208">明細手動値下げ不可の商品です。</Message>
+00156:   <Message Id="ErrorNeedApprovalAgeConfirmation"
+00157:            Code="2209">成年確認が必要な商品があります。成年確認承認を行ってください。</Message>
+00158:   <Message Id="ErrorGetOneTimeBarcode"
+00159:            Code="2210">ワンタイムバーコード生成に失敗しました。{0}</Message>
+00160:   <Message Id="ErrorInValidOneTimeBarcode"
+00161:            Code="2211">{0}</Message>
+00162:   <Message Id="WarningNeedApprovalAgeConfirmation"
+00163:            Code="W2212">成年確認が必要な商品があります。成年確認承認を行ってください。</Message>
+00164:   <Message Id="ErrorPointUpdateExceptionDetail"
+00165:            Code="3008">入力された会員番号で使用されたポイントと付与されたポイントは、リアル反映済みか不明です。</Message>
+00166:   <Message Id="ErrorPointPosLogicInternal"
+00167:            Code="3009">ポイントＰＯＳ内部処理でエラーが発生しました。</Message>
+00168:   <Message Id="ErrorOldModuleVersion"
+00169:            Code="3010">旧モジュールバージョンエラー</Message>
+00170:   <Message Id="ErrorCashChangerDepositOver"
+00171:            Code="3011">お釣りが1万円以上になる、お預かりは出来ません。</Message>
+00172:   <Message Id="ErrorCashChangerBeginDeposit"
+00173:            Code="3012">釣銭機開始処理が失敗しました。再実行してください。</Message>
+00174:   <Message Id="ErrorCashChangerFixDeposit"
+00175:            Code="3013">釣銭機確定処理が失敗しました。再実行してください。</Message>
+00176:   <Message Id="ErrorDevice"
+00177:            Code="3014">{0}</Message>
+00178:   <Message Id="ErrorOpenedAlready"
+00179:            Code="3015">既に開設処理が行われています。</Message>
+00180:   <Message Id="ErrorOpenFirst"
+00181:            Code="3016">まず始めに開設処理を行ってください。</Message>
+00182:   <Message Id="ErrorSummaryNotCompleted"
+00183:            Code="3017">集計処理が完了していません。もうしばらくしてから再実行してください。</Message>
+00184:   <Message Id="ErrorInquiryMTranOffline"
+00185:            Code="3018">サーバとの通信に失敗しました。スキャンを再実行してください。</Message>
+00186:   <Message Id="ErrorInquiryMTranIllegal"
+00187:            Code="3019">スキャンに失敗しました。</Message>
+00188:   <Message Id="ErrorPaymentStationOffline"
+00189:            Code="3020">サーバとの通信に失敗しました。</Message>
+00190:   <Message Id="ErrorNotFoundMTransaction"
+00191:            Code="3021">中間取引が存在しません。&#xa;または、既に復元済の中間取引です。</Message>
+00192:   <Message Id="ErrorLogicService"
+00193:            Code="3022">{0}</Message>
+00194:   <Message Id="ErrorCashChanger"
+00195:            Code="3023">{0}</Message>
+00196:   <Message Id="ErrorInvalidInputChargeAmount"
+00197:            Code="3024">チャージ金額を入力してください。</Message>
+00198:   <Message Id="ErrorValueDepositUnitLimit"
+00199:            Code="3025">入金額が1度あたりの入金限度額 = {0} 円を超えています。</Message>
+00200:   <Message Id="ErrorExitPassword"
+00201:            Code="3026">パスワードが違います。</Message>
+00202:   <Message Id="ErrorPrint"
+00203:            Code="3027">「レシート再印字」を実行してください。</Message>
+00204:   <Message Id="WarningMTranNeutral"
+00205:            Code="3028">取引が開始されていませんでした。「戻る」ボタンを押下し、初めから操作をやり直してください。</Message>
+00206:   <Message Id="WarningMTranIsOperating"
+00207:            Code="3029">取引を復旧しました。「戻る」ボタンを押下し、操作を再開してください。</Message>
+00208:   <Message Id="ErrorPrintDataNotExists"
+00209:            Code="3030">印字データが存在しません。</Message>
+00210:   <Message Id="ErrorReprintOverPermitCount"
+00211:            Code="3031">再印字可能枚数を超過しているため、再印字できません。</Message>
+00212:   <Message Id="ErrorValueDepositTimeOut"
+00213:            Code="3032">入金に失敗しました。状態確認を行ってください。</Message>
+00214:   <Message Id="ErrorValueCheckUnfinishedDepositTimeOut"
+00215:            Code="3033">プリカ利用取消中にエラーが発生したので、再実行してください。</Message>
+00216:   <Message Id="ErrorCashChangerStatusFull"
+00217:            Code="3034">釣銭機にフルの現金スロットがあります。ご確認ください。</Message>
+00218:   <Message Id="ErrorCashChangerStatusEmpty"
+00219:            Code="3035">釣銭機にエンプティの現金スロットがあります。ご確認ください。</Message>
+00220:   <Message Id="ErrorCashChangerStatusNearFull"
+00221:            Code="3036">釣銭機にニアフルの現金スロットがあります。ご確認ください。</Message>
+00222:   <Message Id="ErrorCashChangerStatusNearEmpty"
+00223:            Code="3037">釣銭機にニアエンプティの現金スロットがあります。ご確認ください。</Message>
+00224:   <Message Id="WarningFailedInsertItemMasterMaintenance"
+00225:            Code="3038">商品マスタの緊急メンテナンス履歴を登録中に問題が発生しました。売価変更/名称変更は行われますが、履歴が記録されていない可能性があります。店舗コード:{0} 商品コード:{1}</Message>
+00226:   <Message Id="NoticeCancelPayment"
+00227:            Code="3039">会計操作中止を実行すると、&#xa;取引をバーコードスキャン前の状態に戻します。&#xa;取引は完了していないため、&#xa;お客様には「お会計票」を無くさないよう&#xa;アナウンスください。&#xa;実行してよろしいですか？</Message>
+00228:   <Message Id="NoticeCancelTransaction"
+00229:            Code="3040">取引中止を実行します。&#xa;実行してよろしいですか？</Message>
+00230:   <Message Id="NoticeCancelTransaction_Customer"
+00231:            Code="3040">取引中止を実行します。&#xa;実行してよろしいですか？</Message>
+00232:   <Message Id="NoticeCancelResalesTransactionNoChange">レジマイナスのみ完了し、売上が立っていない状態です。&#xa;売上を立てる必要がある場合は取引完了操作を再度実行してください。&#xa;&#xa;取引中止を行ってもよろしいですか？</Message>
+00233:   <Message Id="NoticeCancelResalesTransactionChange">レジマイナスのみ完了し、売上が立っていない状態です。&#xa;売上を立てる必要がある場合は取引完了操作を再度実行してください。&#xa;&#xa;取引中止を行ってもよろしいですか？</Message>
+00234:   <Message Id="NoticeCancelTransactionWithChange">現状、売上が立っていない状態です。&#xa;このまま取引中止を実施すると&#xa;チャージ取引のみ成立し、レシートとお釣りが排出されます。&#xa;&#xa;取引中止を実施してよろしいですか？</Message>
+00235:   <Message Id="NoticeCancelTransactionWithReceipt">現状、売上が立っていない状態です。&#xa;このまま取引中止を実施すると&#xa;チャージ取引のみ成立し、レシートとお釣りが排出されます。&#xa;&#xa;取引中止を実施してよろしいですか？</Message>
+00236:   <Message Id="WarningValueCardInquiry"
+00237:            Code="3041">トライアルプリカ照会に失敗しました。&#xa;ポイント利用は可能ですが、お支払にはお使いいただけません。</Message>
+00238:   <Message Id="ErrorReceiptServiceOffline"
+00239:            Code="3042">レシート取得時にサーバとの通信に失敗しました。「レシート再印字」を再実行してください。</Message>
+00240:   <Message Id="ErrorCashChangerDeviceInit"
+00241:            Code="3043">釣銭機に異常が発生しているため、&#xa;再接続に失敗しました。&#xa;釣銭機本体に表示されているエラーを解除し、&#xa;再度「釣銭機再接続」を実行してください。</Message>
+00242:   <Message Id="ErrorValueCardScanErrorForCustomer"
+00243:            Code="3044">スキャンに失敗しました。もう一度、スキャン操作をお願いします。再度失敗する場合はお手数ですが、お近くの係員にお問い合わせください。</Message>
+00244:   <Message Id="ErrorLogicServiceClientOffline"
+00245:            Code="3045">LogicServiceに接続できませんでした。</Message>
+00246:   <Message Id="ErrorInvalidChargePoint"
+00247:            Code="3046">入力されたチャージポイントが不正です。</Message>
+00248:   <Message Id="ErrorEventCodeNotExists"
+00249:            Code="3047">イベントコードが存在しません。</Message>
+00250:   　<Message Id="ErrorInitPOSData"
+00251:            Code="3048">取引の初期化に失敗しました。</Message>
+00252:   <Message Id="WarningRMTrialCouponCanNotAdd"
+00253:            Code="W3049">追加できなかったRMお試し引換券情報があります。</Message>
+00254:   <Message Id="ErrorCashChangerReadCashCounts"
+00255:            Code="3050">釣銭機在高読取り処理が失敗しました。再実行してください。</Message>
+00256:   <Message Id="ErrorCashChangerBeginReplenish"
+00257:            Code="3051">釣銭機開始処理が失敗しました。再実行してください。</Message>
+00258:   <Message Id="ErrorCashChangerEndReplenish"
+00259:            Code="3052">釣銭機確定処理が失敗しました。再実行してください。</Message>
+00260:   <Message Id="ErrorRecoveredRecoveryBox"
+00261:            Code="3053">釣銭機の回収庫からお金が回収されています。確定を行ってください。</Message>
+00262:   <Message Id="ErrorOverRecoverCount"
+00263:            Code="3054">枚数が多すぎます。</Message>
+00264:   <Message Id="ErrorNotRecoveredRecoveryBox"
+00265:            Code="3055">回収庫に未回収の紙幣があります。&#xa;回収金額に含める場合は、&#xa;回収対象にチェックを入れてください。&#xa;&#xa;先に回収庫を取り外す場合は、&#xa;本画面を終了してから行ってください。</Message>
+00266:   <Message Id="ErrorNeedRecoverRecoveryBox"
+00267:            >回収庫に未回収の紙幣があります。&#xa;回収対象にチェックを入れてください。</Message>
+00268:   <Message Id="ErrorNotRecovered"
+00269:            Code="3056">回収金額がありません。</Message>
+00270:   <Message Id="ErrorCashChangerRecoverCash"
+00271:            Code="3057">釣銭機確定処理が失敗しました。再実行してください。</Message>
+00272:   <Message Id="ErrorDebitDeviceInit"
+00273:            Code="3058">デビット端末に異常が発生しているため、&#xa;再接続に失敗しました。&#xa;デビット端末に表示されているエラーを解除し、&#xa;再度「デビット端末再接続」を実行してください。</Message>
+00274:   <Message Id="ErrorDebitHealthCheck"
+00275:            Code="3059">デビット接続に失敗しました。&#xa;現在利用出来ない状態のため、&#xa;お使いの際はお近くの係員へお声かけください。</Message>
+00276:   <Message Id="ErrorDebitSalesRequest"
+00277:            Code="3060">デビット支払に失敗しました。&#xa;現在利用出来ない状態のため、&#xa;お使いの際はお近くの係員へお声かけください。</Message>
+00278:   <Message Id="ErrorDebitSalesCancel"
+00279:            Code="3061">デビット端末から中止されました。</Message>
+00280:   <Message Id="ErrorDuplicatedItemMultipleRMTrialCoupon"
+00281:            Code="3062">RMお試し引換券情報の追加に失敗しました。複数のクーポンIDに同一商品が存在します。</Message>
+00282:   <Message Id="NoticeCancelDebitTransaction"
+00283:            Code="3063">デビット端末操作中は実行しないでください。&#xa;取引中止を行うと、デビット口座の引き落とし額が&#xa;プリカカードにチャージされない状況が発生します。&#xa;操作を継続する場合は係員画面を終了してください。&#xa;&#xa;取引中止を実行してよろしいですか？</Message>
+00284:   <Message Id="ErrorCashChangerErrorCanceled"
+00285:            Code="3064">釣銭機補充キャンセル処理が失敗しました。再実行してください。</Message>
+00286:   <Message Id="RecoverCashChangerCheck"
+00287:            Code="3065">回収庫からの回収は鍵が必要になります。</Message>
+00288:   <Message Id="ErrorNotMatchRecoverCount"
+00289:            Code="3066">補充合計金額と回収合計金額が一致しません。</Message>
+00290:   <Message Id="ErrorNotReplenish"
+00291:            Code="3067">補充金額がありません。</Message>
+00292:   <Message Id="ExchangeMoneyCheck"
+00293:            Code="3068">補充合計金額と回収合計金額が一致しません。&#xa;金額を一致させてください。&#xa;&#xa;追加で補充したい場合は終了をして最初から操作を行ってください。</Message>
+00294:   <Message Id="RecoverCashChangerCheckCharge"
+00295:            Code="3069">回収後、回収庫から紙幣を回収してください。</Message>
+00296:   <Message Id="ErrorExchangeNotRecoveredRecoveryBox"
+00297:            Code="3070">回収庫に未回収の紙幣があります。&#xa;&#xa;釣銭機回収操作完了後に&#xa;釣銭機両替操作を行ってください。</Message>
+00298:   <Message Id="WarningCashChangerStatusNearFullDetil"
+00299:            Code="W3071">釣銭機にニアフルの現金スロットがあります。&#xa;以下の現金スロットをご確認ください。&#xa;&#xa;[ニアフル]&#xa;{0}</Message>
+00300:   <Message Id="WarningCashChangerStatusNearEmptyDetil"
+00301:            Code="W3072">釣銭機にニアエンプティの現金スロットがあります。&#xa;以下の現金スロットをご確認ください。&#xa;&#xa;[ニアエンプティ]&#xa;{0}</Message>
+00302:   <Message Id="WarningCashChangerStatusNearDetil"
+00303:            Code="W3073">釣銭機にニアフル・ニアエンプティの現金スロットがあります。&#xa;以下の現金スロットをご確認ください。&#xa;&#xa;[ニアフル]&#xa;{0}&#xa;[ニアエンプティ]&#xa;{1}</Message>
+00304:   <Message Id="CashChangerInitConfirm"
+00305:            Code="3074">釣銭機の再接続を行いますか？&#xa;&#xa;釣銭機のエラー状態を解除しないまま&#xa;再接続を行うと必ず失敗します。&#xa;エラー状態を解除してから&#xa;再接続を行ってください。</Message>
+00306:   <Message Id="ErrorCloseCountRecoveryBox"
+00307:            Code="3075">回収庫に未回収の紙幣があります。&#xa;精算前に必ず回収してください。</Message>
+00308:   <Message Id="ErrorNewModuleVersion"
+00309:            Code="3076">新モジュールバージョンエラー</Message>
+00310:   <Message Id="ErrorNotFoundSalesTransaction"
+00311:            Code="3077">売上取引が存在しません。&#xa;または、既に取消済の売上取引です。</Message>
+00312:   <Message Id="ErrorCannotVoidTransaction"
+00313:            Code="3078">売上取引以外の取消操作はできません。</Message>
+00314:   <Message Id="ErrorRequiredWithName"
+00315:            Code="3079">{0}は必須です。</Message>
+00316:   <Message Id="ErrorIllegalWithName"
+00317:            Code="3080">{0}が正しくありません。</Message>
+00318:   <Message Id="ErrorFreeMessage"
+00319:            Code="3081">{0}</Message>
+00320:   <Message Id="ErrorCloseCountUncertain"
+00321:            Code="3082">違算状態を検出しました。精算をするためには違算状態を解消してください。&#xa;違算状態を解消する方法はマニュアルを参照してください。</Message>
+00322:   <Message Id="ErrorLoadOtherMTranDuringSendMTransaction"
+00323:            Code="3083">現在別の取引を送信中のため復元できません。</Message>
+00324:   <Message Id="ErrorSaveMTransaction"
+00325:            Code="3084">中間取引の保存に失敗しました。</Message>
+00326:   <Message Id="ErrorSaveMTransactionDuetoPayment"
+00327:            Code="3085">商品券・お試し引換券以外の支払いがあるため、中間取引が保存できません。</Message>
+00328:   <Message Id="ErrorCannotVoidDuetoPayment"
+00329:            Code="3086">{0}の支払いを含むため訂正できない売上取引です。</Message>
+00330:   <Message Id="ErrorCannotReSalesDuetoPayment"
+00331:            Code="3087">{0}の支払いを含むため打ち直しできない売上取引です。</Message>
+00332:   <Message Id="ErrorCannotVoidCurrentMode"
+00333:            Code="3088">現在のモードでは読み込めない売上取引です。</Message>
+00334:   <Message Id="ErrorValueDeficiencyLimit"
+00335:            Code="3089">入金額はお会計の不足額より大きい金額で入力してください。</Message>
+00336:   <Message Id="ErrorReSalesRestoreMember"
+00337:            Code="3090">会員照会に失敗しました。再実行してください。</Message>
+00338:   <Message Id="ErrorReSalesRestoreTran"
+00339:            Code="3091">取引の復元でシステムエラーが発生しました。&#xa;売上取引は通常の売上機能から作成してください。</Message>
+00340:   <Message Id="ErrorSavedMTranLimit"
+00341:            Code="3092">保留制限件数を超えています。</Message>
+00342:   <Message Id="ErrorDebitSalesStopNoOperation"
+00343:            Code="3093">デビット支払いを中止しました。</Message>
+00344:   <Message Id="ErrorDebitSalesErrorNoOperation"
+00345:            Code="3094">デビット支払に失敗しました。&#xa;{0}</Message>
+00346:   <Message Id="ErrorDebitSalesRejectedNoOperation"
+00347:            Code="3095">デビット支払に失敗しました。&#xa;ご利用の金融機関へお問い合わせください。</Message>
+00348:   <Message Id="ErrorDebitHealthCheckErrorNoOperation"
+00349:            Code="3096">{0}デビット接続に失敗しました。&#xa;デビット端末の状態を確認し、「デビット端末再接続」を実行してください。</Message>
+00350:   <Message Id="ErrorDebitStopErrorNoOperation"
+00351:            Code="3096">{0}デビット支払に失敗しました。&#xa;デビット端末の状態を確認し、「デビット端末再接続」を実行してください。</Message>
+00352:   <Message Id="ErrorDebitErrorNoOperation"
+00353:            Code="3097">{0}デビット支払に失敗しました。&#xa;ヘルプデスクに取引状況を確認してください。&#xa;デビット端末の状態を確認し、「デビット端末再接続」を実行してください。</Message>
+00354:   <Message Id="ErrorDebitRetryNoOperation"
+00355:            Code="3098">デビット支払に失敗しました。&#xa;再度、実行してください。&#xa;繰り返し発生する場合は別のカードで実施してください。</Message>
+00356:   <Message Id="ErrorDebitSalesStopFailedNoOperation"
+00357:            Code="3099">中止に失敗しました。</Message>
+00358:   <Message Id="ErrorMSRInit"
+00359:            Code="4000">MSRカードリーダーの初期化に失敗しました。再試行しますか？</Message>
+00360:   <Message Id="ErrorLineDisplayInit"
+00361:            Code="4001">客側表示機の初期化に失敗しました。再試行しますか？</Message>
+00362:   <Message Id="ErrorScannerInit"
+00363:            Code="4002">スキャナーの初期化に失敗しました。再試行しますか？</Message>
+00364:   <Message Id="ErrorPOSPrinterInit"
+00365:            Code="4003">プリンターの初期化に失敗しました。&#xa;レシート用紙、プリンターカバーを&#xa;確認してください。</Message>
+00366:   <Message Id="ErrorCashChangerInit"
+00367:            Code="4004">釣銭機の初期化に失敗しました。再試行しますか？{0}</Message>
+00368:   <Message Id="ErrorCAFISArchInit"
+00369:            Code="4005">CAFIS Arch 端末の初期化に失敗しました。再試行しますか？</Message>
+00370:   <Message Id="ErrorLaneLightInit"
+00371:            Code="4006">レーンライトの初期化に失敗しました。再試行しますか？</Message>
+00372:   <Message Id="ErrorGuidanceLEDInit"
+00373:            Code="4007">ガイダンスLEDの初期化に失敗しました。再試行しますか？</Message>
+00374:   <Message Id="ErrorStateManagementInit"
+00375:            Code="4008">アテンダントPC通信の初期化に失敗しました。再試行しますか？</Message>
+00376:   <Message Id="ErrorPosKeyboardInit"
+00377:            Code="4009">POSキーボードの初期化に失敗しました。再試行しますか？</Message>
+00378:   <Message Id="ErrorCannotReSalesDuetoItemCount"
+00379:            Code="4011">部分返品できない取引です。&#xa;返品は一括取消を利用してください。</Message>
+00380:   <Message Id="WarningCreateItemMasterMaintenanceFileFailed"
+00381:            Code="4012">商品マスタメンテナンスのファイル名重複によりファイル作成できませんでした。</Message>
+00382:   <Message Id="WarningDeleteItemMasterMaintenanceFileFailed"
+00383:            Code="4013">商品マスタメンテナンスのファイル名重複によりファイル削除できませんでした。</Message>
+00384:   <Message Id="ErrorValueCardIncorrect"
+00385:            Code="4013">バリューカードの情報が不正、確認ください。</Message>
+00386:   <Message Id="ErrorNotFoundEMoneyChargeTransaction"
+00387:            Code="4014">チャージ取引が存在しません。&#xa;または、既に取消済のチャージ取引です。</Message>
+00388:   <Message Id="ErrorValueCardBalanceNotDeficiency"
+00389:            Code="4015">バリューカードの金額が足りない。</Message>
+00390:   <Message Id="ErrorCannotEMoneyChargeVoidTransaction"
+00391:            Code="4016">チャージ取引以外の取消操作はできません。</Message>
+00392:   <Message Id="ErrorEMoneyChargeVoidValueCardOffline"
+00393:            Code="4017">入金取消に失敗しました。&#xa;再実行してください。</Message>
+00394:   <Message Id="ErrorValueDepositCancel"
+00395:            Code="4018">チャージ後に電子マネーの利用があるため&#xa;チャージ取消できません。&#xa;お客様相談室に問合せしてください。</Message>
+00396:   <Message Id="OperationLimited"
+00397:            Code="4019">現在この操作は許可されていません</Message>
+00398:   <Message Id="ErrorTrainingEMoneyChargeVoidTransaction"
+00399:            Code="4020">練習モードで作成された&#xa;チャージ取引の取消操作は出来ません。</Message>
+00400:   <Message Id="ErrorCannotReSalesDuetoReasonCode"
+00401:            Code="4021">アプリ・プリカが登録されている取引では、&#xa;「Pカード通し忘れ」は選択できません。</Message>
+00402:   <Message Id="ErrorCannotReSalesDuetoCreditCombinedUse"
+00403:            Code="4022">部分返品できない取引です。&#xa;返品は一括取消を利用してください。</Message>
+00404:   <Message Id="ErrorCannotReSalesCreditCombinedUse"
+00405:            Code="4023">クレジットとその他の支払方法の併用はできません。</Message>
+00406:   <Message Id="ErrorCannotSalesCreditCombinedUse"
+00407:            Code="4024">クレジットとその他の支払方法の併用はできません。</Message>
+00408:   <Message Id="ErrorInputNeed"
+00409:            Code="8000">入力値が必要な操作です。&#xa;（入力値＋操作キー）</Message>
+00410:   <Message Id="ErrorInputIllegal"
+00411:            Code="8001">入力値が不正です。</Message>
+00412:   <Message Id="ErrorParameter"
+00413:            Code="9001">パラメータに誤りがあります。{0}</Message>
+00414:   <Message Id="ErrorTranState"
+00415:            Code="9003">現在この操作は行えません。もう一度、操作をやり直して下さい。</Message>
+00416:   <Message Id="ErrorAccessCode"
+00417:            Code="9005">アクセスコードが不正です。</Message>
+00418:   <Message Id="ErrorLoginFailure"
+00419:            Code="9006">ユーザーIDあるいはパスワードに誤りがあります。</Message>
+00420:   <Message Id="ErrorLockPOSData"
+00421:            Code="9012">先行する処理が実行中のためAPIを受付できません。</Message>
+00422:   <Message Id="ErrorException"
+00423:            Code="9999">例外発生[{0}]</Message>
+00424:   <Message Id="ErrorNonBarcodeItemNotFound">バーコードなし商品はありません。</Message>
+00425:   <Message Id="PointConfirm">CRMポイントサーバーと通信できません。&#xa;ポイントは後日反映されます。&#xa;よろしいですか？</Message>
+00426:   <Message Id="POSPrinterStatusConfirm">プリンターの状態を確認してください</Message>
+00427:   <Message Id="CashChangerDescription">釣銭機</Message>
+00428:   <Message Id="CashDrawerDescription">キャッシュドロワー</Message>
+00429:   <Message Id="LineDisplayDescription">客側表示機</Message>
+00430:   <Message Id="MSRDescription">MSRカードリーダーシミュレーター</Message>
+00431:   <Message Id="POSPrinterDescription">POSプリンター</Message>
+00432:   <Message Id="ScannerDescription">スキャナー</Message>
+00433:   <Message Id="PointServiceDescription">ポイントサービス</Message>
+00434:   <Message Id="CAFISArchDescription">CAFIS Arch 端末</Message>
+00435:   <Message Id="MTranServiceDescription">中間取引サービス</Message>
+00436:   <Message Id="POSPrinterCoverOpen">プリンターカバーオープン</Message>
+00437:   <Message Id="POSPrinterCoverOK">プリンターカバーオープン解除</Message>
+00438:   <Message Id="POSPrinterRecEmpty">プリンター用紙を交換してください</Message>
+00439:   <Message Id="POSPrinterRecPaperOK">プリンター用紙の準備ができました</Message>
+00440:   <Message Id="NoticeOpenCountStart">開設処理を開始してよろしいですか？</Message>
+00441:   <Message Id="NoticeCloseCountStart">精算処理を開始してよろしいですか？</Message>
+00442:   <Message Id="NoticeCloseCountUnOperatedMTran">処理されていない保留取引があります。&#xa;続行しますか？</Message>
+00443:   <Message Id="NoticeCloseCountSummaryError">集計エラーがあります。&#xa;続行しますか？</Message>
+00444:   <Message Id="NoticeCloseCountCAFISArchError">デビット日計エラーがあります。{0}&#xa;デビット日計を出力せずに続行しますか？</Message>
+00445:   <Message Id="NoticeCloseCountCAFISArchErrorByArchTerminal">&#xa;デビット端末を切断しました。&#xa;デビット日計を出力するには、再実行を押してください。</Message>
+00446:   <Message Id="NoticeCloseCountCAFISArchErrorByArchTerminalWithoutIdle">&#xa;デビット端末の状態を確認してください。</Message>
+00447:   <Message Id="NoticeCloseCountCAFISArchDebitInit">デビット端末との接続が、切断状態です。&#xa;自動接続して、再実行しますか？&#xa;デビット日計処理を省略して処理続行しますか？</Message>
+00448:   <Message Id="NoticeExitApplication">アプリケーションを終了してよろしいですか？</Message>
+00449:   <Message Id="NoticeShutdown">シャットダウンを実行してよろしいですか？</Message>
+00450:   <Message Id="NoticeReboot">再起動を実行してよろしいですか？</Message>
+00451:   <Message Id="NoticeMenuReboot">再起動しますか？&#xa;０：しない　９：する</Message>
+00452:   <Message Id="ButtonAbort">強制終了</Message>
+00453:   <Message Id="ButtonConnect">接続</Message>
+00454:   <Message Id="ButtonDisconnect">切断</Message>
+00455:   <Message Id="Batch_WaitingTransferCompletion">転送完了待機中です。</Message>
+00456:   <Message Id="DeviceSetting_NoticeSuccessConnect">接続に成功しました。</Message>
+00457:   <Message Id="DeviceSetting_NoticeSuccessDisconnect">切断に成功しました。</Message>
+00458:   <Message Id="DeviceSetting_NoticeFailedConnect">接続に失敗しました。</Message>
+00459:   <Message Id="BeepSoundDescription">ビープ</Message>
+00460:   <Message Id="ErrorBeepSoundDescription">エラービープ</Message>
+00461:   <Message Id="ErrorDeviceInit">{0}の初期化に失敗しました。再試行しますか？</Message>
+00462:   <Message Id="ErrorDeviceNotConnect">{0}がシステムに接続されていないか､電源OFFの状態です。</Message>
+00463:   <Message Id="ButtonReboot">再起動</Message>
+00464:   <Message Id="ButtonExit">強制続行</Message>
+00465:   <Message Id="ButtonRetry">再試行</Message>
+00466:   <Message Id="ButtonShutdonw">ｼｬｯﾄﾀﾞｳﾝ</Message>
+00467:   <Message Id="ExecuteTableDelete">{0}の削除</Message>
+00468:   <Message Id="ExecuteTableImport">{0}のインポート</Message>
+00469:   <Message Id="ExecuteTableUpdate">{0}の更新</Message>
+00470:   <Message Id="ProcessNameDatabaseRestore">データベースの復元</Message>
+00471:   <Message Id="ProcessNameDatabaseBackup">データベースのバックアップ</Message>
+00472:   <Message Id="ProcessNameDiffMasterFileDownload">差分マスタ配信ファイルのダウンロード（Version：{0}、MinorVersion：{1}）</Message>
+00473:   <Message Id="ProcessNameMasterFileDownload">マスタ配信ファイルのダウンロード（Version：{0}）</Message>
+00474:   <Message Id="ProcessNameGetDiffMasterDownloadInfo">差分マスタ配信ファイルのダウンロード情報取得</Message>
+00475:   <Message Id="ProcessNameGetDiffMasterUpdateInfo">差分マスタ配信ファイルの更新情報取得</Message>
+00476:   <Message Id="ProcessNameGetMasterDownloadInfo">マスタ配信ファイルのダウンロード情報取得</Message>
+00477:   <Message Id="ProcessNameGetMasterUpdateInfo">マスタ配信ファイルの更新情報取得</Message>
+00478:   <Message Id="ProcessNameMasterClear">マスタのクリア</Message>
+00479:   <Message Id="ProcessNameEntryUploadMasterDownloadFile">配信ファイルの登録</Message>
+00480:   <Message Id="ProcessNameRegistTerminalVersion">自端末のバージョン登録</Message>
+00481:   <Message Id="ProcessNameNotifyDiffMasterDownloadCompleted">差分マスタ配信ファイルのダウンロード完了報告</Message>
+00482:   <Message Id="ProcessNameNotifyDiffMasterUpdateCompleted">差分マスタの更新完了報告</Message>
+00483:   <Message Id="ProcessNameNotifyMasterDownloadCompleted">マスタ配信ファイルのダウンロード完了報告</Message>
+00484:   <Message Id="ProcessNameNotifyMasterUpdateCompleted">マスタの更新完了報告</Message>
+00485:   <Message Id="ProcessNameShrinkDatabase">データベースの圧縮</Message>
+00486:   <Message Id="ProcessNameUncompressMasterZipFile">マスタ配信ファイルの解凍</Message>
+00487:   <Message Id="ProcessNameUpdateDBStatistics">データベースの統計情報更新</Message>
+00488:   <Message Id="TitleMasterSync">マスタ同期</Message>
+00489:   <Message Id="SyncResultError">失敗</Message>
+00490:   <Message Id="SyncResultNone">無し</Message>
+00491:   <Message Id="SyncReusltProcess">処理中</Message>
+00492:   <Message Id="SyncResultSuccess">成功</Message>
+00493:   <Message Id="SyncResultMasterUpdateNone">マスタ更新無し</Message>
+00494:   <Message Id="SyncResultStart">開始</Message>
+00495:   <Message Id="SyncResultEnd">終了</Message>
+00496:   <Message Id="SyncResultOffline">オフライン</Message>
+00497:   <Message Id="ProcessNameMasterSyncStart">マスタの適用開始（Version：{0}）</Message>
+00498:   <Message Id="ProcessNameMasterSyncEnd">マスタの適用終了（Version：{0}）</Message>
+00499:   <Message Id="ProcessNameDiffMasterSyncStart">マスタの適用開始（Version：{0}、MinorVersion：{1}）</Message>
+00500:   <Message Id="ProcessNameDiffMasterSyncEnd">マスタの適用終了（Version：{0}、MinorVersion：{1}）</Message>
+00501:   <Message Id="ProcessNameAllStoreMasterSync">全店舗共通の各マスタの同期</Message>
+00502:   <Message Id="ProcessNameStoreMasterSync">店舗の各マスタの同期</Message>
+00503:   <Message Id="GuidanceMasterSync">
+00504:     マスタ同期でエラーが発生した場合、下記のボタンが押下可能になります。
+00505:     再試行　　　　　：  マスタ同期を再試行します。
+00506:     強制続行　　　　：  マスタ同期せず、前回のマスタで営業します。
+00507:     再起動　　　　　：  端末を再起動させ、マスタ同期を再試行します。
+00508:     ｼｬｯﾄﾀﾞｳﾝ　　　　：  端末の電源をＯＦＦします。
+00509:   </Message>
+00510:   <Message Id="TitleDataUpdate4Replace">入替DB更新</Message>
+00511:   <Message Id="ProcessNameDataUpdate4Replace">入替DBのデータ更新</Message>
+00512:   <Message Id="ProcessNameBusinessCounterGet">入替元端末のBusinessCounterデータ取得</Message>
+00513:   <Message Id="ProcessNameBusinessCounterUpdate">BusinessCounter更新</Message>
+00514:   <Message Id="GuidanceDataUpdate4Replace">
+00515:     入替DB更新でエラーが発生した場合、下記のボタンが押下可能になります。
+00516:     再試行　　　　　：  入替DB更新を再試行します。
+00517:     再起動　　　　　：  端末を再起動させ、入替DB更新を再試行します。
+00518:     ｼｬｯﾄﾀﾞｳﾝ　　　　：  端末の電源をＯＦＦします。
+00519:   </Message>
+00520:   <Message Id="ErrorEMoneyChargeVD">入金に失敗しました。再実行してください。数回再実行しても成功できない場合、係員呼出してください。</Message>
+00521:   <Message Id="ErrorEMoneyChargeEmployeeVD">入金に失敗しました。&#xa;再実行してください。</Message>
+00522:   <Message Id="WarningRMStamprallyCanNotAdd"
+00523:          Code="W2213">追加できなかったRMスタンプラリー情報があります。</Message>
+00524:   <Message Id="NoticeCancelSelfSalesTransaction"
+00525:          Code="3040">お買物を中止します&#xa;よろしいですか？</Message>
+00526:   <Message Id="ErrorPOSPrinter24VPowerDown">24Vダウンエラーが発生しました。&#xa;プリンターの開閉を行ってください。&#xa;改善しない場合はヘルプデスクへ連絡してください。</Message>
+00527:   <Message Id="ErrorPOSPrinterJam">レシート用紙のジャムエラーが発生しました。&#xa;プリンターの開閉を行ってください。&#xa;改善しない場合はヘルプデスクへ連絡してください。</Message>
+00528:   <Message Id="ErrorPOSPrinterCutter">カッターエラーが発生しました。&#xa;ヘルプデスクへ連絡してください。</Message>
+00529:   <Message Id="ErrorPOSPrinterHeadBroken">サーマル印字ヘッドのドット抜けが&#xa;発生しました。&#xa;ヘルプデスクへ連絡してください。</Message>
+00530:   <Message Id="ErrorPOSPrinterPrint">印字エラーが発生しました。&#xa;プリンターの開閉を行ってください。&#xa;改善しない場合はヘルプデスクへ連絡してください。</Message>
+00531:   <Message Id="ErrorMSRReadMagnetism">MSR読取磁気エラー</Message>
+00532:   <Message Id="ErrorMSREntryCard">MSRカード挿入可能状態遷移エラー</Message>
+00533:   <Message Id="CashChangerErrorRemoveMoney">釣銭排出口に釣銭が残留しています。回収してください。</Message>
+00534:   <Message Id="LaneLightDescription">レーンライト</Message>
+00535:   <Message Id="GuidanceLEDDescription">ガイダンスLED</Message>
+00536:   <Message Id="CancelNonBarcodeItemConfirm">取消してもよろしいでしょうか？</Message>
+00537:   <Message Id="GuidanceCallAttendantCAFISArchUnfinished">引落し状況を確認する必要があります。&#xa;レシートを従業員へお渡し下さい。</Message>
+00538:   <Message Id="GuidanceCallAttendantCAFISArchVDOffline">レシートを従業員へお渡し下さい。</Message>
+00539:   <Message Id="PaymentServiceDescription">決済端末</Message>
+00540:   <Message Id="ErrorPaymentServiceInit">決済端末の初期化に失敗しました。</Message>
+00541: <br />
+00542:   <Message Id="TextDate">日付</Message>
+00543:   <Message Id="TextTime">時刻</Message>
+00544:   <Message Id="TextType">種別</Message>
+00545:   <Message Id="TextTerminalNo">端末番号</Message>
+00546:   <Message Id="TextReceiptNo">レシート番号</Message>
+00547:   <Message Id="TextCarcNo">カード番号</Message>
+00548:   <Message Id="TextQuantityFull">点数</Message>
+00549:   <Message Id="TextQuantity">点</Message>
+00550:   <Message Id="TextAmount">金額</Message>
+00551:   <Message Id="TextFullWidthSpace">　</Message>
+00552:   <Message Id="TextCancel">ｷｬﾝｾﾙ</Message>
+00553:   <Message Id="TextOK">OK</Message>
+00554:   <Message Id="TextCartTerminalNo">カート番号</Message>
+00555: 
+00556:   <Message Id="AgeConfirm">身分証の確認をする場合は、&#xa;{0}&#xa;以降の方が酒・たばこ販売禁止対象です。</Message>
+00557:   <Message Id="DrugConfirm">お客様へ医薬品の利用方法を説明しますか</Message>
+00558:   <Message Id="PreventionConfirm">防犯商品確認お願いします。</Message>
+00559:   <Message Id="ErrorBestByDateBarcode"
+00560:            Code="1827">賞味期限切れの商品のためお買上できません。</Message>
+00561:   <Message Id="ErrorSecondDisplayInit">客面の初期化に失敗しました。再試行しますか？</Message>
+00562:   <Message Id="InfoItemCancelWaiting">取消する商品をスキャンしてください。</Message>
+00563:   <Message Id="InfoReceiptRecoverWaiting">レシートの回収をお願いします。</Message>
+00564:   <Message Id="ErrorNotFoundSalesEvidenceTransaction">売上取引が存在しません。&#xa;または、既に発行済の売上取引です。</Message>
+00565:   <Message Id="ErrorCannotSalesEvidenceTransaction">売上取引以外の発行操作はできません。</Message>
+00566:   <Message Id="InfoCAFISArchTerminalStateC1">キャッシュカードを&#xa;スリットに通してください</Message>
+00567:   <Message Id="InfoCAFISArchTerminalStateC2"></Message>
+00568:   <Message Id="InfoCAFISArchTerminalStateC3">再度、キャッシュカードを&#xa;スリットに通してください</Message>
+00569:   <Message Id="InfoCAFISArchTerminalStateP1">暗証番号を入力して下さい。</Message>
+00570:   <Message Id="InfoCAFISArchTerminalStateP2"></Message>
+00571:   <Message Id="InfoCAFISArchTerminalStateP3">再度、暗証番号を入力してください</Message>
+00572:   <Message Id="ErrorCAFISArchDebitSalesCommunicationError">通信エラーが発生しました。&#xa;ヘルプデスクに取引状況を確認してください。</Message>
+00573:   <Message Id="ErrorCAFISArchSystemInternalError">システム内部エラーが発生しました</Message>
+00574:   <Message Id="CAFISArchDebitResultCodeCOMError">COMエラー</Message>
+00575:   <Message Id="CAFISArchDebitResultCodeTimeout">タイムアウトエラー</Message>
+00576:   <Message Id="CAFISArchDebitResultCodeUnknown">不明なエラー</Message>
+00577:   <Message Id="CAFISArchDebitServiceHealthCheck">ヘルスチェック</Message>
+00578:   <Message Id="CAFISArchDebitServiceDebitSales">デビット売上</Message>
+00579:   <Message Id="CAFISArchDebitServiceStop">中止</Message>
+00580:   <Message Id="CAFISArchDebitServiceDebitReget">デビット再印字</Message>
+00581:   <Message Id="CAFISArchDebitServiceDebitSummary">デビット集計</Message>
+00582:   <Message Id="InfoTicketHasChangeSales">お預りした券類のお釣りは&#xa;払い出しません。</Message>
+00583:   <Message Id="LDSP_Balance">残額</Message>
+00584:   <Message Id="LDSP_Balance2">不足</Message>
+00585:   <Message Id="LDSP_CancelTransaction">取引を中止しました</Message>
+00586:   <Message Id="LDSP_ChangeAmount">お釣り</Message>
+00587:   <Message Id="LDSP_Correction"><strong><em>訂正</em></strong></Message>
+00588:   <Message Id="LDSP_CorrectionAmount">訂正後金額</Message>
+00589:   <Message Id="LDSP_CorrectionDemandAmount">訂正後請求額</Message>
+00590:   <Message Id="LDSP_Currency">円</Message>
+00591:   <Message Id="LDSP_DepositAmount">お預り</Message>
+00592:   <Message Id="LDSP_DiscountAmount">値引</Message>
+00593:   <Message Id="LDSP_DiscountAmountNoSpace">値引</Message>
+00594:   <Message Id="LDSP_DiscountBundle">まとめ値引</Message>
+00595:   <Message Id="LDSP_DiscountItemCouponAmountOff">クーポン値引</Message>
+00596:   <Message Id="LDSP_DiscountItemCouponPercentOff">クーポン割引</Message>
+00597:   <Message Id="LDSP_DiscountOff">割引</Message>
+00598:   <Message Id="LDSP_FromSalesReturnAmount">元売上預り額</Message>
+00599:   <Message Id="LDSP_MemberAmountOffDiscount">会員値引</Message>
+00600:   <Message Id="LDSP_MemberNewPricePrice">会員価格</Message>
+00601:   <Message Id="LDSP_MemberPercentDiscount">会員割引</Message>
+00602:   <Message Id="LDSP_Minus">-</Message>
+00603:   <Message Id="LDSP_Multiple">*</Message>
+00604:   <Message Id="LDSP_OneBlank">　</Message>
+00605:   <Message Id="LDSP_Percent">％</Message>
+00606:   <Message Id="LDSP_Quantity">点</Message>
+00607:   <Message Id="LDSP_QuantityFull">点数</Message>
+00608:   <Message Id="LDSP_ReSalesBalance">訂正後残額</Message>
+00609:   <Message Id="LDSP_ReSalesReturnAmount">訂正後返金額</Message>
+00610:   <Message Id="LDSP_ReturnPrice">返金</Message>
+00611:   <Message Id="LDSP_SalesTitle">現金</Message>
+00612:   <Message Id="LDSP_SubTotal">小計</Message>
+00613:   <Message Id="LDSP_SubTotalDiscountAmount">小計値引</Message>
+00614:   <Message Id="LDSP_SubTotalDiscountOff">小計割引</Message>
+00615:   <Message Id="LDSP_TotalAmount">合計</Message>
+00616:   <Message Id="LDSP_TwoBlank">　　</Message>
+00617:   <Message Id="LDSP_DiscountPairMatch">セット値引</Message>
+00618:   <Message Id="NoticeCancelOrderKitchenTransaction" >ご注文を中止します&#xa;よろしいですか？</Message>
+00619:   <Message Id="NoticeSoldOutProductsConfirm" >{0}は売切れになりました。</Message>
+00620:   <Message Id="NoticeStockLackOrderKitchen" >ご注文していただいている商品の在庫は不足しています。&#xa;ご確認ください。</Message>
+00621:   <Message Id="ErrorFreeProductsCheckOrderKitchen" >ご飯の点数は弁当数を超えています。&#xa;ご確認ください。</Message>
+00622:   <Message Id="ErrorOrderKitchenServiceInit">オーダーキッチンAPIサービスの初期化に失敗しました。</Message>
+00623:   <Message Id="ErrorOrderKitchenStockAvailableCheck">注文リスト内商品の販売可能数チェックは失敗しました。</Message>
+00624:   <Message Id="NoticeSoldOutOrderKitchen">この商品は売り切れです。</Message>
+00625:   <Message Id="ErrorOrderKitchenSaveOrder">注文情報保存を失敗しました。</Message>
+00626:   <Message Id="NoticeTimeLimitOrderKitchen">時間限定メニューです。</Message>
+00627:   <Message Id="NoticeOrderTypeUnChecked">持ち帰りかイートインを選択してください。</Message>
+00628:   <Message Id="NoticeOrderKitchenUnavailable">営業時間外のため、利用できません。</Message>
+00629:   <Message Id="NoticeEatAfterMessage">お食事の後にお声がけください。&#xa;食後の商品を提供させていただきます。</Message>
+00630:   <Message Id="InfoMultipleReceiptWaiting">控えレシートを１枚発行します。</Message>
+00631:   <Message Id="CreditPayment_ErrorTimeout">操作タイムアウトが発生しました。&#xa;決済端末側の操作をキャンセルし、再度操作してください。</Message>
+00632:   <Message Id="CreditPayment_ErrorSerialPortWrite">POS・決済端末間のケーブル接続状態を確認してください。</Message>
+00633:   <Message Id="CreditPayment_ErrorReceiveUnexpectedLinkLevelPhase">水平パリティチェックで問題が発生しました。&#xa;ヘルプデスクへ連絡してください。</Message>
+00634:   <Message Id="CreditPayment_ErrorTeregramFormat">送信電文フォーマットに問題あります。&#xa;ヘルプデスクへ連絡してください。</Message>
+00635:   <Message Id="CreditPayment_ErrorBusy">決済端末が他業務処理中のため応答できません。&#xa;クレジット業務に切り替えてください。</Message>
+00636:   <Message Id="CreditPayment_ErrorModeMismatch">決済端末のモードが違います。&#xa;練習の終了、もしくは、クレジット業務に切り替えて操作して下さい。</Message>
+00637:   <Message Id="CreditPayment_ErrorCancel">決済端末側で操作がキャンセルされました。</Message>
+00638:   <Message Id="CreditPayment_ErrorUnknown">予期せぬエラーが発生しています。&#xa;ヘルプデスクへ連絡してください。</Message>
+00639:   <Message Id="CreditPayment_ErrorPortIsClosedOrProcessing">POS・決済端末間のケーブル接続状態を確認し、再度操作を行ってください。</Message>
+00640:   <Message Id="CreditPayment_ErrorNotFoundResult">該当する処理結果が存在しません。&#xa;ヘルプデスクへ連絡してください。</Message>
+00641:   <Message Id="CreditPayment_NoticeConnectingCreditService">決済端末と連動しています。</Message>
+00642:   <Message Id="CreditPayment_ErrorCancelTransaction">クレジット決済を選択しているため、一括取消できません。</Message>
+00643:   <Message Id="CreditPayment_ErrorFailedCreditPayment">決済に失敗しました。&#xa;決済端末側での処理が完了している場合は、&#xa;「オフラインクレジット」で処理を進めてください。</Message>
+00644:   <Message Id="CreditPayment_TextOneTime">一括</Message>
+00645:   <Message Id="CreditPayment_TextBonus">ﾎﾞｰﾅｽ</Message>
+00646:   <Message Id="CreditPayment_TextInstallments">分割</Message>
+00647:   <Message Id="CreditPayment_TextBonusCombine">ﾎﾞｰﾅｽ併用</Message>
+00648:   <Message Id="CreditPayment_TextRevolving">ﾘﾎﾞﾙﾋﾞﾝｸﾞ</Message>
+00649:   <Message Id="ErrorCannotEvidenceSpecifyItem">指定商品が１つしかありません。&#xa;通常の領収書発行機能を利用してください。</Message>
+00650:   <Message Id="ErrorEvidenceItemUnSelected">商品を指定してください。</Message>
+00651:   <Message Id="NoticeRequireAggregatedData">クレジット日計レポートを出力します。</Message>
+00652:   <Message Id="ErrorRequireAggregatedData">クレジット日計レポートの出力に失敗しました。</Message>
+00653:   <Message Id="ErrorSearchCountLimitOver">検索件数が{0}件を超えました。条件を絞り込んでください。</Message>
+00654:   <Message Id="ErrorResisterData">データ登録に失敗しました。システム管理者へ連絡してください。</Message>
+00655:   <Message Id="ErrorNotFoundData">対象データがありませんでした。</Message>
+00656:   <Message Id="ErrorNotFoundNodeTypeForUpdate">編集可能な端末種別がありません。システム管理者へ連絡してください。</Message>
+00657:   <Message Id="ErrorNotFoundCopyData">コピー元のデータが存在しません。</Message>
+00658:   <Message Id="ErrorLoginUserInfoNotFound">ログインユーザー情報が不正です。ログイン画面からやり直してください。</Message>
+00659:   <Message Id="ErrorNotFoundCreditService">決済端末に接続できませんでした。&#xa;クレジットの支払いを含むため取消できないチャージ取引です。</Message>
+00660:   <Message Id="ErrorEMoneyChargeValueCardFail">プリカチャージに失敗しました（入金失敗）&#xa;決済端末で行ったクレジット操作を取消してください。</Message>
+00661:   <Message Id="ErrorEMoneyChargeVoidCreditServiceFail">クレジット取消に失敗しました。&#xa;クレジット端末で必ず取消してください。</Message>
+00662:   <Message Id="ErrorCAFISArchLANEMoneyChargeValueCardFail">プリカチャージに失敗しました（入金失敗）&#xa;ヘルプデスクに確認してください。</Message>
+00663:   <Message Id="NoticeOpenCountAmountNon">釣銭機から金額情報が取得できません&#xa;鍵位置確認や操作中の状態は終了して下さい&#xa;強制続行の場合、準備金は０円で登録します</Message>
+00664:   <Message Id="ErrorOpenCountAmountDiffer">表示中金額と釣銭機内金額が一致しません&#xa;情報を再取得します</Message><br />
+00665:   <Message Id="ErrorPaymentRequestToCAFISArch">現在、決済が行えません。&#xa;繰り返し発生する場合は店員をお呼びください。</Message>
+00666:   <Message Id="ErrorHealthCheckToCAFISArch">CAFIS Arch端末に接続されていないか､&#xa;繰り返し発生する場合は店員をお呼びください。</Message>
+00667:   <Message Id="ErrorCAFISArchLANDeviceInit">CAFIS Arch端末に異常が発生しているため、&#xa;再接続に失敗しました。&#xa;CAFIS Arch端末に表示されているエラーを解除し、&#xa;再度「ｸﾚｼﾞｯﾄ端末再接続」を実行してください。</Message>
+00668:   <Message Id="HasCreditProhibitionItems">{0}販売禁止商品がありますので、&#xa;サービスカウンターで購入してください。</Message>
+00669:   <Message Id="CAFISArchLANPaymentError">{0}支払いエラー：</Message>
+00670:   <Message Id="NoticeCloseCountCAFISArchLANInit">CAFIS Arch端末との接続が、切断状態です。&#xa;自動接続して、再実行しますか？&#xa;日計処理を省略して処理続行しますか？</Message>
+00671:   <Message Id="NoticeCloseCountCAFISArchLANError">CAFIS Arch端末日計エラーがあります。{0}&#xa;CAFIS Arch端末日計を出力せずに続行しますか？</Message>
+00672:   <Message Id="NoticeCloseCountCAFISArchLANErrorByArchTerminal">&#xa;CAFIS Arch端末を切断しました。&#xa;日計を出力するには、再実行を押してください。</Message>
+00673:   <Message Id="CAFISArchLANSalesPaymentError">{0}</Message>
+00674:   <Message Id="ErrorNotFoundCAFISArchLAN">{0}に接続できませんでした。&#xa;{1}の支払いを含むため取消できない取引です。</Message>
+00675:   <Message Id="CAFISArchLANDescription">CAFIS Arch LAN端末</Message>
+00676:   <Message Id="ErrorCAFISArchLANInit">CAFIS Arch LAN端末の初期化に失敗しました。再試行しますか？</Message>
+00677:   <Message Id="CAFISArchLANTransactionStateUnknown">引き落としが不明の為、&#xa;ヘルプデスクに取引状況を確認してください。</Message>
+00678:   <Message Id="EMoneyChargeErrorValueDepositOffline">プリカサーバーの入金に失敗しました。「状態確認」を実行してください。&#xa;{0}引き落としが成立しています。&#xa;チャージ金額：{1}円&#xa;引落金額    ：{2}円</Message>
+00679:   <Message Id="EMoneyChargeErrorValueDepositError">プリカカードへのチャージに失敗しました。取引中止し、ヘルプデスクに問い合わせてください。&#xa;{0}引き落としが成立しています。&#xa;チャージ金額：{1}円&#xa;引落金額    ：{2}円</Message>
+00680:   <Message Id="ErroCashchangerInitProhibition">釣銭機側の異常を解除してください。</Message>
+00681:   <Message Id="ErrorAddPaymentCash">釣銭機に異常が発生しました、近くの従業員へ連絡してください。</Message>
+00682:   <Message Id="InfoWaitingSendFromChecker">チェッカーからの&#xa;送信を待機しています。</Message>
+00683:   <Message Id="InfoConfirmSendTwoOperatorsMTransaction">取引を送信します。</Message>
+00684:   <Message Id="InfoSendTwoOperatorsMTransaction">取引を送信しています。</Message>
+00685:   <Message Id="ErrorUsingTwoOperatorsCashier">キャッシャーが利用中です。&#xa;キャッシャーの操作を&#xa;終了してください。</Message>
+00686:   <Message Id="ErrorRestoreTwoOperatorsMTransaction">取引の復元でエラーが発生しました。</Message>
+00687:   <Message Id="ErrorSendTwoOperatorsMTransaction">取引の送信でエラーが発生しました。</Message>
+00688:   <Message Id="ErrorUsingTwoOperatorsChecker">チェッカーが利用中です。&#xa;チェッカーを休止してください。</Message>
+00689:   <Message Id="ErrorConfirmTwoOperatorsCheckerState">チェッカーの状況確認でエラーが発生しました。</Message>
+00690:   <Message Id="NoticeSalesMSRRead">カードを通してください</Message>
+00691:   <Message Id="NoticeSalesScannerDisabled">※スキャナの利用はできません</Message>
+00692:   <Message Id="ClearMemberConfirm">プリカスキャンが取り消されますが実行しますか。</Message>
+00693:   <Message Id="ErrorFaceMeService">大変申し訳ありません。&#xa;顔認証に失敗しました。</Message>
+00694:   <Message Id="ErrorDifferentMemberInquiry">既に会員情報が登録されています。&#xa;会員情報削除後、再度登録してください。&#xa;</Message>
+00695:   <Message Id="ErrorMSRDeviceException">MSR接続エラー&#xa;ヘルプデスクにご連絡ください。</Message>
+00696:   <Message Id="ErrorScannerDeviceException">{0}接続エラー&#xa;スキャナーケーブルの抜き差しを&#xa;行ってください。</Message>
+00697:   <Message Id="ErrorFixedScannerDeviceException">固定スキャナー接続エラー&#xa;ヘルプデスクにご連絡ください。</Message>
+00698:   <Message Id="ErrorPrinterDeviceException">プリンター接続エラー&#xa;デバイス設定からプリンターの&#xa;切断、接続を行ってください。</Message>
+00699: <br />
+00700:   <Message Id="ValueCardDescription">トライアルカード</Message>
+00701:   <Message Id="SelfNeutalAttentionApplyMember">トライアル会員にご入会後</Message>
+00702:   <Message Id="SelfExchangeTicketButton">ﾄﾗｲｱﾙ&#xa;商品券</Message>
+00703:   <Message Id="SelfNeutalAttentionCanCharge">{0}にチャージを済ませてご利用下さい</Message>
+00704:   <Message Id="SelfPosiflexAttentionMessage1">{0}を</Message>
+00705:   <Message Id="SelfPosiflexAttentionMessage2">{0}を読み込む</Message>
+00706:   <Message Id="SelfPosiflexAttentionMessage3">※{0}の作成はお声かけください</Message>
+00707:   <Message Id="SelfSS900AttentionMessage1">{0}を&#xa;入れてください</Message>
+00708:   <Message Id="MemberBarcodeScanWithLineFeed">{0}のバーコードを&#xa;スキャンしてください</Message>
+00709:   <Message Id="SelfMemberScanInstruct">{0}を読み込ませてください</Message>
+00710:   <Message Id="MemberBarcodeScan">{0}のバーコードをスキャンしてください</Message>
+00711:   <Message Id="ChargeScanCard">{0}をスキャンしてください</Message>
+00712:   <Message Id="ErrorInvalidMSRBarcode"
+00713:            Code="4010">戻るボタンを押してから、&#xa;{0}の裏面を右側にして、&#xa;磁気カードリーダーに通してください。</Message>
+00714: 
+00715:   <Message Id="ChargeVoidInquiriedEMoneyBalance">電子マネー残高:</Message>
+00716:   <Message Id="TextMemberID">会員証</Message>
+00717:   <Message Id="EmployeeChargeTitleMessage">電子マネーチャージ</Message>
+00718:   <Message Id="ChargeCardInquiryMoney">残高：</Message>
+00719:   <Message Id="PayAppOrValueCardDescription">アプリ・プリカ</Message>
+00720:   <Message Id="PayAppOrCardDescription">アプリ・プリカ</Message>
+00721:   <Message Id="ChargeInsertOrScanCard">{0}をスキャンしてください</Message>
+00722:   <Message Id="ChargeConfirmInquiryMoney">残高をご確認ください</Message>
+00723:   <Message Id="InquiriedEMoneyBalance">電子マネー残高:</Message>
+00724:   <Message Id="InquiriedPoint">ポイント残高：</Message>
+00725:   <Message Id="TextBalance">電子マネー残高:</Message>
+00726:   <Message Id="SelfPosiflexSuPayScanMessage">アプリの方はバーコードを&#xa;スキャンしてください</Message>
+00727:   <Message Id="TextSelfTitle">いらっしゃいませ</Message>
+00728:   <Message Id="SelfNeutalUseInstruction">※画面右側を選択してお会計を始めてください</Message>
+00729:   <Message Id="ButtonAppOrCardHold">{0}を&#xa;お持ちの方</Message>
+00730:   <Message Id="ButtonNonAppOrCardHold">{0}を&#xa;お持ちでない方</Message>
+00731:   <Message Id="SelfMemberMSRReadInstruct">{0}を読み込ませてください</Message>
+00732:   <Message Id="SelfChargeConfirmButton">チャージ&#xa;確認</Message>
+00733:   <Message Id="SelfChargeConfirmRetryButton">会員情報&#xa;再問合</Message>
+00734:   <Message Id="SelfPointNgMessage">会員情報の登録がないためポイント利用できません</Message>
+00735:   <Message Id="SelfPointOfflineMessage">ポイントオフラインのためポイント利用できません</Message>
+00736:   <Message Id="SelfPointUseMessage">ポイント利用はお会計画面にて選択ください</Message>
+00737:   <Message Id="SelfPayEMoneyDescription">電子マネー</Message>
+00738:   <Message Id="SelfPayCreditLANDescription">ｸﾚｼﾞｯﾄ</Message>
+00739:   <Message Id="SelfPayCashDescription">現金</Message>
+00740:   <Message Id="SelfPayUnionPayLANDescription">銀聯</Message>
+00741:   <Message Id="SelfPayQRDescription">バーコード決済</Message>
+00742:   <Message Id="TextPaySuffix">{0}払い</Message>
+00743:   <Message Id="SelfPaymentEMoneyTitleMessage">電子マネー支払い</Message>
+00744:   <Message Id="SelfValueTotal">電子マネー残高：</Message>
+00745:   <Message Id="SelfPayAccountsDescription">給料天引き</Message>
+00746:   <Message Id="NoticeMTranDelete">中間取引を削除してよろしいですか？</Message>
+00747:   <Message Id="ErrorNotFoundMTranDelete">中間取引が存在しません。</Message>
+00748:   <Message Id="OrderKitchen_OfflineCreditConfirm">確定ボタンを押すとオフラインクレジット支払でお会計完了します。</Message>
+00749:   <Message Id="OrderKitchenSelectValueCardTitle">アプリ・プリカ利用選択</Message>
+00750:   <Message Id="OrderKitchenWithCardPayDescription">アプリ・プリカを&#x0a;お持ちの方</Message>
+00751:   <Message Id="OrderKitchenWithoutCardPayDescription">アプリ・プリカを&#x0a;お持ちでない方</Message>
+00752:   <Message Id="TextOrderKitchenSelectValueCard">カードをお持ちの方は、カードスキャンを&#x0a;選択して下さい</Message>
+00753:   <Message Id="ErrorNotLimitedTimeEvidenceTransaction">当日のレシートのみ合算可能です。</Message>
+00754:   <Message Id="NoticeAttendantCancelSelfSalesTransaction">お買い物を中止します&#x0a;係員が参ります&#x0a;しばらくお待ちください</Message>
+00755: 
+00756:   <Message Id="ErrorFaceMePinInputService">大変申し訳ありません。&#xa;顔認証に失敗しました。</Message>
+00757:   <Message Id="SelfAttendantFaceMePinInputing">顔認証二段階PIN入力中</Message>
+00758:   <Message Id="SelfFaceMePinInputTipContent">顔認証二段階PINコードを入力してください</Message>
+00759:   <Message Id="SelfFaceMePinInputRemarkContent">(生年月日の下4桁)</Message>
+00760:   <Message Id="SelfMemberFaceTrialTipContent">顔認証スタート</Message>
+00761:   <Message Id="SelfMemberFaceTipContent">顔認証中</Message>
+00762:   <Message Id="SelfInsertMoney">お金を入れて下さい</Message>
+00763:   <Message Id="ErrorCashDrawerDisConnect">ドロアの切断に失敗しました。&#xa;ヘルプデスクにご連絡ください。</Message>
+00764:   <Message Id="ErrorCashDrawerConnect">ドロアの初期化に失敗しました。&#xa;ヘルプデスクにご連絡ください。</Message>
+00765:   <Message Id="ErrorFaceMeServiceOperator">顔認証に失敗しました</Message>
+00766:   <Message Id="TitleSelfAttendantCancellation">従業員解除しますか？</Message>
+00767:   <Message Id="TextSelfEmployeeCode">ユーザー</Message>
+00768:   <Message Id="TextSelfEmployeePassword">パスワード</Message>
+00769:   <Message Id="ErrorValidAttendantInfo">ユーザーまたはパスワードが不正です。</Message>
+00770:   <Message Id="NoticeQRScanConnect">{0}使用可能。&#xa;バーコードをスキャンしてください。</Message>
+00771:   <Message Id="ErrorQREnable">現在バーコード決済利用できません。</Message>
+00772:   <Message Id="ErrorQRAble">バーコード決済は他の支払いの併用はできません。</Message>
+00773:   <Message Id="ErrorQRResult">バーコード決済異常:&#xa;{0}</Message>
+00774:   <Message Id="ErrorQRAuthentication">認証情報不正です。</Message>
+00775:   <Message Id="ErrorQRBarcodeSupported">支払い可能なバーコード・QRコードではありません。</Message>
+00776:   <Message Id="ErrorQRNetwork">通信エラーです。しばらく経ってから再度お試しください。</Message>
+00777:   <Message Id="ErrorQRUnexpected">予期しないシステムエラーが発生しました。</Message>
+00778:   <Message Id="ErrorQROriginalQRCodeID">元取引がありません。確認してください。</Message>
+00779:   <Message Id="ErrorQRUsed">使用済みの取引IDです。IDを更新してください。</Message>
+00780:   <Message Id="ErrorQRDeactivateAmounts">返金金額が一致しません。</Message>
+00781:   <Message Id="ErrorQRWaitingConfirm">支払承認待ちです。お使いの端末で承認操作お願いいたします。</Message>
+00782:   <Message Id="ErrorQRPending">保留中です。</Message>
+00783:   <Message Id="ErrorQREstablish">取引不成立です。</Message>
+00784:   <Message Id="ErrorQROffline">バーコード決済オフラインのためバーコード決済利用できません。</Message>
+00785:   <Message Id="ErrorQRTimeOut">バーコード決済通信タイムアウトしました。しばらく経ってから再度お試しください。</Message>
+00786:   <Message Id="ErrorQRCancelSuccess">バーコード決済支払い失敗しました。</Message>
+00787:   <Message Id="ErrorQRCancelFail">バーコード決済支払い失敗しました。</Message>
+00788:   <Message Id="SelfSelectNonCashContent">バーコード決済利用選択中</Message>
+00789:   <Message Id="SelfQRScanContent">バーコードスキャン待ち</Message>
+00790:   <Message Id="SelfQRScanResultContent">バーコード決済支払い完了</Message>
+00791:   <Message Id="ErrorQRBarcodeType">スキャンしたバーコードは対応していません。&#xa;{0}使用してください</Message>
+00792:   <Message Id="IncommQRApiServiceDescription">Incommバーコード決済サービス</Message>
+00793:   <Message Id="NoticeQRActivateConnect">支払い通信中...&#xa;しばらくお待ちください。</Message>
+00794:   <Message Id="NoticeQRDeactivateConnect">返品通信中...&#xa;しばらくお待ちください。</Message>
+00795:   <Message Id="ErrorQRDeactivateFail">バーコード決済返品失敗しました。</Message>
+00796:   <Message Id="ErrorCashChangerMsg">釣銭機から金額情報が取得できません&#xa;鍵位置確認や操作中の状態は終了して下さい&#xa;強制続行の場合、０円で精算を実行します</Message>
+00797:   <Message Id="ChargeAttendantDispenseCashMessage">お釣り出す</Message>
+00798:   <Message Id="ErrorPaymentServiceModeSelfDeviceInit">クレジット端末に異常が発生しているため、&#xa;再接続に失敗しました。&#xa;クレジット端末に表示されているエラーを解除し、&#xa;再度「ｸﾚｼﾞｯﾄ端末再接続」を実行してください。</Message>
+00799:   <Message Id="NoticeCloseCountPaymentServiceModeSelfError">クレジット端末日計エラーがあります。{0}&#xa;クレジット端末日計を出力せずに続行しますか？</Message>
+00800:   <Message Id="NoticeCloseCountPaymentServiceModeSelfErrorByTerminal">&#xa;日計を出力するには、再実行を押してください。</Message>
+00801:   <Message Id="PaymentServiceModeSelfResultCodeTimeout">タイムアウトエラー</Message>
+00802:   <Message Id="PaymentServiceModeSelfResultCodeUnknown">不明なエラー</Message>
+00803:   <Message Id="ErrorCreditLanErrorPause">取引保留エラー。</Message>
+00804:   <Message Id="ErrorCreditLanErrorCancel">中止エラー。</Message>
+00805:   <Message Id="ErrorCreditLanErrorModeSelf">{0}&#xa;支払いの成否は不明です。&#xa;ヘルプデスクに取引状況を確認してください。&#xa;クレジット決済端末の状態を確認してください。</Message>
+00806:   <Message Id="ErrorPaymentServiceModeSelfStartUpError">クレジット端末に異常が発生しました。&#xa;クレジット端末に表示されているエラーを解除してください。</Message>
+00807:   <Message Id="ChargeAttendantCreditOperation">クレジット決済端末操作中</Message>
+00808:   <Message Id="TaxAdd">+税</Message>
+00809:   <Message Id="ErrorMemberPointInfinityScanedForOffLine"
+00810:            Code="2101">ポイントインフィニティサーバーと通信できませんでした。</Message>
+00811:   <Message Id="ErrorMemberPointInfinityServer"
+00812:            Code="2104">ポイントインフィニティサーバー内部処理でエラーが発生しました。</Message>
+00813:   <Message Id="WarningPointInfinityRefOffline"
+00814:            Code="W2106">現在ポイントインフィニティサーバーがオフラインのため利用できません。</Message>
+00815:   <Message Id="WarningPointInfinityRefNg"
+00816:            Code="W2107">入力された会員番号は現在ポイントインフィニティサーバーを利用できません。</Message>
+00817:   <Message Id="WarningPointInfinitySetNg"
+00818:            Code="W2108">入力された会員番号は現在ポイントインフィニティサーバーを利用できないためポイントが付与されませんでした。</Message>
+00819:   <Message Id="ErrorPointInfinityServerPointNotAvailableForOffline"
+00820:            Code="2110">ポイントインフィニティサーバー接続がオフラインのため、ポイントの利用はできません。</Message>
+00821:   <Message Id="ErrorPointInfinityServerPointNotAvailableForNg"
+00822:            Code="2111">ポイントインフィニティサーバーが応答エラーのため、ポイントの利用はできません。</Message>
+00823:   <Message Id="WarningPointInfinityServerPointNotAvailableForOffline"
+00824:            Code="W2117">ポイントインフィニティサーバーがオフラインのため、ポイントの付与はできません。</Message>
+00825:   <Message Id="WarningPointInfinityServerPointNotAvailableForNg"
+00826:            Code="W2118">ポイントインフィニティサーバーが応答エラーのため、ポイントの付与はできません。ErrorMessageCD = {0}</Message>
+00827:   <Message Id="PointInfinityConfirm">ポイントインフィニティサーバーと通信できません。&#xa;ポイントは後日反映されます。&#xa;よろしいですか？</Message>
+00828:   <Message Id="ErrorPOSPrinterCable">プリンターケーブルを再度差し込んでください。</Message>
+00829:   <Message Id="ErrorOneTimeBarcodeExpired">バーコードが有効期間切れです。&#xa;バーコードを更新してください。</Message>
+00830:   <Message Id="ErrorCAFISArchDeviceNotConnect">クレジット端末が接続されていないか&#xa;電源OFFの状態です。&#xa;クレジット端末の状態確認をしてください。</Message>
+00831:   <Message Id="ErrorPaymentServiceDeviceNotEnable">クレジット端末が接続されていないか&#xa;ディバイス利用できません。</Message>
+00832:   <Message Id="ErrorPaymentServiceTransaction">クレジット端末でエラー内容を確認し、問題なければ再接続を行ってください。</Message>
+00833:   <Message Id="ErrorCartNotFoundOrPointServiceFailed">入力された会員番号が確認できないか、会員サービスをご利用いただけない状態です。</Message>
+00834:   <Message Id="SalesQRPaymentsInfo">PayPay、楽天ﾍﾟｲ、d払い、Alipay、WeChatPay</Message>
+00835:   <Message Id="SalesChinaQRPaymentsInfo">Alipay、WeChatPay</Message>
+00836:   <Message Id="CreditNeedSendSync">現在クレジット端末が使用できません。&#xa;クレジットを使用されたい場合は&#xa;係員呼出ボタンを押してください。</Message>
+00837:   <Message Id="CreditSendSyncFailed">クレジット端末の一括送信に失敗しました。&#xa;クレジット端末を確認してください。</Message>
+00838:   <Message Id="CreditDeviceErrorResolved">クレジット端末エラー解消</Message>
+00839:   <Message Id="ErrorDrugConfirm">資格者の従業員バーコードではありません。</Message>
+00840:   <Message Id="DrugVerify">医薬品が含まれています。&#xa;登録販売者・薬剤師の従業員バーコードを&#xa;スキャンしてください。</Message>
+00841: </Messages></p>
+<hr />
+<p>FILE: Source/POS4ULogicService/Settings/MessageRJ.xml
+SHA256: fab1c40140be02df9430ee946f0b4e8d6b1d8f54c2ca5c5733132c3f467568d1
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8"?>
+00002: <Messages>
+00003:   <Message Id="RJ_TerminalNo">ﾚｼﾞ</Message>
+00004:   <Message Id="RJ_Operator">責No</Message>
+00005:   <Message Id="RJ_OperatorWithOutNo">責</Message>
+00006:   <Message Id="RJ_Checker">チNo</Message>
+00007:   <Message Id="RJ_PointCard">カードＮｏ</Message>
+00008:   <Message Id="RJ_CanceledSale"><strong><em>*</em></strong><strong>   一括取消   </strong><strong><em>*</em></strong></Message>
+00009:   <Message Id="RJ_Jan">JAN</Message>
+00010:   <Message Id="RJ_TaxMarkReducedExcluded"><em>ｿ</Message>
+00011:   <Message Id="RJ_TaxMarkReducedIncluded"></em>ｳ</Message>
+00012:   <Message Id="RJ_TaxMarkExcluded">外</Message>
+00013:   <Message Id="RJ_TaxMarkIncluded">内</Message>
+00014:   <Message Id="RJ_TaxMarkExempt">非</Message>
+00015:   <Message Id="RJ_CanceledItem">直前取消</Message>
+00016:   <Message Id="RJ_ItemHeaderUnitPrice">単</Message>
+00017:   <Message Id="RJ_ItemCounter">コＸ</Message>
+00018:   <Message Id="RJ_SubTotal">小計</Message>
+00019:   <Message Id="RJ_Total">現計</Message>
+00020:   <Message Id="RJ_TaxesTargetAmountMoney">課税対象額</Message>
+00021:   <Message Id="RJ_TaxFreeAmountMoney">非課税   ﾀｲｼｮｳ</Message>
+00022:   <Message Id="RJ_TaxExcluded">%外税</Message>
+00023:   <Message Id="RJ_TaxExcludedAmountMoney">%外税  ﾀｲｼｮｳ</Message>
+00024:   <Message Id="RJ_TaxIncluded">%内税</Message>
+00025:   <Message Id="RJ_TaxIncludedAmountMoney">%内税  ﾀｲｼｮｳ</Message>
+00026:   <Message Id="RJ_TaxesAmount">税合計</Message>
+00027:   <Message Id="RJ_TotalAmount">合計</Message>
+00028:   <Message Id="RJ_Quantity">点</Message>
+00029:   <Message Id="RJ_ReceiptNo">ﾚｼｰﾄNo</Message>
+00030:   <Message Id="RJ_StoreCode">店No</Message>
+00031:   <Message Id="RJ_TaxesAmountEtc">消費税等</Message>
+00032:   <Message Id="RJ_PaymentPoint">ポイント支払</Message>
+00033:   <Message Id="RJ_DepositAmount">お預り</Message>
+00034:   <Message Id="RJ_DiscountAmount">値引</Message>
+00035:   <Message Id="RJ_FanCouponDiscountAmount">会員ｸｰﾎﾟﾝ値引</Message>
+00036:   <Message Id="RJ_MediaPoint">メディアP</Message>
+00037:   <Message Id="RJ_PaymentValueCard">プリカ支払</Message>
+00038:   <Message Id="RJ_ChangeAmount">お釣り</Message>
+00039:   <Message Id="RJ_NonExchangeTicketCount">万券枚数</Message>
+00040:   <Message Id="RJ_ValueCardInfoTitle"><strong><em>*</em></strong><strong><em>*プリカ情報</em></strong><strong><em>*</em></strong><em></Message>
+00041:   <Message Id="RJ_ValueCardNo">会員番号</Message>
+00042:   <Message Id="RJ_ValueApprovalNumber">承認番号</Message>
+00043:   <Message Id="RJ_ValueBeforeBalance">取引前残高：</Message>
+00044:   <Message Id="RJ_ValueCard">プリカ支払：</Message>
+00045:   <Message Id="RJ_ValueAfterBalance">取引後残高：</Message>
+00046:   <Message Id="RJ_ValueCharge">プリカチャージ</Message>
+00047:   <Message Id="RJ_ValueChargeBeforeBalance">チャージ前残高：</Message>
+00048:   <Message Id="RJ_ValueChargeAmount">チャージ金額：</Message>
+00049:   <Message Id="RJ_ValueChargeAfterBalance">チャージ後残高：</Message>
+00050:   <Message Id="RJ_ValueBalance">プリカ残高：</Message>
+00051:   <Message Id="RJ_ValueChargeCancel">プリカチャージ取消</Message>
+00052:   <Message Id="RJ_ValueChargeCancelBeforeBalance">チャージ取消前残高：</Message>
+00053:   <Message Id="RJ_ValueChargeCancelAmount">チャージ取消金額：</Message>
+00054:   <Message Id="RJ_ValueChargeCancelAfterBalance">チャージ取消後残高：</Message>
+00055:   <Message Id="RJ_CardPoint">TRIAL CARD POINT</Message>
+00056:   <Message Id="RJ_PointCardNo">カードＮｏ</Message>
+00057:   <Message Id="RJ_PointCardTitle"></em><strong><em>*</em></strong><strong>ポイント情報</strong><strong><em>*</em></strong><em></Message>
+00058:   <Message Id="RJ_PointDetails">ポイント明細</Message>
+00059:   <Message Id="RJ_AcquisitionPointDetails">今回獲得ポイント明細</Message>
+00060:   <Message Id="RJ_ECouponPoint">  単品P</Message>
+00061:   <Message Id="RJ_Point">P </Message>
+00062:   <Message Id="RJ_RMLoginPoint">カートご利用P</Message>
+00063:   <Message Id="RJ_RMCouponMark">R</Message>
+00064:   <Message Id="RJ_UnknownValue"></em><strong><em>*</em>*</Message>
+00065:   <Message Id="RJ_MemberAfterAddPoint">今回獲得ポイント合計</Message>
+00066:   <Message Id="RJ_MemberBeforePoint">前回までの総ポイント</Message>
+00067:   <Message Id="RJ_MinusPaymentPoint">ポイント支払分(ﾏｲﾅｽ分)</Message>
+00068:   <Message Id="RJ_ReturnPaymentPoint">ポイント支払分(返却分)</Message>
+00069:   <Message Id="RJ_MemberAfterPoint">取引後ポイント残高</Message>
+00070:   <Message Id="RJ_MemberPoint">ポイント残高</Message>
+00071:   <Message Id="RJ_LostPoint">今月失効ポイント</Message>
+00072:   <Message Id="RJ_PointLostDate">失効予定日</Message>
+00073:   <Message Id="RJ_PurchaseAmount">今月のお買上累計金額</Message>
+00074:   <Message Id="RJ_MemberPointCardNo">会員番号</Message>
+00075:   <Message Id="RJ_CurrentStage">現在ステージ</Message>
+00076:   <Message Id="RJ_UnknownDealNo"></strong><strong><em>*</em></strong><em></Message>
+00077:   <Message Id="RJ_SummaryDiscountInfo1"></em><strong><em>*</em></strong>  まとめ値引き  <strong><em>*</em></strong><em></Message>
+00078:   <Message Id="RJ_SummaryDiscountInfo2">{0}{1}({2}個)</Message>
+00079:   <Message Id="RJ_SummaryDiscountInfo3">{0}から{1}に致します</Message>
+00080:   <Message Id="RJ_Training"></em><strong><em>*</em></strong>  トレーニング  <strong><em>*</em></strong><em></Message>
+00081:   <Message Id="RJ_TrainingMessage">トレーニング</Message>
+00082:   <Message Id="RJ_ReprintReceipt"></em><strong><em>*</em></strong><strong> 再  発  行 </strong><strong><em>*</em></strong><em></Message>
+00083:   <Message Id="RJ_PurchasePoint">  お買上P</Message>
+00084:   <Message Id="RJ_PointTarget">ポイント対象</Message>
+00085:   <Message Id="RJ_MagnificationPoint">  倍率P</Message>
+00086:   <Message Id="RJ_Multiply">x</Message>
+00087:   <Message Id="RJ_ItemPoint">単品商品P</Message>
+00088:   <Message Id="RJ_PointProhibitionMark">ﾋ</Message>
+00089:   <Message Id="RJ_AgeConfirmation">販売確認対象商品</Message>
+00090:   <Message Id="RJ_AgeConfirmationCode">(1-00)</Message>
+00091:   <Message Id="RJ_RMCouponPoint">クーポンP</Message>
+00092:   <Message Id="RJ_ChangedPriceInfo">売変 (旧単価：{0})</Message>
+00093:   <Message Id="RJ_ECouponMark">★</Message>
+00094:   <Message Id="RJ_CouponItemPoint">商品単品P</Message>
+00095:   <Message Id="RJ_MemberECouponMark">&gt;</Message>
+00096:   <Message Id="RJ_PaymentAccountsReceivable">掛計</Message>
+00097:   <Message Id="RJ_ValueChargePoint">  ﾌﾟﾘｶﾁｬｰｼﾞﾎﾟｲﾝﾄ</Message>
+00098:   <Message Id="RJ_NormalReturn"></em><strong><em>*</em></strong><strong> 返      品 </strong><strong><em>*</em></strong><em></Message>
+00099:   <Message Id="RJ_ReturnDefectiveItem"> 不良品</Message>
+00100:   <Message Id="RJ_ReturnOther"> その他</Message>
+00101:   <Message Id="RJ_ReturnAmount">返金額</Message>
+00102:   <Message Id="RJ_CashChangeReserve">釣準</Message>
+00103:   <Message Id="RJ_CashChangeReserveAmount">釣準金</Message>
+00104:   <Message Id="RJ_CashChangeCalculated">釣銭機在高点検</Message>
+00105:   <Message Id="RJ_CloseCountCashChangeCalculated">釣銭機在高点検(精算)</Message>
+00106:   <Message Id="RJ_CashChangeCalculatedReport">＊＊釣銭機在高点検レポート</Message>
+00107:   <Message Id="RJ_CloseCountCashChangeReserve">釣銭準備金</Message>
+00108:   <Message Id="RJ_CashTotal">現金在高</Message>
+00109:   <Message Id="RJ_CalculatedAmount">計算在高</Message>
+00110:   <Message Id="RJ_InputCash">現金在高-釣銭準備金</Message>
+00111:   <Message Id="RJ_StorageSection">＜収納部＞</Message>
+00112:   <Message Id="RJ_CollectSection">＜回収部＞</Message>
+00113:   <Message Id="RJ_CashChangerTotalAmount">機内合計</Message>
+00114:   <Message Id="RJ_Overflow">ｵｰﾊﾞｰﾌﾛｰ</Message>
+00115:   <Message Id="RJ_CoinReject">硬貨リジェクト件数</Message>
+00116:   <Message Id="RJ_BillReject">紙幣リジェクト件数</Message>
+00117:   <Message Id="RJ_Case">件</Message>
+00118:   <Message Id="RJ_Count">枚</Message>
+00119:   <Message Id="RJ_Money">円</Message>
+00120:   <Message Id="RJ_CollectMoney">回収</Message>
+00121:   <Message Id="RJ_CollectMoneyAmount">回収金</Message>
+00122:   <Message Id="RJ_CashChangerReplenish">釣銭機補充</Message>
+00123:   <Message Id="RJ_ReplenishAmount">補充金額</Message>
+00124:   <Message Id="RJ_FromStrongBox">＜金庫から＞</Message>
+00125:   <Message Id="RJ_FromDrawer">＜ドロアから＞</Message>
+00126:   <Message Id="RJ_CashChangerRecover">釣銭機回収</Message>
+00127:   <Message Id="RJ_OverAmount">回収庫</Message>
+00128:   <Message Id="RJ_RecoverAmount">回収金額</Message>
+00129:   <Message Id="RJ_ToStrongBox">＜金庫へ＞</Message>
+00130:   <Message Id="RJ_ToDrawer">＜ドロアへ＞</Message>
+00131:   <Message Id="RJ_ChargePointFixedTime">ﾎﾟｲﾝﾄ成立日時</Message>
+00132:   <Message Id="RJ_Payment">支払</Message>
+00133:   <Message Id="RJ_EvidenceTitle">領   収   証</Message>
+00134:   <Message Id="RJ_EvidenceSama">様</Message>
+00135:   <Message Id="RJ_EvidenceMessage1">上記正に領収しました</Message>
+00136:   <Message Id="RJ_EvidenceMessage2">(消費税等 </Message>
+00137:   <Message Id="RJ_EvidenceMessage3">円を含みます)</Message>
+00138:   <Message Id="RJ_EvidenceMessage4">※保管上のお願い</Message>
+00139:   <Message Id="RJ_EvidenceMessage5">財布等で保管戴く場合は、印刷面を内側に折って保管願います。</Message>
+00140:   <Message Id="RJ_EvidenceTaxCuttarget"></em>印 軽減税率対象商品</Message>
+00141:   <Message Id="RJ_EvidenceBorderLine"><strong><em>_</em></strong><strong><em>_</em></strong><strong></Message>
+00142:   <Message Id="RJ_EvidencePipeMessage">|</Message>
+00143:   <Message Id="RJ_EvidenceStampMsg1">印紙税申告納</Message>
+00144:   <Message Id="RJ_EvidenceStampMsg2">付につき香椎</Message>
+00145:   <Message Id="RJ_EvidenceStampMsg3">税務署承認済</Message>
+00146:   <Message Id="RJ_EvidenceDuplicateMessage"><strong><em>*</em></strong><em>  領収証（控）  </em><strong><em>*</em></strong></Message>
+00147:   <Message Id="RJ_EvidenceDuplicateReceiptNo">領収証No </Message>
+00148:   <Message Id="RJ_EvidenceDuplicateReceiptIssueNo">発行ﾚｼｰﾄNo </Message>
+00149:   <Message Id="RJ_EvidenceDuplicateTotal">領収証金額</Message>
+00150:   <Message Id="RJ_EvidenceStoreName">【取扱店舗：{0}</Message>
+00151:   <Message Id="RJ_RMTrialCouponMark">試</Message>
+00152:   <Message Id="RJ_PaymentTrialCoupon">お試し引換券</Message>
+00153:   <Message Id="RJ_PaymentDebit">デビット</Message>
+00154:   <Message Id="RJ_OrderNo">注文番号</Message>
+00155:   <Message Id="RJ_SignOut">サインアウト</Message>
+00156:   <Message Id="RJ_SignOutCalculatedCash">釣銭在高</Message>
+00157:   <Message Id="RJ_CashChangerExchangeMoney">釣銭機両替</Message>
+00158:   <Message Id="RJ_UncertainDetected">&lt;違算状態検知&gt;</Message>
+00159:   <Message Id="RJ_InputAmount">手入力金額</Message>
+00160:   <Message Id="RJ_CashIn">入金</Message>
+00161:   <Message Id="RJ_CashOut">出金</Message>
+00162:   <Message Id="RJ_EntryCalculatedCash">釣銭機在高確認</Message>
+00163:   <Message Id="RJ_EntryCalculatedCashReport">＊＊釣銭機在高確認レポート</Message>
+00164:   <Message Id="RJ_Drawer">＜ドロア＞</Message>
+00165:   <Message Id="RJ_CashChanger">＜釣銭機＞</Message>
+00166:   <Message Id="RJ_DrawerTotalt">ドロア合計</Message>
+00167:   <Message Id="RJ_CalculatedTotal">＜在高合計＞</Message>
+00168:   <Message Id="RJ_CalculatedTotalAmount">在高合計金額</Message>
+00169:   <Message Id="RJ_EntryColumn">    金種  枚数 棒金         金額</Message>
+00170:   <Message Id="RJ_NonCash">現金外在高確認</Message>
+00171:   <Message Id="RJ_NonCashReport">＊＊現金外在高確認レポート</Message>
+00172:   <Message Id="RJ_ExchangeTicket">商品券</Message>
+00173:   <Message Id="RJ_CashTicket">金券</Message>
+00174:   <Message Id="RJ_BeerTicket">ﾋﾞｰﾙ券</Message>
+00175:   <Message Id="RJ_BeerBarcodeTicket">ﾋﾞｰﾙ券ﾊﾞｰｺｰﾄﾞ</Message>
+00176:   <Message Id="RJ_ValueCardTotal">ﾌﾟﾘﾍﾟｲﾄﾞ計</Message>
+00177:   <Message Id="RJ_TrialCoupon">お試しｸｰﾎﾟﾝ</Message>
+00178:   <Message Id="RJ_CreditTotal">ｸﾚｼﾞｯﾄ計</Message>
+00179:   <Message Id="RJ_DebitTotal">ﾃﾞﾋﾞｯﾄ計</Message>
+00180:   <Message Id="RJ_CreditOfflineTotal">ｵﾌﾗｲﾝｸﾚｼﾞｯﾄ計</Message>
+00181:   <Message Id="RJ_PayPayTotal">QR決済(PayPay)計</Message>
+00182:   <Message Id="RJ_RakutenPayTotal">QR決済(楽天ﾍﾟｲ)計</Message>
+00183:   <Message Id="RJ_DocomoTotal">QR決済(d払い)計</Message>
+00184:   <Message Id="RJ_NonCashTotal">現金外計</Message>
+00185:   <Message Id="RJ_Counter">回</Message>
+00186:   <Message Id="RJ_Customer">客</Message>
+00187:   <Message Id="RJ_NormalVoid">＊レジマイナス＊</Message>
+00188:   <Message Id="RJ_NormalVoidTran">取引レジマイ</Message>
+00189:   <Message Id="RJ_NormalVoidTargetDate">対象取引日</Message>
+00190:   <Message Id="RJ_NormalVoidTargetPosNo">対象POS端末No.</Message>
+00191:   <Message Id="RJ_SaveMTransaction">中間取引保存</Message>
+00192:   <Message Id="RJ_SaveMTransactionReport">＊＊中間取引保存レポート</Message>
+00193:   <Message Id="RJ_MTransactionId">中間取引ID</Message>
+00194:   <Message Id="RJ_PaymentCashInput">現金(手入力)</Message>
+00195:   <Message Id="RJ_CAFISArchDebitSalesReport">[デビット口座引落確認書]</Message>
+00196:   <Message Id="RJ_CAFISArchDebitSalesMerchInfo">加盟店名</Message>
+00197:   <Message Id="RJ_CAFISArchDebitSalesTermIdentityNo">端末番号</Message>
+00198:   <Message Id="RJ_CAFISArchDebitSalesTermUniqueId">端末固有ID</Message>
+00199:   <Message Id="RJ_CAFISArchDebitSalesUseDateTime">ご利用日</Message>
+00200:   <Message Id="RJ_CAFISArchDebitSalesSlipNo">伝票番号</Message>
+00201:   <Message Id="RJ_CAFISArchDebitSalesFinancialInstitution">金融機関名</Message>
+00202:   <Message Id="RJ_CAFISArchDebitSalesAccountNo">口座番号</Message>
+00203:   <Message Id="RJ_CAFISArchDebitSalesDebitNo">引落番号</Message>
+00204:   <Message Id="RJ_CAFISArchDebitSalesCategories">商品区分</Message>
+00205:   <Message Id="RJ_CAFISArchDebitSalesAmount">金額</Message>
+00206:   <Message Id="RJ_CAFISArchDebitSalesThankYou">お買い上げありがとうございました。</Message>
+00207:   <Message Id="RJ_CAFISArchDebitSalesSalesFloor">売場：</Message>
+00208:   <Message Id="RJ_CAFISArchDebitSalesSalesStaff">係員：</Message>
+00209:   <Message Id="RJ_CAFISArchDebitSalesSalesCustomerReserve">お客様控え</Message>
+00210:   <Message Id="RJ_CAFISArchDebitSalesMerchantReserve">加盟店控え(POS接続)</Message>
+00211:   <Message Id="RJ_CAFISArchDebitSalesMsIcDivMS">(MS)</Message>
+00212:   <Message Id="RJ_CAFISArchDebitSalesTradeContentSales">売上</Message>
+00213:   <Message Id="RJ_CAFISArchDebitSalesCommunicationError1">通信エラーが発生しました。</Message>
+00214:   <Message Id="RJ_CAFISArchDebitSalesCommunicationError2">もう一度やり直してください。</Message>
+00215:   <Message Id="RJ_CAFISArchDebitSalesTradeContent">取引内容</Message>
+00216:   <Message Id="RJ_CAFISArchDebitSalesCardNo">会員No.</Message>
+00217:   <Message Id="RJ_CAFISArchDebitSalesPaymentAmount">引落金額</Message>
+00218:   <Message Id="RJ_CAFISArchDebitSummaryReport">[デビット日計リスト]</Message>
+00219:   <Message Id="RJ_CAFISArchDebitSummaryOutputDate">出力日</Message>
+00220:   <Message Id="RJ_CAFISArchDebitSummaryOutputTargetDate">日計出力対象日</Message>
+00221:   <Message Id="RJ_CAFISArchDebitSummaryClosingTime">〆時間</Message>
+00222:   <Message Id="RJ_CAFISArchDebitSummaryTermIdentityNo">端末番号</Message>
+00223:   <Message Id="RJ_CAFISArchDebitSummaryAggregateInfo">集計情報</Message>
+00224:   <Message Id="RJ_CAFISArchDebitSummaryMerchantTotal">＜＜＜加盟店合計＞＞＞</Message>
+00225:   <Message Id="RJ_CAFISArchDebitSummaryCount">件数</Message>
+00226:   <Message Id="RJ_CAFISArchDebitSummaryAmount">金額</Message>
+00227:   <Message Id="RJ_CAFISArchDebitSummaryEnd"><strong><em>END</em></strong></Message>
+00228:   <Message Id="RJ_CAFISArchDebitSummaryIncompleteReport">[デビット未完了取引リスト]</Message>
+00229:   <Message Id="RJ_CAFISArchDebitSummaryDataNotFound">印字するデータはありません。</Message>
+00230:   <Message Id="RJ_CAFISArchDebitSummaryIncompleteTransactionExist1">未完了取引があります。</Message>
+00231:   <Message Id="RJ_CAFISArchDebitSummaryIncompleteTransactionExist2">ヘルプデスクに</Message>
+00232:   <Message Id="RJ_CAFISArchDebitSummaryIncompleteTransactionExist3">お問い合わせください。</Message>
+00233:   <Message Id="RJ_CAFISArchDebitSummaryMerchantName">加盟店名</Message>
+00234:   <Message Id="RJ_CAFISArchDebitSummaryDealDateTime">端末送信日時</Message>
+00235:   <Message Id="RJ_CAFISArchDebitSummarySlipNo">伝票番号</Message>
+00236:   <Message Id="RJ_CAFISArchDebitResultCodeCOMError">COMエラー</Message>
+00237:   <Message Id="RJ_CAFISArchDebitResultCodeTimeout">タイムアウトエラー</Message>
+00238:   <Message Id="RJ_CAFISArchDebitResultCodeUnknown">不明なエラー</Message>
+00239:   <Message Id="RJ_CAFISArchDebitServiceHealthCheck">ヘルスチェック</Message>
+00240:   <Message Id="RJ_CAFISArchDebitServiceDebitSales">デビット売上</Message>
+00241:   <Message Id="RJ_CAFISArchDebitServiceDebitReget">デビット再印字</Message>
+00242:   <Message Id="RJ_CAFISArchDebitServiceStop">中止</Message>
+00243:   <Message Id="RJ_CAFISArchDebitServiceDebitSummary">デビット集計</Message>
+00244:   <Message Id="RJ_CAFISArchDebitInfox">INFOX</Message>
+00245:   <Message Id="RJ_CAFISArchDebitError">エラー</Message>
+00246:   <Message Id="RJ_CAFISArchDebitTradeDateTime">取引日時</Message>
+00247:   <Message Id="RJ_CAFISArchDebitSalesModeTraining">＊＊＊＊＊練習用伝票＊＊＊＊＊＊</Message>
+00248:   <Message Id="RJ_CAFISArchDebitSalesUnfinishedHeader"><strong><em>*</em></strong><strong><em> 店舗確認用 </em></strong><strong><em>*</em></strong></Message>
+00249:   <Message Id="RJ_StamprallyPoint">  スタンプラリーP</Message>
+00250:   <Message Id="RJ_MemberAfterAddStamprally">   (今回獲得スタンプ</Message>
+00251:   <Message Id="RJ_MemberAfterChangePoint">    今回交換ポイント</Message>
+00252:   <Message Id="RJ_RestoreAfterAddStamprally">   (復旧予定スタンプ</Message>
+00253:   <Message Id="RJ_RestoreAfterChangePoint">    復旧予定ポイント</Message>
+00254:   <Message Id="RJ_RankPoint">   (倍率P</Message>
+00255:   <Message Id="RJ_AddPoint">P</Message>
+00256:   <Message Id="RJ_DifferenceCash">過不足金</Message>
+00257:   <Message Id="RJ_AccountsReceivableMessage"><strong><em>*</em></strong><em>    店舗控え    </em><strong><em>*</em></strong></Message>
+00258:   <Message Id="RJ_PaymentCredit">クレジット</Message>
+00259:   <Message Id="RJ_EvidenceItemSpecify"><strong><em>*</em></strong><em> 領収証対象商品 </em><strong><em>*</em></strong></Message>
+00260:   <Message Id="RJ_Number">個</Message>
+00261:   <Message Id="RJ_EvidenceItemSpecifyAmount">領収証対象商品金額</Message>
+00262:   <Message Id="RJ_SalesCertificateTitle">販売証明書</Message>
+00263:   <Message Id="RJ_ItemCode">商品コード          </Message>
+00264:   <Message Id="RJ_SalesCertificateBorderLine"><strong><em>_</em></strong><strong><em>_</em></strong></strong></Message>
+00265:   <Message Id="RJ_PaymentCreditOffline">オフラインクレジット</Message>
+00266:   <Message Id="RJ_CreditReturnAmount">クレジット返金額</Message>
+00267: 
+00268:   <Message Id="RJ_PaymentCreditLAN">クレジット</Message>
+00269:   <Message Id="RJ_PaymentUnionPay">銀聯</Message>
+00270:   <Message Id="RJ_CAFISArchLANError">エラー</Message>
+00271:   <Message Id="RJ_CAFISArchLANInfox">INFOX</Message>
+00272:   <Message Id="RJ_CAFISArchLANServiceCredit">クレジット</Message>
+00273:   <Message Id="RJ_CAFISArchLANServiceEMoney">ご電子マネー</Message>
+00274:   <Message Id="RJ_CAFISArchLANServiceDailyTotal">集計</Message>
+00275:   <Message Id="RJ_CAFISArchLANServiceCheckHealth">ヘルスチェック</Message>
+00276:   <Message Id="RJ_CAFISArchLANServiceCancel">中止</Message>
+00277:   <Message Id="RJ_CAFISArchLANServiceReprintCredit">クレジット再印字</Message>
+00278:   <Message Id="RJ_CAFISArchLANServiceReprintEMoney">電子マネー再印字</Message>
+00279:   <Message Id="RJ_CAFISArchLANServiceUnionPay">銀聯</Message>
+00280:   <Message Id="RJ_CAFISArchLANServiceReprintUnionPay">銀聯再印字</Message>
+00281:   <Message Id="RJ_CAFISArchLANServiceDebit">デビット</Message>
+00282:   <Message Id="RJ_CAFISArchLANSalesModeTraining">＊＊＊＊＊練習用伝票＊＊＊＊＊＊</Message>
+00283:   <Message Id="RJ_CAFISArchLANSalesMerchInfo">加盟店</Message>
+00284:   <Message Id="RJ_CAFISArchLANSalesTermIdentityNo">端末番号</Message>
+00285:   <Message Id="RJ_CAFISArchLANSalesUseDateTime">ご利用日</Message>
+00286:    <Message Id="RJ_CAFISArchLANSalesSlipNo">伝票番号</Message>
+00287:   <Message Id="RJ_CAFISArchLANSalesOriginalTradeSlipNo">元取引伝票番号</Message>
+00288:   <Message Id="RJ_CAFISArchLANSalesPan">会員番号</Message>
+00289:   <Message Id="RJ_CAFISArchLANSalesExpDate">有効期限</Message>
+00290:   <Message Id="RJ_CAFISArchLANSalesMsIcDivMS">(MS)</Message>
+00291:   <Message Id="RJ_CAFISArchLANSalesMsIcDivIC">(IC)</Message>
+00292:   <Message Id="RJ_CAFISArchLANSalesMsIcDivMN">(MN)</Message>
+00293:   <Message Id="RJ_CAFISArchLANSalesMsIcDiv">IC/MS識別子</Message>
+00294:   <Message Id="RJ_CAFISArchLANSalesApprovalNo">承認番号</Message>
+00295:   <Message Id="RJ_CAFISArchLANSalesTradeContent">取引内容</Message>
+00296:   <Message Id="RJ_CAFISArchLANSalesTradeContentSales">売上</Message>
+00297:   <Message Id="RJ_CAFISArchLANSalesTradeContentReturn">返品</Message>
+00298:   <Message Id="RJ_CAFISArchLANSalesTradeContentVoid">取消</Message>
+00299:   <Message Id="RJ_CAFISArchLANSalesCardNo">会員No.</Message>
+00300:   <Message Id="RJ_CAFISArchLANSalesTotalAmount">合計金額</Message>
+00301:   <Message Id="RJ_CAFISArchLANSalesSignNecessity">ご署名</Message>
+00302:   <Message Id="RJ_CAFISArchLANSalesAid">AID</Message>
+00303:   <Message Id="RJ_CAFISArchLANSalesCardSeqNo">カードシーケンスNo</Message>
+00304:   <Message Id="RJ_CAFISArchLANSalesAtc">ATC</Message>
+00305:   <Message Id="RJ_CAFISArchLANSalesTc">TC</Message>
+00306:   <Message Id="RJ_CAFISArchLANSalesSalesFloor">売場：</Message>
+00307:   <Message Id="RJ_CAFISArchLANSalesStaff">係員：</Message>
+00308:   <Message Id="RJ_CAFISArchLANSalesPayDivSales">一括</Message>
+00309:   <Message Id="RJ_CAFISArchLANSalesPaymentAmount">引落金額</Message>
+00310:   <Message Id="RJ_CAFISArchLANSalesCustomerReserve">お客様控え</Message>
+00311:   <Message Id="RJ_CAFISArchLANSalesMerchantReserve">加盟店控え(POS接続)</Message>
+00312:   <Message Id="RJ_CAFISArchLANSalesUnfinishedHeader"><strong><em>*</em></strong><strong><em> 店舗確認用 </em></strong><strong><em>*</em></strong></Message>
+00313:   <Message Id="RJ_CAFISArchLANSalesCommunicationError1">通信エラーが発生しました。</Message>
+00314:   <Message Id="RJ_CAFISArchLANSalesCommunicationError2">もう一度やり直してください。</Message>
+00315:   <Message Id="RJ_CAFISArchLANSalesICCError1">ICCエラーが発生しました。</Message>
+00316:   <Message Id="RJ_CAFISArchLANSalesICCError2">もう一度やり直してください。</Message>
+00317:   <Message Id="RJ_CAFISArchLANSalesTimeout">タイムアウトエラー</Message>
+00318:   <Message Id="RJ_CAFISArchLANCreditSalesReport">[クレジット売上票] G</Message>
+00319:   <Message Id="RJ_CAFISArchLANCreditSalesPayDiv">支払区分</Message>
+00320:   <Message Id="RJ_CAFISArchLANCreditSalesDealDiv">取扱区分</Message>
+00321:   <Message Id="RJ_CAFISArchLANCreditSalesCardCorpName">カード会社名</Message>
+00322:   <Message Id="RJ_CAFISArchLANCreditSalesGoods">商品区分</Message>
+00323:   <Message Id="RJ_CAFISArchLANCreditSalesInstallmentTimes">分割回数</Message>
+00324:   <Message Id="RJ_CAFISArchLANCreditSalesPayStartMonth">支払開始月</Message>
+00325:   <Message Id="RJ_CAFISArchLANCreditSalesBonsTimes">ボーナス回数</Message>
+00326:   <Message Id="RJ_CAFISArchLANCreditSalesAmount">金額</Message>
+00327:   <Message Id="RJ_CAFISArchLANCreditSalesTaxOther">税その他金額</Message>
+00328:   <Message Id="RJ_CAFISArchLANCreditSalesKanaName">カナ氏名</Message>
+00329:   <Message Id="RJ_CAFISArchLANCreditSalesBrandName">ブランド名</Message>
+00330:   <Message Id="RJ_CAFISArchLANCreditSalesArc">ARC</Message><br />
+00331:   <Message Id="RJ_CAFISArchLANUnionPaySalesReport">[中国銀聯カード]</Message>
+00332:   <Message Id="RJ_CAFISArchLANUnionPaySalesFinanInstName">金融機関名</Message>
+00333:   <Message Id="RJ_CAFISArchLANUnionPaySalesCupNo">銀聯番号</Message>
+00334:   <Message Id="RJ_CAFISArchLANUnionPaySalesCupSendTime">銀聯送信日時</Message>
+00335:   <Message Id="RJ_CAFISArchLANUnionPaySalesUn">UN</Message>
+00336:   <Message Id="RJ_CAFISArchLANUnionPaySalesAip">AIP</Message>
+00337:   <Message Id="RJ_CAFISArchLANDailyTotalReport">[{0}日計リスト]</Message>
+00338:   <Message Id="RJ_CAFISArchLANDailyTotalSummaryReport">[{0}リスト]</Message>
+00339:   <Message Id="RJ_CAFISArchLANDailyTotalIncompleteReport">[{0}未完了リスト]</Message>
+00340:   <Message Id="RJ_CAFISArchLANDailyTotalOutputDate">出力日</Message>
+00341:   <Message Id="RJ_CAFISArchLANDailyTotalOutputTargetDate">日計出力対象日</Message>
+00342:   <Message Id="RJ_CAFISArchLANDailyTotalClosingTime">〆時間</Message>
+00343:   <Message Id="RJ_CAFISArchLANDailyTotalDataNotFound">印字するデータはありません。</Message>
+00344:   <Message Id="RJ_CAFISArchLANDailyTotalTermIdentityNo">端末番号</Message>
+00345:   <Message Id="RJ_CAFISArchLANDailyTotalDealDateTime">端末送信日時</Message>
+00346:   <Message Id="RJ_CAFISArchLANDailyTotalMerchantTotal">＜＜＜加盟店合計＞＞＞</Message>
+00347:   <Message Id="RJ_CAFISArchLANDailyTotalCount">件数</Message>
+00348:   <Message Id="RJ_CAFISArchLANDailyTotalAmount">金額</Message>
+00349:   <Message Id="RJ_CAFISArchLANDailyTotalEnd"><strong><em>END</em></strong></Message>
+00350:   <Message Id="RJ_CAFISArchLANDailyTotalIncompleteTransactionExist1">未完了取引があります。</Message>
+00351:   <Message Id="RJ_CAFISArchLANDailyTotalIncompleteTransactionExist2">ヘルプデスクに</Message>
+00352:   <Message Id="RJ_CAFISArchLANDailyTotalIncompleteTransactionExist3">お問い合わせください。</Message>
+00353:   <Message Id="RJ_CAFISArchLANDailyTotalMerchantName">加盟店名</Message>
+00354:   <Message Id="RJ_CAFISArchLANDailyTotalSlipNo">伝票番号</Message>
+00355:   <Message Id="RJ_PaymentPayPay">QR決済(PayPay)</Message>
+00356:   <Message Id="RJ_PaymentRakutenPay">QR決済(楽天ﾍﾟｲ)</Message>
+00357:   <Message Id="RJ_PaymentDocomo">QR決済(d払い)</Message>
+00358:   <Message Id="RJ_PaymentQRID">QR決済ID</Message>
+00359:   <Message Id="RJ_CloseDailyBusinessClount">精算回数</Message>
+00360:   <Message Id="RJ_RediMinusTran">取引ﾚｼﾞﾏｲ</Message>
+00361:   <Message Id="RJ_ReturnTran">返品</Message>
+00362:   <Message Id="RJ_TaxMarkReduced"><em></Message>
+00363:   <Message Id="RJ_VoidPrepaidCharge">ﾌﾟﾘｶﾁｬ取消</Message>
+00364:   <Message Id="RJ_DutyFreeDetailMessage"></em><strong><em>*</em></strong><strong><em>*免税明細</em></strong><strong><em>*</em></strong><strong></Message>
+00365:   <Message Id="RJ_DutyFreeTotalMessage"></strong><strong><em>*</em></strong><strong><em>免税合計</em></strong><strong><em>*</em></strong>**</Message>
+00366:   <Message Id="RJ_DutyFreeGeneralDetailTitle">【一般物品】--------------------</Message>
+00367:   <Message Id="RJ_DutyFreeConsumableDetailTitle">【消耗品】----------------------</Message>
+00368:   <Message Id="RJ_DutyFreeNonExemptDetailTitle">【免税対象外】-------------------</Message>
+00369:   <Message Id="RJ_DutyFreeGeneralTotalTitle">一般物品</Message>
+00370:   <Message Id="RJ_DutyFreeConsumableTotalTitle">消耗品</Message>
+00371:   <Message Id="RJ_DutyFreeNonExemptTotalTitle">免税対象外</Message>
+00372:   <Message Id="RJ_DutyFreeConsumableMessage">消耗品</Message>
+00373:   <Message Id="RJ_DutyFreeNonExemptMessage">免税対象外</Message>
+00374:   <Message Id="RJ_DutyFreeQuantityMark">@</Message>
+00375:   <Message Id="RJ_DutyFreeTotalAmount">総額</Message>
+00376:   <Message Id="RJ_DutyFreeTaxMarkReducedExcluded">ｿ </Message>
+00377:   <Message Id="RJ_DutyFreeTaxMarkReducedIncluded">ｳ </Message>
+00378:   <Message Id="RJ_PaymentAlipay">Alipay</Message>
+00379:   <Message Id="RJ_PaymentWeChatPay">WeChat Pay</Message>
+00380:   <Message Id="RJ_AlipayTotal">アリペイ計</Message>
+00381:   <Message Id="RJ_WeChatPayTotal">ｳｨﾁｬｯﾄペイ計</Message>
+00382:   <Message Id="RJ_DrugOperator">医藥責No</Message>
+00383: </Messages></p>
+<hr />
+<p>FILE: Source/POS4ULogicService/Settings/MessageRJ_FC.xml
+SHA256: b25898976861f0400df7643b5256af64823fbef1832f4c2137138e5bb12d2f8e
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8"?>
+00002: <Messages>
+00003:   <Message Id="RJ_TerminalNo">ﾚｼﾞ</Message>
+00004:   <Message Id="RJ_Operator">責No</Message>
+00005:   <Message Id="RJ_Checker">チNo</Message>
+00006:   <Message Id="RJ_PointCard">カードＮｏ</Message>
+00007:   <Message Id="RJ_CanceledSale"><strong><em>*</em></strong><strong>   一括取消   </strong><strong><em>*</em></strong></Message>
+00008:   <Message Id="RJ_Jan">JAN</Message>
+00009:   <Message Id="RJ_TaxMarkReducedExcluded"><em>ｿ</Message>
+00010:   <Message Id="RJ_TaxMarkReducedIncluded"></em>ｳ</Message>
+00011:   <Message Id="RJ_TaxMarkExcluded">外</Message>
+00012:   <Message Id="RJ_TaxMarkIncluded">内</Message>
+00013:   <Message Id="RJ_TaxMarkExempt">非</Message>
+00014:   <Message Id="RJ_CanceledItem">直前取消</Message>
+00015:   <Message Id="RJ_ItemHeaderUnitPrice">単</Message>
+00016:   <Message Id="RJ_ItemCounter">コＸ</Message>
+00017:   <Message Id="RJ_SubTotal">小計</Message>
+00018:   <Message Id="RJ_Total">現計</Message>
+00019:   <Message Id="RJ_TaxesTargetAmountMoney">課税対象額</Message>
+00020:   <Message Id="RJ_TaxFreeAmountMoney">非課税   ﾀｲｼｮｳ</Message>
+00021:   <Message Id="RJ_TaxExcluded">%外税</Message>
+00022:   <Message Id="RJ_TaxExcludedAmountMoney">%外税  ﾀｲｼｮｳ</Message>
+00023:   <Message Id="RJ_TaxIncluded">%内税</Message>
+00024:   <Message Id="RJ_TaxIncludedAmountMoney">%内税  ﾀｲｼｮｳ</Message>
+00025:   <Message Id="RJ_TaxesAmount">税合計</Message>
+00026:   <Message Id="RJ_TotalAmount">合計</Message>
+00027:   <Message Id="RJ_Quantity">点</Message>
+00028:   <Message Id="RJ_ReceiptNo">ﾚｼｰﾄNo</Message>
+00029:   <Message Id="RJ_StoreCode">店No</Message>
+00030:   <Message Id="RJ_TaxesAmountEtc">消費税等</Message>
+00031:   <Message Id="RJ_PaymentPoint">ポイント支払</Message>
+00032:   <Message Id="RJ_DepositAmount">お預り</Message>
+00033:   <Message Id="RJ_DiscountAmount">値引</Message>
+00034:   <Message Id="RJ_FanCouponDiscountAmount">会員ｸｰﾎﾟﾝ値引</Message>
+00035:   <Message Id="RJ_MediaPoint">メディアP</Message>
+00036:   <Message Id="RJ_PaymentValueCard">プリカ支払</Message>
+00037:   <Message Id="RJ_ChangeAmount">お釣り</Message>
+00038:   <Message Id="RJ_NonExchangeTicketCount">万券枚数</Message>
+00039:   <Message Id="RJ_ValueCardInfoTitle"><strong><em>*</em></strong><strong><em>*プリカ情報</em></strong><strong><em>*</em></strong><em></Message>
+00040:   <Message Id="RJ_ValueCardNo">会員番号</Message>
+00041:   <Message Id="RJ_ValueApprovalNumber">承認番号</Message>
+00042:   <Message Id="RJ_ValueBeforeBalance">取引前残高：</Message>
+00043:   <Message Id="RJ_ValueCard">プリカ支払：</Message>
+00044:   <Message Id="RJ_ValueAfterBalance">取引後残高：</Message>
+00045:   <Message Id="RJ_ValueCharge">プリカチャージ</Message>
+00046:   <Message Id="RJ_ValueChargeBeforeBalance">チャージ前残高：</Message>
+00047:   <Message Id="RJ_ValueChargeAmount">チャージ金額：</Message>
+00048:   <Message Id="RJ_ValueChargeAfterBalance">チャージ後残高：</Message>
+00049:   <Message Id="RJ_ValueBalance">プリカ残高：</Message>
+00050:   <Message Id="RJ_ValueChargeCancel">プリカチャージ取消</Message>
+00051:   <Message Id="RJ_ValueChargeCancelBeforeBalance">チャージ取消前残高：</Message>
+00052:   <Message Id="RJ_ValueChargeCancelAmount">チャージ取消金額：</Message>
+00053:   <Message Id="RJ_ValueChargeCancelAfterBalance">チャージ取消後残高：</Message>
+00054:   <Message Id="RJ_CardPoint">TRIAL CARD POINT</Message>
+00055:   <Message Id="RJ_PointCardNo">カードＮｏ</Message>
+00056:   <Message Id="RJ_PointCardTitle"></em><strong><em>*</em></strong><strong>ポイント情報</strong><strong><em>*</em></strong><em></Message>
+00057:   <Message Id="RJ_PointDetails">ポイント明細</Message>
+00058:   <Message Id="RJ_AcquisitionPointDetails">今回獲得ポイント明細</Message>
+00059:   <Message Id="RJ_ECouponPoint">  単品P</Message>
+00060:   <Message Id="RJ_Point">P </Message>
+00061:   <Message Id="RJ_RMLoginPoint">カートご利用P</Message>
+00062:   <Message Id="RJ_RMCouponMark">R</Message>
+00063:   <Message Id="RJ_UnknownValue"></em><strong><em>*</em>*</Message>
+00064:   <Message Id="RJ_MemberAfterAddPoint">今回獲得ポイント合計</Message>
+00065:   <Message Id="RJ_MemberBeforePoint">前回までの総ポイント</Message>
+00066:   <Message Id="RJ_MinusPaymentPoint">ポイント支払分(ﾏｲﾅｽ分)</Message>
+00067:   <Message Id="RJ_ReturnPaymentPoint">ポイント支払分(返却分)</Message>
+00068:   <Message Id="RJ_MemberAfterPoint">取引後ポイント残高</Message>
+00069:   <Message Id="RJ_MemberPoint">ポイント残高</Message>
+00070:   <Message Id="RJ_LostPoint">今月失効ポイント</Message>
+00071:   <Message Id="RJ_PointLostDate">失効予定日</Message>
+00072:   <Message Id="RJ_PurchaseAmount">今月のお買上累計金額</Message>
+00073:   <Message Id="RJ_MemberPointCardNo">会員番号</Message>
+00074:   <Message Id="RJ_CurrentStage">現在ステージ</Message>
+00075:   <Message Id="RJ_UnknownDealNo"></strong><strong><em>*</em></strong><em></Message>
+00076:   <Message Id="RJ_SummaryDiscountInfo1"></em><strong><em>*</em></strong>  まとめ値引き  <strong><em>*</em></strong><em></Message>
+00077:   <Message Id="RJ_SummaryDiscountInfo2">{0}{1}({2}個)</Message>
+00078:   <Message Id="RJ_SummaryDiscountInfo3">{0}から{1}に致します</Message>
+00079:   <Message Id="RJ_Training"></em><strong><em>*</em></strong>  トレーニング  <strong><em>*</em></strong><em></Message>
+00080:   <Message Id="RJ_TrainingMessage">トレーニング</Message>
+00081:   <Message Id="RJ_ReprintReceipt"></em><strong><em>*</em></strong><strong> 再  発  行 </strong><strong><em>*</em></strong><em></Message>
+00082:   <Message Id="RJ_PurchasePoint">  お買上P</Message>
+00083:   <Message Id="RJ_PointTarget">ポイント対象</Message>
+00084:   <Message Id="RJ_MagnificationPoint">  倍率P</Message>
+00085:   <Message Id="RJ_Multiply">x</Message>
+00086:   <Message Id="RJ_ItemPoint">単品商品P</Message>
+00087:   <Message Id="RJ_PointProhibitionMark">ﾋ</Message>
+00088:   <Message Id="RJ_AgeConfirmation">販売確認対象商品</Message>
+00089:   <Message Id="RJ_AgeConfirmationCode">(1-00)</Message>
+00090:   <Message Id="RJ_RMCouponPoint">クーポンP</Message>
+00091:   <Message Id="RJ_ChangedPriceInfo">売変 (旧単価：{0})</Message>
+00092:   <Message Id="RJ_ECouponMark">★</Message>
+00093:   <Message Id="RJ_CouponItemPoint">商品単品P</Message>
+00094:   <Message Id="RJ_MemberECouponMark">&gt;</Message>
+00095:   <Message Id="RJ_PaymentAccountsReceivable">掛計</Message>
+00096:   <Message Id="RJ_ValueChargePoint">  ﾌﾟﾘｶﾁｬｰｼﾞﾎﾟｲﾝﾄ</Message>
+00097:   <Message Id="RJ_NormalReturn"></em><strong><em>*</em></strong><strong> 返      品 </strong><strong><em>*</em></strong><em></Message>
+00098:   <Message Id="RJ_ReturnDefectiveItem"> 不良品</Message>
+00099:   <Message Id="RJ_ReturnOther"> その他</Message>
+00100:   <Message Id="RJ_ReturnAmount">返金額</Message>
+00101:   <Message Id="RJ_CashChangeReserve">釣準</Message>
+00102:   <Message Id="RJ_CashChangeReserveAmount">釣準金</Message>
+00103:   <Message Id="RJ_CashChangeCalculated">釣銭機在高点検</Message>
+00104:   <Message Id="RJ_CloseCountCashChangeCalculated">釣銭機在高点検(精算)</Message>
+00105:   <Message Id="RJ_CashChangeCalculatedReport">＊＊釣銭機在高点検レポート</Message>
+00106:   <Message Id="RJ_CloseCountCashChangeReserve">釣銭準備金</Message>
+00107:   <Message Id="RJ_CashTotal">現金在高</Message>
+00108:   <Message Id="RJ_CalculatedAmount">計算在高</Message>
+00109:   <Message Id="RJ_InputCash">現金在高-釣銭準備金</Message>
+00110:   <Message Id="RJ_StorageSection">＜収納部＞</Message>
+00111:   <Message Id="RJ_CollectSection">＜回収部＞</Message>
+00112:   <Message Id="RJ_CashChangerTotalAmount">機内合計</Message>
+00113:   <Message Id="RJ_Overflow">ｵｰﾊﾞｰﾌﾛｰ</Message>
+00114:   <Message Id="RJ_CoinReject">硬貨リジェクト件数</Message>
+00115:   <Message Id="RJ_BillReject">紙幣リジェクト件数</Message>
+00116:   <Message Id="RJ_Case">件</Message>
+00117:   <Message Id="RJ_Count">枚</Message>
+00118:   <Message Id="RJ_Money">円</Message>
+00119:   <Message Id="RJ_CollectMoney">回収</Message>
+00120:   <Message Id="RJ_CollectMoneyAmount">回収金</Message>
+00121:   <Message Id="RJ_CashChangerReplenish">釣銭機補充</Message>
+00122:   <Message Id="RJ_ReplenishAmount">補充金額</Message>
+00123:   <Message Id="RJ_FromStrongBox">＜金庫から＞</Message>
+00124:   <Message Id="RJ_FromDrawer">＜ドロアから＞</Message>
+00125:   <Message Id="RJ_CashChangerRecover">釣銭機回収</Message>
+00126:   <Message Id="RJ_OverAmount">回収庫</Message>
+00127:   <Message Id="RJ_RecoverAmount">回収金額</Message>
+00128:   <Message Id="RJ_ToStrongBox">＜金庫へ＞</Message>
+00129:   <Message Id="RJ_ToDrawer">＜ドロアへ＞</Message>
+00130:   <Message Id="RJ_ChargePointFixedTime">ﾎﾟｲﾝﾄ成立日時</Message>
+00131:   <Message Id="RJ_Payment">支払</Message>
+00132:   <Message Id="RJ_EvidenceTitle">領   収   証</Message>
+00133:   <Message Id="RJ_EvidenceSama">様</Message>
+00134:   <Message Id="RJ_EvidenceMessage1">上記正に領収しました</Message>
+00135:   <Message Id="RJ_EvidenceMessage2">(消費税等 </Message>
+00136:   <Message Id="RJ_EvidenceMessage3">円を含みます)</Message>
+00137:   <Message Id="RJ_EvidenceMessage4">※保管上のお願い</Message>
+00138:   <Message Id="RJ_EvidenceMessage5">財布等で保管戴く場合は、印刷面を内側に折って保管願います。</Message>
+00139:   <Message Id="RJ_EvidenceTaxCuttarget"></em>印 軽減税率対象商品</Message>
+00140:   <Message Id="RJ_EvidenceBorderLine"><strong><em>_</em></strong><strong><em>_</em></strong><strong></Message>
+00141:   <Message Id="RJ_EvidencePipeMessage">|</Message>
+00142:   <Message Id="RJ_EvidenceStampMsg1">印紙税申告納</Message>
+00143:   <Message Id="RJ_EvidenceStampMsg2">付につき香椎</Message>
+00144:   <Message Id="RJ_EvidenceStampMsg3">税務署承認済</Message>
+00145:   <Message Id="RJ_EvidenceDuplicateMessage"><strong><em>*</em></strong><em>  領収証（控）  </em><strong><em>*</em></strong></Message>
+00146:   <Message Id="RJ_EvidenceDuplicateReceiptNo">領収証No </Message>
+00147:   <Message Id="RJ_EvidenceDuplicateReceiptIssueNo">発行ﾚｼｰﾄNo </Message>
+00148:   <Message Id="RJ_EvidenceDuplicateTotal">領収証金額</Message>
+00149:   <Message Id="RJ_EvidenceStoreName">【取扱店舗：{0}</Message>
+00150:   <Message Id="RJ_RMTrialCouponMark">試</Message>
+00151:   <Message Id="RJ_PaymentTrialCoupon">お試し引換券</Message>
+00152:   <Message Id="RJ_PaymentDebit">デビット</Message>
+00153:   <Message Id="RJ_OrderNo">注文番号</Message>
+00154:   <Message Id="RJ_SignOut">サインアウト</Message>
+00155:   <Message Id="RJ_SignOutCalculatedCash">釣銭在高</Message>
+00156:   <Message Id="RJ_CashChangerExchangeMoney">釣銭機両替</Message>
+00157:   <Message Id="RJ_UncertainDetected">&lt;違算状態検知&gt;</Message>
+00158:   <Message Id="RJ_InputAmount">手入力金額</Message>
+00159:   <Message Id="RJ_CashIn">入金</Message>
+00160:   <Message Id="RJ_CashOut">出金</Message>
+00161:   <Message Id="RJ_EntryCalculatedCash">釣銭機在高確認</Message>
+00162:   <Message Id="RJ_EntryCalculatedCashReport">＊＊釣銭機在高確認レポート</Message>
+00163:   <Message Id="RJ_Drawer">＜ドロア＞</Message>
+00164:   <Message Id="RJ_CashChanger">＜釣銭機＞</Message>
+00165:   <Message Id="RJ_DrawerTotalt">ドロア合計</Message>
+00166:   <Message Id="RJ_CalculatedTotal">＜在高合計＞</Message>
+00167:   <Message Id="RJ_CalculatedTotalAmount">在高合計金額</Message>
+00168:   <Message Id="RJ_EntryColumn">    金種  枚数 棒金         金額</Message>
+00169:   <Message Id="RJ_NonCash">現金外在高確認</Message>
+00170:   <Message Id="RJ_NonCashReport">＊＊現金外在高確認レポート</Message>
+00171:   <Message Id="RJ_ExchangeTicket">商品券</Message>
+00172:   <Message Id="RJ_CashTicket">金券</Message>
+00173:   <Message Id="RJ_BeerTicket">ﾋﾞｰﾙ・米券</Message>
+00174:   <Message Id="RJ_BeerBarcodeTicket">ﾋﾞｰﾙ券ﾊﾞｰｺｰﾄﾞ</Message>
+00175:   <Message Id="RJ_ValueCardTotal">ﾌﾟﾘﾍﾟｲﾄﾞ計</Message>
+00176:   <Message Id="RJ_TrialCoupon">お試しｸｰﾎﾟﾝ</Message>
+00177:   <Message Id="RJ_CreditTotal">ｸﾚｼﾞｯﾄ計</Message>
+00178:   <Message Id="RJ_DebitTotal">ﾃﾞﾋﾞｯﾄ計</Message>
+00179:   <Message Id="RJ_CreditOfflineTotal">ｵﾌﾗｲﾝｸﾚｼﾞｯﾄ計</Message>
+00180:   <Message Id="RJ_PayPayTotal">QR決済(PayPay)計</Message>
+00181:   <Message Id="RJ_RakutenPayTotal">QR決済(楽天ﾍﾟｲ)計</Message>
+00182:   <Message Id="RJ_DocomoTotal">QR決済(d払い)計</Message>
+00183:   <Message Id="RJ_NonCashTotal">現金外計</Message>
+00184:   <Message Id="RJ_Counter">回</Message>
+00185:   <Message Id="RJ_Customer">客</Message>
+00186:   <Message Id="RJ_NormalVoid">＊レジマイナス＊</Message>
+00187:   <Message Id="RJ_NormalVoidTran">取引レジマイ</Message>
+00188:   <Message Id="RJ_NormalVoidTargetDate">対象取引日</Message>
+00189:   <Message Id="RJ_NormalVoidTargetPosNo">対象POS端末No.</Message>
+00190:   <Message Id="RJ_SaveMTransaction">中間取引保存</Message>
+00191:   <Message Id="RJ_SaveMTransactionReport">＊＊中間取引保存レポート</Message>
+00192:   <Message Id="RJ_MTransactionId">中間取引ID</Message>
+00193:   <Message Id="RJ_PaymentCashInput">現金(手入力)</Message>
+00194:   <Message Id="RJ_CAFISArchDebitSalesReport">[デビット口座引落確認書]</Message>
+00195:   <Message Id="RJ_CAFISArchDebitSalesMerchInfo">加盟店名</Message>
+00196:   <Message Id="RJ_CAFISArchDebitSalesTermIdentityNo">端末番号</Message>
+00197:   <Message Id="RJ_CAFISArchDebitSalesTermUniqueId">端末固有ID</Message>
+00198:   <Message Id="RJ_CAFISArchDebitSalesUseDateTime">ご利用日</Message>
+00199:   <Message Id="RJ_CAFISArchDebitSalesSlipNo">伝票番号</Message>
+00200:   <Message Id="RJ_CAFISArchDebitSalesFinancialInstitution">金融機関名</Message>
+00201:   <Message Id="RJ_CAFISArchDebitSalesAccountNo">口座番号</Message>
+00202:   <Message Id="RJ_CAFISArchDebitSalesDebitNo">引落番号</Message>
+00203:   <Message Id="RJ_CAFISArchDebitSalesCategories">商品区分</Message>
+00204:   <Message Id="RJ_CAFISArchDebitSalesAmount">金額</Message>
+00205:   <Message Id="RJ_CAFISArchDebitSalesThankYou">お買い上げありがとうございました。</Message>
+00206:   <Message Id="RJ_CAFISArchDebitSalesSalesFloor">売場：</Message>
+00207:   <Message Id="RJ_CAFISArchDebitSalesSalesStaff">係員：</Message>
+00208:   <Message Id="RJ_CAFISArchDebitSalesSalesCustomerReserve">お客様控え</Message>
+00209:   <Message Id="RJ_CAFISArchDebitSalesMerchantReserve">加盟店控え(POS接続)</Message>
+00210:   <Message Id="RJ_CAFISArchDebitSalesMsIcDivMS">(MS)</Message>
+00211:   <Message Id="RJ_CAFISArchDebitSalesTradeContentSales">売上</Message>
+00212:   <Message Id="RJ_CAFISArchDebitSalesCommunicationError1">通信エラーが発生しました。</Message>
+00213:   <Message Id="RJ_CAFISArchDebitSalesCommunicationError2">もう一度やり直してください。</Message>
+00214:   <Message Id="RJ_CAFISArchDebitSalesTradeContent">取引内容</Message>
+00215:   <Message Id="RJ_CAFISArchDebitSalesCardNo">会員No.</Message>
+00216:   <Message Id="RJ_CAFISArchDebitSalesPaymentAmount">引落金額</Message>
+00217:   <Message Id="RJ_CAFISArchDebitSummaryReport">[デビット日計リスト]</Message>
+00218:   <Message Id="RJ_CAFISArchDebitSummaryOutputDate">出力日</Message>
+00219:   <Message Id="RJ_CAFISArchDebitSummaryOutputTargetDate">日計出力対象日</Message>
+00220:   <Message Id="RJ_CAFISArchDebitSummaryClosingTime">〆時間</Message>
+00221:   <Message Id="RJ_CAFISArchDebitSummaryTermIdentityNo">端末番号</Message>
+00222:   <Message Id="RJ_CAFISArchDebitSummaryAggregateInfo">集計情報</Message>
+00223:   <Message Id="RJ_CAFISArchDebitSummaryMerchantTotal">＜＜＜加盟店合計＞＞＞</Message>
+00224:   <Message Id="RJ_CAFISArchDebitSummaryCount">件数</Message>
+00225:   <Message Id="RJ_CAFISArchDebitSummaryAmount">金額</Message>
+00226:   <Message Id="RJ_CAFISArchDebitSummaryEnd"><strong><em>END</em></strong></Message>
+00227:   <Message Id="RJ_CAFISArchDebitSummaryIncompleteReport">[デビット未完了取引リスト]</Message>
+00228:   <Message Id="RJ_CAFISArchDebitSummaryDataNotFound">印字するデータはありません。</Message>
+00229:   <Message Id="RJ_CAFISArchDebitSummaryIncompleteTransactionExist1">未完了取引があります。</Message>
+00230:   <Message Id="RJ_CAFISArchDebitSummaryIncompleteTransactionExist2">ヘルプデスクに</Message>
+00231:   <Message Id="RJ_CAFISArchDebitSummaryIncompleteTransactionExist3">お問い合わせください。</Message>
+00232:   <Message Id="RJ_CAFISArchDebitSummaryMerchantName">加盟店名</Message>
+00233:   <Message Id="RJ_CAFISArchDebitSummaryDealDateTime">端末送信日時</Message>
+00234:   <Message Id="RJ_CAFISArchDebitSummarySlipNo">伝票番号</Message>
+00235:   <Message Id="RJ_CAFISArchDebitResultCodeCOMError">COMエラー</Message>
+00236:   <Message Id="RJ_CAFISArchDebitResultCodeTimeout">タイムアウトエラー</Message>
+00237:   <Message Id="RJ_CAFISArchDebitResultCodeUnknown">不明なエラー</Message>
+00238:   <Message Id="RJ_CAFISArchDebitServiceHealthCheck">ヘルスチェック</Message>
+00239:   <Message Id="RJ_CAFISArchDebitServiceDebitSales">デビット売上</Message>
+00240:   <Message Id="RJ_CAFISArchDebitServiceDebitReget">デビット再印字</Message>
+00241:   <Message Id="RJ_CAFISArchDebitServiceStop">中止</Message>
+00242:   <Message Id="RJ_CAFISArchDebitServiceDebitSummary">デビット集計</Message>
+00243:   <Message Id="RJ_CAFISArchDebitInfox">INFOX</Message>
+00244:   <Message Id="RJ_CAFISArchDebitError">エラー</Message>
+00245:   <Message Id="RJ_CAFISArchDebitTradeDateTime">取引日時</Message>
+00246:   <Message Id="RJ_CAFISArchDebitSalesModeTraining">＊＊＊＊＊練習用伝票＊＊＊＊＊＊</Message>
+00247:   <Message Id="RJ_CAFISArchDebitSalesUnfinishedHeader"><strong><em>*</em></strong><strong><em> 店舗確認用 </em></strong><strong><em>*</em></strong></Message>
+00248:   <Message Id="RJ_StamprallyPoint">  スタンプラリーP</Message>
+00249:   <Message Id="RJ_MemberAfterAddStamprally">   (今回獲得スタンプ</Message>
+00250:   <Message Id="RJ_MemberAfterChangePoint">    今回交換ポイント</Message>
+00251:   <Message Id="RJ_RestoreAfterAddStamprally">   (復旧予定スタンプ</Message>
+00252:   <Message Id="RJ_RestoreAfterChangePoint">    復旧予定ポイント</Message>
+00253:   <Message Id="RJ_RankPoint">   (倍率P</Message>
+00254:   <Message Id="RJ_AddPoint">P</Message>
+00255:   <Message Id="RJ_DifferenceCash">過不足金</Message>
+00256:   <Message Id="RJ_AccountsReceivableMessage"><strong><em>*</em></strong><em>    店舗控え    </em><strong><em>*</em></strong></Message>
+00257:   <Message Id="RJ_PaymentCredit">クレジット</Message>
+00258:   <Message Id="RJ_EvidenceItemSpecify"><strong><em>*</em></strong><em> 領収証対象商品 </em><strong><em>*</em></strong></Message>
+00259:   <Message Id="RJ_Number">個</Message>
+00260:   <Message Id="RJ_EvidenceItemSpecifyAmount">領収証対象商品金額</Message>
+00261:   <Message Id="RJ_SalesCertificateTitle">販売証明書</Message>
+00262:   <Message Id="RJ_ItemCode">商品コード          </Message>
+00263:   <Message Id="RJ_SalesCertificateBorderLine"><strong><em>_</em></strong><strong><em>_</em></strong></strong></Message>
+00264:   <Message Id="RJ_PaymentCreditOffline">オフラインクレジット</Message>
+00265:   <Message Id="RJ_CreditReturnAmount">クレジット返金額</Message>
+00266: 
+00267:   <Message Id="RJ_PaymentCreditLAN">クレジット</Message>
+00268:   <Message Id="RJ_PaymentUnionPay">銀聯</Message>
+00269:   <Message Id="RJ_CAFISArchLANError">エラー</Message>
+00270:   <Message Id="RJ_CAFISArchLANInfox">INFOX</Message>
+00271:   <Message Id="RJ_CAFISArchLANServiceCredit">クレジット</Message>
+00272:   <Message Id="RJ_CAFISArchLANServiceEMoney">ご電子マネー</Message>
+00273:   <Message Id="RJ_CAFISArchLANServiceDailyTotal">集計</Message>
+00274:   <Message Id="RJ_CAFISArchLANServiceCheckHealth">ヘルスチェック</Message>
+00275:   <Message Id="RJ_CAFISArchLANServiceCancel">中止</Message>
+00276:   <Message Id="RJ_CAFISArchLANServiceReprintCredit">クレジット再印字</Message>
+00277:   <Message Id="RJ_CAFISArchLANServiceReprintEMoney">電子マネー再印字</Message>
+00278:   <Message Id="RJ_CAFISArchLANServiceUnionPay">銀聯</Message>
+00279:   <Message Id="RJ_CAFISArchLANServiceReprintUnionPay">銀聯再印字</Message>
+00280:   <Message Id="RJ_CAFISArchLANServiceDebit">デビット</Message>
+00281:   <Message Id="RJ_CAFISArchLANSalesModeTraining">＊＊＊＊＊練習用伝票＊＊＊＊＊＊</Message>
+00282:   <Message Id="RJ_CAFISArchLANSalesMerchInfo">加盟店</Message>
+00283:   <Message Id="RJ_CAFISArchLANSalesTermIdentityNo">端末番号</Message>
+00284:   <Message Id="RJ_CAFISArchLANSalesUseDateTime">ご利用日</Message>
+00285:    <Message Id="RJ_CAFISArchLANSalesSlipNo">伝票番号</Message>
+00286:   <Message Id="RJ_CAFISArchLANSalesOriginalTradeSlipNo">元取引伝票番号</Message>
+00287:   <Message Id="RJ_CAFISArchLANSalesPan">会員番号</Message>
+00288:   <Message Id="RJ_CAFISArchLANSalesExpDate">有効期限</Message>
+00289:   <Message Id="RJ_CAFISArchLANSalesMsIcDivMS">(MS)</Message>
+00290:   <Message Id="RJ_CAFISArchLANSalesMsIcDivIC">(IC)</Message>
+00291:   <Message Id="RJ_CAFISArchLANSalesMsIcDivMN">(MN)</Message>
+00292:   <Message Id="RJ_CAFISArchLANSalesMsIcDiv">IC/MS識別子</Message>
+00293:   <Message Id="RJ_CAFISArchLANSalesApprovalNo">承認番号</Message>
+00294:   <Message Id="RJ_CAFISArchLANSalesTradeContent">取引内容</Message>
+00295:   <Message Id="RJ_CAFISArchLANSalesTradeContentSales">売上</Message>
+00296:   <Message Id="RJ_CAFISArchLANSalesTradeContentReturn">返品</Message>
+00297:   <Message Id="RJ_CAFISArchLANSalesTradeContentVoid">取消</Message>
+00298:   <Message Id="RJ_CAFISArchLANSalesCardNo">会員No.</Message>
+00299:   <Message Id="RJ_CAFISArchLANSalesTotalAmount">合計金額</Message>
+00300:   <Message Id="RJ_CAFISArchLANSalesSignNecessity">ご署名</Message>
+00301:   <Message Id="RJ_CAFISArchLANSalesAid">AID</Message>
+00302:   <Message Id="RJ_CAFISArchLANSalesCardSeqNo">カードシーケンスNo</Message>
+00303:   <Message Id="RJ_CAFISArchLANSalesAtc">ATC</Message>
+00304:   <Message Id="RJ_CAFISArchLANSalesTc">TC</Message>
+00305:   <Message Id="RJ_CAFISArchLANSalesSalesFloor">売場：</Message>
+00306:   <Message Id="RJ_CAFISArchLANSalesStaff">係員：</Message>
+00307:   <Message Id="RJ_CAFISArchLANSalesPayDivSales">一括</Message>
+00308:   <Message Id="RJ_CAFISArchLANSalesPaymentAmount">引落金額</Message>
+00309:   <Message Id="RJ_CAFISArchLANSalesCustomerReserve">お客様控え</Message>
+00310:   <Message Id="RJ_CAFISArchLANSalesMerchantReserve">加盟店控え(POS接続)</Message>
+00311:   <Message Id="RJ_CAFISArchLANSalesUnfinishedHeader"><strong><em>*</em></strong><strong><em> 店舗確認用 </em></strong><strong><em>*</em></strong></Message>
+00312:   <Message Id="RJ_CAFISArchLANSalesCommunicationError1">通信エラーが発生しました。</Message>
+00313:   <Message Id="RJ_CAFISArchLANSalesCommunicationError2">もう一度やり直してください。</Message>
+00314:   <Message Id="RJ_CAFISArchLANSalesICCError1">ICCエラーが発生しました。</Message>
+00315:   <Message Id="RJ_CAFISArchLANSalesICCError2">もう一度やり直してください。</Message>
+00316:   <Message Id="RJ_CAFISArchLANSalesTimeout">タイムアウトエラー</Message>
+00317:   <Message Id="RJ_CAFISArchLANCreditSalesReport">[クレジット売上票] G</Message>
+00318:   <Message Id="RJ_CAFISArchLANCreditSalesPayDiv">支払区分</Message>
+00319:   <Message Id="RJ_CAFISArchLANCreditSalesDealDiv">取扱区分</Message>
+00320:   <Message Id="RJ_CAFISArchLANCreditSalesCardCorpName">カード会社名</Message>
+00321:   <Message Id="RJ_CAFISArchLANCreditSalesGoods">商品区分</Message>
+00322:   <Message Id="RJ_CAFISArchLANCreditSalesInstallmentTimes">分割回数</Message>
+00323:   <Message Id="RJ_CAFISArchLANCreditSalesPayStartMonth">支払開始月</Message>
+00324:   <Message Id="RJ_CAFISArchLANCreditSalesBonsTimes">ボーナス回数</Message>
+00325:   <Message Id="RJ_CAFISArchLANCreditSalesAmount">金額</Message>
+00326:   <Message Id="RJ_CAFISArchLANCreditSalesTaxOther">税その他金額</Message>
+00327:   <Message Id="RJ_CAFISArchLANCreditSalesKanaName">カナ氏名</Message>
+00328:   <Message Id="RJ_CAFISArchLANCreditSalesBrandName">ブランド名</Message>
+00329:   <Message Id="RJ_CAFISArchLANCreditSalesArc">ARC</Message><br />
+00330:   <Message Id="RJ_CAFISArchLANUnionPaySalesReport">[中国銀聯カード]</Message>
+00331:   <Message Id="RJ_CAFISArchLANUnionPaySalesFinanInstName">金融機関名</Message>
+00332:   <Message Id="RJ_CAFISArchLANUnionPaySalesCupNo">銀聯番号</Message>
+00333:   <Message Id="RJ_CAFISArchLANUnionPaySalesCupSendTime">銀聯送信日時</Message>
+00334:   <Message Id="RJ_CAFISArchLANUnionPaySalesUn">UN</Message>
+00335:   <Message Id="RJ_CAFISArchLANUnionPaySalesAip">AIP</Message>
+00336:   <Message Id="RJ_CAFISArchLANDailyTotalReport">[{0}日計リスト]</Message>
+00337:   <Message Id="RJ_CAFISArchLANDailyTotalSummaryReport">[{0}リスト]</Message>
+00338:   <Message Id="RJ_CAFISArchLANDailyTotalIncompleteReport">[{0}未完了リスト]</Message>
+00339:   <Message Id="RJ_CAFISArchLANDailyTotalOutputDate">出力日</Message>
+00340:   <Message Id="RJ_CAFISArchLANDailyTotalOutputTargetDate">日計出力対象日</Message>
+00341:   <Message Id="RJ_CAFISArchLANDailyTotalClosingTime">〆時間</Message>
+00342:   <Message Id="RJ_CAFISArchLANDailyTotalDataNotFound">印字するデータはありません。</Message>
+00343:   <Message Id="RJ_CAFISArchLANDailyTotalTermIdentityNo">端末番号</Message>
+00344:   <Message Id="RJ_CAFISArchLANDailyTotalDealDateTime">端末送信日時</Message>
+00345:   <Message Id="RJ_CAFISArchLANDailyTotalMerchantTotal">＜＜＜加盟店合計＞＞＞</Message>
+00346:   <Message Id="RJ_CAFISArchLANDailyTotalCount">件数</Message>
+00347:   <Message Id="RJ_CAFISArchLANDailyTotalAmount">金額</Message>
+00348:   <Message Id="RJ_CAFISArchLANDailyTotalEnd"><strong><em>END</em></strong></Message>
+00349:   <Message Id="RJ_CAFISArchLANDailyTotalIncompleteTransactionExist1">未完了取引があります。</Message>
+00350:   <Message Id="RJ_CAFISArchLANDailyTotalIncompleteTransactionExist2">ヘルプデスクに</Message>
+00351:   <Message Id="RJ_CAFISArchLANDailyTotalIncompleteTransactionExist3">お問い合わせください。</Message>
+00352:   <Message Id="RJ_CAFISArchLANDailyTotalMerchantName">加盟店名</Message>
+00353:   <Message Id="RJ_CAFISArchLANDailyTotalSlipNo">伝票番号</Message>
+00354:   <Message Id="RJ_PaymentPayPay">QR決済(PayPay)</Message>
+00355:   <Message Id="RJ_PaymentRakutenPay">QR決済(楽天ﾍﾟｲ)</Message>
+00356:   <Message Id="RJ_PaymentDocomo">QR決済(d払い)</Message>
+00357:   <Message Id="RJ_CloseDailyBusinessClount">精算回数</Message>
+00358:   <Message Id="RJ_RediMinusTran">取引ﾚｼﾞﾏｲ</Message>
+00359:   <Message Id="RJ_ReturnTran">返品</Message>
+00360:   <Message Id="RJ_TaxMarkReduced"><em></Message>
+00361:   <Message Id="RJ_VoidPrepaidCharge">ﾌﾟﾘｶﾁｬ取消</Message>
+00362:   <Message Id="RJ_DutyFreeDetailMessage"></em><strong><em>*</em></strong><strong><em>*免税明細</em></strong><strong><em>*</em></strong><strong></Message>
+00363:   <Message Id="RJ_DutyFreeTotalMessage"></strong><strong><em>*</em></strong><strong><em>免税合計</em></strong><strong><em>*</em></strong>**</Message>
+00364:   <Message Id="RJ_DutyFreeGeneralDetailTitle">【一般物品】--------------------</Message>
+00365:   <Message Id="RJ_DutyFreeConsumableDetailTitle">【消耗品】----------------------</Message>
+00366:   <Message Id="RJ_DutyFreeNonExemptDetailTitle">【免税対象外】-------------------</Message>
+00367:   <Message Id="RJ_DutyFreeGeneralTotalTitle">一般物品</Message>
+00368:   <Message Id="RJ_DutyFreeConsumableTotalTitle">消耗品</Message>
+00369:   <Message Id="RJ_DutyFreeNonExemptTotalTitle">免税対象外</Message>
+00370:   <Message Id="RJ_DutyFreeConsumableMessage">消耗品</Message>
+00371:   <Message Id="RJ_DutyFreeNonExemptMessage">免税対象外</Message>
+00372:   <Message Id="RJ_DutyFreeQuantityMark">@</Message>
+00373:   <Message Id="RJ_DutyFreeTotalAmount">総額</Message>
+00374:   <Message Id="RJ_DutyFreeTaxMarkReducedExcluded">ｿ </Message>
+00375:   <Message Id="RJ_DutyFreeTaxMarkReducedIncluded">ｳ </Message>
+00376:   <Message Id="RJ_PaymentAlipay">Alipay</Message>
+00377:   <Message Id="RJ_PaymentWeChatPay">WeChat Pay</Message>
+00378:   <Message Id="RJ_AlipayTotal">アリペイ計</Message>
+00379:   <Message Id="RJ_WeChatPayTotal">ｳｨﾁｬｯﾄペイ計</Message>
+00380:   <Message Id="RJ_DrugOperator">医藥責No</Message>
+00381: </Messages></p>
+<p>END ORIGINAL PROMPT</p></div></div></div>
+<div class="message assistant" id="msg-2026-07-09T06-17-48-050Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2026-07-09T06-17-48-050Z" class="timestamp-link"><time datetime="2026-07-09T06:17:48.050Z" data-timestamp="2026-07-09T06:17:48.050Z">2026-07-09T06:17:48.050Z</time></a></div><div class="message-content">
+<div class="thinking"><div class="thinking-label">Thinking</div><p>The user wants me to generate "文件级源码讲解笔记" (file-level source code explanation notes) for batch_020, which contains 4 XML configuration files. Let me analyze each file carefully and produce the requested output.</p>
+<p>Let me go through each file:</p>
+<ol>
+<li><strong>ControllerLogicService.xml</strong> - A plugin configuration file that defines which plugins to start up for the POS4ULogicService.</li>
+<li><strong>Message.xml</strong> - A large message/error code definition file for POS4ULogicService.</li>
+<li><strong>MessageRJ.xml</strong> - Receipt journal message definitions.</li>
+<li><strong>MessageRJ_FC.xml</strong> - Another version of receipt journal messages (FC likely stands for "Food Court" or similar variant).</li>
+</ol>
+<p>I need to analyze each file carefully and produce detailed notes. Let me write it all out.</p></div></div></div>
+<div class="message assistant" id="msg-2026-07-09T06-19-05-529Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2026-07-09T06-19-05-529Z" class="timestamp-link"><time datetime="2026-07-09T06:19:05.529Z" data-timestamp="2026-07-09T06:19:05.529Z">2026-07-09T06:19:05.529Z</time></a></div><div class="message-content">
+<div class="assistant-text"><h1>文件级源码笔记：config_config_settings</h1>
+<h2>Batch 信息</h2>
+<ul>
+<li>Batch ID: batch_020</li>
+<li>Batch Name: config_config_settings</li>
+<li>Module: config</li>
+<li>Purpose: 解释项目配置、构建配置、依赖配置和运行时配置加载线索</li>
+</ul>
+<hr />
+<h2>文件：Source/POS4ULogicService/Settings/ControllerLogicService.xml</h2>
+<h3>1. 文件定位</h3>
+<p>本项目是 POS4ULogicService 的 <strong>插件启动配置</strong> 文件。它定义了服务启动时需要加载的插件列表，以及它们的生命周期管理方式（是否单例）。该文件是服务启动阶段的入口导向配置文件，运行时由 IoC/插件加载框架读取，决定哪些管理器（Manager）和控制器（Controller）被实例化并注入到容器中。</p>
+<p>属于 <code>POS4ULogicService</code> 模块的 <code>Settings</code> 子目录，与 <code>Message.xml</code>、<code>MessageRJ.xml</code> 等运行时资源文件同级。</p>
+<h3>2. 对外暴露内容</h3>
+<p>该文件不是代码文件，不导出 class/function/API，它是一个 XML 配置数据源，由框架在启动时读取。具体暴露内容如下：</p>
+<ul>
+<li><strong>根元素</strong> <code>&lt;Controller&gt;</code>（第 2 行）</li>
+<li>定义整个插件的容器上下文</li>
+<li><strong><code>&lt;Startup&gt;</code> 块</strong>（第 3–23 行）</li>
+<li>定义启动阶段按顺序加载的插件清单</li>
+<li>每一项 <code>&lt;Plugin&gt;</code> 通过 <code>Id</code> 属性指定插件名，<code>IsSingleton</code> 指定生命周期</li>
+<li><strong><code>&lt;Exit&gt;</code> 块</strong>（第 24–25 行）</li>
+<li>当前为空，预留退出时的清理逻辑</li>
+</ul>
+<p>各插件条目（按出现顺序）：</p>
+<table>
+<thead>
+<tr>
+<th>Id</th>
+<th>行号</th>
+<th>IsSingleton</th>
+<th>用途推断</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>InitAccessor</td>
+<td>4</td>
+<td>无（默认false）</td>
+<td>初始化数据访问层</td>
+</tr>
+<tr>
+<td>CommandController</td>
+<td>5–6</td>
+<td>True</td>
+<td>命令路由控制器</td>
+</tr>
+<tr>
+<td>RJManager</td>
+<td>7–8</td>
+<td>True</td>
+<td>收据/日志管理器</td>
+</tr>
+<tr>
+<td>DiscountManager</td>
+<td>9–10</td>
+<td>True</td>
+<td>折扣管理器</td>
+</tr>
+<tr>
+<td>TaxManager</td>
+<td>11–12</td>
+<td>True</td>
+<td>税管理器</td>
+</tr>
+<tr>
+<td>PaymentManager</td>
+<td>13–14</td>
+<td>True</td>
+<td>支付管理器</td>
+</tr>
+<tr>
+<td>InitCheckDigitManager</td>
+<td>15</td>
+<td>无（默认false）</td>
+<td>校验位初始化管理器</td>
+</tr>
+<tr>
+<td>InitRoundManager</td>
+<td>16</td>
+<td>无（默认false）</td>
+<td>舍入规则初始化管理器</td>
+</tr>
+<tr>
+<td>DeviceManager</td>
+<td>17–18</td>
+<td>True</td>
+<td>外部设备管理器（钓銭机、打印机等）</td>
+</tr>
+<tr>
+<td>PointManager</td>
+<td>19–20</td>
+<td>True</td>
+<td>积分管理器</td>
+</tr>
+<tr>
+<td>SessionManager</td>
+<td>21–22</td>
+<td>True</td>
+<td>会话管理器</td>
+</tr>
+</tbody>
+</table>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p><strong>启动顺序</strong>（第 3–23 行）：</p>
+<ol>
+<li>框架从 XML 根 <code>&lt;Controller&gt;</code> 开始解析。</li>
+<li>读取 <code>&lt;Startup&gt;</code> 内的所有 <code>&lt;Plugin&gt;</code> 子元素。</li>
+<li>按文档顺序（从上到下）依次实例化每个 <code>Plugin</code>。顺序就是初始化顺序，因此 <code>InitAccessor</code>（数据访问）最先加载，<code>SessionManager</code> 最后加载。</li>
+<li>带有 <code>IsSingleton="True"</code> 的插件（如 <code>CommandController</code>、<code>RJManager</code> 等共 8 个）在整个服务生命周期中只有一个实例；没有该属性或为 <code>False</code> 的（<code>InitAccessor</code>、<code>InitCheckDigitManager</code>、<code>InitRoundManager</code>）每次请求可能新建实例。</li>
+</ol>
+<p><strong>退出阶段</strong>（第 24–25 行）：
+- <code>&lt;Exit&gt;</code> 当前为空节点，表示目前没有在退出时需要反注册或清理的逻辑。如需扩展，后续可在此添加 <code>&lt;Plugin&gt;</code> 引用。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>该文件不是代码文件，不包含函数或类。但以下概念对理解启动流程至关重要：</p>
+<ul>
+<li><strong>Plugin 概念</strong>：每个 <code>&lt;Plugin&gt;</code> 代表一个插件（组件/模块），由框架根据 <code>Id</code> 查找对应的实现类并实例化。<code>Id</code> 与代码中的类名或注册名存在映射关系，该映射在何处定义需要结合其他文件确认。</li>
+<li><strong>IsSingleton 语义</strong>：<code>True</code> = 单例（容器内只有一个实例）；缺失或 <code>False</code> = 瞬态（每次请求新建实例）。</li>
+</ul>
+<h3>5. 依赖关系</h3>
+<ul>
+<li><strong>依赖框架</strong>：需要一个能解析 <code>&lt;Controller&gt;/&lt;Startup&gt;/&lt;Plugin&gt;</code> 结构的 IoC 容器或插件加载器。该加载器的实现不在本文件，需要结合其他文件确认（推测在 <code>Source/POS4ULogicService</code> 的某个入口代码中）。</li>
+<li><strong>依赖 <code>Id</code> 到类的映射</strong>：每个 <code>Id</code>（如 <code>"InitAccessor"</code>）必须对应一个实现了插件接口的类。映射定义位置需要结合其他文件确认。</li>
+<li><strong>被依赖方</strong>：该文件是启动流程的控制点，因此被所有插件对应的模块（command、discount、tax、payment、device、point 等）反向依赖。</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<p>当前文件没有显式错误处理逻辑。它是一个声明式配置文件，错误情况由消费它的框架负责：
+- 如果某个 <code>Id</code> 找不到对应的插件类，框架应抛出启动异常。
+- 如果 XML 格式错误（如缺少闭合标签），XML 解析器应报错。
+- <code>&lt;Exit&gt;</code> 为空意味着退出时不做清理，但若后续添加了插件引用而未正确处理，可能造成资源泄漏。
+- 所有错误处理细节需要结合框架实现代码确认。</p>
+<h3>7. 测试相关</h3>
+<p>当前输入中没有包含对该文件的测试。建议的测试方式：
+- <strong>单元测试</strong>：模拟配置文件解析器，验证 <code>Startup</code> 中的插件顺序和 <code>IsSingleton</code> 属性被正确读取。
+- <strong>集成测试</strong>：启动一个最小化的 POS4ULogicService 实例，验证根据此配置启动的插件数量和顺序是否符合预期。
+- <strong>覆盖率关注点</strong>：每个 <code>Id</code> 是否都有对应的实现类；<code>IsSingleton</code> 语义是否被正确执行。</p>
+<h3>8. 新人阅读建议</h3>
+<ol>
+<li><strong>先看整体结构</strong>：理解 <code>&lt;Controller&gt;</code> → <code>&lt;Startup&gt;</code> 是"声明我要启动什么"的模式。</li>
+<li><strong>关注插件顺序</strong>：<code>InitAccessor</code> 最优先，<code>SessionManager</code> 最后——因为数据访问层是一切上层管理器的前提。</li>
+<li><strong>对比 Singleton vs 非 Singleton</strong>：8 个 Singleton 是长期存活的业务管理器；3 个非 Singleton 是初始化任务，跑完即丢。</li>
+<li><strong>注意 <code>&lt;Exit&gt;</code> 为空</strong>：这意味着退出时没有显式清理钩子，需要结合框架确认如何确保资源释放。</li>
+<li><strong>结合代码定位映射关系</strong>：找到框架读取此配置的代码，以及 <code>Id</code> 到类的映射机制，是理解整个启动流程的关键。</li>
+</ol>
+<h3>9. 不确定点</h3>
+<ul>
+<li><strong>插件加载框架的实现代码位置</strong>：需要结合框架入口文件确认 <code>ControllerLogicService.xml</code> 被哪个类读取、如何解析、如何实例化 <code>Plugin</code>。</li>
+<li><strong><code>Id</code> 到类的映射规则</strong>：<code>Id</code> 是类名（如 <code>InitAccessor</code> → <code>InitAccessor</code> 类）还是需要额外的注册表？映射位置未知。</li>
+<li><strong><code>InitAccessor</code>、<code>InitCheckDigitManager</code>、<code>InitRoundManager</code></strong> 这三个非 Singleton 插件，为何不需要保持单例？它们是否在设计上是一次性初始化的"启动即销毁"任务？</li>
+<li><strong><code>&lt;Exit&gt;</code> 为何为空</strong>：是不是由框架自动处理 Dispose？还是尚未实现退出清理需求？</li>
+<li><strong>本项目的插件机制是否基于 .NET 的 MEF（Managed Extensibility Framework）或其他自定义 IoC 容器？</strong></li>
+</ul>
+<hr />
+<h2>文件：Source/POS4ULogicService/Settings/Message.xml</h2>
+<h3>1. 文件定位</h3>
+<p>这是 POS4ULogicService 的 <strong>消息/错误码国际化资源文件</strong>。它定义了整个 POS 逻辑层在运行时可能抛出的所有用户可见消息，涵盖错误信息、警告、确认提示和 UI 文本。该文件以 <code>Id</code> 为键、日文消息文本为值，通过消息查找框架消费。</p>
+<p>属于 <code>POS4ULogicService</code> 模块的 <code>Settings</code> 子目录，是运行时消息加载的关键配置之一。</p>
+<h3>2. 对外暴露内容</h3>
+<p>该文件是一个 XML 消息资源文件，不导出 class/function。它定义了一个 <code>&lt;Messages&gt;</code> 根元素（第 2 行），包含 <strong>840+</strong> 个 <code>&lt;Message&gt;</code> 条目。每个条目有三部分：
+- <code>Id</code>：消息标识符（如 <code>"ErrorUnknown"</code>），供代码逻辑引用。
+- 可选的 <code>Code</code>：错误码字符串（如 <code>"1884"</code>、<code>"E0001"</code>、<code>"W1896"</code>），用于分类和展示。前缀 <code>E</code> = Error，<code>W</code> = Warning。
+- 元素文本：实际的用户可见日语消息，支持 <code>{0}</code>、<code>{1}</code> 等格式化占位符。</p>
+<p>消息按功能域可划分为以下类别（行号仅列代表条）：</p>
+<table>
+<thead>
+<tr>
+<th>类别</th>
+<th>示例 Id</th>
+<th>行号范围（约）</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>系统错误</td>
+<td>ErrorUnknown</td>
+<td>3–4</td>
+<td>通用系统错误</td>
+</tr>
+<tr>
+<td>事务令牌</td>
+<td>ErrorTransactionToken</td>
+<td>5–6</td>
+<td>事务令牌校验失败</td>
+</tr>
+<tr>
+<td>商品相关</td>
+<td>ErrorItemNotFound 等</td>
+<td>10–51</td>
+<td>商品查询、数量、价格边界</td>
+</tr>
+<tr>
+<td>折扣相关</td>
+<td>ErrorZeroDiscount 等</td>
+<td>52–53</td>
+<td>折扣操作限制</td>
+</tr>
+<tr>
+<td>支付相关</td>
+<td>ErrorPayment 等</td>
+<td>54–55</td>
+<td>支付内容错误</td>
+</tr>
+<tr>
+<td>OTC 医药品</td>
+<td>ErrorOTCDrugSales</td>
+<td>60–63</td>
+<td>药品销售限制</td>
+</tr>
+<tr>
+<td>会员/积分</td>
+<td>ErrorMemberPointScaned... 等</td>
+<td>68–69, 110–171</td>
+<td>积分服务器通信与状态</td>
+</tr>
+<tr>
+<td>电子マネー</td>
+<td>ErrorValueCardOffline 等</td>
+<td>98–109, 122–131</td>
+<td>电子货币服务器状态</td>
+</tr>
+<tr>
+<td>CRM 积分</td>
+<td>WarningCRMPoint... 等</td>
+<td>136–139</td>
+<td>CRM 积分服务器</td>
+</tr>
+<tr>
+<td>钓銭機</td>
+<td>ErrorCashChanger... 等</td>
+<td>170–227, 240–307</td>
+<td>钓銭机全部生命周期操作</td>
+</tr>
+<tr>
+<td>デビット</td>
+<td>ErrorDebit... 等</td>
+<td>272–357</td>
+<td>借记卡支付错误</td>
+</tr>
+<tr>
+<td>デバイス初期化</td>
+<td>ErrorMSRInit ～ ErrorPosKeyboardInit</td>
+<td>358–377, 458–462</td>
+<td>各外部设备初始化失败</td>
+</tr>
+<tr>
+<td>UI 标签</td>
+<td>LDSP_<em>、Text</em>、Button<em>、Title</em></td>
+<td>542–632, 700–841</td>
+<td>画面显示用文本</td>
+</tr>
+<tr>
+<td>操作限制</td>
+<td>OperationLimited</td>
+<td>396–397</td>
+<td>功能未授权</td>
+</tr>
+<tr>
+<td>参数验证</td>
+<td>ErrorInputNeed 等</td>
+<td>408–411</td>
+<td>输入参数验证</td>
+</tr>
+<tr>
+<td>权限</td>
+<td>ErrorLoginFailure 等</td>
+<td>418–421</td>
+<td>认证失败</td>
+</tr>
+<tr>
+<td>印字/レシート</td>
+<td>ErrorPrintDataNotExists 等</td>
+<td>208–211</td>
+<td>打印相关</td>
+</tr>
+<tr>
+<td>精算/点検</td>
+<td>ErrorSummaryNotCompleted 等</td>
+<td>182–183</td>
+<td>日结相关</td>
+</tr>
+</tbody>
+</table>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>文件本身是静态数据，无执行逻辑。运行时行为：
+1. 代码根据业务场景构造消息 Id（如 <code>"ErrorItemNotFound"</code>）。
+2. 消息查询框架读取 <code>Message.xml</code>，根据 <code>Id</code> 定位 <code>&lt;Message&gt;</code> 元素。
+3. 返回元素文本，并代入 <code>{0}</code>、<code>{1}</code> 等占位符（如第 33 行 <code>"PaymentCode = {0}"</code>、第 79 行 <code>"StoreCode:{0},TerminalNo:{1}"</code>）。
+4. 如果消息定义了 <code>Code</code> 属性，该 Code 会被用于业务判断或日志分类。Code 前缀区分严重程度：<code>E</code>=Error（红色/终止），<code>W</code>=Warning（黄色/可继续），无前缀=Informational。</p>
+<p><strong>消息命名约定</strong>：
+- <code>Error*</code>：错误消息（业务阻止），如 <code>ErrorItemNotFound</code>（第 10–11 行）。
+- <code>Warning*</code>：警告消息（操作可继续但有风险），如 <code>WarningOTCDrugSales</code>（第 62–63 行）。
+- <code>Notice*</code> / <code>Info*</code> / <code>Confirm*</code>：确认对话框/提示，如 <code>NoticeCancelTransaction</code>（第 228–229 行）。
+- <code>Text*</code> / <code>LDSP_*</code> / <code>RJ_*</code> / <code>Button*</code> / <code>Title*</code>：UI 标签文本，如 <code>TextDate</code>（第 542 行）、<code>LDSP_SubTotal</code>（第 612 行）。
+- <code>ProcessName*</code>：后台处理名称（第 470–512 行），用于进度显示。
+- <code>SyncResult*</code> / <code>Guidance*</code>：同步/引导文本（第 489–519 行）。
+- <code>CashChanger*</code> / <code>Device*</code> / <code>CAFISArch*</code>：设备相关消息。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>该文件不是代码文件。但以下元素对理解消息系统至关重要：</p>
+<ul>
+<li><strong><code>Id</code> 属性</strong>：每个 <code>&lt;Message&gt;</code> 的唯一标识符，与代码中的消息枚举或常量对应。例如 <code>"ErrorItemNotFound"</code> 在代码中被引用时，框架查询此文件取文本。</li>
+<li><strong><code>Code</code> 属性</strong>：错误码字符串，用于分类、日志、或前端展示。不同消息可能共享相同 Code（如第 14–15 行的 <code>ErrorInvalidBarcode</code> 和第 16–17 行的 <code>ErrorInputCodeByCheckDigit</code> 都有 <code>Code="0007"</code>），说明 Code 不一定唯一，更可能是面向用户的分组码。</li>
+<li><strong>格式化占位符 <code>{0}</code></strong>：在运行时被动态参数替换。如第 33 行 <code>"PaymentCode = {0}"</code>、第 73 行 <code>"ポイント残高:{0}"</code>。</li>
+</ul>
+<h3>5. 依赖关系</h3>
+<ul>
+<li><strong>被代码依赖</strong>：所有业务逻辑抛出异常或显示消息时，都通过 <code>Id</code> 引用此文件中的消息。</li>
+<li><strong>依赖消息加载框架</strong>：需要一个 XML 消息查询器，能够按 <code>Id</code> 读取文本、支持参数格式化。该框架的实现位置需要结合其他文件确认。</li>
+<li><strong>可能依赖 MessageRJ.xml/MessageRJ_FC.xml</strong>：<code>Message.xml</code> 与 <code>MessageRJ*.xml</code> 职责不同：前者是逻辑层错误/提示消息；后者是收据打印用文本。</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<p>错误处理在文件外部，由消费此文件的框架负责：
+- <strong>Id 不命中</strong>：如果代码引用了此处不存在的 <code>Id</code>，可能需要结合其他文件确认框架是否降级为默认消息或抛出未处理异常。
+- <strong>Code 重复</strong>：多个 <code>Message</code> 共用同一 Code（如 <code>Code="0007"</code> 被 3 个消息使用）——这是设计意图（面向用户显示相同的错误提示），但 Code 不应该作为唯一业务逻辑键使用。
+- <strong><code>Code</code> 缺失</strong>：部分 <code>&lt;Message&gt;</code> 没有 <code>Code</code>（如第 267 行 <code>ErrorNeedRecoverRecoveryBox</code>、第 424 行 <code>ErrorNonBarcodeItemNotFound</code>），表示这些消息不需要错误码分类。
+- <strong>格式化占位符缺失参数</strong>：如果调用方未提供 <code>{0}</code> 参数，消息会显示原始 <code>{0}</code> 字符串，属于调用方 bug。
+- <strong><code>&lt;Message&gt;</code> 内部含换行符 <code>&amp;#xa;</code></strong>：用于控制消息在显示时的换行（如第 73 行、第 227 行），如果前端框架不解析 <code>&amp;#xa;</code>，可能显示异常。</p>
+<h3>7. 测试相关</h3>
+<p>当前输入中没有包含对该文件的测试。建议：
+- <strong>覆盖测试</strong>：验证所有代码中引用的 <code>Id</code> 都在此文件中存在定义。
+- <strong>参数完整性测试</strong>：对包含 <code>{0}</code>、<code>{1}</code> 的消息，验证调用方是否在每种场景下都传了正确数量和类型的参数。
+- <strong>消息显示测试</strong>：对有 <code>&amp;#xa;</code> 的消息，验证显示时是否正确换行。
+- <strong>错误码一致性测试</strong>：验证 <code>Code</code> 前缀与实际用途匹配（Error 类必须有 <code>E</code> 或纯数字，Warning 类必须是 <code>W</code> 开头）。</p>
+<h3>8. 新人阅读建议</h3>
+<ol>
+<li><strong>不要逐行阅读</strong>：该文件有 840+ 行，逐行读没有意义。</li>
+<li><strong>先理解分类</strong>：通过 Id 前缀（<code>Error*</code>、<code>Warning*</code>、<code>Notice*</code>、<code>Text*</code>、<code>LDSP_*</code> 等）了解消息类别。</li>
+<li><strong>重点关注业务限制类消息</strong>：<code>ErrorItemQuantityMinUnder</code>（第 42–43 行）、<code>ErrorItemPriceMaxOver</code>（第 48–49 行）等，它们直接反映了业务规则边界值。</li>
+<li><strong>注意设备相关消息</strong>：<code>ErrorCashChanger*</code>（第 170–307 行）、<code>ErrorDebit*</code>（第 272–357 行）、<code>ErrorPOSPrinter*</code>（第 364–365 行、第 526–530 行）等，反映了项目对接的外部设备种类。</li>
+<li><strong>Code 相同≠消息相同</strong>：<code>ErrorInvalidBarcode</code>（第 14–15 行）和 <code>ErrorTrainingCardInProduction</code>（第 88–89 行）共享 <code>Code="0007"</code> 但消息不同，说明 Code 是客户端展示的分类码，不是业务逻辑键。</li>
+<li><strong>理解格式化参数</strong>：遇到 <code>{0}</code> 时，关注它在运行时被什么值替换，这能帮助理解参数传递链路。</li>
+</ol>
+<h3>9. 不确定点</h3>
+<ul>
+<li><strong>消息加载框架的实现位置</strong>：需要结合其他文件确认 <code>Message.xml</code> 被哪个类加载、如何缓存、是否支持多语言切换。</li>
+<li><strong>Id 到枚举/常量的映射</strong>：代码中引用消息 Id 时，是通过字符串常量、枚举，还是某个代码生成器生成的类？定义位置需要确认。</li>
+<li><strong><code>Code</code> 的完整分类规则</strong>：<code>E</code>/<code>W</code> 前缀何时必须使用，纯数字（如 <code>1884</code>）和带字母前缀（如 <code>E0001</code>）的 Code 是否属于不同系统？</li>
+<li><strong><code>MessageRJ.xml</code> 和 <code>MessageRJ_FC.xml</code> 是否也被同一个加载框架消费</strong>：如果是，框架如何区分哪个 Id 属于哪个文件？</li>
+<li><strong><code>Message.xml</code> 中没有但能在 MessageRJ*.xml 中找到的同名 Id</strong>：如 <code>RJ_*</code> 前缀的消息只出现在 MessageRJ 文件中，说明此文件按职责分片。</li>
+</ul>
+<hr />
+<h2>文件：Source/POS4ULogicService/Settings/MessageRJ.xml</h2>
+<h3>1. 文件定位</h3>
+<p>这是 POS4ULogicService 的 <strong>收据/日志印字消息资源文件</strong>。RJ 很可能代表 "Receipt Journal"（收据日志/レシートジャーナル）。它与 <code>Message.xml</code> 职责分离：<code>Message.xml</code> 管错误/提示/UI；<code>MessageRJ.xml</code> 管打印输出到收据或日志上的固定文本标签。</p>
+<p>属于 <code>POS4ULogicService</code> 模块的 <code>Settings</code> 子目录，是收据打印模块的配套配置。</p>
+<h3>2. 对外暴露内容</h3>
+<p>该文件是一个 XML 消息资源文件，定义 <code>&lt;Messages&gt;</code> 根元素（第 2 行），包含约 <strong>382 行</strong> 的 <code>&lt;Message&gt;</code> 条目。</p>
+<p>所有 Id 都以 <code>RJ_</code> 为前缀（Receipt Journal 的缩写），按打印内容的用途可分类如下：</p>
+<table>
+<thead>
+<tr>
+<th>类别</th>
+<th>示例 Id</th>
+<th>行号</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>终端/操作员标识</td>
+<td>RJ_TerminalNo, RJ_Operator</td>
+<td>3–6</td>
+<td>收据头部标签</td>
+</tr>
+<tr>
+<td>税标识</td>
+<td>RJ_TaxMarkReducedExcluded, RJ_TaxMarkIncluded 等</td>
+<td>10–14</td>
+<td>税率标识</td>
+</tr>
+<tr>
+<td>金额/小计/合计</td>
+<td>RJ_SubTotal, RJ_Total, RJ_TotalAmount</td>
+<td>18–19, 27</td>
+<td>收据金额标签</td>
+</tr>
+<tr>
+<td>折扣/优惠券</td>
+<td>RJ_DiscountAmount, RJ_FanCouponDiscountAmount 等</td>
+<td>34–35</td>
+<td>折扣行标签</td>
+</tr>
+<tr>
+<td>プリカ/电子マネー</td>
+<td>RJ_ValueCardNo, RJ_ValueApprovalNumber 等</td>
+<td>41–55</td>
+<td>预付费卡信息标签</td>
+</tr>
+<tr>
+<td>ポイント</td>
+<td>RJ_PointCardNo, RJ_MemberPoint 等</td>
+<td>56–95</td>
+<td>积分信息标签</td>
+</tr>
+<tr>
+<td>領収証</td>
+<td>RJ_EvidenceTitle, RJ_EvidenceSama 等</td>
+<td>133–150</td>
+<td>收据凭证格式文本</td>
+</tr>
+<tr>
+<td>釣銭機在高</td>
+<td>RJ_CashChangerCalculated, RJ_CalculatedAmount 等</td>
+<td>104–130, 156–169</td>
+<td>钓銭机点检/精算格式</td>
+</tr>
+<tr>
+<td>現金外</td>
+<td>RJ_ExchangeTicket, RJ_CashTicket 等</td>
+<td>171–174</td>
+<td>非现金支付方式</td>
+</tr>
+<tr>
+<td>QR/デビット/クレジット</td>
+<td>RJ_PaymentPayPay, RJ_PaymentDebit, RJ_PaymentCredit 等</td>
+<td>150–183, 257–265</td>
+<td>各支付方式名称</td>
+</tr>
+<tr>
+<td>CAFIS Arch デビット</td>
+<td>RJ_CAFISArchDebitSalesReport 等</td>
+<td>195–248</td>
+<td>借记卡交易明细格式</td>
+</tr>
+<tr>
+<td>CAFIS Arch LAN</td>
+<td>RJ_CAFISArchLAN* 系列</td>
+<td>268–356</td>
+<td>CAFIS LAN 端末印刷格式</td>
+</tr>
+<tr>
+<td>免税</td>
+<td>RJ_DutyFree* 系列</td>
+<td>364–376</td>
+<td>免税购物明细格式</td>
+</tr>
+<tr>
+<td>雑多</td>
+<td>RJ_OrderNo, RJ_DrugOperator, RJ_PaymentAlipay 等</td>
+<td>154, 377–382</td>
+<td>其他印刷标签</td>
+</tr>
+</tbody>
+</table>
+<p>与 <code>Message.xml</code> 的关键差异：
+- <code>Message.xml</code> 的消息含有完整句子、<code>&amp;#xa;</code> 换行、面向用户的自然语言。
+- <code>MessageRJ.xml</code> 的消息多是简短标签（2–4 个半角/全角字符），用于收据上空间受限的位置。</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>该文件是静态数据，运行时行为：
+1. 收据/日志打印组件在处理完业务逻辑后，调用打印格式化模块。
+2. 格式化模块根据打印内容类型，用 <code>RJ_*</code> 类型的 <code>Id</code> 查询 <code>MessageRJ.xml</code>，取得对应标签文本。
+3. 标签文本被塞入预定格式的收据行中输出。
+4. 部分消息包含 <code>{0}</code>、<code>{1}</code> 占位符（如第 78 行 <code>"{0}{1}({2}個)"</code>、第 92 行 <code>"売変 (旧単価：{0})"</code>），在运行时被具体数值替换。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>不是代码文件。关键元素：</p>
+<ul>
+<li><strong><code>Id</code> 命名空间 <code>RJ_</code></strong>：整个文件的消息都带 <code>RJ_</code> 前缀，与 <code>Message.xml</code> 的命名空间天然隔离，避免 Id 冲突。</li>
+<li><strong><code>RJ_TaxMark*</code> 系列（第 10–14 行）</strong>：定义税率显示标记，<code>*Excluded</code> = 外税，<code>*Included</code> = 内税，<code>*Reduced*</code> = 轻减税率，<code>*Exempt</code> = 非课税。这是日本消费税制度在 POS 程序的直接体现。</li>
+<li><strong><code>RJ_CAFISArch*</code> 系列（第 195–355 行）</strong>：CAFIS Arch 是日本的借记卡/信用卡支付网络协议。这部分暴露了项目对接的支付基础设施。</li>
+</ul>
+<h3>5. 依赖关系</h3>
+<ul>
+<li><strong>被打印格式化模块依赖</strong>：所有 <code>RJ_*</code> 消息由收据/日志打印代码引用。</li>
+<li><strong>与 <code>Message.xml</code> 同目录但职责分离</strong>：打印模块应独立读取此文件，而非从 <code>Message.xml</code> 查找 <code>RJ_*</code> 消息。</li>
+<li><strong><code>MessageRJ_FC.xml</code> 与此文件高度相似</strong>：可能是同一个打印框架的不同变体（FC 可能代表 Food Court 或其他终端模式），需要结合其他文件确认。</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li><strong>Id 缺失</strong>：如果打印代码引用了不在 <code>MessageRJ.xml</code> 中的 <code>RJ_*</code> Id，框架应降级为空白或抛出异常，需要结合框架代码确认。</li>
+<li><strong>布局溢出</strong>：标签文本（如第 263 行 <code>"商品コード          "</code>）带有显式空格以对齐收据列宽。如果字体/打印机变更，可能导致对齐失效。</li>
+<li><strong><code>RJ_UnknownValue</code>（第 64 行）= <code>"*******"</code></strong>：用于掩码敏感数据，表示无法获取的值，是隐私保护的设计模式。</li>
+<li><strong>部分消息包含换行符</strong>：如第 361 行 <code>"ﾌﾟﾘｶﾁｬ取消"</code>（全角/半角混排），这在印字空间有限的窄收据上容易截断。</li>
+</ul>
+<h3>7. 测试相关</h3>
+<p>建议：
+- <strong>标签完整性测试</strong>：验证所有打印相关的代码路径都引用在此文件中定义的 Id。
+- <strong>格式对齐测试</strong>：对在窄收据上打印的标签，验证其在 32/40 列收据上不溢出。
+- <strong><code>MessageRJ.xml</code> vs <code>MessageRJ_FC.xml</code> 差异测试</strong>：两个文件高度相似，应有自动化 diff 测试来确认差异点，确保各自的变体配置正确。</p>
+<h3>8. 新人阅读建议</h3>
+<ol>
+<li><strong>不要逐行读，分类浏览</strong>：先看 <code>RJ_TaxMark*</code>（理解消费税处理），再看 <code>RJ_CAFISArch*</code>（理解支付对接），最后看 <code>RJ_Evidence*</code>（理解领收书格式）。</li>
+<li><strong>注意半角/全角混排</strong>：收据打印通常用点阵打印机或热敏打印机，字符宽度固定。消息文本中的全角空格、半角字母混排是有意为之，用于对齐。</li>
+<li><strong>与 Message.xml 对比</strong>：理解为什么同样的业务（如"ポイント"）有两个不同的 Id：<code>Message.xml</code> 里的 <code>ErrorPointBalance</code> 是错误提示，<code>MessageRJ.xml</code> 里的 <code>RJ_MemberPoint</code> 是收据标签。</li>
+<li><strong>关注 CAFIS Arch 相关消息的数量</strong>：CAFIS Arch 和 CAFIS Arch LAN 相关消息占整个文件的约 40%，说明支付对接是项目的核心复杂度之一。</li>
+</ol>
+<h3>9. 不确定点</h3>
+<ul>
+<li><strong><code>MessageRJ.xml</code> 与 <code>MessageRJ_FC.xml</code> 的关系</strong>：两个文件高度同构（约 95% 重叠），FC 代表什么？是 Food Court（フードコート）还是其他业务变体？</li>
+<li><strong><code>MessageRJ.xml</code> 的加载机制</strong>：是独立于 <code>Message.xml</code> 的另一个加载器，还是由同一个框架根据 Id 前缀路由到不同文件？</li>
+<li><strong><code>RJ_</code> 前缀是否在 Id 查找时被剥离</strong>：代码引用时是否写 <code>"RJ_TerminalNo"</code> 还是 <code>"TerminalNo"</code>？</li>
+<li><strong>收据格式控制</strong>：文件中的空格对齐细节（如第 263 行 <code>"商品コード          "</code>）在代码层面是如何保证的？是否有固定的列宽枚举？</li>
+<li><strong><code>MessageRJ.xml</code> 是否支持多语言</strong>：当前只有日语，未来如果有英文收据需求是否需要新增文件？</li>
+</ul>
+<hr />
+<h2>文件：Source/POS4ULogicService/Settings/MessageRJ_FC.xml</h2>
+<h3>1. 文件定位</h3>
+<p>这是 <code>MessageRJ.xml</code> 的一个 <strong>变体版本</strong>。FC 很可能是 "Food Court"（フードコート）的缩写，代表专门用于食品广场/美食广场 POS 终端的收据消息配置。该文件与 <code>MessageRJ.xml</code> 共享绝大部分内容，但存在少量差异——这些差异正反映了 Food Court 模式与标准模式的业务需求区别。</p>
+<p>属于 <code>POS4ULogicService</code> 模块的 <code>Settings</code> 子目录，是 <code>MessageRJ.xml</code> 的终端形态定制版本。</p>
+<h3>2. 对外暴露内容</h3>
+<p>与 <code>MessageRJ.xml</code> 几乎相同的结构——<code>&lt;Messages&gt;</code> 根元素（第 2 行），包含约 <strong>381 行</strong> 的 <code>&lt;Message&gt;</code> 条目，所有 Id 同样以 <code>RJ_</code> 为前缀。</p>
+<p><strong>与 <code>MessageRJ.xml</code> 的差异分析（逐行对比）：</strong></p>
+<ul>
+<li><strong>第 173 行</strong>：<code>MessageRJ_FC.xml</code> 有 <code>&lt;Message Id="RJ_BeerTicket"&gt;ﾋﾞｰﾙ・米券&lt;/Message&gt;</code>，而 <code>MessageRJ.xml</code> 对应是第 174 行 <code>&lt;Message Id="RJ_BeerTicket"&gt;ﾋﾞｰﾙ券&lt;/Message&gt;</code>。差异：<code>MessageRJ_FC</code> 中西红柿版本增加了"米券"，消息文本从"啤酒券"变为"啤酒・米券"。</li>
+<li><strong>第 174 行</strong>：<code>MessageRJ_FC.xml</code> 第 174 行列号与标准版第 175 行一致（<code>RJ_BeerBarcodeTicket</code>），无差异。</li>
+<li><strong>第 103 行</strong>：<code>MessageRJ.xml</code> 有 <code>&lt;Message Id="RJ_CloseCountCashChangeReserve"&gt;釣銭準備金&lt;/Message&gt;</code>（第 107 行），在 <code>MessageRJ_FC.xml</code> 中第 106 行一致，无差异。</li>
+<li><strong><code>MessageRJ.xml</code> 第 101 行 <code>RJ_CashChangeReserveAmount</code> → <code>MessageRJ_FC.xml</code> 第 101 行一致</strong>。</li>
+<li><strong><code>MessageRJ.xml</code> 第 178 行 <code>RJ_BeerTicket</code> → <code>MessageRJ_FC.xml</code> 第 173 行的差异已命中</strong>。</li>
+</ul>
+<p>另外，<code>MessageRJ.xml</code> 第 101–130 行（钓銭机相关标签）在 <code>MessageRJ_FC.xml</code> 第 100–129 行逐行对应。</p>
+<p><strong>核心差异总结</strong>：
+- <code>"ﾋﾞｰﾙ券"</code>（啤酒券）变更为 <code>"ﾋﾞｰﾙ・米券"</code>（啤酒・米券），以及多一个以 <code>RJ_</code>为前缀的消息。
+- 其他内容几乎完全一致。</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>运行时的行为与 <code>MessageRJ.xml</code> 相同，但具体加载哪个文件取决于 POS 终端的运行模式（标准 vs Food Court）：
+1. 系统启动时根据配置或检测到的终端类型决定使用 <code>MessageRJ.xml</code> 还是 <code>MessageRJ_FC.xml</code>。
+2. 收据打印逻辑根据 <code>RJ_*</code> Id 查询选中的消息文件，取回标签文本。
+3. 对于两个文件语义相同的 Id（如 <code>RJ_TerminalNo</code>），输出完全相同；对有差异的 Id（如 <code>RJ_BeerTicket</code>），输出符合终端业态要求的标签。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>非代码文件。关键差异点：</p>
+<ul>
+<li><strong><code>RJ_BeerTicket</code>（第 173 行）</strong>：文本从 <code>"ﾋﾞｰﾙ券"</code> 变为 <code>"ﾋﾞｰﾙ・米券"</code>。业务含义：Food Court 模式下，POS 终端需要同时处理啤酒券和大米券，而不是仅啤酒券。</li>
+</ul>
+<h3>5. 依赖关系</h3>
+<ul>
+<li><strong>与 <code>MessageRJ.xml</code> 是同一模块的变体</strong>：两者共享相同的 Id 集合（几乎完全重叠），由同一个打印格式化模块根据不同终端模式加载不同文件。</li>
+<li><strong>依赖终端模式判定逻辑</strong>：需要一个运行时配置或检测机制来决定加载 <code>MessageRJ.xml</code> 还是 <code>MessageRJ_FC.xml</code>。该判定逻辑位置需要结合其他文件确认。</li>
+<li><strong>依赖与 <code>Message.xml</code> 相同的消息加载框架</strong>。</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li><strong>文件选择错误</strong>：如果标准终端错误加载了 <code>MessageRJ_FC.xml</code>，收据上会打印"啤酒・米券"而非"啤酒券"，造成轻微业务混淆但不会崩溃。</li>
+<li><strong>Id 缺失</strong>：与 <code>MessageRJ.xml</code> 相同——如果某个 Id 不存在，框架行为需要结合其他文件确认。</li>
+</ul>
+<h3>7. 测试相关</h3>
+<ul>
+<li><strong>差异回归测试</strong>：最关键的测试是 <code>MessageRJ.xml</code> vs <code>MessageRJ_FC.xml</code> 的对比测试，确保：</li>
+<li>两个文件共享的 Id 文本完全相同（除了有意的差异点）。</li>
+<li>「有意的差异」被正确记录和理解。</li>
+<li>终端加载了正确的文件。</li>
+<li><strong>终端模式切换测试</strong>：验证标准终端和 FC 终端在相同业务场景下输出了预期的不同收据文本。</li>
+</ul>
+<h3>8. 新人阅读建议</h3>
+<ol>
+<li><strong>与 <code>MessageRJ.xml</code> 对比阅读</strong>：用 diff 工具比较两个文件，找出差异点。目前唯一确认的差异是 <code>RJ_BeerTicket</code> 的文本。</li>
+<li><strong>理解 FC 的含义</strong>：Food Court 业态需要处理大米券，而标准业态不需要——这是业务差异在该配置文件中的体现。</li>
+<li><strong>不要被文件长度的相似性迷惑</strong>：尽管 99%+ 的内容相同，但恰是那 1% 的差异反映了重要的业务分支。</li>
+<li><strong>关注同样的 Id 在两个文件中是否真的完全一致</strong>：建议用脚本逐 Id 比较消息文本，确保没有其他隐藏的差异。</li>
+<li><strong>思考扩展性</strong>：如果有第三种终端模式（如 Drive-Through），是否会新增 <code>MessageRJ_DT.xml</code>？</li>
+</ol>
+<h3>9. 不确定点</h3>
+<ul>
+<li><strong>FC 的确切含义</strong>：需要结合业务文档或配置文件确认 FC 是否确实代表 Food Court（フードコート），还是其他含义（如 Front Counter、Fiscal Code 等）。</li>
+<li><strong>文件选择机制</strong>：哪个配置文件或 API 决定使用 <code>MessageRJ.xml</code> 还是 <code>MessageRJ_FC.xml</code>？是在 <code>App.config</code>/<code>web.config</code> 中指定，还是在 <code>ControllerLogicService.xml</code> 中配置？</li>
+<li><strong>是否存在其他变体</strong>：除了 FC，是否还有 <code>MessageRJ_SM.xml</code>（超市）、<code>MessageRJ_DS.xml</code>（药妆店）等变体文件？需要检查 <code>Settings/</code> 目录下是否有其他类似文件。</li>
+<li><strong>差异是否只有 <code>RJ_BeerTicket</code> 一处</strong>：虽然逐行对比看到内容高度重叠，但需自动化工具确认是否存在其他细微差异（如空格、制表符、编码差异）。</li>
+<li><strong>两个文件是否共享同一 SHA256 或版本控制</strong>：如果有版本 tag 记录了最后一次同步时间，可以作为一致性参考。</li>
+</ul>
+<hr />
+<h2>本批覆盖确认</h2>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>覆盖状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Source/POS4ULogicService/Settings/ControllerLogicService.xml</td>
+<td>已详细讲解</td>
+<td>插件启动配置文件，已逐元素分析 Plugin 顺序、Singleton 语义、Exit 为空的原因与风险</td>
+</tr>
+<tr>
+<td>Source/POS4ULogicService/Settings/Message.xml</td>
+<td>已详细讲解</td>
+<td>消息/错误码主资源文件，已按功能域分类、说明编码规范、格式化参数用法、Code 与 Id 的关系</td>
+</tr>
+<tr>
+<td>Source/POS4ULogicService/Settings/MessageRJ.xml</td>
+<td>已详细讲解</td>
+<td>收据日志印字消息文件，已说明与 Message.xml 的职责分离、标签格式特点、CAFIS Arch 支付消息占比</td>
+</tr>
+<tr>
+<td>Source/POS4ULogicService/Settings/MessageRJ_FC.xml</td>
+<td>已详细讲解</td>
+<td>MessageRJ 的 Food Court 变体，已对比分析差异点（RJ_BeerTicket 文本变更），说明终端模式分支的业务含义</td>
+</tr>
+</tbody>
+</table>
+<p>本批 4 个文件全部为 XML 配置/资源文件，没有可执行代码。它们的运行时行为取决于消费这些文件的框架代码，已在各文件的"不确定点"中明确列出需要结合框架源码确认的具体问题。最关键的未解决线索是：<strong>ControllerLogicService.xml</strong> 的插件加载机制、<strong>Message*.xml</strong> 共享的消息查询框架、以及 <strong>MessageRJ.xml vs MessageRJ_FC.xml</strong> 的文件选择逻辑，这三个点需要结合本批之外的框架入口代码才能完整理解。</p></div></div></div>
+        
+
+<div class="pagination"><a href="index.html" class="index-link">Index</a></div>
+
+    </div>
+    <script>
+document.querySelectorAll('time[data-timestamp]').forEach(function(el) {
+    const timestamp = el.getAttribute('data-timestamp');
+    const date = new Date(timestamp);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    if (isToday) { el.textContent = timeStr; }
+    else { el.textContent = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + timeStr; }
+});
+document.querySelectorAll('pre.json').forEach(function(el) {
+    let text = el.textContent;
+    text = text.replace(/"([^"]+)":/g, '<span style="color: #ce93d8">"$1"</span>:');
+    text = text.replace(/: "([^"]*)"/g, ': <span style="color: #81d4fa">"$1"</span>');
+    text = text.replace(/: (\d+)/g, ': <span style="color: #ffcc80">$1</span>');
+    text = text.replace(/: (true|false|null)/g, ': <span style="color: #f48fb1">$1</span>');
+    el.innerHTML = text;
+});
+document.querySelectorAll('.truncatable').forEach(function(wrapper) {
+    const content = wrapper.querySelector('.truncatable-content');
+    const btn = wrapper.querySelector('.expand-btn');
+    if (content.scrollHeight > 250) {
+        wrapper.classList.add('truncated');
+        btn.addEventListener('click', function() {
+            if (wrapper.classList.contains('truncated')) { wrapper.classList.remove('truncated'); wrapper.classList.add('expanded'); btn.textContent = 'Show less'; }
+            else { wrapper.classList.remove('expanded'); wrapper.classList.add('truncated'); btn.textContent = 'Show more'; }
+        });
+    }
+});
+</script>
+</body>
+</html>

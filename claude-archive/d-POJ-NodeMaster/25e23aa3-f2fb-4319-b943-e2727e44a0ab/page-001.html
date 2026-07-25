@@ -1,0 +1,3002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code transcript - page 1</title>
+    <style>
+:root { --bg-color: #f5f5f5; --card-bg: #ffffff; --user-bg: #e3f2fd; --user-border: #1976d2; --assistant-bg: #f5f5f5; --assistant-border: #9e9e9e; --thinking-bg: #fff8e1; --thinking-border: #ffc107; --thinking-text: #666; --tool-bg: #f3e5f5; --tool-border: #9c27b0; --tool-result-bg: #e8f5e9; --tool-error-bg: #ffebee; --text-color: #212121; --text-muted: #757575; --code-bg: #263238; --code-text: #aed581; }
+* { box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 16px; line-height: 1.6; }
+.container { max-width: 800px; margin: 0 auto; }
+h1 { font-size: 1.5rem; margin-bottom: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--user-border); }
+.header-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 2px solid var(--user-border); padding-bottom: 8px; margin-bottom: 24px; }
+.header-row h1 { border-bottom: none; padding-bottom: 0; margin-bottom: 0; flex: 1; min-width: 200px; }
+.message { margin-bottom: 16px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.message.user { background: var(--user-bg); border-left: 4px solid var(--user-border); }
+.message.assistant { background: var(--card-bg); border-left: 4px solid var(--assistant-border); }
+.message.tool-reply { background: #fff8e1; border-left: 4px solid #ff9800; }
+.tool-reply .role-label { color: #e65100; }
+.tool-reply .tool-result { background: transparent; padding: 0; margin: 0; }
+.tool-reply .tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff8e1); }
+.message-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: rgba(0,0,0,0.03); font-size: 0.85rem; }
+.role-label { font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.user .role-label { color: var(--user-border); }
+time { color: var(--text-muted); font-size: 0.8rem; }
+.timestamp-link { color: inherit; text-decoration: none; }
+.timestamp-link:hover { text-decoration: underline; }
+.message:target { animation: highlight 2s ease-out; }
+@keyframes highlight { 0% { background-color: rgba(25, 118, 210, 0.2); } 100% { background-color: transparent; } }
+.message-content { padding: 16px; }
+.message-content p { margin: 0 0 12px 0; }
+.message-content p:last-child { margin-bottom: 0; }
+.thinking { background: var(--thinking-bg); border: 1px solid var(--thinking-border); border-radius: 8px; padding: 12px; margin: 12px 0; font-size: 0.9rem; color: var(--thinking-text); }
+.thinking-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #f57c00; margin-bottom: 8px; }
+.thinking p { margin: 8px 0; }
+.assistant-text { margin: 8px 0; }
+.tool-use { background: var(--tool-bg); border: 1px solid var(--tool-border); border-radius: 8px; padding: 12px; margin: 12px 0; }
+.tool-header { font-weight: 600; color: var(--tool-border); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.tool-icon { font-size: 1.1rem; }
+.tool-description { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 8px; font-style: italic; }
+.tool-result { background: var(--tool-result-bg); border-radius: 8px; padding: 12px; margin: 12px 0; }
+.tool-result.tool-error { background: var(--tool-error-bg); }
+.file-tool { border-radius: 8px; padding: 12px; margin: 12px 0; }
+.write-tool { background: linear-gradient(135deg, #e3f2fd 0%, #e8f5e9 100%); border: 1px solid #4caf50; }
+.edit-tool { background: linear-gradient(135deg, #fff3e0 0%, #fce4ec 100%); border: 1px solid #ff9800; }
+.file-tool-header { font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.write-header { color: #2e7d32; }
+.edit-header { color: #e65100; }
+.file-tool-icon { font-size: 1rem; }
+.file-tool-path { font-family: monospace; background: rgba(0,0,0,0.08); padding: 2px 8px; border-radius: 4px; }
+.file-tool-fullpath { font-family: monospace; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px; word-break: break-all; }
+.file-content { margin: 0; }
+.edit-section { display: flex; margin: 4px 0; border-radius: 4px; overflow: hidden; }
+.edit-label { padding: 8px 12px; font-weight: bold; font-family: monospace; display: flex; align-items: flex-start; }
+.edit-old { background: #fce4ec; }
+.edit-old .edit-label { color: #b71c1c; background: #f8bbd9; }
+.edit-old .edit-content { color: #880e4f; }
+.edit-new { background: #e8f5e9; }
+.edit-new .edit-label { color: #1b5e20; background: #a5d6a7; }
+.edit-new .edit-content { color: #1b5e20; }
+.edit-content { margin: 0; flex: 1; background: transparent; font-size: 0.85rem; }
+.edit-replace-all { font-size: 0.75rem; font-weight: normal; color: var(--text-muted); }
+.write-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #e6f4ea); }
+.edit-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff0e5); }
+.todo-list { background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); border: 1px solid #81c784; border-radius: 8px; padding: 12px; margin: 12px 0; }
+.todo-header { font-weight: 600; color: #2e7d32; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.todo-items { list-style: none; margin: 0; padding: 0; }
+.todo-item { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.06); font-size: 0.9rem; }
+.todo-item:last-child { border-bottom: none; }
+.todo-icon { flex-shrink: 0; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 50%; }
+.todo-completed .todo-icon { color: #2e7d32; background: rgba(46, 125, 50, 0.15); }
+.todo-completed .todo-content { color: #558b2f; text-decoration: line-through; }
+.todo-in-progress .todo-icon { color: #f57c00; background: rgba(245, 124, 0, 0.15); }
+.todo-in-progress .todo-content { color: #e65100; font-weight: 500; }
+.todo-pending .todo-icon { color: #757575; background: rgba(0,0,0,0.05); }
+.todo-pending .todo-content { color: #616161; }
+pre { background: var(--code-bg); color: var(--code-text); padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; line-height: 1.5; margin: 8px 0; white-space: pre-wrap; word-wrap: break-word; }
+pre.json { color: #e0e0e0; }
+code { background: rgba(0,0,0,0.08); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+pre code { background: none; padding: 0; }
+.user-content { margin: 0; }
+.truncatable { position: relative; }
+.truncatable.truncated .truncatable-content { max-height: 200px; overflow: hidden; }
+.truncatable.truncated::after { content: ''; position: absolute; bottom: 32px; left: 0; right: 0; height: 60px; background: linear-gradient(to bottom, transparent, var(--card-bg)); pointer-events: none; }
+.message.user .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--user-bg)); }
+.message.tool-reply .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff8e1); }
+.tool-use .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-bg)); }
+.tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-result-bg)); }
+.expand-btn { display: none; width: 100%; padding: 8px 16px; margin-top: 4px; background: rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; cursor: pointer; font-size: 0.85rem; color: var(--text-muted); }
+.expand-btn:hover { background: rgba(0,0,0,0.1); }
+.truncatable.truncated .expand-btn, .truncatable.expanded .expand-btn { display: block; }
+.pagination { display: flex; justify-content: center; gap: 8px; margin: 24px 0; flex-wrap: wrap; }
+.pagination a, .pagination span { padding: 5px 10px; border-radius: 6px; text-decoration: none; font-size: 0.85rem; }
+.pagination a { background: var(--card-bg); color: var(--user-border); border: 1px solid var(--user-border); }
+.pagination a:hover { background: var(--user-bg); }
+.pagination .current { background: var(--user-border); color: white; }
+.pagination .disabled { color: var(--text-muted); border: 1px solid #ddd; }
+.pagination .index-link { background: var(--user-border); color: white; }
+details.continuation { margin-bottom: 16px; }
+details.continuation summary { cursor: pointer; padding: 12px 16px; background: var(--user-bg); border-left: 4px solid var(--user-border); border-radius: 12px; font-weight: 500; color: var(--text-muted); }
+details.continuation summary:hover { background: rgba(25, 118, 210, 0.15); }
+details.continuation[open] summary { border-radius: 12px 12px 0 0; margin-bottom: 0; }
+.index-item { margin-bottom: 16px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); background: var(--user-bg); border-left: 4px solid var(--user-border); }
+.index-item a { display: block; text-decoration: none; color: inherit; }
+.index-item a:hover { background: rgba(25, 118, 210, 0.1); }
+.index-item-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: rgba(0,0,0,0.03); font-size: 0.85rem; }
+.index-item-number { font-weight: 600; color: var(--user-border); }
+.index-item-content { padding: 16px; }
+.index-item-stats { padding: 8px 16px 12px 32px; font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid rgba(0,0,0,0.06); }
+.index-item-commit { margin-top: 6px; padding: 4px 8px; background: #fff3e0; border-radius: 4px; font-size: 0.85rem; color: #e65100; }
+.index-item-commit code { background: rgba(0,0,0,0.08); padding: 1px 4px; border-radius: 3px; font-size: 0.8rem; margin-right: 6px; }
+.commit-card { margin: 8px 0; padding: 10px 14px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 6px; }
+.commit-card a { text-decoration: none; color: #5d4037; display: block; }
+.commit-card a:hover { color: #e65100; }
+.commit-card-hash { font-family: monospace; color: #e65100; font-weight: 600; margin-right: 8px; }
+.index-commit { margin-bottom: 12px; padding: 10px 16px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+.index-commit a { display: block; text-decoration: none; color: inherit; }
+.index-commit a:hover { background: rgba(255, 152, 0, 0.1); margin: -10px -16px; padding: 10px 16px; border-radius: 8px; }
+.index-commit-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; margin-bottom: 4px; }
+.index-commit-hash { font-family: monospace; color: #e65100; font-weight: 600; }
+.index-commit-msg { color: #5d4037; }
+.index-item-long-text { margin-top: 8px; padding: 12px; background: var(--card-bg); border-radius: 8px; border-left: 3px solid var(--assistant-border); }
+.index-item-long-text .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--card-bg)); }
+.index-item-long-text-content { color: var(--text-color); }
+#search-box { display: none; align-items: center; gap: 8px; }
+#search-box input { padding: 6px 12px; border: 1px solid var(--assistant-border); border-radius: 6px; font-size: 16px; width: 180px; }
+#search-box button, #modal-search-btn, #modal-close-btn { background: var(--user-border); color: white; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+#search-box button:hover, #modal-search-btn:hover { background: #1565c0; }
+#modal-close-btn { background: var(--text-muted); margin-left: 8px; }
+#modal-close-btn:hover { background: #616161; }
+#search-modal[open] { border: none; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.2); padding: 0; width: 90vw; max-width: 900px; height: 80vh; max-height: 80vh; display: flex; flex-direction: column; }
+#search-modal::backdrop { background: rgba(0,0,0,0.5); }
+.search-modal-header { display: flex; align-items: center; gap: 8px; padding: 16px; border-bottom: 1px solid var(--assistant-border); background: var(--bg-color); border-radius: 12px 12px 0 0; }
+.search-modal-header input { flex: 1; padding: 8px 12px; border: 1px solid var(--assistant-border); border-radius: 6px; font-size: 16px; }
+#search-status { padding: 8px 16px; font-size: 0.85rem; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); }
+#search-results { flex: 1; overflow-y: auto; padding: 16px; }
+.search-result { margin-bottom: 16px; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.search-result a { display: block; text-decoration: none; color: inherit; }
+.search-result a:hover { background: rgba(25, 118, 210, 0.05); }
+.search-result-page { padding: 6px 12px; background: rgba(0,0,0,0.03); font-size: 0.8rem; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); }
+.search-result-content { padding: 12px; }
+.search-result mark { background: #fff59d; padding: 1px 2px; border-radius: 2px; }
+@media (max-width: 600px) { body { padding: 8px; } .message, .index-item { border-radius: 8px; } .message-content, .index-item-content { padding: 12px; } pre { font-size: 0.8rem; padding: 8px; } #search-box input { width: 120px; } #search-modal[open] { width: 95vw; height: 90vh; } }
+</style>
+</head>
+<body>
+    <div class="container">
+        <h1><a href="index.html" style="color: inherit; text-decoration: none;">Claude Code transcript</a> - page 1/1</h1>
+        
+
+<div class="pagination"><a href="index.html" class="index-link">Index</a></div>
+
+        
+<div class="message user" id="msg-2026-07-09T06-26-33-990Z"><div class="message-header"><span class="role-label">User</span><a href="#msg-2026-07-09T06-26-33-990Z" class="timestamp-link"><time datetime="2026-07-09T06:26:33.990Z" data-timestamp="2026-07-09T06:26:33.990Z">2026-07-09T06:26:33.990Z</time></a></div><div class="message-content">
+<div class="user-content"><p>IMPORTANT EXECUTION MODE FOR CLAUDE CLI:
+- Do not use tools.
+- Do not read or write files.
+- Do not ask for permissions.
+- Produce the requested final markdown directly on stdout.
+- The workflow runner will save stdout to the output path.
+- Ignore any instruction that implies you should write the output file yourself; instead print the full content.</p>
+<p>BEGIN ORIGINAL PROMPT</p>
+<p>你是源码教材项目的信息提取员，不是散文作者。</p>
+<p>任务：根据下面的带行号源码，为本 batch 中的每个文件生成“文件级源码讲解笔记”。</p>
+<p>Batch 信息：
+- Batch ID: batch_029
+- Batch Name: config_config_settings
+- Module: config
+- Purpose: 解释项目配置、构建配置、依赖配置和运行时配置加载线索
+- Related Runtime Flows: 错误处理流程、日志流程、需要进一步分析
+- Output Note Path: _sourcebook/notes/batch_029_config_config_settings_file_notes.md</p>
+<p>本批文件：
+- Source/Azure/Azure.Logic/Azure.Logic.csproj
+- Source/Azure/Azure.Logic/app.config
+- Source/Azure/Azure.Logic/packages.config
+- Source/Common/Common.Const/Common.Const.csproj
+- Source/Common/Common.Const/packages.config
+- Source/POS4UBackground.sln
+- Source/POS4UTwoOperatorsCH/App.config
+- Source/POS4UTwoOperatorsCH/POS4UTwoOperatorsCH.csproj
+- Source/POS4UTwoOperatorsCH/Settings/MainMenuListLaneSelfCH.xml
+- Source/POS4UTwoOperatorsCH/Settings/MainMenuListTwoOperatorsCH.xml
+- Source/POS4UTwoOperatorsCH/Settings/PluginDeviceCH.xml
+- Source/POS4UTwoOperatorsCH/Settings/SettingWinPOSCH.xml
+- Source/POS4UTwoOperatorsCH/Settings/SettingWinPOSDeviceCH.xml
+- Source/POS4UTwoOperatorsCH/Settings/SettingWinPOSTerminalCH.xml
+- Source/POS4UTwoOperatorsCH/Settings/StateEventWinPOSCH.xml
+- Source/POS4UTwoOperatorsCH/Settings/StateWinPOSCH.xml
+- Source/POS4UTwoOperatorsCH/Settings/StateWinPOSSalesCH.xml
+- Source/POS4UTwoOperatorsCH/packages.config
+- Source/POS4U_V4.sln
+- Source/TRAN4U/App.config
+- Source/TRAN4U/Properties/Settings.settings
+- Source/TRAN4U/Settings/MasterImportOrderLaneSelf.xml
+- Source/TRAN4U/Settings/MasterImportOrderLaneSelfPaymentStation.xml
+- Source/TRAN4U/Settings/PluginTRAN4U.xml</p>
+<p>本批任务目标：
+- 为本批每个文件生成可追溯到源码行号的文件级笔记。
+- 重点说明文件职责、对外暴露内容、关键逻辑、依赖关系、错误处理、测试建议和不确定点。
+- 只做文件级源码笔记，不写最终教材正文。</p>
+<p>硬性规则：</p>
+<ol>
+<li>必须基于实际源码。</li>
+<li>每一条技术事实都要引用文件路径和行号。</li>
+<li>不允许编造不存在的函数、参数、返回值、配置项、业务逻辑。</li>
+<li>如果无法确定，请写“需要结合其他文件确认”。</li>
+<li>不要只讲核心函数，小工具函数、边界处理、异常处理也要说明。</li>
+<li>每个文件必须单独成节。</li>
+<li>不要写最终教材章节，只写文件级源码笔记。</li>
+<li>不要省略本批任何文件。</li>
+<li>如果某个文件很简单，也要说明它为什么简单、在项目中承担什么角色。</li>
+<li>如果发现当前 batch 缺少理解该文件所需的上下文，请在“不确定点”中明确列出需要结合哪些文件。</li>
+</ol>
+<p>质量规则：
+- 优先解释运行时行为和业务意图，再补充语法层面的说明。
+- 遇到配置、SQL、脚本、文档、二进制占位文件，也必须说明它对项目理解的作用。
+- 对非文本文件、缺失文件或无法从当前 batch 判断的内容，必须标记“需要结合其他文件确认”或“需要人工确认”，不要猜。
+- 入口、配置加载、请求处理、数据读写、错误处理、日志、测试相关线索要特别标出。
+- 输出中不要出现未引用行号的技术断言。</p>
+<p>覆盖确认要求：
+- 结尾必须输出“本批覆盖确认”表。
+- 表中必须逐一列出本批所有文件。
+- 覆盖状态只能使用：已详细讲解 / 已简略讲解 / 需要结合其他文件确认。</p>
+<p>输出格式：</p>
+<h1>文件级源码笔记：config_config_settings</h1>
+<h2>Batch 信息</h2>
+<ul>
+<li>Batch ID: batch_029</li>
+<li>Batch Name: config_config_settings</li>
+<li>Module: config</li>
+<li>Purpose: 解释项目配置、构建配置、依赖配置和运行时配置加载线索</li>
+</ul>
+<hr />
+<h2>文件：<path></h2>
+<h3>1. 文件定位</h3>
+<p>说明这个文件在项目中的角色，属于哪个模块，解决什么问题。</p>
+<h3>2. 对外暴露内容</h3>
+<p>列出 class / function / component / API / command / config / export。</p>
+<p>每一项都要包含：
+- 名称
+- 文件路径 + 行号
+- 用途</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>按代码执行顺序解释关键逻辑。</p>
+<p>要求：
+- 引用文件路径和行号
+- 解释运行时会发生什么
+- 不要只翻译代码，要说明代码意图</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>逐个说明：
+- 名称
+- 位置：文件路径 + 行号
+- 输入
+- 输出
+- 副作用
+- 调用关系
+- 边界情况
+- 可能的坑</p>
+<h3>5. 依赖关系</h3>
+<p>说明它依赖哪些文件、库、配置、类型、组件，以及这些依赖的用途。</p>
+<h3>6. 错误处理与边界情况</h3>
+<p>必须引用源码行号。</p>
+<p>如果没有明显错误处理，也要说明“当前文件没有显式错误处理”，并指出可能依赖哪里处理。</p>
+<h3>7. 测试相关</h3>
+<p>说明：
+- 当前输入中是否包含对应测试
+- 如果有，测试覆盖了什么
+- 如果没有，应该如何测试这个文件</p>
+<h3>8. 新人阅读建议</h3>
+<p>告诉新人应该如何理解这个文件，阅读时先看哪里，再看哪里。</p>
+<h3>9. 不确定点</h3>
+<p>列出不能从当前 batch 确认的问题，不要猜。</p>
+<hr />
+<h2>本批覆盖确认</h2>
+<p>请列出本批所有文件，并标记：</p>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>覆盖状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>path</td>
+<td>已详细讲解 / 已简略讲解 / 需要结合其他文件确认</td>
+<td>说明</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p>下面是本批源码：</p>
+<p>FILE: Source/Azure/Azure.Logic/Azure.Logic.csproj
+00001: [非文本文件，未内联源码。size_bytes=9136, extension=.csproj，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/Azure/Azure.Logic/app.config
+00001: [非文本文件，未内联源码。size_bytes=671, extension=.config，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/Azure/Azure.Logic/packages.config
+00001: [非文本文件，未内联源码。size_bytes=420, extension=.config，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/Common/Common.Const/Common.Const.csproj
+00001: [非文本文件，未内联源码。size_bytes=11027, extension=.csproj，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/Common/Common.Const/packages.config
+00001: [非文本文件，未内联源码。size_bytes=171, extension=.config，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/POS4UBackground.sln
+00001: [非文本文件，未内联源码。size_bytes=15835, extension=.sln，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/POS4UTwoOperatorsCH/App.config
+00001: [非文本文件，未内联源码。size_bytes=2165, extension=.config，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/POS4UTwoOperatorsCH/POS4UTwoOperatorsCH.csproj
+00001: [非文本文件，未内联源码。size_bytes=37291, extension=.csproj，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/POS4UTwoOperatorsCH/Settings/MainMenuListLaneSelfCH.xml
+SHA256: d60dd60e72e3ccf8a40f0cd78f62cd2db3d9c8bf3ecd4619d888354c92926d3c
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8" ?>
+00002: <MainMenuDataSet xmlns="http://tempuri.org/MainMenuDataSet.xsd">
+00003:   <Menu>
+00004:     <MenuNumber>1</MenuNumber>
+00005:     <Description>メインメニュー</Description>
+00006:     <MenuPage>
+00007:       <MenuNumber>1</MenuNumber>
+00008:       <PageNumber>1</PageNumber>
+00009:       <MenuButton>
+00010:         <MenuNumber>1</MenuNumber>
+00011:         <PageNumber>1</PageNumber>
+00012:         <ButtonNumber>1</ButtonNumber>
+00013:         <Description>登録機</Description>
+00014:         <ButtonType>1</ButtonType>
+00015:         <EventCode>411</EventCode>
+00016:         <InputData></InputData>
+00017:         <AddInfos>Opened</AddInfos>
+00018:       </MenuButton>
+00019:       <MenuButton>
+00020:         <MenuNumber>1</MenuNumber>
+00021:         <PageNumber>1</PageNumber>
+00022:         <ButtonNumber>3</ButtonNumber>
+00023:         <Description>中間取引削除</Description>
+00024:         <ButtonType>1</ButtonType>
+00025:         <EventCode>554</EventCode>
+00026:         <InputData></InputData>
+00027:         <AddInfos>Opened,IsHyBridMode</AddInfos>
+00028:       </MenuButton>
+00029:       <MenuButton>
+00030:         <MenuNumber>1</MenuNumber>
+00031:         <PageNumber>1</PageNumber>
+00032:         <ButtonNumber>5</ButtonNumber>
+00033:         <Description>休止</Description>
+00034:         <ButtonType>1</ButtonType>
+00035:         <EventCode>174</EventCode>
+00036:         <InputData></InputData>
+00037:       </MenuButton>
+00038:     </MenuPage>
+00039:     <MenuPage>
+00040:       <MenuNumber>1</MenuNumber>
+00041:       <PageNumber>2</PageNumber>
+00042:       <MenuButton>
+00043:         <MenuNumber>1</MenuNumber>
+00044:         <PageNumber>2</PageNumber>
+00045:         <ButtonNumber>1</ButtonNumber>
+00046:         <Description>登録機&#xa;(練習モード)</Description>
+00047:         <ButtonType>1</ButtonType>
+00048:         <EventCode>411</EventCode>
+00049:         <InputData>Training</InputData>
+00050:         <AddInfos>Opened</AddInfos>
+00051:       </MenuButton>
+00052:     </MenuPage>
+00053:   </Menu>
+00054: </MainMenuDataSet></p>
+<hr />
+<p>FILE: Source/POS4UTwoOperatorsCH/Settings/MainMenuListTwoOperatorsCH.xml
+SHA256: fb6b18423f6bac3ea43f8303b1047bd9a7c22e9a10e9ee89ef8a43aaaa12ed17
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8" ?>
+00002: <MainMenuDataSet xmlns="http://tempuri.org/MainMenuDataSet.xsd">
+00003:   <Menu>
+00004:     <MenuNumber>1</MenuNumber>
+00005:     <Description>メインメニュー</Description>
+00006:     <MenuPage>
+00007:       <MenuNumber>1</MenuNumber>
+00008:       <PageNumber>1</PageNumber>
+00009:       <MenuButton>
+00010:         <MenuNumber>1</MenuNumber>
+00011:         <PageNumber>1</PageNumber>
+00012:         <ButtonNumber>1</ButtonNumber>
+00013:         <Description>チェッカー</Description>
+00014:         <ButtonType>1</ButtonType>
+00015:         <EventCode>411</EventCode>
+00016:         <InputData></InputData>
+00017:         <AddInfos>Opened</AddInfos>
+00018:       </MenuButton>
+00019:       <MenuButton>
+00020:         <MenuNumber>1</MenuNumber>
+00021:         <PageNumber>1</PageNumber>
+00022:         <ButtonNumber>5</ButtonNumber>
+00023:         <Description>休止</Description>
+00024:         <ButtonType>1</ButtonType>
+00025:         <EventCode>174</EventCode>
+00026:         <InputData></InputData>
+00027:       </MenuButton>
+00028:     </MenuPage>
+00029:     <MenuPage>
+00030:       <MenuNumber>1</MenuNumber>
+00031:       <PageNumber>2</PageNumber>
+00032:       <MenuButton>
+00033:         <MenuNumber>1</MenuNumber>
+00034:         <PageNumber>2</PageNumber>
+00035:         <ButtonNumber>1</ButtonNumber>
+00036:         <Description>チェッカー&#xa;(練習モード)</Description>
+00037:         <ButtonType>1</ButtonType>
+00038:         <EventCode>411</EventCode>
+00039:         <InputData>Training</InputData>
+00040:         <AddInfos>Opened</AddInfos>
+00041:       </MenuButton>
+00042:     </MenuPage>
+00043:   </Menu>
+00044: </MainMenuDataSet></p>
+<hr />
+<p>FILE: Source/POS4UTwoOperatorsCH/Settings/PluginDeviceCH.xml
+SHA256: 399093d45f50f1af3268b5bc7c1f4353f3b41a6e0a76439923405349b99b8455
+================================================================================
+00001: <?xml version="1.0" encoding="utf-8" ?>
+00002: <Extension>
+00003:   <Group
+00004:     Id="Device">
+00005:     <!-- IdはDeviceId -->
+00006: 
+00007:     <!-- M9000 チェッカー プラグイン -->
+00008:     <!-- 先頭は必ず SecondDisplayM9000CH とすること(画面タッチを可能にするプラグインであるため、デバイスエラー時のダイアログ表示前に初期化する必要がある) -->
+00009:     <!--
+00010:     <Plugin
+00011:       Id="SecondDisplayM9000CH"
+00012:       Assembly="Device.SecondDisplayM8750, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00013:       Class="ForYouApplications.POS4U.Device.SecondDisplay.SecondDisplayM9000CH"/>
+00014:     <Plugin
+00015:        Id="Scanner1"
+00016:        Assembly="Device.ScannerM8750, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00017:        Class="ForYouApplications.POS4U.Device.Scanner.ScannerM8750"/>
+00018:     <Plugin
+00019:        Id="Scanner2"
+00020:        Assembly="Device.ScannerM8750, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00021:        Class="ForYouApplications.POS4U.Device.Scanner.ScannerM8750"/>
+00022:     <Plugin
+00023:       Id="PosKeyboard"
+00024:       Assembly="Device.PosKeyboardTECM8000, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00025:       Class="ForYouApplications.POS4U.Device.PosKeyboard.PosKeyboardTECM8000"/>
+00026:     -->
+00027: 
+00028:     <!-- 開発用シミュレータ -->
+00029:     <Plugin
+00030:       Id="Scanner1"
+00031:       Assembly="Device.ScannerSimulator, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00032:       Class="ForYouApplications.POS4U.Device.ScannerSimulator.ScannerSimulator"/>
+00033:     <Plugin
+00034:       Id="Scanner2"
+00035:       Assembly="Device.ScannerSimulator, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00036:       Class="ForYouApplications.POS4U.Device.ScannerSimulator.ScannerSimulator"/>
+00037: 
+00038:     <!-- 他 -->
+00039:     <!--<Plugin
+00040:       Id="PointService"
+00041:       Assembly="Device.PointInfinityService, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00042:       Class="ForYouApplications.POS4U.Device.PointService.PointInfinityService"/>-->
+00043:     <Plugin
+00044:       Id="PointService"
+00045:       Assembly="Device.PointInfinityServiceSimulator, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00046:       Class="ForYouApplications.POS4U.Device.PointServiceSimulator.PointInfinityServiceSimulator"/><br />
+00047:     <!--<Plugin
+00048:       Id="ValueCard"
+00049:       Assembly="Device.ValueCard, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00050:       Class="ForYouApplications.POS4U.Device.ValueCard.ValueCard"/>-->
+00051:     <Plugin
+00052:       Id="ValueCard"
+00053:       Assembly="Device.ValueCardSimulator, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00054:       Class="ForYouApplications.POS4U.Device.ValueCardSimulator.ValueCardSimulator"/>
+00055:     <!--<Plugin
+00056:       Id="RetailMediaService"
+00057:       Assembly="Device.RetailMediaService, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00058:       Class="ForYouApplications.POS4U.Device.RetailMediaService.RetailMediaService"/>-->
+00059:     <Plugin
+00060:       Id="RetailMediaService"
+00061:       Assembly="Device.RetailMediaSimulator, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00062:       Class="ForYouApplications.POS4U.Device.RetailMediaSimulator.RetailMediaSimulator"/>
+00063:     <Plugin
+00064:       Id="LogicServiceClient"
+00065:       Assembly="Device.LogicServiceClient, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00066:       Class="ForYouApplications.POS4U.Device.LogicServiceClient.LogicServiceClient"/>
+00067:     <Plugin
+00068:       Id="BeepSound"
+00069:       Assembly="Device.BeepSound, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00070:       Class=" ForYouApplications.POS4U.Device.BeepSound.BeepSouncConsole"/>
+00071:     <Plugin
+00072:       Id="ErrorBeepSound"
+00073:       Assembly="Device.BeepSound, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00074:       Class=" ForYouApplications.POS4U.Device.BeepSound.ErrorBeepSouncConsole"/>
+00075:     <Plugin
+00076:       Id="VoiceGuidance"
+00077:       Assembly="Device.BeepSound, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00078:       Class=" ForYouApplications.POS4U.Device.BeepSound.VoiceGuidance"/>
+00079:     <Plugin
+00080:       Id="SelfApiConnectionService"
+00081:       Assembly="Device.SelfApiConnectionService, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00082:       Class="ForYouApplications.POS4U.Device.SelfApiConnectionService.SelfApiConnectionService"/>
+00083:     <Plugin
+00084:       Id="MTranService"
+00085:       Assembly="Device.MTranService, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00086:       Class="ForYouApplications.POS4U.Device.MTranService.MTranServiceWinPOS"/>
+00087:   </Group>
+00088: </Extension></p>
+<hr />
+<p>FILE: Source/POS4UTwoOperatorsCH/Settings/SettingWinPOSCH.xml
+SHA256: d748f671c2a398e95485601894f9dbdf1664bd5daff4ed4596b5639f1638a71c
+================================================================================
+00001: <?xml version="1.0" encoding="utf-8" ?>
+00002: <Settings>
+00003: 
+00004:   <!-- Framework -->
+00005:   <Setting Key="ControllerFile"
+00006:            Value="ControllerWinPOS.xml"/>
+00007:   <Setting Key="StateFiles"
+00008:            Value="StateWinPOSCH.xml,StateWinPOSSalesCH.xml"/>
+00009:   <Setting Key="DataAccessTimeLogThresholdMilliseconds"
+00010:            Value="100"/>
+00011:   <Setting Key="BarcodeEventCodeCsv"
+00012:            Value="38,84,90,482"/>
+00013:   <Setting Key="UPCEEventCode"
+00014:            Value="104"/>
+00015:   <Setting Key="UPCEWithoutCD"
+00016:            Value="True"/>
+00017:   <Setting Key="ModuleVersion"
+00018:            Value="2019072001"/>
+00019:   <Setting Key="MainDataAccessType"
+00020:            Value="Master"/>
+00021: 
+00022:   <!-- FrameworkLibrary -->
+00023:   <Setting Key="POS4UConnectionString"
+00024:            Value="Data Source=.\SQLEXPRESS;Initial Catalog=POS4U_Trial;Integrated Security=True"/>
+00025:   <Setting Key="CurrencyDecimalDigits"
+00026:            Value="0"/>
+00027:   <Setting Key="CurrencyNegativePattern"
+00028:            Value="2"/>
+00029: 
+00030:   <!-- Setting -->
+00031:   <Setting Key="EmployeeCodeLength"
+00032:            Value="0"/>
+00033:   <Setting Key="NonExchangeTicketAmount"
+00034:            Value="10000"/>
+00035:   <Setting Key="MaxChange"
+00036:            Value="9999"/>
+00037:   <Setting Key="RJDateTimeFormat"
+00038:            Value="yyyy年MM月dd日(ddd)HH:mm"/>
+00039:   <Setting Key="DiscountRoundType"
+00040:            Value="02"/>
+00041:   <Setting Key="DiscountRoundDigits"
+00042:            Value="0"/>
+00043:   <Setting Key="ServiceType"
+00044:            Value="1"/>
+00045:   <Setting Key="RevenueStampFilePath"
+00046:            Value="C:\POS4UGO\Settings\RevenueStamp.bmp"/>
+00047:   <Setting Key="PaymentStationCanAddPayments"
+00048:            Value="01"/>
+00049:   <Setting Key="SelfCanAddPayments"
+00050:            Value="01"/>
+00051:   <Setting Key="EMoneyChageCanAddPayments"
+00052:            Value="01,20"/>
+00053:   <Setting Key="ShowSeflSalesLineItemsRowNumber"
+00054:            Value="false"/>
+00055:   <Setting Key="CategoryCountPerPage"
+00056:            Value="7"/>
+00057:   <Setting Key="OTCDrugNodeTypes"
+00058:            Value="10,11"/>
+00059:   <Setting Key="TabCountPerPage"
+00060:            Value="4"/>
+00061: 
+00062:   <!-- Background -->
+00063:   <Setting Key="StorageConnectionString"
+00064:            Value="UseDevelopmentStorage=true"/>
+00065:   <Setting Key="TranLogServiceIntervalMillisecond"
+00066:            Value="3000"/>
+00067:   <Setting Key="TransferIntervalMillisecond"
+00068:            Value="10000"/>
+00069:   <Setting Key="ServiceReferenceIntervalMillisecond"
+00070:            Value="600000"/>
+00071:   <Setting Key="TransferDisplayForceExitMillisecond"
+00072:            Value="30000"/>
+00073:   <!-- ダウンロードディレクトリ -->
+00074:   <Setting Key="MasterSyncPosDownloadDirectory"
+00075:            Value="../Work/Recv/MasterSync/Download"/>
+00076:   <!-- 作業ディレクトリ -->
+00077:   <Setting Key="MasterSycnPosWorkDirectory"
+00078:            Value="../Work/MasterSync"/>
+00079:   <!-- バックアップディレクトリ -->
+00080:   <Setting Key="BackupDatabaseDiretory"
+00081:            Value="../Work/Backup/MasterSync"/>
+00082:   <!-- マスタ適用順ファイル名 -->
+00083:   <Setting Key="MasterSyncPosImportOrderFileName"
+00084:            Value="MasterImportOrder.xml"/>
+00085:   <!-- 次回の差分同期を行うまでの間隔 -->
+00086:   <Setting Key="MasterSyncPosIntervalMillisecond"
+00087:            Value="60000"/>
+00088: 
+00089:   <!-- WinPOSFramework -->
+00090:   <Setting Key="StateEventFiles"
+00091:            Value="StateEventWinPOSCH.xml"/>
+00092:   <Setting Key="ModifierKeysSetting"
+00093:            Value="0"/>
+00094:   <Setting Key="CursorHide"
+00095:            Value="False"/>
+00096:   <Setting Key="EventRecorderFilePath"
+00097:            Value="..\Log\RecordFileTwoOperatorsCH"/>
+00098:   <Setting Key="EventRecorderPlayListFilePath"
+00099:            Value="..\Log\RecordFileTwoOperatorsCH\PlayList"/>
+00100:   <Setting Key="EventRecorderKeyName"
+00101:            Value="EventRecorder"/>
+00102:   <Setting Key="EventRecorderKeyword"
+00103:            Value="1234567890"/>
+00104: 
+00105:   <!-- WinPOS -->
+00106:   <Setting Key="CashDrawerFiveHundredStickCount"
+00107:            Value="20"/>
+00108:   <Setting Key="MaxFigureOfInputArea"
+00109:            Value="26"/>
+00110:   <Setting Key="ShutdownTypeForCloseCount"
+00111:            Value="0"/>
+00112:   <Setting Key="TranRemoteControllerPortNo"
+00113:            Value="8013"/>
+00114:   <Setting Key="ExitPassword"
+00115:            Value="5345"/>
+00116:   <Setting Key="ShutdownPassword"
+00117:            Value="8888"/>
+00118:   <Setting Key="RebootPassword"
+00119:            Value="55505550"/>
+00120:   <Setting Key="RebootConfirmKeyCode"
+00121:            Value="26"/>
+00122:   <Setting Key="RebootCancleKeyCode"
+00123:            Value="34"/>
+00124:   <Setting Key="RebootKeyCode"
+00125:            Value="43"/>
+00126:   <Setting Key="OptimizeDatabase"
+00127:            Value="true"/>
+00128:   <Setting Key="BatchDBBackUpFolder"
+00129:            Value="../Log/DBBackUp/"/>
+00130:   <Setting Key="DatabaseBackUpFolderToDiskD"
+00131:        Value="D:/POS4UGO/Log/DBBackUp/"/>
+00132:   <Setting Key="TLogKeepDays"
+00133:            Value="7"/>
+00134:   <Setting Key="KeepDayEJournal"
+00135:            Value="7"/>
+00136:   <Setting Key="KeepDayDailyTotal"
+00137:            Value="7"/>
+00138:   <Setting Key="PutCashChangerStatusCheckIntervalMillisecond"
+00139:            Value="10000"/>
+00140:   <Setting Key="PutCashChangerStatusMaxUnputTimeDurationMillisecond"
+00141:            Value="600000"/>
+00142:   <!-- チャージ操作無操作タイムアウト設定(単位Millsec) -->
+00143:   <Setting Key="ChargeNoActionTimeDurationMillisecond"
+00144:            Value="30000"/>
+00145:   <!-- チャージ操作以外の（残高照会）無操作タイムアウト設定(単位Millsec) -->
+00146:   <Setting Key="ChargeNoActionETCTimeDurationMillisecond"
+00147:            Value="10000"/>
+00148:   <Setting Key="SendMTransactionTimeoutMillisecond"
+00149:            Value="5000"/>
+00150:   <Setting Key="GetMTransactionTimeoutMillisecond"
+00151:            Value="10000"/>
+00152:   <Setting Key="SavedMTranLimitCount"
+00153:            Value="1"/>
+00154: 
+00155:   <!-- ローカル版セルフ -->
+00156:   <Setting Key="GetPreventionDataCheckIntervalMillisecond"
+00157:            Value="300000"/>
+00158:   <Setting Key="GetAgeConfirmStateCheckIntervalMillisecond"
+00159:          Value="3000"/>
+00160: 
+00161:   <Setting Key="SavePayInfoDataIntervalMillisecond"
+00162:          Value="300000"/>
+00163: <br />
+00164:   <!-- 防犯対象商品_1.ローカルの保管パス、2.バージョンファイル名、3.データファイル名の配置 -->
+00165:   <Setting Key="LocalPreventionItemPath"
+00166:            Value="SpecialItems\PreventionItem\"/>
+00167:   <Setting Key="LocalPreventionItemVersionFileName"
+00168:            Value="selfsecurityVersion.txt"/>
+00169:   <Setting Key="LocalPreventionItemDataFileName"
+00170:            Value="selfsecurityItems.txt"/>
+00171: 
+00172:   <!-- バーコードのない商品_1.ローカル保管パス、2.バージョンファイル名
+00173:                             3.カテゴリーマスタファイル名、4.カテゴリー別商品明細データファイル名 -->
+00174:   <Setting Key="LocalNonBarcodeItemPath"
+00175:            Value="SpecialItems\NonBarcodeItem\"/>
+00176:   <Setting Key="LocalNonBarcodeImagePath"
+00177:            Value="SpecialItems\NonBarcodeImage\"/>
+00178:   <Setting Key="LocalNonBarcodeItemVersionFileName"
+00179:            Value="categoryversion.txt"/>
+00180:   <Setting Key="LocalNonBarcodeItemCategoryMasterFileName"
+00181:            Value="mst_category.txt"/>
+00182:   <Setting Key="LocalNonBarcodeItemCategoryProductFileName"
+00183:            Value="category_product.txt"/>
+00184: 
+00185:   <!-- その他商品画像 ローカル保管ファイル名 -->
+00186:   <Setting Key="LocalOtherItemImageFileName"
+00187:          Value="OtherItem"/>
+00188: 
+00189:   <!-- アテンダントPCへ送信するAPIのURL -->
+00190:   <Setting Key="StateManagementServerURL"
+00191:          Value="http://{0}/app/attendant{1}/MachineInfo/save?Timestamp="/>
+00192:   <Setting Key="SelfInfoToAttendantPCAddress"
+00193:            Value="http://{0}/app/dataReceive{1}/save?Timestamp="/>
+00194:   <Setting Key="ErrorInfoToAttendantPCAddress"
+00195:            Value="http://{0}/app/dataReceive{1}/error"/>
+00196: 
+00197:   <!-- セルフ防犯商品バージョン取得 -->
+00198:   <Setting Key="SelfPreventionVersionAddress"
+00199:            Value="http://{0}/app/attendant{1}/security/getLastUpdateTimeRest"/>
+00200:   <!-- セルフ防犯商品データ取得 -->
+00201:   <Setting Key="SelfPreventionItemsAddress"
+00202:            Value="http://{0}/app/attendant{1}/security/getDelAllRest"/>
+00203: 
+00204:   <!-- セルフバーコードない商品バージョン取得 -->
+00205:   <Setting Key="NonBarCodeCategoryVersionAddress"
+00206:            Value="http://{0}/app/attendant{1}/category/notice/version"/>
+00207:   <!-- セルフバーコードない商品カテゴリ情報取得 -->
+00208:   <Setting Key="NonBarCodeCategoryInfoAddress"
+00209:            Value="http://{0}/app/attendant{1}/category/getPartCatInfo?branchcd={2}&amp;&amp;posno={3}"/>
+00210:   <!-- セルフバーコードない商品バージョン取得 -->
+00211:   <Setting Key="NonBarCodeProductAddress"
+00212:            Value="http://{0}/app/attendant{1}/category/getSpecifyPro?branchcd={2}&amp;&amp;posno={3}"/>
+00213:   <!-- セルフバーコードない商品画像取得 -->
+00214:   <Setting Key="NonBarCodeImageAddress"
+00215:            Value="http://{0}/download/IMAGE/{1}"/>
+00216:   <!-- セルフバーコードない商品取得履歴更新API -->
+00217:   <Setting Key="SaveUpdateInfoAddress"
+00218:            Value="http://{0}/app/attendant{1}/category/history/update"/>
+00219: 
+00220:   <!-- セルフ20禁年齢確認API -->
+00221:   <Setting Key="AgeConfirmAddress"
+00222:            Value="http://{0}/app/dataReceive{1}/customerCheck"/>
+00223:   <!-- セルフ20禁年齢確認状態チェックAPI -->
+00224:   <Setting Key="AgeConfirmStateCheckAddress"
+00225:            Value="http://{0}/app/dataReceive{1}/staffCheck"/>
+00226:   <!-- セルフ支払い情報を保存API -->
+00227:   <Setting Key="SelfSavePayInfoAddress"
+00228:            Value="http://{0}/app/dataReceive{1}/savePayInfo"/>
+00229: <br />
+00230:   <!-- API用共通の店舗番号桁数 -->
+00231:   <Setting Key="StoreCodeLength"
+00232:            Value="3"/>
+00233: 
+00234:   <!-- レジ袋商品のBarcode -->
+00235:   <Setting Key="RegiBagBarcode"
+00236:            Value="4522646330991"/>
+00237: 
+00238:   <Setting Key="RecommendationCouponAPI"
+00239:          Value="/recommendation/coupon/using" />
+00240:   <Setting Key="TrialCouponAPI"
+00241:            Value="/trycoupon/using" />
+00242:   <Setting Key="StamprallyAPI"
+00243:            Value="/campaigns" />
+00244:   <Setting Key="RecommendationCouponApplyAPI"
+00245:            Value="/recommendation/coupon/apply" />
+00246:   <Setting Key="TrialCouponApplyAPI"
+00247:            Value="/trycoupon/apply" />
+00248:   <Setting Key="StamprallyApplyAPI"
+00249:            Value="/campaigns/stamp" />
+00250: 
+00251:   <Setting Key="GetPaymentStationStateMillisecond"
+00252:            Value="1000"/>
+00253: 
+00254:   <!-- 販売証明書横向き印字横文字数 -->
+00255:   <Setting Key="Right90RJSalesCertificateWidth"
+00256:            Value="68"/>
+00257: 
+00258:   <!-- 買上販促レシート発行 URL -->
+00259:   <Setting Key="PPMStampFilePath"
+00260:        Value="C:\POS4UGO\PPM_BitMap\"/>
+00261: 
+00262:   <!-- 二人制チェッカーメニュー画面更新待機時間(Millsec) -->
+00263:   <Setting Key="TwoOperatorsCheckerUpdateMenuSleepMillisecond"
+00264:           Value="2000"/>
+00265: 
+00266:   <!-- 支払い情報ファイル作成のパス -->
+00267:   <Setting Key="SavePayInfoFailedFilePath"
+00268:            Value="C:\POS4UGO\SavePayInfoFailed\"/>
+00269: 
+00270:   <!-- Manjyuからバーコードのない商品_1.ベースフォルダ、2.ダウンロードフォルダ名のサフィックス、
+00271:                                 3.カテゴリーと商品明細データファイル名のプレフィックス、
+00272:                                 4.JPG画像ファイル名のプレフィックス-->
+00273:   <Setting Key="ManjyuLocalNonBarcodeBaseFolder"
+00274:            Value="SpecialItems\"/>
+00275:   <Setting Key="ManjyuLocalNonBarcodeDownloaFolder"
+00276:            Value="Download\"/>
+00277:   <Setting Key="ManjyuLocalNonBarcodeItemPath"
+00278:            Value="ManjyuNonBarcodeItem"/>
+00279:   <Setting Key="ManjyuLocalNonBarcodeImagePath"
+00280:           Value="ManjyuNonBarcodeImage"/>
+00281: 
+00282:   <!-- パッケージスキャナーログのパス -->
+00283:   <Setting Key="PackageScannerLogFolder"
+00284:            Value="C:\POS4UGO\Log\PackageScanner\"/>
+00285: 
+00286:   <!-- Manjyuからセルフ防犯商品_商品明細データファイル名のプレフィックス　-->
+00287:   <Setting Key="ManjyuLocalPreventionItemPath"
+00288:            Value="SpecialItems\ManjyuPreventionItem\"/>
+00289: 
+00290:   <!-- Dashboradへ送信するAPIのURL -->
+00291:   <Setting Key="StateManagementDashboradServerURL"
+00292:          Value="https://{0}/app/attendant{1}/MachineInfo/save?Timestamp="/>
+00293:   <Setting Key="SelfInfoToDashboradAddress"
+00294:            Value="https://{0}/app/dataReceive{1}/save?Timestamp="/>
+00295:   <Setting Key="ErrorInfoToDashboradAddress"
+00296:            Value="https://{0}/app/dataReceive{1}/error"/>
+00297: <br />
+00298:   <!--Dashborad通信 セルフ20禁年齢確認API-->
+00299:   <Setting Key="AgeConfirmDashboradAddress"
+00300:            Value="https://{0}/app/dataReceive{1}/customerCheck"/>
+00301:   <!--Dashborad通信 セルフ20禁年齢確認状態チェックAPI-->
+00302:   <Setting Key="AgeConfirmStateCheckDashboradAddress"
+00303:            Value="https://{0}/app/dataReceive{1}/staffCheck"/>
+00304: </Settings></p>
+<hr />
+<p>FILE: Source/POS4UTwoOperatorsCH/Settings/SettingWinPOSDeviceCH.xml
+SHA256: c76c4662f45558f367a3a2c7359ef12ec6d3ee18b2a15611841dea72a11d504a
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8" ?>
+00002: <Settings>
+00003:   <!-- Device -->
+00004:   <Setting Key="Scanner1Name" Value="USBSCANNER"/>
+00005:   <Setting Key="Scanner2Name" Value="USBSCANNER.EX"/>
+00006:   <Setting Key="DeviceCompatibilitiesString" Value="OposAndCompatibilityLevel1"/>
+00007:   <Setting Key="VoiceGuidanceFilePath" Value=".\VoiceGuidances\"/>
+00008:   <Setting Key="LogicServiceTerminalNo" Value="110"/>
+00009:   <Setting Key="LogicServiceBaseAddress" Value="http://localhost:63526"/>
+00010:   <!-- MTranServiceListener使用設定(true:使用/false:不使用)(店内の他端末からの中間取引通信を受信する場合にtrue) -->
+00011:   <Setting Key="IsEnableMTranServiceListener" Value="true"/>
+00012:   <Setting Key="MTranServicePort" Value="8081"/>
+00013:   <Setting Key="MTranServiceSendPort" Value="8080"/>
+00014:   <Setting Key="PosKeyboard2Name" Value="LS780KEYUB" />
+00015:   <Setting Key="CustomerDisplayX" Value="800"/>
+00016:   <Setting Key="CustomerDisplayY" Value="600"/>
+00017: </Settings></p>
+<hr />
+<p>FILE: Source/POS4UTwoOperatorsCH/Settings/SettingWinPOSTerminalCH.xml
+SHA256: 1350afe2e146336886408fb82b1994bd20e869a3c8b98591d4956a2e31d548aa
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8" ?>
+00002: <Settings>
+00003:   <!-- Setting -->
+00004:   <Setting Key="ManagedNo"
+00005:            Value="1"/>
+00006: 
+00007:   <!-- Background -->
+00008:   <Setting Key="TransactionServerAddress"
+00009:            Value="http://localhost:63526"/>
+00010: 
+00011:   <!-- WinPOSFramework -->
+00012:   <Setting Key="WindowWidth"
+00013:            Value="800"/>
+00014:   <Setting Key="WindowHeight"
+00015:            Value="600"/>
+00016:   <Setting Key="LeftPosition"
+00017:            Value="1024"/>
+00018:   <Setting Key="TopPosition"
+00019:            Value="0"/>
+00020:   <!-- CustomerDisplay表示 表示しなくない場合は0以下の値を設定する。 -->
+00021:   <Setting Key="CustomerDisplayWindowWidth"
+00022:            Value="480"/>
+00023:   <Setting Key="CustomerDisplayWindowHeight"
+00024:            Value="800"/>
+00025: 
+00026:   <!--画像イメージタイプ 00富士通、01TECSS900、02TECSS950、03Posiflex-->
+00027:   <Setting Key="NodeImageType"
+00028:            Value="00"/>
+00029:   <!--音声タイプ 00富士通、01TECSS900-->
+00030:   <Setting Key="NodeVoiceType"
+00031:            Value="00"/>
+00032: 
+00033:   <!-- オーダーセルフと惣菜一体化フラグ  true:既存、false:オーダーセルフと惣菜一体化-->
+00034:   <Setting Key="OrderKitchenSkipUnify"
+00035:            Value="false"/>
+00036:   <!--- オーダーキッチン‗プリカ持つ方選択画面表示要否 true:表示 / false:表示しない -->
+00037:   <Setting Key="ShowKitchenIsHasPrepaidCard"
+00038:            Value="true"/>
+00039: 
+00040:   <!-- 二人制チェッカー端末 -->
+00041:   <Setting Key="IsTwoOperatorsChecker"
+00042:            Value="True"/>
+00043: </Settings></p>
+<hr />
+<p>FILE: Source/POS4UTwoOperatorsCH/Settings/StateEventWinPOSCH.xml
+SHA256: df9c4d7b1e3e0d286604ada1cf76c40833cd06ca9147a6539c9113a9ab0fd968
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8" ?>
+00002: <Root>
+00003:   <TranType Id="Sales">
+00004:     <Command Before="Common_Clear"
+00005:              After="Sales_Clear" />
+00006:     <Command Before="Sales_SubTotal"
+00007:              After="Sales_ConfirmSendTwoOperatorsMTransaction" />
+00008:     <State Id="SalesTran_ItemReference">
+00009:       <Command Before="Sales_ItemReference"
+00010:                After="Common_Barcode" />
+00011:     </State>
+00012:     <State Id="ItemReference_WaitingISBN">
+00013:       <Command Before="Sales_CancelAddLineItem"
+00014:                After="Sales_ChangeItemReference" />
+00015:     </State>
+00016:     <State Id="ItemReference_WaitingCCodeAndPrice">
+00017:       <Command Before="Sales_CancelAddLineItem"
+00018:                After="Sales_ChangeItemReference" />
+00019:     </State>
+00020:     <State Id="SalesTran_WaitingDrugConfirm">
+00021:       <Command Before="Common_SignInOut" After="Sales_DrugConfirm"/>
+00022:     </State>
+00023:     <State Id="SalesTran_ItemCancel">
+00024:       <Command Before="Sales_PriceLookup"
+00025:                After="Sales_CancelSpecifiedLineByItem" />
+00026:       <Command Before="Sales_PriceLookupMagazine"
+00027:                After="Sales_CancelSpecifiedLineByItem" />
+00028:       <Command Before="Sales_NonPriceLookup"
+00029:                After="Sales_CancelSpecifiedLineByItem" />
+00030:       <Command Before="Sales_PriceLookupBook"
+00031:                After="Sales_CancelSpecifiedLineBySpecialItem" />
+00032:       <Command Before="Sales_PriceLookupBookISBN"
+00033:                After="Sales_CancelSpecifiedLineBySpecialItem" />
+00034:       <Command Before="Sales_PriceLookupBookCCodeAndPrice"
+00035:                After="Sales_CancelSpecifiedLineBySpecialItem" />
+00036:       <Command Before="Sales_MarkDownItem"
+00037:                After="Sales_CancelSpecifiedLineBySpecialItem" />
+00038:     </State>
+00039:     <State Id="TwoOperators_WaitingConfirmSendMTransaction">
+00040:       <Command Before="Common_Clear"
+00041:                After="Sales_CancelSendTwoOperatorsMTransaction" />
+00042:     </State>
+00043:     <Command Before="PaymentStation_InquiryMTransaction"
+00044:              After="Sales_LoadMTransactionManagement" />
+00045:   </TranType>
+00046:   <TranType Id="Lock">
+00047:     <Command Before="Common_SignInOut"
+00048:              After="Lock_SignIn" />
+00049:   </TranType>
+00050: </Root></p>
+<hr />
+<p>FILE: Source/POS4UTwoOperatorsCH/Settings/StateWinPOSCH.xml
+SHA256: c4ed3dbeb68472874ed1b683c2efc7b9929eab67eeee6cc026fedd8172a989c4
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8" ?>
+00002: <State>
+00003:   <!-- Excelとかで作れるようにする。 -->
+00004:   <Anytime>
+00005:     <Command Id="Common_Clear" />
+00006:     <Command Id="Sales_Clear" />
+00007:     <Command Id="Common_RemoveDeviceError" />
+00008:     <Command Id="Common_RemoveDeviceWarning" />
+00009:     <Command Id="Device_StatusUpdate" />
+00010:     <Command Id="Device_Error" />
+00011:     <Command Id="Common_ConfirmCanCloseCountTwoOperatorsChecker" />
+00012:   </Anytime>
+00013:   <TranType Id="MainMenu">
+00014:     <State Ids="MainMenuTran_Neutral">
+00015:       <Command Id="Common_PowerOn"/>
+00016:       <Command Id="Common_SignInOut" />
+00017:       <Command Id="Lock_ChangeDisplay" />
+00018:       <Command Id="Sales_ChangeDisplayWithMode" />
+00019:       <Command Id="MainMenu_ChangeDisplay" />
+00020:       <Command Id="MainMenu_RebootConfirm" />
+00021:       <Command Id="MTranDelete_ChangeDisplay" />
+00022:     </State>
+00023:     <State Ids="MainMenuTran_WaitingForConfirmReboot">
+00024:       <Command Id="Common_ExitApplication" />
+00025:       <Command Id="MainMenu_ChangeDisplayBack" />
+00026:     </State>
+00027:   </TranType>
+00028:   <TranType Id="Lock">
+00029:     <State Ids="LockTran_Neutral">
+00030:       <Command Id="Lock_SignIn" />
+00031:       <Command Id="Lock_Confirm" />
+00032:       <Command Id="MainMenu_RebootConfirm" />
+00033:     </State>
+00034:     <State Ids="LockTran_WaitingForConfirmExit">
+00035:       <Command Id="Common_ExitApplication" />
+00036:       <Command Id="Lock_SetNeutral" />
+00037:     </State>
+00038:     <State Ids="LockTran_WaitingForConfirmShutdown">
+00039:       <Command Id="Common_ExitApplication" />
+00040:       <Command Id="Lock_SetNeutral" />
+00041:     </State>
+00042:     <State Ids="LockTran_WaitingForConfirmReboot">
+00043:       <Command Id="Common_ExitApplication" />
+00044:       <Command Id="Lock_SetNeutral" />
+00045:     </State>
+00046:   </TranType>
+00047: </State></p>
+<hr />
+<p>FILE: Source/POS4UTwoOperatorsCH/Settings/StateWinPOSSalesCH.xml
+SHA256: f7e42e8b35a5e924c018a2215b0b3695f37ea2852627b9c9d5676b0335636e97
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8" ?>
+00002: <State>
+00003:   <TranType Id="Sales">
+00004:     <State Ids="SalesTran_Neutral,SalesTran_Fixed,SalesTran_Canceled">
+00005:       <Command Id="MainMenu_ChangeDisplay" />
+00006:       <Command Id="Sales_ChangeDisplay"/>
+00007:       <Command Id="Common_ChangeDisplayTraining"/>
+00008:       <Command Id="Common_SignInOut"/>
+00009:       <Command Id="Sales_PriceLookup"/>
+00010:       <Command Id="Sales_PriceLookupMagazine"/>
+00011:       <Command Id="Sales_PriceLookupBook"/>
+00012:       <Command Id="Sales_PriceLookupBookISBN"/>
+00013:       <Command Id="Sales_PriceLookupBookCCodeAndPrice"/>
+00014:       <Command Id="Sales_NonPriceLookup"/>
+00015:       <Command Id="Sales_MarkDownItem"/>
+00016:       <Command Id="Sales_SelectItem" />
+00017:       <Command Id="Sales_ChangeItemReference" />
+00018:       <Command Id="Sales_LoadMTransactionManagement" />
+00019:       <Command Id="Sales_GetCashChangerStatus" />
+00020:       <Command Id="Common_ArrowDown" />
+00021:       <Command Id="Common_ArrowUp" />
+00022:       <Command Id="Common_PageDown" />
+00023:       <Command Id="Common_PageUp" />
+00024:       <Command Id="Member_MemberBarcodeScan" />
+00025:       <Command Id="Member_MemberOneTimeBarcodeScan" />
+00026:       <Command Id="Sales_GetPriceReferenceList" />
+00027:       <Command Id="Sales_ChangeMode"/>
+00028:       <Command Id="Sales_ChangeEnteringItem" />
+00029:       <Command Id="Sales_SavedMTransactionList" />
+00030:       <Command Id="Sales_LoadMTransactionManagementByCartId" />
+00031:       <Command Id="PaymentStation_InquiryMTransaction" />
+00032:     </State>
+00033:     <State Ids="SalesTran_EnteringItem">
+00034:       <Command Id="Sales_PriceLookup"/>
+00035:       <Command Id="Sales_PriceLookupMagazine"/>
+00036:       <Command Id="Sales_PriceLookupBook"/>
+00037:       <Command Id="Sales_PriceLookupBookISBN"/>
+00038:       <Command Id="Sales_PriceLookupBookCCodeAndPrice"/>
+00039:       <Command Id="Sales_NonPriceLookup"/>
+00040:       <Command Id="Sales_ChangeQuantity"/>
+00041:       <Command Id="Sales_ChangeQuantityPosKeyBoard"/>
+00042:       <Command Id="Sales_ChangePrice"/>
+00043:       <Command Id="Sales_MarkDownItem"/>
+00044:       <Command Id="Sales_CancelSpecifiedLine"/>
+00045:       <Command Id="Sales_CancelSpecifiedLineByItem"/>
+00046:       <Command Id="Sales_SubTotal" />
+00047:       <Command Id="Sales_CancelTransaction"/>
+00048:       <Command Id="Sales_DiscountManualLineItem" />
+00049:       <Command Id="Sales_ChangeItemReference" />
+00050:       <Command Id="RetailMedia_SetRMCoupon"/>
+00051:       <Command Id="RetailMedia_SetRMLoginPoint"/>
+00052:       <Command Id="Sales_ApprovalAgeConfirmation" />
+00053:       <Command Id="Sales_SelectItem" />
+00054:       <Command Id="Sales_GetCashChangerStatus" />
+00055:       <Command Id="Common_ArrowDown" />
+00056:       <Command Id="Common_ArrowUp" />
+00057:       <Command Id="Common_PageDown" />
+00058:       <Command Id="Common_PageUp" />
+00059:       <Command Id="Common_CancelTransactionConfirm" />
+00060:       <Command Id="Member_MemberBarcodeScan" />
+00061:       <Command Id="Member_MemberOneTimeBarcodeScan" />
+00062:       <Command Id="Sales_GetPriceReferenceList" />
+00063:       <Command Id="Sales_RefreshMember" />
+00064:       <Command Id="Sales_ChangeMode"/>
+00065:       <Command Id="Sales_AgeConfirm" />
+00066:       <Command Id="Sales_PreventionConfirm" />
+00067:       <Command Id="Sales_DrugConfirm" />
+00068:       <Command Id="Sales_ChangeTaxGroup" />
+00069:       <Command Id="Sales_ChangeEnteringItem" />
+00070:       <Command Id="Sales_ItemCancel" />
+00071:       <Command Id="MainMenu_ChangeDisplay" />
+00072:       <Command Id="Sales_ConfirmSendTwoOperatorsMTransaction" />
+00073:       <Command Id="Common_SignInOut"/>
+00074:       <Command Id="Sales_PreventionConfirmForTwoOperators" />
+00075:       <Command Id="Sales_ClearMemberConfirm"/>
+00076:       <Command Id="Sales_SaveMTransactionManagement" />
+00077:       <Command Id="Sales_SavedMTransactionList" />
+00078:       <Command Id="Sales_LaneSelfSubTotal"/>
+00079:       <Command Id="Sales_ConfirmSendLaneSelfMTransaction"/>
+00080:       <Command Id="PaymentStation_InquiryMTransaction" />
+00081:     </State>
+00082:     <State Ids="SalesTran_ItemCancel">
+00083:       <Command Id="Sales_CancelSpecifiedLineByItem"/>
+00084:       <Command Id="Sales_CancelSpecifiedLineBySpecialItem"/>
+00085:       <Command Id="Sales_ItemCancelClose" />
+00086:     </State>
+00087:     <State Ids="SalesTran_WaitingAgeConfirm">
+00088:       <Command Id="Sales_AgeConfirm"/>
+00089:     </State>
+00090:     <State Ids="SalesTran_WaitingPreventionConfirm">
+00091:       <Command Id="Sales_PreventionConfirm"/>
+00092:       <Command Id="Sales_SubTotal" />
+00093:       <Command Id="Sales_PreventionConfirmForTwoOperators" />
+00094:       <Command Id="Sales_LaneSelfSubTotal"/>
+00095:       <Command Id="Sales_ConfirmSendTwoOperatorsMTransaction" />
+00096:     </State>
+00097:     <State Ids="SalesTran_WaitingDrugConfirm">
+00098:       <Command Id="Sales_DrugConfirm"/>
+00099:       <Command Id="Sales_SubTotal" />
+00100:       <Command Id="Sales_LaneSelfSubTotal"/>
+00101:       <Command Id="Sales_ConfirmSendTwoOperatorsMTransaction" />
+00102:       <Command Id="Common_CancelConfirm" />
+00103:       <Command Id="Common_SignInAttendant" />
+00104:     </State>
+00105:     <State Ids="SalesTran_SelectEnteringItem">
+00106:       <Command Id="Sales_PriceLookup"/>
+00107:       <Command Id="Sales_PriceLookupMagazine"/>
+00108:       <Command Id="Sales_PriceLookupBook"/>
+00109:       <Command Id="Sales_PriceLookupBookISBN"/>
+00110:       <Command Id="Sales_PriceLookupBookCCodeAndPrice"/>
+00111:       <Command Id="Sales_NonPriceLookup"/>
+00112:       <Command Id="Sales_ChangeQuantity"/>
+00113:       <Command Id="Sales_ChangeQuantityPosKeyBoard"/>
+00114:       <Command Id="Sales_ChangePrice"/>
+00115:       <Command Id="Sales_MarkDownItem"/>
+00116:       <Command Id="Sales_CancelSpecifiedLine"/>
+00117:       <Command Id="Sales_CancelSpecifiedLineByItem"/>
+00118:       <Command Id="Sales_SubTotal" />
+00119:       <Command Id="Sales_DiscountManualLineItem" />
+00120:       <Command Id="Sales_ChangeItemReference" />
+00121:       <Command Id="RetailMedia_SetRMCoupon"/>
+00122:       <Command Id="RetailMedia_SetRMLoginPoint"/>
+00123:       <Command Id="Sales_ApprovalAgeConfirmation" />
+00124:       <Command Id="Sales_CancelTransaction" />
+00125:       <Command Id="Common_CancelTransactionConfirm" />
+00126:       <Command Id="Member_MemberBarcodeScan" />
+00127:       <Command Id="Member_MemberOneTimeBarcodeScan" />
+00128:       <Command Id="Sales_GetPriceReferenceList" />
+00129:       <Command Id="Sales_RefreshMember" />
+00130:       <Command Id="Sales_AgeConfirm" />
+00131:       <Command Id="Sales_PreventionConfirm" />
+00132:       <Command Id="Sales_DrugConfirm" />
+00133:       <Command Id="Sales_ChangeEnteringItem" />
+00134:       <Command Id="Sales_ItemCancel" />
+00135:       <Command Id="MainMenu_ChangeDisplay" />
+00136:       <Command Id="Sales_ConfirmSendTwoOperatorsMTransaction" />
+00137:       <Command Id="Common_SignInOut"/>
+00138:       <Command Id="Sales_PreventionConfirmForTwoOperators" />
+00139:       <Command Id="Sales_ClearMemberConfirm"/>
+00140:       <Command Id="Sales_SaveMTransactionManagement" />
+00141:       <Command Id="Sales_LaneSelfSubTotal"/>
+00142:       <Command Id="Sales_ConfirmSendLaneSelfMTransaction"/>
+00143:     </State>
+00144:     <State Ids="SalesTran_WaitingCancelTransactionCofirm">
+00145:       <Command Id="Common_CancelConfirm" />
+00146:       <Command Id="Common_CancelTransaction" />
+00147:     </State>
+00148:     <State Ids="SalesTran_ItemReference">
+00149:       <Command Id="Sales_ChangeItemReference" />
+00150:       <Command Id="Common_Barcode" />
+00151:       <Command Id="Sales_PriceLookup"/>
+00152:       <Command Id="Sales_PriceLookupMagazine"/>
+00153:       <Command Id="Sales_PriceLookupBook"/>
+00154:       <Command Id="Sales_PriceLookupBookISBN"/>
+00155:       <Command Id="Sales_PriceLookupBookCCodeAndPrice"/>
+00156:       <Command Id="Sales_NonPriceLookup"/>
+00157:       <Command Id="Sales_MarkDownItem"/>
+00158:       <Command Id="Common_CancelTransactionConfirm" />
+00159:     </State>
+00160:     <State Ids="SalesTran_SavedMTransactionList">
+00161:       <Command Id="Sales_LoadMTransactionManagement" />
+00162:       <Command Id="Common_CancelConfirm" />
+00163:     </State>
+00164:     <State Ids="LineItem_WaitingISBN">
+00165:       <Command Id="Sales_PriceLookupBookISBN" />
+00166:       <Command Id="Sales_CancelAddLineItem" />
+00167:     </State>
+00168:     <State Ids="LineItem_WaitingCCodeAndPrice">
+00169:       <Command Id="Sales_PriceLookupBookCCodeAndPrice" />
+00170:       <Command Id="Sales_CancelAddLineItem" />
+00171:     </State>
+00172:     <State Ids="ItemReference_WaitingISBN">
+00173:       <Command Id="Sales_PriceLookupBookISBN" />
+00174:       <Command Id="Sales_ChangeItemReference" />
+00175:     </State>
+00176:     <State Ids="ItemReference_WaitingCCodeAndPrice">
+00177:       <Command Id="Sales_PriceLookupBookCCodeAndPrice" />
+00178:       <Command Id="Sales_ChangeItemReference" />
+00179:     </State>
+00180:     <State Ids="SalesTran_GetCashChangerStatus">
+00181:       <Command Id="Sales_GetCashChangerStatus" />
+00182:     </State>
+00183:     <State Ids="SalesTran_ValueCardOffline">
+00184:       <Command Id="Sales_OfflineCancel" />
+00185:       <Command Id="Sales_OfflineRetry" />
+00186:     </State>
+00187:     <State Ids="TwoOperators_WaitingConfirmSendMTransaction">
+00188:       <Command Id="Sales_CancelSendTwoOperatorsMTransaction" />
+00189:       <Command Id="Sales_DisplaySendTwoOperatorsMTransaction" />
+00190:     </State>
+00191:     <State Ids="TwoOperators_SendTMTransaction">
+00192:       <Command Id="Sales_InquiryCanAcceptTwoOperatorsMTransaction" />
+00193:       <Command Id="Sales_CancelSendTwoOperatorsMTransaction" />
+00194:       <Command Id="Sales_Total" />
+00195:       <Command Id="Sales_SendMTransactionManagement" />
+00196:     </State>
+00197:     <State Ids="TwoOperators_CompletedInquiryCanAcceptTwoOperatorsMTransaction">
+00198:       <Command Id="Sales_RequestGetTwoOperatorsMTransaction" />
+00199:     </State>
+00200:     <State Ids="TwoOperators_CompletedSendTMTransaction,TwoOperators_LaneSelfFailedRequest">
+00201:       <Command Id="Sales_ChangeDisplay" />
+00202:     </State>
+00203:     <State Ids="TwoOperators_CanNotAcceptMTransaction,TwoOperators_FailedAcceptMTransaction,TwoOperators_FailedRequest,TwoOperators_LaneSelfPlusPaymentStationSendMTransaction,TwoOperators_LaneSelfFailedRequest">
+00204:       <Command Id="Sales_InquiryCanAcceptTwoOperatorsMTransaction" />
+00205:       <Command Id="Sales_CancelSendTwoOperatorsMTransaction" />
+00206:       <Command Id="Sales_SendMTransactionManagement" />
+00207:     </State>
+00208:     <State Ids="TwoOperators_RequestPrintPauseMTransaction">
+00209:       <Command Id="Sales_RequestPrintPauseLaneSelfMTransaction" />
+00210:     </State>
+00211:     <State Ids="TwoOperators_CanPrintPauseMTransaction,TwoOperators_FailedPrintPauseMTransaction">
+00212:       <Command Id="Sales_PrintPauseLaneSelfMTransactionResult"/>
+00213:     </State>
+00214:     <State Ids="Member_WaitingClearMemberCofirm">
+00215:       <Command Id="Common_CancelConfirm" />
+00216:       <Command Id="Sales_ClearMember" />
+00217:     </State>
+00218:     <State Ids="SalesTran_SendMTransaction">
+00219:       <Command Id="Sales_ChangeDisplay" />
+00220:       <Command Id="Sales_NotifyCustomer" />
+00221:       <Command Id="Sales_ReSendMTransactionManagement" />
+00222:       <Command Id="Sales_LoadMTransactionManagement" />
+00223:       <Command Id="Sales_Total" />
+00224:     </State>
+00225:     <State Ids="SalesTran_NotFoundInquiryCanAcceptMTransaction,SalesTran_FailedRequestGetMTransaction">
+00226:       <Command Id="Sales_ChangeDisplay" />
+00227:       <Command Id="Sales_NotifyCustomer" />
+00228:       <Command Id="Sales_ReSendMTransactionManagement" />
+00229:       <Command Id="Sales_LoadMTransactionManagement" />
+00230:       <Command Id="Sales_Total" />
+00231:     </State>
+00232:     <State Ids="SalesTran_WaitingInquiryCanAcceptMTransaction,SalesTran_WaitingReInquiryCanAcceptMTransaction,SalesTran_WaitingRequestGetMTransaction">
+00233:       <Command Id="Sales_Total" />
+00234:     </State>
+00235:     <State Ids="SalesTran_SavedMTransactionList">
+00236:       <Command Id="Sales_LoadMTransactionManagement" />
+00237:       <Command Id="Common_CancelConfirm" />
+00238:     </State>
+00239:     <State Ids="SalesTran_Paying">
+00240:       <Command Id="Sales_ClearSubTotal" />
+00241:       <Command Id="Sales_CancelSubTotal" />
+00242:       <Command Id="Sales_Total" />
+00243:       <Command Id="Sales_CancelTransaction"/>
+00244:       <Command Id="Sales_ChangeQuantity"/>
+00245:       <Command Id="Sales_ChangeQuantityPaymentTicket"/>
+00246:       <Command Id="Payment_AddPayment" />
+00247:       <Command Id="Sales_SelectItem" />
+00248:       <Command Id="Sales_SelectPayment" />
+00249:       <Command Id="Sales_ChangeSelectPaymentRow" />
+00250:       <Command Id="Sales_AddPaymentValueCard" />
+00251:       <Command Id="Sales_AddPaymentCashInput" />
+00252:       <Command Id="Sales_AddPaymentAccountsReceivable" />
+00253:       <Command Id="Sales_SaveMTransactionManagement" />
+00254:       <Command Id="Sales_GetCashChangerStatus" />
+00255:       <Command Id="Common_ArrowDown" />
+00256:       <Command Id="Common_ArrowUp" />
+00257:       <Command Id="Common_PageDown" />
+00258:       <Command Id="Common_PageUp" />
+00259:       <Command Id="Common_CancelTransactionConfirm" />
+00260:       <Command Id="Member_MemberBarcodeScan" />
+00261:       <Command Id="Member_MemberOneTimeBarcodeScan" />
+00262:       <Command Id="EMoneyChargeEmployee_ChangeDisplay" />
+00263:       <Command Id="Sales_RefreshMember" />
+00264:       <Command Id="Sales_ChangeMode"/>
+00265:       <Command Id="Sales_SendMTransactionManagement" />
+00266:       <Command Id="Sales_ChangeEnteringItem" />
+00267:       <Command Id="PaymentService_AddPayment" />
+00268:       <Command Id="Common_CanNonExchangeTicketCount"/>
+00269:       <Command Id="Device_CAFISArchLANTotal" />
+00270:       <Command Id="Sales_ClearMemberConfirm"/>
+00271:       <Command Id="Common_FaceMeStart" />
+00272:       <Command Id="Sales_QRScanDialogShow"/>
+00273:       <Command Id="Sales_ConfirmSendTwoOperatorsMTransaction" />
+00274:       <Command Id="Sales_ConfirmSendLaneSelfMTransaction"/>
+00275:     </State>
+00276:     <State Ids ="SalesTran_WaitingDrugVerify">
+00277:       <Command Id="Sales_DrugVerify"/>
+00278:       <Command Id="Common_CancelConfirm"/>
+00279:     </State>
+00280:   </TranType>
+00281:   <TranType Id="MTranDelete">
+00282:     <State Ids="MTranDelete_Neutral">
+00283:       <Command Id="MTranDelete_DeleteCartMTransactionConfirm" />
+00284:       <Command Id="MTranDelete_Clear" />
+00285:       <Command Id="MainMenu_ChangeDisplay" />
+00286:       <Command Id="MTranDelete_SearchCartMTransaction" />
+00287:       <Command Id="MTranDelete_MTransactionSpecify" />
+00288:       <Command Id="MTranDelete_MTransactionSpecifyAll" />
+00289:       <Command Id="Sales_ChangeDisplay" />
+00290:     </State>
+00291:     <State Ids="MTranDelete_MTranDeleteConfirm">
+00292:       <Command Id="MTranDelete_DeleteCartMTransaction" />
+00293:       <Command Id="Common_CancelConfirm" />
+00294:     </State>
+00295:   </TranType>
+00296: </State></p>
+<hr />
+<p>FILE: Source/POS4UTwoOperatorsCH/packages.config
+00001: [非文本文件，未内联源码。size_bytes=171, extension=.config，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/POS4U_V4.sln
+00001: [非文本文件，未内联源码。size_bytes=99987, extension=.sln，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/TRAN4U/App.config
+00001: [非文本文件，未内联源码。size_bytes=1981, extension=.config，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/TRAN4U/Properties/Settings.settings
+00001: [非文本文件，未内联源码。size_bytes=242, extension=.settings，需要人工确认其教材处理方式]</p>
+<hr />
+<p>FILE: Source/TRAN4U/Settings/MasterImportOrderLaneSelf.xml
+SHA256: 1e92b3a5ce1672f9bda9b21aba2f87e3e2f3c6c148aae4f97760e2ce660fa654
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8" ?>
+00002: <MasterImportTargetTables>
+00003:   <!-- インポート対象テーブル -->
+00004:   <TargetTable TableName="AreaMaster" />
+00005:   <TargetTable TableName="BarcodeConvertMaster" />
+00006:   <TargetTable TableName="BarcodeConvertSubMaster" />
+00007:   <TargetTable TableName="BestBeforeDateMaster" />
+00008:   <TargetTable TableName="BestBeforeMarkDownMaster" />
+00009:   <TargetTable TableName="CashChangerCheckMaster" />
+00010:   <TargetTable TableName="CashDenominationMaster" />
+00011:   <TargetTable TableName="ChargePointCalculateMaster" />
+00012:   <TargetTable TableName="CompanyMaster" />
+00013:   <TargetTable TableName="DiscountAutoItemMaster" />
+00014:   <TargetTable TableName="DiscountAutoMDHierarchyMaster" />
+00015:   <TargetTable TableName="DiscountGroupSetDetailMaster" />
+00016:   <TargetTable TableName="DiscountGroupSetItemMaster" />
+00017:   <TargetTable TableName="DiscountGroupSetMaster" />
+00018:   <TargetTable TableName="DiscountManualMaster" />
+00019:   <TargetTable TableName="DiscountMixMatchDetailMaster" />
+00020:   <TargetTable TableName="DiscountMixMatchMaster" />
+00021:   <TargetTable TableName="DiscountMixMatchSetItemMaster" />
+00022:   <TargetTable TableName="DiscountTypeMaster" />
+00023:   <TargetTable TableName="DynamicPricingMaster" />
+00024:   <TargetTable TableName="EmployeeMaster" />
+00025:   <TargetTable TableName="EmployeeRoleMaster" />
+00026:   <TargetTable TableName="EventConvertMaster" />
+00027:   <TargetTable TableName="EventGroupDetailMaster" />
+00028:   <TargetTable TableName="EventGroupMaster" />
+00029:   <TargetTable TableName="FunctionMenuButtonMaster" />
+00030:   <TargetTable TableName="FunctionMenuMaster" />
+00031:   <TargetTable TableName="ItemImageMaster" />
+00032:   <TargetTable TableName="ItemMaster" />
+00033:   <TargetTable TableName="LineDisplayMessageMaster" />
+00034:   <TargetTable TableName="MDHierarchyLevelMaster" />
+00035:   <TargetTable TableName="MDHierarchyMaster" />
+00036:   <TargetTable TableName="NodeMaster" />
+00037:   <TargetTable TableName="NonBarcodeOtherItemCategoryMaster" />
+00038:   <TargetTable TableName="NonBarcodeOtherItemMaster" />
+00039:   <TargetTable TableName="OperationLimitMaster" />
+00040:   <TargetTable TableName="PaymentMaster" />
+00041:   <TargetTable TableName="PaymentPointScheduleMaster" />
+00042:   <TargetTable TableName="PaymentSummaryGroupMaster" />
+00043:   <TargetTable TableName="PaymentTicketBarCodeMaster" />
+00044:   <TargetTable TableName="PaymentTicketMaster" />
+00045:   <TargetTable TableName="PointECouponMaster" />
+00046:   <TargetTable TableName="PointMemberECouponDetailMaster" />
+00047:   <TargetTable TableName="PointMemberECouponMaster" />
+00048:   <TargetTable TableName="PointRankMaster" />
+00049:   <TargetTable TableName="PointRankScheduleMaster" />
+00050:   <TargetTable TableName="PointRankStageMaster" />
+00051:   <TargetTable TableName="PointRateItemMaster" />
+00052:   <TargetTable TableName="PointRateMDHierarchyMaster" />
+00053:   <TargetTable TableName="PresetMenuButtonMaster" />
+00054:   <TargetTable TableName="PresetMenuMaster" />
+00055:   <TargetTable TableName="ReasonMaster" />
+00056:   <TargetTable TableName="ReceiptMessageMaster" />
+00057:   <TargetTable TableName="RevenueStampGroupMaster" />
+00058:   <TargetTable TableName="RevenueStampMaster" />
+00059:   <TargetTable TableName="SettingMaster" />
+00060:   <TargetTable TableName="StoreInformationMaster" />
+00061:   <TargetTable TableName="TaxCodeMaster" />
+00062:   <TargetTable TableName="TaxGroupDetailMaster" />
+00063:   <TargetTable TableName="TaxGroupMaster" />
+00064:   <TargetTable TableName="PPMStamp" />
+00065: </MasterImportTargetTables></p>
+<hr />
+<p>FILE: Source/TRAN4U/Settings/MasterImportOrderLaneSelfPaymentStation.xml
+SHA256: 1e92b3a5ce1672f9bda9b21aba2f87e3e2f3c6c148aae4f97760e2ce660fa654
+================================================================================
+00001: ﻿<?xml version="1.0" encoding="utf-8" ?>
+00002: <MasterImportTargetTables>
+00003:   <!-- インポート対象テーブル -->
+00004:   <TargetTable TableName="AreaMaster" />
+00005:   <TargetTable TableName="BarcodeConvertMaster" />
+00006:   <TargetTable TableName="BarcodeConvertSubMaster" />
+00007:   <TargetTable TableName="BestBeforeDateMaster" />
+00008:   <TargetTable TableName="BestBeforeMarkDownMaster" />
+00009:   <TargetTable TableName="CashChangerCheckMaster" />
+00010:   <TargetTable TableName="CashDenominationMaster" />
+00011:   <TargetTable TableName="ChargePointCalculateMaster" />
+00012:   <TargetTable TableName="CompanyMaster" />
+00013:   <TargetTable TableName="DiscountAutoItemMaster" />
+00014:   <TargetTable TableName="DiscountAutoMDHierarchyMaster" />
+00015:   <TargetTable TableName="DiscountGroupSetDetailMaster" />
+00016:   <TargetTable TableName="DiscountGroupSetItemMaster" />
+00017:   <TargetTable TableName="DiscountGroupSetMaster" />
+00018:   <TargetTable TableName="DiscountManualMaster" />
+00019:   <TargetTable TableName="DiscountMixMatchDetailMaster" />
+00020:   <TargetTable TableName="DiscountMixMatchMaster" />
+00021:   <TargetTable TableName="DiscountMixMatchSetItemMaster" />
+00022:   <TargetTable TableName="DiscountTypeMaster" />
+00023:   <TargetTable TableName="DynamicPricingMaster" />
+00024:   <TargetTable TableName="EmployeeMaster" />
+00025:   <TargetTable TableName="EmployeeRoleMaster" />
+00026:   <TargetTable TableName="EventConvertMaster" />
+00027:   <TargetTable TableName="EventGroupDetailMaster" />
+00028:   <TargetTable TableName="EventGroupMaster" />
+00029:   <TargetTable TableName="FunctionMenuButtonMaster" />
+00030:   <TargetTable TableName="FunctionMenuMaster" />
+00031:   <TargetTable TableName="ItemImageMaster" />
+00032:   <TargetTable TableName="ItemMaster" />
+00033:   <TargetTable TableName="LineDisplayMessageMaster" />
+00034:   <TargetTable TableName="MDHierarchyLevelMaster" />
+00035:   <TargetTable TableName="MDHierarchyMaster" />
+00036:   <TargetTable TableName="NodeMaster" />
+00037:   <TargetTable TableName="NonBarcodeOtherItemCategoryMaster" />
+00038:   <TargetTable TableName="NonBarcodeOtherItemMaster" />
+00039:   <TargetTable TableName="OperationLimitMaster" />
+00040:   <TargetTable TableName="PaymentMaster" />
+00041:   <TargetTable TableName="PaymentPointScheduleMaster" />
+00042:   <TargetTable TableName="PaymentSummaryGroupMaster" />
+00043:   <TargetTable TableName="PaymentTicketBarCodeMaster" />
+00044:   <TargetTable TableName="PaymentTicketMaster" />
+00045:   <TargetTable TableName="PointECouponMaster" />
+00046:   <TargetTable TableName="PointMemberECouponDetailMaster" />
+00047:   <TargetTable TableName="PointMemberECouponMaster" />
+00048:   <TargetTable TableName="PointRankMaster" />
+00049:   <TargetTable TableName="PointRankScheduleMaster" />
+00050:   <TargetTable TableName="PointRankStageMaster" />
+00051:   <TargetTable TableName="PointRateItemMaster" />
+00052:   <TargetTable TableName="PointRateMDHierarchyMaster" />
+00053:   <TargetTable TableName="PresetMenuButtonMaster" />
+00054:   <TargetTable TableName="PresetMenuMaster" />
+00055:   <TargetTable TableName="ReasonMaster" />
+00056:   <TargetTable TableName="ReceiptMessageMaster" />
+00057:   <TargetTable TableName="RevenueStampGroupMaster" />
+00058:   <TargetTable TableName="RevenueStampMaster" />
+00059:   <TargetTable TableName="SettingMaster" />
+00060:   <TargetTable TableName="StoreInformationMaster" />
+00061:   <TargetTable TableName="TaxCodeMaster" />
+00062:   <TargetTable TableName="TaxGroupDetailMaster" />
+00063:   <TargetTable TableName="TaxGroupMaster" />
+00064:   <TargetTable TableName="PPMStamp" />
+00065: </MasterImportTargetTables></p>
+<hr />
+<p>FILE: Source/TRAN4U/Settings/PluginTRAN4U.xml
+SHA256: 1673765ed32e7db756749e24f6135993c5fd3dac0143660d27648641cd1476db
+================================================================================
+00001: <?xml version="1.0" encoding="utf-8" ?>
+00002: <Extension>
+00003:   <Plugin
+00004:     Id="SummaryQueueManager"
+00005:     Assembly="Background.Business.BackgroundCommon, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00006:     Class="ForYouApplications.POS4U.Background.Business.BackgroundCommon.SQLDatabaseSummaryQueueManager"/>
+00007:   <Plugin
+00008:     Id="TransactionLogQueue"
+00009:     Assembly="Data.Accessor, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00010:     Class="ForYouApplications.POS4U.Data.Accessor.SQLDatabaseSummaryQueueAccessor"/>
+00011:   <Group
+00012:     Id="AdministratorModuleGroup">
+00013:     <Plugin
+00014:       Id="TranLogService"
+00015:       Assembly="Background.Business.TranLogService, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00016:       Class="ForYouApplications.POS4U.Background.Business.TranLogService.TranLogService"/>
+00017:     <Plugin
+00018:       Id="Transfer"
+00019:       Assembly="Background.Business.Transfer, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00020:       Class="ForYouApplications.POS4U.Background.Business.Transfer.Transfer"/>
+00021:     <Plugin
+00022:       Id="MasterSyncPosDiff"
+00023:       Assembly="Background.Business.MasterSyncPos, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00024:       Class="ForYouApplications.POS4U.Background.Business.MasterSyncPos.MasterSyncPosDiff"/>
+00025:   </Group>
+00026:   <Group
+00027:     Id="TranLogService">
+00028:     <Plugin
+00029:       Id="TranLogServiceSetBusinessState"
+00030:       Assembly="Background.Business.TranLogService, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00031:       Class="ForYouApplications.POS4U.Background.Business.TranLogService.TranLogServiceSetBusinessState"/>
+00032:     <Plugin
+00033:       Id="TranLogServiceCashTotal"
+00034:       Assembly="Background.Business.TranLogService, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00035:       Class="ForYouApplications.POS4U.Background.Business.TranLogService.TranLogServiceCashTotal"/>
+00036:     <Plugin
+00037:       Id="TranLogServiceRMLoginPointTotal"
+00038:       Assembly="Background.Business.TranLogService, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00039:       Class="ForYouApplications.POS4U.Background.Business.TranLogService.TranLogServiceRMLoginPointTotal"/>
+00040:     <Plugin
+00041:       Id="TranLogServiceRMCouponPointTotal"
+00042:       Assembly="Background.Business.TranLogService, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00043:       Class="ForYouApplications.POS4U.Background.Business.TranLogService.TranLogServiceRMCouponPointTotal"/>
+00044:     <Plugin
+00045:       Id="TranLogServicePosSalesTotal"
+00046:       Assembly="Background.Business.TranLogService, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00047:       Class="ForYouApplications.POS4U.Background.Business.TranLogService.TranLogServicePosSalesTotal"/>
+00048:     <Plugin
+00049:       Id="TranLogServiceDealCodeTotal"
+00050:       Assembly="Background.Business.TranLogService, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00051:       Class="ForYouApplications.POS4U.Background.Business.TranLogService.TranLogServiceDealCodeTotal"/>
+00052:   </Group>
+00053:   <Group
+00054:     Id="Transfer">
+00055:     <Plugin
+00056:       Id="TransferTransactionLog"
+00057:       Assembly="Background.Business.Transfer, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00058:       Class="ForYouApplications.POS4U.Background.Business.Transfer.TransferTransactionLogPOS"/>
+00059:     <Plugin
+00060:       Id="TransferEJournal"
+00061:       Assembly="Background.Business.Transfer, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00062:       Class="ForYouApplications.POS4U.Background.Business.Transfer.TransferEJournalPOS"/>
+00063:   </Group>
+00064:   <Group
+00065:     Id="MasterSyncPosDiff">
+00066:     <Plugin
+00067:       Id="MasterSyncPosDiff"
+00068:       Assembly="Background.Business.MasterSyncPos, Version=1.0.0.0, Culture=neutral, PublickeyToken=7f613065d93c5dd1"
+00069:       Class="ForYouApplications.POS4U.Background.Business.MasterSyncPos.MasterSyncPosDiffLogic"/>
+00070:   </Group>
+00071: </Extension></p>
+<p>END ORIGINAL PROMPT</p></div></div></div>
+<div class="message assistant" id="msg-2026-07-09T06-26-40-800Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2026-07-09T06-26-40-800Z" class="timestamp-link"><time datetime="2026-07-09T06:26:40.800Z" data-timestamp="2026-07-09T06:26:40.800Z">2026-07-09T06:26:40.800Z</time></a></div><div class="message-content">
+<div class="thinking"><div class="thinking-label">Thinking</div><p>The user wants me to generate a "file-level source code explanation notes" document for batch_029. However, many of the files in this batch are marked as non-text files that need manual confirmation. I need to work with what I have - the XML files that were included as text, and note the non-text files that couldn't be inlined.</p>
+<p>Let me analyze each file carefully based on the provided source code and metadata.</p>
+<p>Let me go through each file systematically.</p>
+<h2>Non-text files (no source code provided):</h2>
+<ol>
+<li><code>Source/Azure/Azure.Logic/Azure.Logic.csproj</code> - 9136 bytes, .csproj</li>
+<li><code>Source/Azure/Azure.Logic/app.config</code> - 671 bytes, .config</li>
+<li><code>Source/Azure/Azure.Logic/packages.config</code> - 420 bytes, .config</li>
+<li><code>Source/Common/Common.Const/Common.Const.csproj</code> - 11027 bytes, .csproj</li>
+<li><code>Source/Common/Common.Const/packages.config</code> - 171 bytes, .config</li>
+<li><code>Source/POS4UBackground.sln</code> - 15835 bytes, .sln</li>
+<li><code>Source/POS4UTwoOperatorsCH/App.config</code> - 2165 bytes, .config</li>
+<li><code>Source/POS4UTwoOperatorsCH/POS4UTwoOperatorsCH.csproj</code> - 37291 bytes, .csproj</li>
+<li><code>Source/POS4UTwoOperatorsCH/packages.config</code> - 171 bytes, .config</li>
+<li><code>Source/POS4U_V4.sln</code> - 99987 bytes, .sln</li>
+<li><code>Source/TRAN4U/App.config</code> - 1981 bytes, .config</li>
+<li><code>Source/TRAN4U/Properties/Settings.settings</code> - 242 bytes, .settings</li>
+</ol>
+<h2>XML files with source code:</h2>
+<ol>
+<li><code>Source/POS4UTwoOperatorsCH/Settings/MainMenuListLaneSelfCH.xml</code> - 54 lines</li>
+<li><code>Source/POS4UTwoOperatorsCH/Settings/MainMenuListTwoOperatorsCH.xml</code> - 44 lines</li>
+<li><code>Source/POS4UTwoOperatorsCH/Settings/PluginDeviceCH.xml</code> - 88 lines</li>
+<li><code>Source/POS4UTwoOperatorsCH/Settings/SettingWinPOSCH.xml</code> - 304 lines</li>
+<li><code>Source/POS4UTwoOperatorsCH/Settings/SettingWinPOSDeviceCH.xml</code> - 17 lines</li>
+<li><code>Source/POS4UTwoOperatorsCH/Settings/SettingWinPOSTerminalCH.xml</code> - 43 lines</li>
+<li><code>Source/POS4UTwoOperatorsCH/Settings/StateEventWinPOSCH.xml</code> - 50 lines</li>
+<li><code>Source/POS4UTwoOperatorsCH/Settings/StateWinPOSCH.xml</code> - 47 lines</li>
+<li><code>Source/POS4UTwoOperatorsCH/Settings/StateWinPOSSalesCH.xml</code> - 296 lines</li>
+<li><code>Source/TRAN4U/Settings/MasterImportOrderLaneSelf.xml</code> - 65 lines</li>
+<li><code>Source/TRAN4U/Settings/MasterImportOrderLaneSelfPaymentStation.xml</code> - 65 lines</li>
+<li><code>Source/TRAN4U/Settings/PluginTRAN4U.xml</code> - 71 lines</li>
+</ol>
+<p>Total: 24 files in the batch.</p>
+<p>Now let me create comprehensive notes for each file. For non-text files, I'll note what can be inferred from metadata and what needs manual confirmation. For XML files with source, I'll do detailed analysis.</p>
+<p>Let me write this out as a comprehensive document.</p></div></div></div>
+<div class="message assistant" id="msg-2026-07-09T06-29-18-506Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2026-07-09T06-29-18-506Z" class="timestamp-link"><time datetime="2026-07-09T06:29:18.506Z" data-timestamp="2026-07-09T06:29:18.506Z">2026-07-09T06:29:18.506Z</time></a></div><div class="message-content">
+<div class="assistant-text"><h1>文件级源码笔记：config_config_settings</h1>
+<h2>Batch 信息</h2>
+<ul>
+<li>Batch ID: batch_029</li>
+<li>Batch Name: config_config_settings</li>
+<li>Module: config</li>
+<li>Purpose: 解释项目配置、构建配置、依赖配置和运行时配置加载线索</li>
+</ul>
+<hr />
+<h2>文件：Source/Azure/Azure.Logic/Azure.Logic.csproj</h2>
+<h3>1. 文件定位</h3>
+<p>Azure.Logic 项目的 MSBuild 项目文件。定义了该项目如何编译、引用了哪些程序集、目标框架等构建元信息。属于 Azure 模块中的一个子项目，根据名称推测与 Azure 云服务相关的业务逻辑层有关。</p>
+<h3>2. 对外暴露内容</h3>
+<p>无代码暴露。作为 .csproj 文件，它对外暴露的是：
+- 项目的程序集名称、默认命名空间
+- 编译目标（输出类型：Library/Exe）
+- 引用的外部 NuGet 包和内部项目引用
+- .NET Framework 目标版本</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>.csproj 文件无运行时执行逻辑，仅在 MSBuild 编译时由构建系统解析执行。构建顺序由文件内的 <code>&lt;ProjectReference&gt;</code> 元素决定。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>不适用。.csproj 是 XML 构建描述文件，不包含可执行代码。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>依赖 MSBuild 编译系统</li>
+<li>可能需要引用 Azure SDK、Azure.Storage 等云服务库（需要结合文件内容确认）</li>
+<li>可能需要引用同一 Solution 下的其他项目</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<p>当前文件没有错误处理逻辑。构建错误由 MSBuild 引擎处理。</p>
+<h3>7. 测试相关</h3>
+<p>当前输入中没有对应的测试。测试文件应位于同目录或配套的 .Tests 项目中。</p>
+<h3>8. 新人阅读建议</h3>
+<p>了解 MSBuild 项目文件基本结构后，重点关注 <code>&lt;ItemGroup&gt;</code> 中的 <code>&lt;PackageReference&gt;</code> 或 <code>&lt;Reference&gt;</code> 了解外部依赖，以及 <code>&lt;ProjectReference&gt;</code> 了解项目间引用关系。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>文件内容未知，无法判断目标框架版本（.NET Framework 4.x / .NET Core）</li>
+<li>无法判断输出类型（类库 / 控制台应用）</li>
+<li>无法判断引用了哪些 Azure 服务包</li>
+<li>需要结合文件实际内容或其他 source batch（如 batch_001～003 框架体系）确认</li>
+</ul>
+<hr />
+<h2>文件：Source/Azure/Azure.Logic/app.config</h2>
+<h3>1. 文件定位</h3>
+<p>Azure.Logic 项目的运行时配置文件（.NET Framework 标准 App.config）。用于存储运行时连接字符串、应用设置等键值对，.NET Framework 通过 <code>ConfigurationManager</code> 类读取。</p>
+<h3>2. 对外暴露内容</h3>
+<p>无代码暴露。对外暴露的是 .NET 配置节：
+- <code>connectionStrings</code> — 数据库或外部服务连接字符串
+- <code>appSettings</code> — 自定义键值对
+- <code>runtime</code> — CLR 运行时行为配置</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>应用启动时，.NET Framework 自动加载 App.config，初始化 <code>ConfigurationManager</code>。运行时代码通过 <code>ConfigurationManager.AppSettings["Key"]</code> 或 <code>ConfigurationManager.ConnectionStrings["Name"]</code> 读取。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无可执行组件。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>被 Azure.Logic 项目中的代码依赖</li>
+<li>读取方式依赖 .NET Framework 的 <code>System.Configuration</code> 程序集</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<p>当前文件没有显式错误处理。如果在代码中访问不存在的配置键，会返回 null，调用方需要处理空值。</p>
+<h3>7. 测试相关</h3>
+<p>配置文件的测试通常通过 mock 配置或集成测试覆盖。当前输入未包含测试文件。</p>
+<h3>8. 新人阅读建议</h3>
+<p>阅读时可以重点关注 <code>connectionStrings</code> 看数据库或 Azure 服务端点，以及 <code>appSettings</code> 中的自定义配置值。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>具体内容未知，无法确认包含哪些连接字符串和应用设置</li>
+<li>需要结合文件实际内容确认</li>
+<li>Azure 连接是使用 Azure SQL 还是 Azure Storage 等无法判断</li>
+</ul>
+<hr />
+<h2>文件：Source/Azure/Azure.Logic/packages.config</h2>
+<h3>1. 文件定位</h3>
+<p>NuGet 包依赖清单文件。被 .NET Framework 项目使用（.NET Core 和 .NET 5+ 使用 PackageReference）。记录了该项目引用的所有 NuGet 第三方包的 ID 和版本号。</p>
+<h3>2. 对外暴露内容</h3>
+<p>无代码暴露。对外暴露的是 NuGet 包清单：
+- <code>package id</code> — 包标识符
+- <code>targetFramework</code> — 目标框架
+- <code>version</code> — 包版本号</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>构建时，NuGet 还原工具读取 packages.config，下载对应版本的程序集到 packages/ 目录，然后 MSBuild 将这些程序集加入编译引用。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>依赖 NuGet 包管理器</li>
+<li>列表中的每个包都是运行时或编译时依赖</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<p>当前文件没有错误处理。包不存在或版本不匹配时，NuGet 还原会报错。</p>
+<h3>7. 测试相关</h3>
+<p>不适用。这是构建配置，不是可测试代码。</p>
+<h3>8. 新人阅读建议</h3>
+<p>查看包列表可以快速了解项目的技术栈——比如是否引用 Entity Framework、Newtonsoft.Json、Azure SDK 等。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>具体包含哪些包未知</li>
+<li>包版本未知</li>
+<li>需要结合文件实际内容确认</li>
+</ul>
+<hr />
+<h2>文件：Source/Common/Common.Const/Common.Const.csproj</h2>
+<h3>1. 文件定位</h3>
+<p>Common.Const 公共常量项目的 MSBuild 项目文件。Const 通常代表 Constants（常量），该项目很可能定义了全局常量（如错误码、事件码、状态值等），被项目中几乎所有其他模块引用。</p>
+<h3>2. 对外暴露内容</h3>
+<p>无代码暴露。作为 .csproj 文件暴露的是项目构建配置。</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>同 Azure.Logic.csproj，仅编译时生效，无运行时逻辑。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>由于是 Common 层 Const 项目，它应该不依赖其他业务项目（或只依赖最底层的工具库）</li>
+<li>被几乎所有上层模块引用</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<p>无。</p>
+<h3>7. 测试相关</h3>
+<p>常量定义通常不需要专门测试。如果常量定义了业务值范围，可以考虑写校验测试。</p>
+<h3>8. 新人阅读建议</h3>
+<p>Constants 项目是理解整个系统枚举值和常量体系的最佳入口。建议在代码被内联后首先阅读该项目的源代码文件。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>文件内容未知</li>
+<li>具体包含了哪些常量类（如 ErrorCode、EventCode、StateId 等）无法确认</li>
+<li>需要结合文件实际内容或其他 source batch 确认</li>
+</ul>
+<hr />
+<h2>文件：Source/Common/Common.Const/packages.config</h2>
+<h3>1. 文件定位</h3>
+<p>Common.Const 项目的 NuGet 包依赖清单。</p>
+<h3>2. 对外暴露内容</h3>
+<p>无。</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>同前述 packages.config。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>作为底层 Common 项目，它应该极少或没有第三方依赖</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<p>无。</p>
+<h3>7. 测试相关</h3>
+<p>不适用。</p>
+<h3>8. 新人阅读建议</h3>
+<p>查看依赖数量可以判断 Common.Const 的纯净度（0 依赖说明是最纯粹的常量定义项目）。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>具体包含哪些包未知</li>
+<li>需要结合文件实际内容确认</li>
+</ul>
+<hr />
+<h2>文件：Source/POS4UBackground.sln</h2>
+<h3>1. 文件定位</h3>
+<p>Visual Studio 解决方案文件。它定义了 POS4U 后台服务相关的项目集合，包括项目 GUID、项目类型、解决方案配置等。sln 文件是开发人员打开和编译项目的入口。</p>
+<h3>2. 对外暴露内容</h3>
+<p>无代码暴露。对外暴露的是：
+- 解决方案中包含的项目列表
+- 全局构建配置（Debug / Release）
+- 解决方案属性</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>双击 .sln 文件时，Visual Studio 加载文件中的项目列表，按项目 GUID 和路径逐个加载项目。编译时，MSBuild 按项目间的引用关系决定编译顺序。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>依赖 Visual Studio 或 MSBuild</li>
+<li>引用的各项目之间可能有编译顺序依赖</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<p>无。如果 .sln 文件损坏或项目路径不存在，Visual Studio 会报加载错误。</p>
+<h3>7. 测试相关</h3>
+<p>不适用。</p>
+<h3>8. 新人阅读建议</h3>
+<p>通过 .sln 文件可以了解后台服务模块包含哪些子项目，是理解系统模块拆分的第一手资料。重点关注它包含了哪些项目，以及是否有启动项目设置。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>包含哪些具体项目未知（一个 Background 后台会有多个子项目）</li>
+<li>启动项目设置未知</li>
+<li>需要结合文件实际内容确认</li>
+</ul>
+<hr />
+<h2>文件：Source/POS4UTwoOperatorsCH/App.config</h2>
+<h3>1. 文件定位</h3>
+<p>POS4UTwoOperatorsCH（二人制チェッカーCH端末）应用的运行时配置文件。这是 POS4U 双人制收银模式的终端应用程序入口配置文件。</p>
+<h3>2. 对外暴露内容</h3>
+<p>无代码暴露。包含：
+- <code>connectionStrings</code> — 数据库连接
+- <code>appSettings</code> — 应用级配置
+- 启动相关设置</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>应用启动时自动加载，供 <code>ConfigurationManager</code> 等 API 读取。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>被 POS4UTwoOperatorsCH 应用程序代码依赖</li>
+<li>配合 Settings/ 目录下的 XML 配置文件一起构成完整配置体系</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<p>无显式错误处理。代码访问不存在的键时返回 null。</p>
+<h3>7. 测试相关</h3>
+<p>不直接测试。集成测试中可能通过修改 App.config 测试不同配置下的行为。</p>
+<h3>8. 新人阅读建议</h3>
+<p>阅读 App.config 和 SettingWinPOS*.xml 配合理解配置加载机制。App.config 通常存放数据库连接和基础运行时参数，业务配置在 XML 文件中。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>具体包含哪些连接字符串和设置键值未知</li>
+<li>需要结合文件实际内容确认</li>
+</ul>
+<hr />
+<h2>文件：Source/POS4UTwoOperatorsCH/POS4UTwoOperatorsCH.csproj</h2>
+<h3>1. 文件定位</h3>
+<p>POS4UTwoOperatorsCH 应用程序的项目文件。这是二人制收银终端的主项目，包含所有编译配置、引用、内容文件（Content）设置等。文件大小 37KB 说明引用了大量程序集和资源。</p>
+<h3>2. 对外暴露内容</h3>
+<p>无代码暴露。包含：
+- 引用列表（大量第三方和内部引用）
+- Content 文件列表（Settings 目录下的 XML 会被复制到输出目录）
+- 生成事件（Pre-build / Post-build）
+- 输出类型（推测为 Windows Application / WinForms / WPF）</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>编译时 MSBuild 执行。重点注意项目中的 <code>&lt;Content&gt;</code> 设置使 Settings XML 文件随编译输出。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>引用大量第三方库（需要结合 packages.config 确认）</li>
+<li>引用 Common、Device 等内部项目</li>
+<li>Settings/ 目录下的 XML 是运行时必须的配置文件</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<p>无。</p>
+<h3>7. 测试相关</h3>
+<p>不适用。</p>
+<h3>8. 新人阅读建议</h3>
+<p>37KB 的 .csproj 说明有大量引用。重点关注 <code>&lt;ProjectReference&gt;</code> 理解模块间依赖关系，以及 <code>&lt;Content&gt;</code> 确认哪些资源文件会随程序发布。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>具体的引用列表未知</li>
+<li>输出类型未知</li>
+<li>需要结合文件实际内容确认</li>
+</ul>
+<hr />
+<h2>文件：Source/POS4UTwoOperatorsCH/Settings/MainMenuListLaneSelfCH.xml</h2>
+<h3>1. 文件定位</h3>
+<p>自助收银（Lane Self）端的主菜单按钮布局配置文件。属于 POS4UTwoOperatorsCH 项目的 Settings 目录，定义了自助通道 POS 端主菜单页面的按钮排列、功能代码和页面属性。</p>
+<h3>2. 对外暴露内容</h3>
+<ul>
+<li><code>&lt;MainMenuDataSet&gt;</code> — 根元素（行号 2），XML 命名空间指向 <code>http://tempuri.org/MainMenuDataSet.xsd</code></li>
+<li><code>&lt;Menu&gt;</code> — 菜单定义容器（行号 3）</li>
+<li><code>&lt;MenuNumber&gt;</code>（行号 4）：菜单编号</li>
+<li><code>&lt;Description&gt;</code>（行号 5）：菜单描述 "メインメニュー"</li>
+<li><code>&lt;MenuPage&gt;</code>（行号 6~52）：菜单页面</li>
+<li><code>&lt;MenuButton&gt;</code>（行号 9~37、42~51）：按钮定义<ul>
+<li><code>&lt;ButtonNumber&gt;</code> — 按钮序号</li>
+<li><code>&lt;Description&gt;</code> — 按钮显示文本（日文）</li>
+<li><code>&lt;ButtonType&gt;</code> — 按钮类型（均为 "1"）</li>
+<li><code>&lt;EventCode&gt;</code> — 事件代码（如 411、554、174）</li>
+<li><code>&lt;InputData&gt;</code> — 附加输入数据（如 "Training"）</li>
+<li><code>&lt;AddInfos&gt;</code> — 附加标记（如 "Opened"、"IsHyBridMode"）</li>
+</ul>
+</li>
+</ul>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>运行时，POS 框架读取此 XML 构建主菜单 UI：
+1. 解析 <code>&lt;MainMenuDataSet&gt;</code> 根节点（行号 2）
+2. 遍历 <code>&lt;Menu&gt;</code> 下的 <code>&lt;MenuPage&gt;</code> 元素（行号 6~52），每个 <code>&lt;MenuPage&gt;</code> 对应一页菜单画面
+3. 当前有两个页面：Page 1（行号 7~38）和 Page 2（行号 39~52）
+4. 每个页面的 <code>&lt;MenuButton&gt;</code> 按 <code>&lt;ButtonNumber&gt;</code> 映射到屏幕按钮位置
+5. 用户点击按钮时，触发 <code>&lt;EventCode&gt;</code> 对应的事件（行号 15、25、35）</p>
+<p>Page 1 定义了三个按钮：
+- Button 1："登録機"（注册机）→ EventCode 411 + AddInfos="Opened"（行号 9~18）
+- Button 3："中間取引削除"（中间交易删除）→ EventCode 554 + AddInfos="Opened,IsHyBridMode"（行号 19~28）
+- Button 5："休止"（休止/暂停）→ EventCode 174（行号 29~37）</p>
+<p>Page 2 定义了一个按钮：
+- Button 1："登録機(練習モード)" → EventCode 411 + InputData="Training" + AddInfos="Opened"（行号 42~51）</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无直接代码函数。这是一个数据驱动配置，框架中有对应的 XML 解析器（未在当前 batch 中）。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>依赖运行时框架的 XML 解析逻辑（未在当前 batch）</li>
+<li>依赖 <code>MainMenuDataSet.xsd</code> 验证 XML 结构</li>
+<li>按钮上定义的 EventCode 值在系统事件管理层必须已注册</li>
+<li>参考 SettingWinPOSCH.xml 第 5~6 行的 ControllerFile 控制器文件用于框架加载</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li>按钮编号可能不连续（Page 1 有 ButtonNumber 1、3、5，跳过了 2、4），框架应支持非连续布局。具体行为需要结合解析逻辑确认。</li>
+<li>未定义按钮的位置可能是空白或隐藏</li>
+<li>没有重复按钮编号校验</li>
+</ul>
+<h3>7. 测试相关</h3>
+<p>当前输入未包含对应测试。建议测试：
+- XML 格式有效性（可以成功解析）
+- 所有 EventCode 在事件注册表中存在
+- 按钮编号无重复</p>
+<h3>8. 新人阅读建议</h3>
+<p>先对比阅读 <code>MainMenuListLaneSelfCH.xml</code> 和 <code>MainMenuListTwoOperatorsCH.xml</code>，理解自助模式与双人模式在菜单布局上的差异。这是理解 POS 菜单驱动架构的关键配置。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>EventCode 值（411、554、174）对应的实际业务含义需要结合事件注册模块确认</li>
+<li><code>MainMenuDataSet.xsd</code> 不存在于当前 batch，需要结合其他 batch 确认其定义</li>
+<li><code>IsHyBridMode</code> AddInfos 的语义需要结合代码确认</li>
+</ul>
+<hr />
+<h2>文件：Source/POS4UTwoOperatorsCH/Settings/MainMenuListTwoOperatorsCH.xml</h2>
+<h3>1. 文件定位</h3>
+<p>双人收银（Two Operators）端的 Checker（チェッカー）菜单按钮布局配置文件。与 LaneSelf 配置对应，属于双人制模式的菜单定义。</p>
+<h3>2. 对外暴露内容</h3>
+<p>与 MainMenuListLaneSelfCH.xml 完全相同的结构，但按钮内容不同：
+- <code>&lt;MainMenuDataSet&gt;</code> 根元素（行号 2）
+- <code>&lt;Menu&gt;</code> 容器（行号 3~43）
+  - <code>&lt;MenuNumber&gt;</code> 1（行号 4）
+  - <code>&lt;Description&gt;</code> "メインメニュー"（行号 5）
+  - Page 1（行号 6~28）：Checker 模式的两个按钮
+  - Page 2（行号 29~42）：Checker 练习模式的按钮</p>
+<p>Page 1 按钮：
+- Button 1："チェッカー" → EventCode 411 + AddInfos="Opened"（行号 9~18）
+- Button 5："休止" → EventCode 174（行号 19~28）</p>
+<p>Page 2 按钮：
+- Button 1："チェッカー(練習モード)" → EventCode 411 + InputData="Training" + AddInfos="Opened"（行号 32~42）</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>运行时行为与 LaneSelf 版本完全一致。区别在于：
+- LaneSelf 版本有 3 个按钮（包含"中間取引削除"），TwoOperators 版本只有 2 个按钮
+- LaneSelf 的 Button 1 显示"登録機"，TwoOperators 的 Button 1 显示"チェッカー"
+- </p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>与 LaneSelf 版本共享同一套解析逻辑</li>
+<li>EventCode 含义与 LaneSelf 一致</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<p>与 LaneSelf 一致。按钮编号同样是不连续的（1 和 5）。</p>
+<h3>7. 测试相关</h3>
+<p>当前输入未包含测试。建议与 LaneSelf 版本统一测试 Schema 有效性。</p>
+<h3>8. 新人阅读建议</h3>
+<p>对比两个 MainMenuList 文件是最佳入门方式。差异体现了 LaneSelf（自助通道）与 TwoOperators（双人收银）的业务职责区别。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>同 LaneSelf 版本</li>
+</ul>
+<hr />
+<h2>文件：Source/POS4UTwoOperatorsCH/Settings/PluginDeviceCH.xml</h2>
+<h3>1. 文件定位</h3>
+<p>设备插件注册配置文件。它定义了 POS4U 双人制（CH）终端运行时加载的所有硬件设备驱动和模拟器插件。采用"插件架构"解耦具体设备实现。这是一个框架核心文件，决定了哪些设备驱动被加载。</p>
+<h3>2. 对外暴露内容</h3>
+<ul>
+<li><code>&lt;Extension&gt;</code> 根元素（行号 2）</li>
+<li><code>&lt;Group Id="Device"&gt;</code> 设备组（行号 3~87）</li>
+<li>16 个 <code>&lt;Plugin&gt;</code> 元素，每个包含：</li>
+<li><code>Id</code> — 设备标识（如 "Scanner1"、"PointService"）</li>
+<li><code>Assembly</code> — 强名称程序集（含 Version、Culture、PublicKeyToken）</li>
+<li><code>Class</code> — 完整类名（命名空间+类名）</li>
+</ul>
+<p>插件清单（按行号）：</p>
+<table>
+<thead>
+<tr>
+<th>Id</th>
+<th>Assembly</th>
+<th>Class</th>
+<th>行号</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Scanner1</td>
+<td>Device.ScannerSimulator</td>
+<td>...ScannerSimulator</td>
+<td>29~32</td>
+</tr>
+<tr>
+<td>Scanner2</td>
+<td>Device.ScannerSimulator</td>
+<td>...ScannerSimulator</td>
+<td>33~36</td>
+</tr>
+<tr>
+<td>PointService</td>
+<td>Device.PointInfinityServiceSimulator</td>
+<td>...PointInfinityServiceSimulator</td>
+<td>43~46</td>
+</tr>
+<tr>
+<td>ValueCard</td>
+<td>Device.ValueCardSimulator</td>
+<td>...ValueCardSimulator</td>
+<td>51~54</td>
+</tr>
+<tr>
+<td>RetailMediaService</td>
+<td>Device.RetailMediaSimulator</td>
+<td>...RetailMediaSimulator</td>
+<td>59~62</td>
+</tr>
+<tr>
+<td>LogicServiceClient</td>
+<td>Device.LogicServiceClient</td>
+<td>...LogicServiceClient</td>
+<td>63~66</td>
+</tr>
+<tr>
+<td>BeepSound</td>
+<td>Device.BeepSound</td>
+<td>...BeepSouncConsole</td>
+<td>67~70</td>
+</tr>
+<tr>
+<td>ErrorBeepSound</td>
+<td>Device.BeepSound</td>
+<td>...ErrorBeepSouncConsole</td>
+<td>71~74</td>
+</tr>
+<tr>
+<td>VoiceGuidance</td>
+<td>Device.BeepSound</td>
+<td>...VoiceGuidance</td>
+<td>75~78</td>
+</tr>
+<tr>
+<td>SelfApiConnectionService</td>
+<td>Device.SelfApiConnectionService</td>
+<td>...SelfApiConnectionService</td>
+<td>79~82</td>
+</tr>
+<tr>
+<td>MTranService</td>
+<td>Device.MTranService</td>
+<td>...MTranServiceWinPOS</td>
+<td>83~86</td>
+</tr>
+</tbody>
+</table>
+<p>注释掉的"生产环境"插件（行号 7~26）：
+- SecondDisplayM9000CH（第二显示器）
+- Scanner1/Scanner2（M8750 扫描枪）
+- PosKeyboard（TEC M8000 POS键盘）</p>
+<p>当前激活的全是模拟器/开发版（行号 28~86）。</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>运行框架启动时：
+1. 框架读取 PluginDeviceCH.xml，解析 <code>&lt;Extension&gt;/&lt;Group&gt;</code> 节点（行号 2~3）
+2. 遍历 Group 下的所有 <code>&lt;Plugin&gt;</code> 元素
+3. 对每个 Plugin，根据 <code>Assembly</code> 属性中的强名称加载程序集
+4. 根据 <code>Class</code> 属性通过反射实例化插件对象
+5. 插件实例注册到设备管理器中，<code>Id</code> 属性作为全局唯一标识
+6. 应用代码通过 <code>Id</code>（如 "Scanner1"）获取设备实例进行操作</p>
+<p>注释中标注（行号 8）：
+- "先頭は必ず SecondDisplayM9000CH とすること"——如果有第二显示器插件，必须放在最前面，因为它负责触摸功能，必须在设备错误对话框显示前完成初始化
+- 这反映了设备插件有初始化顺序依赖</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无直接代码函数。插件框架的加载逻辑（反射 + 类型实例化）由框架核心处理。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>依赖框架的插件加载引擎（未在当前 batch 中）</li>
+<li>依赖所有列出的程序集被编译到输出目录或 GAC 中</li>
+<li>Assembly 的 PublicKeyToken <code>7f613065d93c5dd1</code> 表明所有设备程序集使用同一个强名称签名密钥</li>
+<li>SettingWinPOSDeviceCH.xml 中的设备名称（如 Scanner1Name、PosKeyboard2Name）与 Plugin 的 Id 对应</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li>当前没有显式错误处理代码</li>
+<li>注释中有说明初始化顺序约束（行号 8）</li>
+<li>没有定义插件加载失败时的回退行为</li>
+<li>没有定义 Id 冲突时的处理策略</li>
+</ul>
+<h3>7. 测试相关</h3>
+<p>当前输入未包含测试。建议测试：
+- XML 格式与 Schema 匹配
+- Assembly 的所有类是否可以通过反射加载
+- Id 唯一性校验</p>
+<h3>8. 新人阅读建议</h3>
+<p>这个文件是理解 POS4U 设备抽象层的入口。注意对比注释掉的"生产"插件和当前使用的"模拟器"插件的区别。结合 <code>SettingWinPOSDeviceCH.xml</code> 理解设备配置的键值对命名约定（如 Scanner1 ↔ Scanner1Name）。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>插件加载失败时的具体框架行为需要结合框架源码确认</li>
+<li><code>LogicServiceClient</code> 的具体功能需要结合代码确认（可能是连接外部逻辑服务）</li>
+<li><code>SelfApiConnectionService</code> 的具体功能需要结合代码确认</li>
+<li><code>MTranService</code> 的具体功能需要结合代码确认（推测与中间交易 MTransaction 相关）</li>
+<li>需要结合其他 batch 中的插件引擎源码确认加载顺序和冲突处理机制</li>
+</ul>
+<hr />
+<h2>文件：Source/POS4UTwoOperatorsCH/Settings/SettingWinPOSCH.xml</h2>
+<h3>1. 文件定位</h3>
+<p>POS4U 双人制（CH）终端的主配置文件。这是 POS 应用运行时的核心配置源，包含了框架行为、数据库连接、业务参数、后台服务、通信端点、安全策略等约 120 项配置键值。是本 batch 中最重要的配置文件。</p>
+<h3>2. 对外暴露内容</h3>
+<p>按业务分组，关键配置项：</p>
+<p><strong>Framework 组（行号 4~20）：</strong>
+- <code>ControllerFile</code> = "ControllerWinPOS.xml"（行号 5~6）—框架主控制器文件名
+- <code>StateFiles</code> = "StateWinPOSCH.xml,StateWinPOSSalesCH.xml"（行号 7~8）—状态机定义文件
+- <code>DataAccessTimeLogThresholdMilliseconds</code> = "100"（行号 9~10）—数据访问慢日志阈值
+- <code>BarcodeEventCodeCsv</code> = "38,84,90,482"（行号 11~12）—条码扫描触发的事件代码
+- <code>ModuleVersion</code> = "2019072001"（行号 17~18）—模块版本号
+- <code>MainDataAccessType</code> = "Master"（行号 19~20）—数据访问类型（主数据库）</p>
+<p><strong>FrameworkLibrary 组（行号 22~28）：</strong>
+- <code>POS4UConnectionString</code> = "Data Source=.\SQLEXPRESS;Initial Catalog=POS4U_Trial;Integrated Security=True"（行号 23~24）—数据库连接字符串（开发环境 SQL Express）
+- <code>CurrencyDecimalDigits</code> = "0"（行号 25~26）—货币小数位数
+- <code>CurrencyNegativePattern</code> = "2"（行号 27~28）—负数货币格式</p>
+<p><strong>Setting 组（业务配置，行号 30~60）：</strong>
+- <code>EmployeeCodeLength</code> = "0"（行号 31~32）—员工代码长度（0 表示无限制）
+- <code>NonExchangeTicketAmount</code> = "10000"（行号 33~34）—非兑换券金额上限
+- <code>MaxChange</code> = "9999"（行号 35~36）—最大找零金额
+- <code>RJDateTimeFormat</code> = "yyyy年MM月dd日(ddd)HH:mm"（行号 37~38）—日本日期格式
+- <code>DiscountRoundType</code> = "02"（行号 39~40）—折扣舍入方式
+- <code>ServiceType</code> = "1"（行号 43~44）—业务类型
+- <code>RevenueStampFilePath</code> = "C:\POS4UGO\Settings\RevenueStamp.bmp"（行号 45~46）—收入印纸图片路径
+- <code>PaymentStationCanAddPayments</code> / <code>SelfCanAddPayments</code> / <code>EMoneyChageCanAddPayments</code>（行号 47~52）—各终端允许的支付追加方式
+- <code>CategoryCountPerPage</code> = "7" / <code>TabCountPerPage</code> = "4"（行号 55~60）—商品分类每页显示数
+- <code>OTCDrugNodeTypes</code> = "10,11"（行号 57~58）—OTC药品节点类型</p>
+<p><strong>Background 组（后台服务，行号 62~87）：</strong>
+- <code>StorageConnectionString</code> = "UseDevelopmentStorage=true"（行号 63~64）—Azure Storage 开发存储
+- <code>TranLogServiceIntervalMillisecond</code> = "3000"（行号 65~66）—交易日志服务轮询间隔
+- <code>TransferIntervalMillisecond</code> = "10000"（行号 67~68）—数据上传间隔
+- <code>ServiceReferenceIntervalMillisecond</code> = "600000"（行号 69~70）—服务引用轮询间隔（10分钟）
+- <code>TransferDisplayForceExitMillisecond</code> = "30000"（行号 71~72）—上传显示强制退出超时
+- <code>MasterSyncPosDownloadDirectory</code> / <code>MasterSycnPosWorkDirectory</code> / <code>BackupDatabaseDiretory</code>（行号 74~81）—Master 同步路径
+- <code>MasterSyncPosImportOrderFileName</code> = "MasterImportOrder.xml"（行号 83~84）—Master 导入顺序文件名
+- <code>MasterSyncPosIntervalMillisecond</code> = "60000"（行号 86~87）—Master 同步间隔</p>
+<p><strong>WinPOSFramework 组（行号 89~103）：</strong>
+- <code>StateEventFiles</code> = "StateEventWinPOSCH.xml"（行号 90~91）—状态事件文件
+- <code>EventRecorderFilePath</code> / <code>PlayListFilePath</code> / <code>KeyName</code> / <code>Keyword</code>（行号 96~103）—事件录制回放路径
+- <code>CursorHide</code> = "False" / <code>ModifierKeysSetting</code> = "0"（行号 92~95）—UI 表现配置</p>
+<p><strong>WinPOS 组（行号 105~153）：</strong>
+- <code>CashDrawerFiveHundredStickCount</code> = "20"（行号 106~107）—500 元硬币识别计数
+- <code>MaxFigureOfInputArea</code> = "26"（行号 108~109）—输入区域最大字符数
+- <code>TranRemoteControllerPortNo</code> = "8013"（行号 112~113）—交易远程控制端口
+- <code>ExitPassword</code> / <code>ShutdownPassword</code> / <code>RebootPassword</code>（行号 114~119）—操作密码
+- 键盘快捷操作代码（行号 120~125）
+- <code>OptimizeDatabase</code> = "true"（行号 126~127）—数据库优化标志
+- 日志保留天数配置（行号 132~137）
+- 钱箱状态检查间隔/超时（行号 138~141）
+- 储值卡操作超时设置（行号 142~153）</p>
+<p><strong>自助相关组（ローカル版セルフ，行号 155~171）：</strong>
+- 数据检查/年龄确认定时器（行号 156~163）
+- 防犯商品/无条码商品/商品图片的本地存储路径（行号 165~187）</p>
+<p><strong>API 地址组（行号 188~249）：</strong>
+- 服务器 API URL（行号 190~195）
+- 防犯商品版本/数据获取 API（行号 197~203）
+- 无条码商品分类/产品/图像 API（行号 204~219）
+- 年龄确认 API（行号 220~228）
+- 优惠券/Stamp Rally API（行号 238~249）</p>
+<p><strong>其他配置（行号 251~304）：</strong>
+- Dashboard API URL（行号 291~304）
+- 打印/菜单更新/支付信息存储路径等</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>应用启动时：
+1. 框架读取 "ControllerFile"（行号 5）获取主控制器文件路径 → 加载 ControllerWinPOS.xml
+2. 读取 "StateFiles"（行号 7）加载状态机定义 → StateWinPOSCH.xml 和 StateWinPOSSalesCH.xml
+3. 读取 "StateEventFiles"（行号 90）加载状态事件映射 → StateEventWinPOSCH.xml
+4. 读取数据库连接字符串（行号 23）初始化数据访问层
+5. 逐一读取所有 <code>&lt;Setting&gt;</code> 条目，存入全局配置管理器中</p>
+<p>运行时，各模块通过配置管理器按 Key 查找配置值。例如：
+- 收银模块调用 <code>GetConfig("MaxChange")</code> 获取最大找零金额（行号 35）
+- 后台服务根据 TranLogServiceIntervalMillisecond（行号 65）设定定时器
+- 设备管理读取 PluginDeviceCH.xml 和 SettingWinPOSDeviceCH.xml 中的设备名称</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>此文件为配置数据，无函数。但需要关注一个关键模式：
+- 所有配置文件路径（行号 5~8、90~91）指向的其他 XML 文件名构成了配置加载链
+- 这形成了一个多级配置加载体系：App.config → SettingWinPOSCH.xml → 其他 XML</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>依赖 <code>System.Configuration</code> 框架读取 App.config，从中找到 SettingWinPOSCH.xml 的位置</li>
+<li>引用文件：ControllerWinPOS.xml、StateWinPOSCH.xml、StateWinPOSSalesCH.xml、StateEventWinPOSCH.xml、MasterImportOrder.xml（行号 5、7、90、83）</li>
+<li>数据库：SQL Server Express（行号 23）</li>
+<li>后台服务：Azure Storage（行号 63）</li>
+<li>网络通信：多条 HTTP/HTTPS API 端点（行号 190~252、291~304）</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li>文件没有显式错误处理</li>
+<li>某些配置值缺失可能导致运行异常（如没有数据库连接字符串会导致应用无法启动）</li>
+<li>路径配置（行号 45~46、74~78、96~97）如果目录不存在，需要依赖框架的自动创建逻辑或异常处理</li>
+<li>密码配置以纯文本存储（行号 114~119），存在安全隐患</li>
+<li>版本号 "2019072001"（行号 17~18）为硬编码日期格式，需注意更新</li>
+</ul>
+<h3>7. 测试相关</h3>
+<p>当前输入未包含测试。建议：
+- 配置键完整性测试——确保所有代码中使用的配置键在此文件中都有定义
+- 配置值格式测试——如端口号是否为数字、超时值是否为正数
+- 路径存在性测试——确保引用的文件路径在构建输出中</p>
+<h3>8. 新人阅读建议</h3>
+<p>将此文件作为研究 POS4U 配置体系的核心入口。先浏览所有配置组的注释（行号 4、22、30、62、89、105、155、172、189、197、220、254、262、266、282、290），理解系统有哪些功能模块。然后对照其他 XML 配置文件跟进配置加载链。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li><code>ControllerFile</code> = "ControllerWinPOS.xml" 不在当前 batch 中，需要结合其他 batch 确认其内容</li>
+<li><code>StateFiles</code> 与 <code>StateEventFiles</code> 的协同关系需要结合状态机框架确认</li>
+<li>所有 API URL 中的 <code>{0}</code>、<code>{1}</code>、<code>{2}</code>、<code>{3}</code> 占位符的填充规则需要结合调用代码确认</li>
+<li><code>ServiceType</code> = "1" 的业务含义未定义</li>
+<li>EventRecorderKeyword 的用途（行号 102~103）需要结合代码确认</li>
+<li><code>ShutdownTypeForCloseCount</code> = "0" 的含义不明确</li>
+<li><code>PaymentStationCanAddPayments</code> / <code>SelfCanAddPayments</code> 的值格式需要结合代码确认</li>
+</ul>
+<hr />
+<h2>文件：Source/POS4UTwoOperatorsCH/Settings/SettingWinPOSDeviceCH.xml</h2>
+<h3>1. 文件定位</h3>
+<p>设备配置专有文件。与 PluginDeviceCH.xml 互补——Plugin 文件注册设备驱动类型，此文件提供设备的运行时参数（如名称、端口、IP、显示分辨率等）。</p>
+<h3>2. 对外暴露内容</h3>
+<p>16 个配置项：
+- <code>Scanner1Name</code> = "USBSCANNER"（行号 4）— 一号扫描枪设备名（OPOS 逻辑名）
+- <code>Scanner2Name</code> = "USBSCANNER.EX"（行号 5）— 二号扫描枪设备名
+- <code>DeviceCompatibilitiesString</code> = "OposAndCompatibilityLevel1"（行号 6）— OPOS 兼容性级别
+- <code>VoiceGuidanceFilePath</code> = ".\VoiceGuidances\"（行号 7）— 语音引导文件路径
+- <code>LogicServiceTerminalNo</code> = "110"（行号 8）— 逻辑服务终端号
+- <code>LogicServiceBaseAddress</code> = "http://localhost:63526"（行号 9）— 逻辑服务基地址
+- <code>IsEnableMTranServiceListener</code> = "true"（行号 11）— 是否启用中间交易监听
+- <code>MTranServicePort</code> = "8081" / <code>MTranServiceSendPort</code> = "8080"（行号 12~13）— MTran 服务端口
+- <code>PosKeyboard2Name</code> = "LS780KEYUB"（行号 14）— POS 键盘设备名
+- <code>CustomerDisplayX</code> = "800" / <code>CustomerDisplayY</code> = "600"（行号 15~16）— 顾客显示器分辨率</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>框架初始化设备层时：
+1. 先加载 PluginDeviceCH.xml 注册设备驱动类型
+2. 再加载 SettingWinPOSDeviceCH.xml 为每个已注册的插件提供配置参数
+3. 设备管理器将设备名（如 "USBSCANNER"）绑定到对应插件类型实例</p>
+<p>代码通过设备管理器获取设备时，可以传入 "Scanner1Name" 的值作为参数。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>直接依赖 PluginDeviceCH.xml 中的插件注册</li>
+<li>Scanner 设备名与 OPOS（OLE for Retail POS）标准关联</li>
+<li>LogicServiceBaseAddress/Port 与同一网络中的 LogicService 服务关联</li>
+<li>MTranService 端口（行号 12~13）与其他终端通信相关</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li><code>CustomerDisplayX</code> / <code>Y</code> 无有效值范围校验。注释说"表示しなくない場合は0以下の値を設定する"（行号 20），但此注释在终端配置文件中，设备配置中没有</li>
+<li>端口号（行号 12~13）无范围校验</li>
+</ul>
+<h3>7. 测试相关</h3>
+<p>当前输入未包含测试。建议：
+- 端口号范围校验测试
+- 设备名与 Plugin 注册 Id 对应关系测试</p>
+<h3>8. 新人阅读建议</h3>
+<p>与 PluginDeviceCH.xml 一起阅读。Plugin 文件定义"有什么设备"，设备文件定义"设备的具体配置"。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li><code>DeviceCompatibilitiesString</code> 的具体兼容模式定义需要结合 OPOS 层代码确认</li>
+<li><code>LogicServiceTerminalNo</code> = "110" 的分配规则需要结合后台服务配置确认</li>
+<li>MTranService 的端口通信协议需要结合对应服务源码确认</li>
+</ul>
+<hr />
+<h2>文件：Source/POS4UTwoOperatorsCH/Settings/SettingWinPOSTerminalCH.xml</h2>
+<h3>1. 文件定位</h3>
+<p>终端专有配置。定义特定于该收银终端（硬件/软件实例）的显示参数、图像与语音类型、窗口位置等。</p>
+<h3>2. 对外暴露内容</h3>
+<p>10 个配置项：
+- <code>ManagedNo</code> = "1"（行号 4~5）— 管理编号（可能是店内的 POS 编号）
+- <code>TransactionServerAddress</code> = "http://localhost:63526"（行号 8~9）— 交易服务器地址
+- <code>WindowWidth</code>/<code>WindowHeight</code> = 800/600（行号 12~15）— 主窗口尺寸
+- <code>LeftPosition</code>/<code>TopPosition</code> = 1024/0（行号 16~19）— 窗口起始位置（推测双屏显示场景，主屏在右侧）
+- <code>CustomerDisplayWindowWidth</code>/<code>Height</code> = 480/800（行号 21~24）— 顾客显示器尺寸
+- <code>NodeImageType</code> = "00"（行号 27~28）— 图像类型（00富士通、01TECSS900、02TECSS950、03Posiflex）
+- <code>NodeVoiceType</code> = "00"（行号 30~31）— 语音类型（00富士通、01TECSS900）
+- <code>OrderKitchenSkipUnify</code> = "false"（行号 34~35）— 订单厨房跳过一体化
+- <code>ShowKitchenIsHasPrepaidCard</code> = "true"（行号 37~38）— 是否显示预付费卡选择画面
+- <code>IsTwoOperatorsChecker</code> = "True"（行号 41~42）— 是否为双人制 Checker 模式</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>应用启动时：
+1. 框架加载终端配置，设置窗口尺寸和位置
+2. 根据图像/语音类型加载对应的 UI 皮肤和音频资源
+3. 根据 <code>IsTwoOperatorsChecker</code> 判断是否以双人制模式启动
+4. 连接 <code>TransactionServerAddress</code> 指定的交易服务器</p>
+<p><code>LeftPosition</code> = 1024（行号 17）结合 <code>WindowWidth</code> = 800（行号 12）暗示：
+- 总屏幕宽度 = 1024 + 800 = 1824，可能是 1920 宽度的双屏排列
+- POS 主窗口放置在屏幕右侧，顾客显示在左侧（CustomerDisplayWidth=480 也是竖屏尺寸=480*800 旋转）</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>依赖框架的窗口管理模块</li>
+<li>图像/语音类型（行号 27~31）的 00/01/02/03 值与外部厂商资源文件关联</li>
+<li><code>TransactionServerAddress</code> 指向 LogicServiceBaseAddress（SettingWinPOSDeviceCH.xml 行号 9）的同一端口</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li><code>CustomerDisplayWindowWidth</code> / <code>Height</code> 注释说 0 以下不显示（行号 20），但当前设置正数值</li>
+<li>窗口位置无边界限制，可能导致窗口超出屏幕范围</li>
+</ul>
+<h3>7. 测试相关</h3>
+<p>当前输入未包含测试。建议测试窗口位置和尺寸配置在目标分辨率下的显示效果。</p>
+<h3>8. 新人阅读阅读建议</h3>
+<p>这个文件很小但很重要，因为它定义了终端的身份（<code>ManagedNo</code>、<code>IsTwoOperatorsChecker</code>）和物理布局。理解窗口坐标（1024,0）可以帮助理解店铺硬件布局。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li><code>NodeImageType</code>/<code>NodeVoiceType</code> 的 00~03 枚举值对应的实际资源文件需要结合框架加载逻辑确认</li>
+<li><code>OrderKitchenSkipUnify</code> 的业务含义需要结合订单厨房模块代码确认</li>
+<li><code>ManagedNo</code> 的作用范围（是否全局唯一）需要结合后台确认</li>
+</ul>
+<hr />
+<h2>文件：Source/POS4UTwoOperatorsCH/Settings/StateEventWinPOSCH.xml</h2>
+<h3>1. 文件定位</h3>
+<p>状态-事件映射配置文件。定义了在执行某个状态变更时，哪些"命令（Command）"需要在状态改变前（Before）和改变后（After）自动触发。这是 POS 框架状态机的重要组成部分。</p>
+<h3>2. 对外暴露内容</h3>
+<ul>
+<li><code>&lt;Root&gt;</code> 根元素（行号 2）</li>
+<li><code>&lt;TranType Id="Sales"&gt;</code>（行号 3~45）— 销售交易类型</li>
+<li><code>&lt;TranType Id="Lock"&gt;</code>（行号 46~49）— 锁定交易类型</li>
+</ul>
+<p>关键状态-事件映射：</p>
+<p><strong>Sales 类型（行号 3~45）：</strong>
+- 全局映射（各状态之间共享）：
+  - Before="Common_Clear" → After="Sales_Clear"（行号 4~5）
+  - Before="Sales_SubTotal" → After="Sales_ConfirmSendTwoOperatorsMTransaction"（行号 6~7）
+- <code>SalesTran_ItemReference</code> 状态（行号 8~11）：
+  - Before="Sales_ItemReference" → After="Common_Barcode"
+- <code>ItemReference_WaitingISBN</code>（行号 12~15）：
+  - Before="Sales_CancelAddLineItem" → After="Sales_ChangeItemReference"
+- <code>ItemReference_WaitingCCodeAndPrice</code>（行号 16~19）：同上
+- <code>SalesTran_WaitingDrugConfirm</code>（行号 20~22）：
+  - Before="Common_SignInOut" → After="Sales_DrugConfirm"
+- <code>SalesTran_ItemCancel</code>（行号 23~38）：
+  - 多个 Before 对应同一个 After="Sales_CancelSpecifiedLineByItem"
+- <code>TwoOperators_WaitingConfirmSendMTransaction</code>（行号 39~42）：
+  - Before="Common_Clear" → After="Sales_CancelSendTwoOperatorsMTransaction"
+- 外层（行号 43~44）：
+  - Before="PaymentStation_InquiryMTransaction" → After="Sales_LoadMTransactionManagement"</p>
+<p><strong>Lock 类型（行号 46~49）：</strong>
+- Before="Common_SignInOut" → After="Lock_SignIn"</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>运行时状态机引擎的工作流程：</p>
+<ol>
+<li>状态机加载 StateWinPOSCH.xml 定义的状态列表，和 StateEventWinPOSCH.xml 定义的事件映射</li>
+<li>当状态机即将执行状态迁移时，检查当前 TranType + State 是否有匹配的 <code>&lt;Command&gt;</code> 元素</li>
+<li>如果有匹配，先执行 <code>Before</code> 属性指定的命令，再执行状态变更</li>
+<li>状态变更完成后，如果有关联的 <code>After</code> 命令，执行之</li>
+</ol>
+<p>例如，当系统进入 <code>SalesTran_ItemCancel</code>（行号 23）状态时，如果外部触发 <code>Sales_PriceLookup</code>（行号 25 Before），系统会在处理后自动调用 <code>Sales_CancelSpecifiedLineByItem</code>（行号 25 After）。</p>
+<p>这个机制允许框架在特定操作前后自动注入业务逻辑。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无直接函数。但需要理解：
+- <code>Before</code> — 状态进入前需要检查的命令条件
+- <code>After</code> — 在 Before 命令执行后自动触发的命令
+- 同一个 State 可以定义多个 <code>&lt;Command&gt;</code>，每个绑定不同的 Before</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>直接依赖 StateWinPOSCH.xml 和 StateWinPOSSalesCH.xml（SettingWinPOSCH.xml 行号 7~8 定义了这两个文件）</li>
+<li>Before/After 中的命令名称（如 "Common_Clear"、"Sales_CancelSpecifiedLineByItem"）必须在状态定义文件中存在</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li>没有定义未匹配到 Before/After 时的默认行为</li>
+<li>多层嵌套的 Before/After 可能形成递归调用，但当前配置中没有明显循环</li>
+<li>如果 Before 命令执行失败，After 是否执行取决于框架实现</li>
+</ul>
+<h3>7. 测试相关</h3>
+<p>当前输入未包含测试。建议：
+- 每个 Before 命令必须在状态定义文件中已注册
+- 每个 After 命令必须在状态定义文件中已注册
+- 无死循环路径检查</p>
+<h3>8. 新人阅读建议</h3>
+<p>先阅读 StateWinPOSCH.xml 理解有哪些状态，再读此文件理解状态转换时的自动行为。注意 <code>TranType</code> 的事务范围区分（Sales vs. Lock）。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>Before/After 的精确语义（Before 是"进入状态前需要执行的操作"还是"条件检查"）</li>
+<li>如果 Before 命令执行失败，After 是否执行</li>
+<li>外层（行号 43~44）的 <code>&lt;Command&gt;</code> 放在 <code>&lt;TranType&gt;</code> 直接下级而不是某个 <code>&lt;State&gt;</code> 内部，其作用范围需要结合框架解析逻辑确认（可能是该 TranType 下所有状态的公共映射）</li>
+</ul>
+<hr />
+<h2>文件：Source/POS4UTwoOperatorsCH/Settings/StateWinPOSCH.xml</h2>
+<h3>1. 文件定位</h3>
+<p>状态机主定义文件。它定义了 POS 应用在不同业务阶段（TranType）下允许进入的状态（State），以及每个状态下允许执行的命令（Command）。这是 POS 应用 UI 控制层的核心配置文件。</p>
+<h3>2. 对外暴露内容</h3>
+<ul>
+<li><code>&lt;State&gt;</code> 根元素（行号 2）</li>
+<li><code>&lt;Anytime&gt;</code> 全局可用命令（行号 4~11）— 任何状态下都可执行的命令</li>
+<li><code>Common_Clear</code>、<code>Sales_Clear</code>（行号 5~6）— 清除操作</li>
+<li><code>Common_RemoveDeviceError</code>、<code>Common_RemoveDeviceWarning</code>（行号 7~8）— 设备异常解除</li>
+<li><code>Device_StatusUpdate</code>、<code>Device_Error</code>（行号 9~10）— 设备状态通知</li>
+<li>
+<p><code>Common_ConfirmCanCloseCountTwoOperatorsChecker</code>（行号 11）— 双人制关账确认</p>
+</li>
+<li>
+<p><code>&lt;TranType Id="MainMenu"&gt;</code>（行号 13~27）— 主菜单事务</p>
+</li>
+<li><code>MainMenuTran_Neutral</code> 状态（行号 14~22）：允许开机、登录、切换显示、重启确认、中间交易删除切换</li>
+<li>
+<p><code>MainMenuTran_WaitingForConfirmReboot</code> 状态（行号 23~26）：仅允许退出和返回</p>
+</li>
+<li>
+<p><code>&lt;TranType Id="Lock"&gt;</code>（行号 28~46）— 锁定事务</p>
+</li>
+<li><code>LockTran_Neutral</code> 状态（行号 29~33）：登录、确认、重启</li>
+<li><code>LockTran_WaitingForConfirmExit</code> / <code>Shutdown</code> / <code>Reboot</code>（行号 34~45）：退出或返回</li>
+</ul>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>框架运行时按以下方式使用此文件：</p>
+<ol>
+<li>加载 StateWinPOSCH.xml 解析所有 <code>&lt;Anytime&gt;</code> 和 <code>&lt;TranType&gt;</code> → <code>&lt;State&gt;</code> 命令列表</li>
+<li>应用当前处于某个 TranType 的某个 State 中</li>
+<li>UI 触发一个 Command（如用户点击按钮发送 <code>Common_SignInOut</code>）</li>
+<li>框架检查当前 TranType + State 中是否包含此 Command</li>
+<li>如果包含，执行该 Command 对应的业务逻辑</li>
+<li>如果不包含，忽略该 UI 操作</li>
+</ol>
+<p><code>&lt;Anytime&gt;</code> 区域（行号 4~11）定义的命令在所有状态下都可用——如设备错误通知、状态更新等系统级操作。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无直接函数。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>被 SettingWinPOSCH.xml 的 <code>StateFiles</code> 键引用（行号 7~8）</li>
+<li>与 StateWinPOSSalesCH.xml 配合使用，此文件定义了 MainMenu 和 Lock 状态，销售状态在另一个文件中</li>
+<li>与 StateEventWinPOSCH.xml 配合定义状态迁移前后行为</li>
+<li>Command Id（如 "Common_Clear"）需要在框架的命令注册表中存在对应实现</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li>当前状态下不存在对应 Command 时，框架静默忽略（推测行为，需要确认）</li>
+<li>没有定义"非法状态转换"的错误处理</li>
+</ul>
+<h3>7. 测试相关</h3>
+<p>当前输入未包含测试。建议：
+- 所有 Command Id 在代码中都有对应实现
+- 所有状态至少有一个出口（可以转移到另一个状态）
+- 没有不可达状态</p>
+<h3>8. 新人阅读建议</h3>
+<p>将此文件与 StateWinPOSSalesCH.xml、StateEventWinPOSCH.xml 三个文件视为整体阅读。此文件是"静态状态定义"，StateWinPOSSalesCH.xml 是销售相关的扩展状态，StateEventWinPOSCH.xml 是状态迁移时的行为触发配置。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>Command 的执行结果如何影响状态转移（是否有成功/失败分支）</li>
+<li>框架如何处理"当前状态不存在的 Command"，是忽略还是报错</li>
+<li><code>Device_StatusUpdate</code> / <code>Device_Error</code> 是异步通知还是同步调用</li>
+</ul>
+<hr />
+<h2>文件：Source/POS4UTwoOperatorsCH/Settings/StateWinPOSSalesCH.xml</h2>
+<h3>1. 文件定位</h3>
+<p>销售模块状态定义文件。这是 StateWinPOSCH.xml 的补充，专门定义销售交易（Sales TranType）下的所有状态和允许的命令。也是本 batch 中最长（296 行）的配置文件。</p>
+<h3>2. 对外暴露内容</h3>
+<ul>
+<li><code>&lt;TranType Id="Sales"&gt;</code>（行号 3~280）— 销售交易类型的所有状态</li>
+</ul>
+<p><strong>状态列表：</strong></p>
+<ol>
+<li>
+<p><code>SalesTran_Neutral,SalesTran_Fixed,SalesTran_Canceled</code>（行号 4~32）— 初始/固定/已取消共享大量命令（价格查询、会员服务、中间交易等）</p>
+</li>
+<li>
+<p><code>SalesTran_EnteringItem</code>（行号 33~81）— 录入商品状态，最复杂的状态，支持 47 个命令：</p>
+</li>
+<li>商品录入/变更/删除</li>
+<li>打折/小计/取消交易</li>
+<li>年龄确认/防犯确认/OTC 药品确认</li>
+<li>会员扫描/会员切换</li>
+<li>零售媒体（RM）优惠券/积分</li>
+<li>双人制中间交易（MTransaction）相关</li>
+<li>
+<p>自助通道（Lane Self）小计</p>
+</li>
+<li>
+<p><code>SalesTran_ItemCancel</code>（行号 82~86）— 单项取消状态</p>
+</li>
+<li>
+<p>等待状态：</p>
+</li>
+<li><code>SalesTran_WaitingAgeConfirm</code>（行号 87~89）— 等待年龄确认</li>
+<li><code>SalesTran_WaitingPreventionConfirm</code>（行号 90~96）— 等待防犯确认</li>
+<li>
+<p><code>SalesTran_WaitingDrugConfirm</code>（行号 97~104）— 等待药品确认</p>
+</li>
+<li>
+<p><code>SalesTran_SelectEnteringItem</code>（行号 105~143）— 选择录入商品状态</p>
+</li>
+<li>
+<p><code>SalesTran_WaitingCancelTransactionCofirm</code>（行号 144~147）— 等待取消交易确认</p>
+</li>
+<li>
+<p><code>SalesTran_ItemReference</code>（行号 148~159）— 商品参照状态</p>
+</li>
+<li>
+<p><code>SalesTran_SavedMTransactionList</code>（行号 160~163）— 已保存中间交易列表</p>
+</li>
+<li>
+<p>图书相关等待状态：</p>
+</li>
+<li><code>LineItem_WaitingISBN</code>、<code>LineItem_WaitingCCodeAndPrice</code>（行号 164~171）</li>
+<li>
+<p><code>ItemReference_WaitingISBN</code>、<code>ItemReference_WaitingCCodeAndPrice</code>（行号 172~179）</p>
+</li>
+<li>
+<p><code>SalesTran_GetCashChangerStatus</code>（行号 180~182）— 钱箱状态查询</p>
+</li>
+<li>
+<p><code>SalesTran_ValueCardOffline</code>（行号 183~186）— 储值卡离线状态</p>
+</li>
+<li>
+<p>双人制中间交易相关状态（行号 187~213）：</p>
+<ul>
+<li><code>TwoOperators_WaitingConfirmSendMTransaction</code> — 等待确认发送</li>
+<li><code>TwoOperators_SendTMTransaction</code> — 发送中</li>
+<li><code>TwoOperators_CompletedInquiryCanAcceptTwoOperatorsMTransaction</code></li>
+<li><code>TwoOperators_CompletedSendTMTransaction,TwoOperators_LaneSelfFailedRequest</code></li>
+<li><code>TwoOperators_CanNotAcceptMTransaction,...</code> — 多个失败状态共享同一组命令</li>
+<li><code>TwoOperators_RequestPrintPauseMTransaction</code> — 请求打印暂停</li>
+<li><code>TwoOperators_CanPrintPauseMTransaction,...</code> — 打印暂停结果</li>
+</ul>
+</li>
+<li>
+<p><code>Member_WaitingClearMemberCofirm</code>（行号 214~217）— 等待清除会员确认</p>
+</li>
+<li>
+<p><code>SalesTran_SendMTransaction</code>（行号 218~224）— 发送中间交易状态</p>
+</li>
+<li>
+<p><code>SalesTran_NotFoundInquiryCanAcceptMTransaction,...</code>（行号 225~231）— 查询失败状态</p>
+</li>
+<li>
+<p>等待响应状态（行号 232~234）— 网络请求等待中</p>
+</li>
+<li>
+<p><code>SalesTran_Paying</code>（行号 239~275）— 付款状态，支持 35 个命令（付款方式选择、找零、储值卡支付等）</p>
+</li>
+<li>
+<p><code>SalesTran_WaitingDrugVerify</code>（行号 276~279）— 等待药品验证</p>
+</li>
+<li>
+<p><code>&lt;TranType Id="MTranDelete"&gt;</code>（行号 281~295）— 中间交易删除事务</p>
+</li>
+<li><code>MTranDelete_Neutral</code> — 删除完成/搜索/指定</li>
+<li><code>MTranDelete_MTranDeleteConfirm</code> — 删除确认/取消</li>
+</ol>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>销售模块的完整状态机运行逻辑：</p>
+<ol>
+<li>初始状态 <code>SalesTran_Neutral</code> — 允许查找商品、会员登录</li>
+<li>扫描商品后进入 <code>SalesTran_EnteringItem</code> — 可以录入、修改、删除商品，进行小计</li>
+<li>需要年龄/防犯/药品确认时进入对应的等待状态，确认完回到 EnteringItem</li>
+<li>小计后进入 <code>SalesTran_Paying</code> — 选择支付方式完成支付</li>
+<li>在双人制模式下，任何阶段都可以发起中间交易（MTransaction），经过多个通信状态完成发送</li>
+<li>取消交易进入等待确认状态，确认后取消</li>
+</ol>
+<p>双人制中间交易流程（行号 187~234）是此配置中最复杂的部分：
+- 等待发送确认 → 发送 → 查询对方是否可接收 → 请求获取 → 完成发送
+- 其中包含多重失败重试状态和超时等待状态</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无直接函数。但 <code>PaymentStation_InquiryMTransaction</code> 命令在多个状态中出现（行号 31、81、143），表明在收银台查询中间交易是一项跨状态功能。</p>
+<p><code>Sales_ConfirmSendTwoOperatorsMTransaction</code> 在多个状态中可用（行号 72、95、102、136、273），反映发送中间交易可以从录入商品、等待确认等各种状态发起。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>与 StateWinPOSCH.xml 配合（SettingWinPOSCH.xml 行号 7~8 中 <code>StateFiles</code> 同时引用了两个文件）</li>
+<li>Sales TranType 状态都在此文件中，MainMenu 和 Lock 在 StateWinPOSCH.xml 中</li>
+<li>所有 Command Id 在代码中必须有实现</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li>失败/超时状态被明确定义（如 <code>TwoOperators_CanNotAcceptMTransaction</code>、<code>TwoOperators_FailedRequest</code>），在这些状态下都有重试或取消选项</li>
+<li>等待状态（行号 232~234）只有一个 <code>Sales_Total</code> 命令，可能是轮询等待期间不允许其他操作</li>
+<li><code>SalesTran_ValueCardOffline</code> 状态（行号 183~186）只有取消和重试两个选项</li>
+</ul>
+<h3>7. 测试相关</h3>
+<p>当前输入未包含测试。建议：
+- 状态可达性分析——每个状态确实可以从某个前置状态进入
+- 所有 Command Id 在 Event 注册表中存在
+- 中间交易流程的完整路径测试</p>
+<h3>8. 新人阅读建议</h3>
+<p>这是了解 POS 收银业务逻辑流程的最佳文件之一。建议：
+1. 先看 <code>SalesTran_EnteringItem</code>（行号 33~81）理解录入阶段的完整操作能力
+2. 看 <code>SalesTran_Paying</code>（行号 239~275）理解付款阶段
+3. 看双人制中间交易状态流转（行号 187~234）理解复杂的状态流转模式
+4. 对比 <code>SalesTran_WaitingAgeConfirm</code> 和 <code>SalesTran_WaitingDrugConfirm</code> 理解业务约束的配置方式</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>状态的逗号分隔（如 <code>SalesTran_Neutral,SalesTran_Fixed,SalesTran_Canceled</code>，行号 4）语法需要结合框架解析确认——是"这三个状态共享命令"还是"在进入这三个状态时的先后关系"</li>
+<li>部分状态的 Id 字符串（如 <code>TwoOperators_CanNotAcceptMTransaction,TwoOperators_FailedAcceptMTransaction,TwoOperators_FailedRequest,TwoOperators_LaneSelfPlusPaymentStationSendMTransaction</code>，行号 203）过长，可能影响可读性，但功能上应该正确</li>
+<li><code>PaymentService_AddPayment</code>（行号 267）与 <code>Payment_AddPayment</code>（行号 246）的区别需要结合代码确认</li>
+</ul>
+<hr />
+<h2>文件：Source/POS4UTwoOperatorsCH/packages.config</h2>
+<h3>1. 文件定位</h3>
+<p>POS4UTwoOperatorsCH 项目的 NuGet 包依赖清单。</p>
+<h3>2. 对外暴露内容</h3>
+<p>无。171 字节大小的 packages.config 通常只有 2~3 个包依赖。</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>同前述 packages.config 说明。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>依赖 NuGet 还原工具</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<p>无。</p>
+<h3>7. 测试相关</h3>
+<p>不适用。</p>
+<h3>8. 新人阅读建议</h3>
+<p>查看包列表可以帮助理解技术栈。171 字节说明依赖很少，可能只包含最基础的框架包。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>具体包含哪些包未知，需要结合文件实际内容确认</li>
+</ul>
+<hr />
+<h2>文件：Source/POS4U_V4.sln</h2>
+<h3>1. 文件定位</h3>
+<p>POS4U V4 版本的 Visual Studio 主解决方案文件。99987 字节说明包含大量项目引用（通常是 30~60 个项目），是整个 POS4U 系统的完整解决方案。</p>
+<h3>2. 对外暴露内容</h3>
+<p>无代码暴露。包含：
+- 全部项目的清单（包括 POS4UTwoOperatorsCH、TRAN4U、Azure.Logic、Common.Const 等）
+- 每个项目的 GUID、类型 GUID、路径
+- 全局构建配置（Debug/Release、x86/x64/AnyCPU）
+- 解决方案级属性</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>同前述 .sln 文件说明。此文件是开发入口，决定了整个系统的模块组织结构。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>依赖所有列表中的项目路径存在且 .csproj 格式正确</li>
+<li>是其他 .sln（如 POS4UBackground.sln）的超集或母集</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<p>无。</p>
+<h3>7. 测试相关</h3>
+<p>不适用。</p>
+<h3>8. 新人阅读建议</h3>
+<p>打开此文件查看解决方案目录结构是了解系统架构的第一步。关注：
+- 项目分组命名（如 Common.<em>、Device.</em>、Background.<em>、POS4U</em>）
+- 启动项目设置
+- 解决方案配置平台</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>包含的具体项目列表未知</li>
+<li>项目间的引用关系（哪些是独立项目、哪些是依赖项目）</li>
+<li>需要结合文件实际内容确认</li>
+</ul>
+<hr />
+<h2>文件：Source/TRAN4U/App.config</h2>
+<h3>1. 文件定位</h3>
+<p>TRAN4U 项目的运行时配置文件。TRAN4U 可能是"交易相关后台服务"或"数据传输"模块。1981 字节比 POS4UTwoOperatorsCH 的 App.config（2165 字节）略小。</p>
+<h3>2. 对外暴露内容</h3>
+<p>无代码暴露。典型的 .NET App.config 包含连接字符串和 appSettings。</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>同前述 App.config 说明。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>被 TRAN4U 项目代码依赖</li>
+<li><code>System.Configuration</code></li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<p>无。</p>
+<h3>7. 测试相关</h3>
+<p>不直接测试。</p>
+<h3>8. 新人阅读建议</h3>
+<p>阅读后与 POS4UTwoOperatorsCH 的 App.config 对比，理解两个项目的配置差异。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>具体内容未知，无法判断 TRAN4U 是后台服务还是终端应用</li>
+<li><code>connectionStrings</code> 指向的数据库未知</li>
+<li>需要结合文件实际内容确认</li>
+</ul>
+<hr />
+<h2>文件：Source/TRAN4U/Properties/Settings.settings</h2>
+<h3>1. 文件定位</h3>
+<p>TRAN4U 项目的强类型设置文件。.NET 项目中的 Settings.settings 是 Visual Studio 设计器维护的设置文件，会生成对应的 Settings.Designer.cs 强类型代码。242 字节说明设置项很少。</p>
+<h3>2. 对外暴露内容</h3>
+<p>无代码暴露。包含：
+- 设置键名
+- 设置值类型
+- 设置值范围（Application/User 级别）
+- 默认值</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>编译时 Visual Studio 自动生成 <code>Settings.Designer.cs</code>，代码可通过 <code>Properties.Settings.Default.SettingName</code> 强类型访问。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>依赖 .NET Framework 的 Settings 基础架构</li>
+<li>从 App.config 读取实际值</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<p>无。</p>
+<h3>7. 测试相关</h3>
+<p>不适用。</p>
+<h3>8. 新人阅读建议</h3>
+<p>了解强类型设置 vs. App.config 键值对的差异。强类型设置在编译时类型安全，App.config 在运行时字符串解析。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>具体包含哪些设置项未知</li>
+<li>设置的作用域（Application/User）未知</li>
+<li>需要结合文件实际内容确认</li>
+</ul>
+<hr />
+<h2>文件：Source/TRAN4U/Settings/MasterImportOrderLaneSelf.xml</h2>
+<h3>1. 文件定位</h3>
+<p>自助通道（Lane Self）的 Master 数据导入顺序定义文件。定义了 TRAN4U 后台服务从 Master 服务器同步数据时，需要导入哪些数据库表的顺序。</p>
+<h3>2. 对外暴露内容</h3>
+<ul>
+<li><code>&lt;MasterImportTargetTables&gt;</code> 根元素（行号 2）</li>
+<li>64 个 <code>&lt;TargetTable TableName="..."/&gt;</code> 条目（行号 4~64），列出了所有需要导入的 Master 表名</li>
+</ul>
+<p>表名列表覆盖了 POS 系统的完整 Master 数据：</p>
+<p><strong>基础数据：</strong>
+- <code>AreaMaster</code>（地域）、<code>CompanyMaster</code>（公司）、<code>StoreInformationMaster</code>（店铺信息）
+- <code>NodeMaster</code>（节点）、<code>EmployeeMaster</code>（员工）、<code>EmployeeRoleMaster</code>（员工角色）
+- <code>FunctionMenuMaster</code> / <code>FunctionMenuButtonMaster</code>（功能菜单）</p>
+<p><strong>商品相关：</strong>
+- <code>ItemMaster</code>（商品）、<code>ItemImageMaster</code>（商品图片）
+- <code>BarcodeConvertMaster</code> / <code>BarcodeConvertSubMaster</code>（条码转换）
+- <code>MDHierarchyMaster</code> / <code>MDHierarchyLevelMaster</code>（商品层级结构）
+- <code>PresetMenuMaster</code> / <code>PresetMenuButtonMaster</code>（预设菜单）
+- <code>NonBarcodeOtherItemCategoryMaster</code> / <code>NonBarcodeOtherItemMaster</code>（无条码商品）
+- <code>BestBeforeDateMaster</code> / <code>BestBeforeMarkDownMaster</code>（保质期/降价）</p>
+<p><strong>价格/折扣：</strong>
+- <code>DiscountAutoItemMaster</code>、<code>DiscountManualMaster</code>、<code>DiscountMixMatchMaster</code> 等（多种折扣类型）
+- <code>DynamicPricingMaster</code>（动态定价）
+- <code>DiscountAutoMDHierarchyMaster</code>、<code>DiscountGroupSet*Master</code> 等</p>
+<p><strong>支付/税收：</strong>
+- <code>PaymentMaster</code>（支付方式）、<code>PaymentTicketMaster</code>、<code>PaymentTicketBarCodeMaster</code>
+- <code>PaymentSummaryGroupMaster</code>、<code>PaymentPointScheduleMaster</code>
+- <code>TaxCodeMaster</code>、<code>TaxGroupMaster</code>、<code>TaxGroupDetailMaster</code></p>
+<p><strong>积分/点数：</strong>
+- <code>PointRankMaster</code>、<code>PointRankScheduleMaster</code>、<code>PointRankStageMaster</code>
+- <code>PointRateItemMaster</code>、<code>PointRateMDHierarchyMaster</code>
+- <code>PointECouponMaster</code>、<code>PointMemberECouponMaster</code> / <code>DetailMaster</code>
+- <code>ChargePointCalculateMaster</code></p>
+<p><strong>其他：</strong>
+- <code>CashDenominationMaster</code>（现金面额）、<code>CashChangerCheckMaster</code>（钱箱校验）
+- <code>EventConvertMaster</code> / <code>EventGroupMaster</code> / <code>EventGroupDetailMaster</code>（事件转换）
+- <code>ReasonMaster</code>（原因编码）、<code>ReceiptMessageMaster</code>（收银条消息）
+- <code>SettingMaster</code>（设置 Master）、<code>OperationLimitMaster</code>（操作限制）
+- <code>LineDisplayMessageMaster</code>（行显示消息）
+- <code>RevenueStampMaster</code> / <code>RevenueStampGroupMaster</code>（收入印纸）
+- <code>PPMStamp</code>（买上促销印戳）</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>TRAN4U 后台服务的 Master Sync（Master 同步）模块运行时：
+1. 读取 <code>MasterImportOrderLaneSelf.xml</code>，获取导入目标表列表
+2. 按 XML 文件中表的出现顺序逐个导入
+3. 对每个表：</p>
+<ul>
+<li>检查远程 Master 数据库是否有更新版本</li>
+<li>计算差异（增量同步）</li>
+<li>将差异数据下载到本地（下载目录由 SettingWinPOSCH.xml 行号 74 的 <code>MasterSyncPosDownloadDirectory</code> 定义）</li>
+<li>解包到工作目录（行号 77 的 <code>MasterSycnPosWorkDirectory</code>）</li>
+<li>
+<p>按顺序 Apply 到本地数据库</p>
+</li>
+<li>
+<p>表顺序关键：有依赖关系的表必须按正确顺序导入（如先导入 <code>AreaMaster</code> 再导入引用 AreaID 的其他表）</p>
+</li>
+</ul>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>由 TRAN4U 后台服务的 MasterSyncPos 模块读取</li>
+<li>所有列出的表名必须在 Master 数据库中存在对应的表结构</li>
+<li>同步间隔由 SettingWinPOSCH.xml 的 <code>MasterSyncPosIntervalMillisecond</code>（行号 86~87）控制</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li>文件没有显式错误处理</li>
+<li>如果导入过程中某一个表失败，后续表的导入行为取决于 MasterSyncPos 模块的实现（继续/中止）</li>
+<li>没有定义重试策略</li>
+</ul>
+<h3>7. 测试相关</h3>
+<p>当前输入未包含测试。建议：
+- 所有表名在 Master 数据库中确实存在
+- 导入顺序满足外键依赖关系
+- 增量同步差异计算逻辑测试</p>
+<h3>8. 新人阅读建议</h3>
+<p>通过此文件了解 POS4U 系统使用哪些 Master 数据。这是理解系统数据模型最直接的方法之一。可以按业务域分类这些表，有助于理解系统功能划分。</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>导入顺序是否有优化需求（按外键依赖拓扑排序），当前顺序是否为最优</li>
+<li>增量同步差异计算的算法需要结合 MasterSyncPos 源码确认</li>
+<li>如果表之间没有数据依赖关系，并行导入是否可能（当前明确指定顺序可能是串行导入）</li>
+</ul>
+<hr />
+<h2>文件：Source/TRAN4U/Settings/MasterImportOrderLaneSelfPaymentStation.xml</h2>
+<h3>1. 文件定位</h3>
+<p>自助收银台（Payment Station）的 Master 数据导入顺序定义文件。SHA256 值与 LaneSelf 版本完全一致，说明内容完全相同。</p>
+<h3>2. 对外暴露内容</h3>
+<p>与 <code>MasterImportOrderLaneSelf.xml</code> 完全相同的内容（SHA256 校验一致可以确认）。</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>同 LaneSelf 版本。因为 SHA256 完全一致，所以两个文件的运行时行为也完全一致。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无。</p>
+<h3>5. 依赖关系</h3>
+<p>同 LaneSelf 版本。</p>
+<h3>6. 错误处理与边界情况</h3>
+<p>同 LaneSelf 版本。</p>
+<h3>7. 测试相关</h3>
+<p>同 LaneSelf 版本。</p>
+<h3>8. 新人阅读建议</h3>
+<p>既然内容完全相同，重点关注为什么系统需要两个同内容的文件。推测原因：
+- 可能是未来两个端点的 Master 数据需求不同，预留了独立的配置
+- 也可能是框架设计上每个终端类型有独立的导入配置（Lane Self vs. Payment Station）
+- 当前版本巧合一致，未来可能独立分化</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li>两个文件完全相同的具体原因需要结合项目规划确认</li>
+<li>如果后续要分化，Lane Self 和 Payment Station 在 Master 数据上的差异可能是什么</li>
+<li>框架如何选择使用哪个文件需要结合 MasterSyncPos 源码确认</li>
+</ul>
+<hr />
+<h2>文件：Source/TRAN4U/Settings/PluginTRAN4U.xml</h2>
+<h3>1. 文件定位</h3>
+<p>TRAN4U 后台服务的插件注册配置文件。定义了后台服务运行时需要加载的模块组件，包括汇总管理、交易日志、数据传输、Master 同步等后台业务模块。</p>
+<h3>2. 对外暴露内容</h3>
+<ul>
+<li><code>&lt;Extension&gt;</code> 根元素（行号 2）</li>
+</ul>
+<p><strong>顶级 Plugin（无 Group 包裹）：</strong>
+- <code>SummaryQueueManager</code>（行号 3~6）：后台汇总队列管理器，用于管理数据库汇总队列
+- <code>TransactionLogQueue</code>（行号 7~10）：交易日志队列存取器</p>
+<p><strong>Group "AdministratorModuleGroup"（管理模块组，行号 11~25）：</strong>
+- <code>TranLogService</code>：交易日志服务（定时采集交易数据）
+- <code>Transfer</code>：传输服务（上传数据到服务器）
+- <code>MasterSyncPosDiff</code>：Master 差异同步服务</p>
+<p><strong>Group "TranLogService"（交易日志服务子模块，行号 26~52）：</strong>
+- <code>TranLogServiceSetBusinessState</code>：设置业务状态
+- <code>TranLogServiceCashTotal</code>：现金汇总
+- <code>TranLogServiceRMLoginPointTotal</code>：RM 登录积分汇总
+- <code>TranLogServiceRMCouponPointTotal</code>：RM 优惠券积分汇总
+- <code>TranLogServicePosSalesTotal</code>：POS 销售汇总
+- <code>TranLogServiceDealCodeTotal</code>：Deal Code 汇总</p>
+<p><strong>Group "Transfer"（传输服务子模块，行号 53~63）：</strong>
+- <code>TransferTransactionLog</code>：交易日志上传
+- <code>TransferEJournal</code>：电子日志上传</p>
+<p><strong>Group "MasterSyncPosDiff"（Master 同步子模块，行号 64~70）：</strong>
+- <code>MasterSyncPosDiff</code>：差异同步逻辑实现</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>TRAN4U 后台服务启动时：
+1. 加载 PluginTRAN4U.xml，按插件的注册顺序实例化
+2. 先初始化无 Group 的顶级插件（行号 3~10）：
+   - <code>SummaryQueueManager</code>：启动汇总队列管理器
+   - <code>TransactionLogQueue</code>：初始化交易日志队列存取器
+3. 按 Group 初始化分组插件：
+   - <code>AdministratorModuleGroup</code>（行号 11~25）的三个主模块各自启动
+   - 每个主模块内部再加载其子模块</p>
+<p>TRAN4U 后台的核心业务循环：
+- <code>TranLogService</code> 按 SettingWinPOSCH.xml 的 <code>TranLogServiceIntervalMillisecond</code>（3000ms）定时采集交易日志
+- <code>Transfer</code> 按 <code>TransferIntervalMillisecond</code>（10000ms）定时上传数据到服务器
+- <code>MasterSyncPosDiff</code> 按 <code>MasterSyncPosIntervalMillisecond</code>（60000ms）定时检查并同步 Master 数据</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>无直接函数。</p>
+<h3>5. 依赖关系</h3>
+<ul>
+<li>依赖框架的插件引擎（与 PluginDeviceCH.xml 共用同一套插件加载机制）</li>
+<li>所有 Assembly 都使用 PublicKeyToken <code>7f613065d93c5dd1</code>（与设备插件相同的签名密钥）</li>
+<li>依赖的程序集（根据 Assembly 属性推断）：</li>
+<li><code>Background.Business.BackgroundCommon</code> — 后台通用业务</li>
+<li><code>Data.Accessor</code> — 数据访问层</li>
+<li><code>Background.Business.TranLogService</code> — 交易日志服务</li>
+<li><code>Background.Business.Transfer</code> — 数据传输服务</li>
+<li><code>Background.Business.MasterSyncPos</code> — Master 同步服务</li>
+<li>配置依赖 SettingWinPOSCH.xml 中的间隔时间设置</li>
+</ul>
+<h3>6. 错误处理与边界情况</h3>
+<ul>
+<li>没有显式错误处理</li>
+<li>如果某个 Group 内一个 Plugin 初始化失败，同组其他插件是否继续加载未定义</li>
+<li>顶级插件（行号 3~10）没有 Group，可能是"必须成功初始化"的核心服务</li>
+</ul>
+<h3>7. 测试相关</h3>
+<p>当前输入未包含测试。建议：
+- 每个 Plugin 的 Assembly 和 Class 名称在编译输出中存在
+- 插件加载顺序测试（Group 嵌套顺序是否正常加载）
+- 间隔时间配置的有效性测试</p>
+<h3>8. 新人阅读建议</h3>
+<p>这是理解 TRAN4U 后台服务架构的关键文件。重点关注：
+1. Group 结构：顶级 → AdministratorModuleGroup（3 个子服务）→ 每个子服务的细分插件
+2. 与 SettingWinPOSCH.xml 中的间隔时间配置的对应关系
+3. 与 MasterImportOrder*.xml 的对应关系（MasterSyncPosDiff 使用导入顺序配置）</p>
+<h3>9. 不确定点</h3>
+<ul>
+<li><code>SummaryQueueManager</code> 和 <code>TransactionLogQueue</code> 的具体功能和工作原理需要结合代码确认</li>
+<li>TranLogService 的多个子模块（CashTotal、RMLoginPointTotal 等）的协同方式</li>
+<li>Transfer 模块与外部服务器的通信协议（HTTP/HTTPS/TCP）</li>
+<li>插件加载失败时的框架容错策略</li>
+</ul>
+<hr />
+<h2>本批覆盖确认</h2>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>覆盖状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Source/Azure/Azure.Logic/Azure.Logic.csproj</td>
+<td>需要结合其他文件确认</td>
+<td>非文本文件，未内联源码。无法确认依赖列表和目标框架</td>
+</tr>
+<tr>
+<td>Source/Azure/Azure.Logic/app.config</td>
+<td>需要结合其他文件确认</td>
+<td>非文本文件，未内联源码。无法确认连接字符串和设置</td>
+</tr>
+<tr>
+<td>Source/Azure/Azure.Logic/packages.config</td>
+<td>需要结合其他文件确认</td>
+<td>非文本文件，未内联源码。无法确认 NuGet 包列表</td>
+</tr>
+<tr>
+<td>Source/Common/Common.Const/Common.Const.csproj</td>
+<td>需要结合其他文件确认</td>
+<td>非文本文件，未内联源码。无法确认常量定义范围</td>
+</tr>
+<tr>
+<td>Source/Common/Common.Const/packages.config</td>
+<td>需要结合其他文件确认</td>
+<td>非文本文件，未内联源码。无法确认依赖包</td>
+</tr>
+<tr>
+<td>Source/POS4UBackground.sln</td>
+<td>需要结合其他文件确认</td>
+<td>非文本文件，未内联源码。无法确认包含的项目列表</td>
+</tr>
+<tr>
+<td>Source/POS4UTwoOperatorsCH/App.config</td>
+<td>需要结合其他文件确认</td>
+<td>非文本文件，未内联源码。无法确认连接字符串</td>
+</tr>
+<tr>
+<td>Source/POS4UTwoOperatorsCH/POS4UTwoOperatorsCH.csproj</td>
+<td>需要结合其他文件确认</td>
+<td>非文本文件，未内联源码。无法确认引用列表和输出类型</td>
+</tr>
+<tr>
+<td>Source/POS4UTwoOperatorsCH/Settings/MainMenuListLaneSelfCH.xml</td>
+<td>已详细讲解</td>
+<td>54 行全部内联。分析了按钮布局、EventCode 映射、页面结构</td>
+</tr>
+<tr>
+<td>Source/POS4UTwoOperatorsCH/Settings/MainMenuListTwoOperatorsCH.xml</td>
+<td>已详细讲解</td>
+<td>44 行全部内联。分析了与 LaneSelf 版本的差异</td>
+</tr>
+<tr>
+<td>Source/POS4UTwoOperatorsCH/Settings/PluginDeviceCH.xml</td>
+<td>已详细讲解</td>
+<td>88 行全部内联。分析了 16 个插件注册、开发 vs 生产环境对比</td>
+</tr>
+<tr>
+<td>Source/POS4UTwoOperatorsCH/Settings/SettingWinPOSCH.xml</td>
+<td>已详细讲解</td>
+<td>304 行全部内联。分析了约 120 项配置，覆盖整个配置体系</td>
+</tr>
+<tr>
+<td>Source/POS4UTwoOperatorsCH/Settings/SettingWinPOSDeviceCH.xml</td>
+<td>已详细讲解</td>
+<td>17 行全部内联。分析了 16 个设备配置项</td>
+</tr>
+<tr>
+<td>Source/POS4UTwoOperatorsCH/Settings/SettingWinPOSTerminalCH.xml</td>
+<td>已详细讲解</td>
+<td>43 行全部内联。分析了终端身份和窗口布局</td>
+</tr>
+<tr>
+<td>Source/POS4UTwoOperatorsCH/Settings/StateEventWinPOSCH.xml</td>
+<td>已详细讲解</td>
+<td>50 行全部内联。分析了状态事件映射机制</td>
+</tr>
+<tr>
+<td>Source/POS4UTwoOperatorsCH/Settings/StateWinPOSCH.xml</td>
+<td>已详细讲解</td>
+<td>47 行全部内联。分析了 MainMenu 和 Lock 状态定义</td>
+</tr>
+<tr>
+<td>Source/POS4UTwoOperatorsCH/Settings/StateWinPOSSalesCH.xml</td>
+<td>已详细讲解</td>
+<td>296 行全部内联。分析了 Sales 和 MTranDelete 的完整状态定义，含双人制中间交易流程</td>
+</tr>
+<tr>
+<td>Source/POS4UTwoOperatorsCH/packages.config</td>
+<td>需要结合其他文件确认</td>
+<td>非文本文件，未内联源码</td>
+</tr>
+<tr>
+<td>Source/POS4U_V4.sln</td>
+<td>需要结合其他文件确认</td>
+<td>非文本文件，未内联源码。100KB 说明项目众多，需要人工确认</td>
+</tr>
+<tr>
+<td>Source/TRAN4U/App.config</td>
+<td>需要结合其他文件确认</td>
+<td>非文本文件，未内联源码</td>
+</tr>
+<tr>
+<td>Source/TRAN4U/Properties/Settings.settings</td>
+<td>需要结合其他文件确认</td>
+<td>非文本文件，未内联源码</td>
+</tr>
+<tr>
+<td>Source/TRAN4U/Settings/MasterImportOrderLaneSelf.xml</td>
+<td>已详细讲解</td>
+<td>65 行全部内联。分析了 64 个 Master 目标表</td>
+</tr>
+<tr>
+<td>Source/TRAN4U/Settings/MasterImportOrderLaneSelfPaymentStation.xml</td>
+<td>已详细讲解</td>
+<td>内容与 LaneSelf 版本完全相同（SHA256 一致），分析了重复配置的原因推测</td>
+</tr>
+<tr>
+<td>Source/TRAN4U/Settings/PluginTRAN4U.xml</td>
+<td>已详细讲解</td>
+<td>71 行全部内联。分析了后台服务插件体系，6 个 Group 18 个插件</td>
+</tr>
+</tbody>
+</table></div></div></div>
+        
+
+<div class="pagination"><a href="index.html" class="index-link">Index</a></div>
+
+    </div>
+    <script>
+document.querySelectorAll('time[data-timestamp]').forEach(function(el) {
+    const timestamp = el.getAttribute('data-timestamp');
+    const date = new Date(timestamp);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    if (isToday) { el.textContent = timeStr; }
+    else { el.textContent = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + timeStr; }
+});
+document.querySelectorAll('pre.json').forEach(function(el) {
+    let text = el.textContent;
+    text = text.replace(/"([^"]+)":/g, '<span style="color: #ce93d8">"$1"</span>:');
+    text = text.replace(/: "([^"]*)"/g, ': <span style="color: #81d4fa">"$1"</span>');
+    text = text.replace(/: (\d+)/g, ': <span style="color: #ffcc80">$1</span>');
+    text = text.replace(/: (true|false|null)/g, ': <span style="color: #f48fb1">$1</span>');
+    el.innerHTML = text;
+});
+document.querySelectorAll('.truncatable').forEach(function(wrapper) {
+    const content = wrapper.querySelector('.truncatable-content');
+    const btn = wrapper.querySelector('.expand-btn');
+    if (content.scrollHeight > 250) {
+        wrapper.classList.add('truncated');
+        btn.addEventListener('click', function() {
+            if (wrapper.classList.contains('truncated')) { wrapper.classList.remove('truncated'); wrapper.classList.add('expanded'); btn.textContent = 'Show less'; }
+            else { wrapper.classList.remove('expanded'); wrapper.classList.add('truncated'); btn.textContent = 'Show more'; }
+        });
+    }
+});
+</script>
+</body>
+</html>

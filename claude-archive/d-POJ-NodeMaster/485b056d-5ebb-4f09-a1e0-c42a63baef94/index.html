@@ -1,0 +1,2931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code transcript - Index</title>
+    <style>
+:root { --bg-color: #f5f5f5; --card-bg: #ffffff; --user-bg: #e3f2fd; --user-border: #1976d2; --assistant-bg: #f5f5f5; --assistant-border: #9e9e9e; --thinking-bg: #fff8e1; --thinking-border: #ffc107; --thinking-text: #666; --tool-bg: #f3e5f5; --tool-border: #9c27b0; --tool-result-bg: #e8f5e9; --tool-error-bg: #ffebee; --text-color: #212121; --text-muted: #757575; --code-bg: #263238; --code-text: #aed581; }
+* { box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 16px; line-height: 1.6; }
+.container { max-width: 800px; margin: 0 auto; }
+h1 { font-size: 1.5rem; margin-bottom: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--user-border); }
+.header-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 2px solid var(--user-border); padding-bottom: 8px; margin-bottom: 24px; }
+.header-row h1 { border-bottom: none; padding-bottom: 0; margin-bottom: 0; flex: 1; min-width: 200px; }
+.message { margin-bottom: 16px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.message.user { background: var(--user-bg); border-left: 4px solid var(--user-border); }
+.message.assistant { background: var(--card-bg); border-left: 4px solid var(--assistant-border); }
+.message.tool-reply { background: #fff8e1; border-left: 4px solid #ff9800; }
+.tool-reply .role-label { color: #e65100; }
+.tool-reply .tool-result { background: transparent; padding: 0; margin: 0; }
+.tool-reply .tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff8e1); }
+.message-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: rgba(0,0,0,0.03); font-size: 0.85rem; }
+.role-label { font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.user .role-label { color: var(--user-border); }
+time { color: var(--text-muted); font-size: 0.8rem; }
+.timestamp-link { color: inherit; text-decoration: none; }
+.timestamp-link:hover { text-decoration: underline; }
+.message:target { animation: highlight 2s ease-out; }
+@keyframes highlight { 0% { background-color: rgba(25, 118, 210, 0.2); } 100% { background-color: transparent; } }
+.message-content { padding: 16px; }
+.message-content p { margin: 0 0 12px 0; }
+.message-content p:last-child { margin-bottom: 0; }
+.thinking { background: var(--thinking-bg); border: 1px solid var(--thinking-border); border-radius: 8px; padding: 12px; margin: 12px 0; font-size: 0.9rem; color: var(--thinking-text); }
+.thinking-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #f57c00; margin-bottom: 8px; }
+.thinking p { margin: 8px 0; }
+.assistant-text { margin: 8px 0; }
+.tool-use { background: var(--tool-bg); border: 1px solid var(--tool-border); border-radius: 8px; padding: 12px; margin: 12px 0; }
+.tool-header { font-weight: 600; color: var(--tool-border); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.tool-icon { font-size: 1.1rem; }
+.tool-description { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 8px; font-style: italic; }
+.tool-result { background: var(--tool-result-bg); border-radius: 8px; padding: 12px; margin: 12px 0; }
+.tool-result.tool-error { background: var(--tool-error-bg); }
+.file-tool { border-radius: 8px; padding: 12px; margin: 12px 0; }
+.write-tool { background: linear-gradient(135deg, #e3f2fd 0%, #e8f5e9 100%); border: 1px solid #4caf50; }
+.edit-tool { background: linear-gradient(135deg, #fff3e0 0%, #fce4ec 100%); border: 1px solid #ff9800; }
+.file-tool-header { font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.write-header { color: #2e7d32; }
+.edit-header { color: #e65100; }
+.file-tool-icon { font-size: 1rem; }
+.file-tool-path { font-family: monospace; background: rgba(0,0,0,0.08); padding: 2px 8px; border-radius: 4px; }
+.file-tool-fullpath { font-family: monospace; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px; word-break: break-all; }
+.file-content { margin: 0; }
+.edit-section { display: flex; margin: 4px 0; border-radius: 4px; overflow: hidden; }
+.edit-label { padding: 8px 12px; font-weight: bold; font-family: monospace; display: flex; align-items: flex-start; }
+.edit-old { background: #fce4ec; }
+.edit-old .edit-label { color: #b71c1c; background: #f8bbd9; }
+.edit-old .edit-content { color: #880e4f; }
+.edit-new { background: #e8f5e9; }
+.edit-new .edit-label { color: #1b5e20; background: #a5d6a7; }
+.edit-new .edit-content { color: #1b5e20; }
+.edit-content { margin: 0; flex: 1; background: transparent; font-size: 0.85rem; }
+.edit-replace-all { font-size: 0.75rem; font-weight: normal; color: var(--text-muted); }
+.write-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #e6f4ea); }
+.edit-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff0e5); }
+.todo-list { background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); border: 1px solid #81c784; border-radius: 8px; padding: 12px; margin: 12px 0; }
+.todo-header { font-weight: 600; color: #2e7d32; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.todo-items { list-style: none; margin: 0; padding: 0; }
+.todo-item { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.06); font-size: 0.9rem; }
+.todo-item:last-child { border-bottom: none; }
+.todo-icon { flex-shrink: 0; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 50%; }
+.todo-completed .todo-icon { color: #2e7d32; background: rgba(46, 125, 50, 0.15); }
+.todo-completed .todo-content { color: #558b2f; text-decoration: line-through; }
+.todo-in-progress .todo-icon { color: #f57c00; background: rgba(245, 124, 0, 0.15); }
+.todo-in-progress .todo-content { color: #e65100; font-weight: 500; }
+.todo-pending .todo-icon { color: #757575; background: rgba(0,0,0,0.05); }
+.todo-pending .todo-content { color: #616161; }
+pre { background: var(--code-bg); color: var(--code-text); padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; line-height: 1.5; margin: 8px 0; white-space: pre-wrap; word-wrap: break-word; }
+pre.json { color: #e0e0e0; }
+code { background: rgba(0,0,0,0.08); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+pre code { background: none; padding: 0; }
+.user-content { margin: 0; }
+.truncatable { position: relative; }
+.truncatable.truncated .truncatable-content { max-height: 200px; overflow: hidden; }
+.truncatable.truncated::after { content: ''; position: absolute; bottom: 32px; left: 0; right: 0; height: 60px; background: linear-gradient(to bottom, transparent, var(--card-bg)); pointer-events: none; }
+.message.user .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--user-bg)); }
+.message.tool-reply .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff8e1); }
+.tool-use .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-bg)); }
+.tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-result-bg)); }
+.expand-btn { display: none; width: 100%; padding: 8px 16px; margin-top: 4px; background: rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; cursor: pointer; font-size: 0.85rem; color: var(--text-muted); }
+.expand-btn:hover { background: rgba(0,0,0,0.1); }
+.truncatable.truncated .expand-btn, .truncatable.expanded .expand-btn { display: block; }
+.pagination { display: flex; justify-content: center; gap: 8px; margin: 24px 0; flex-wrap: wrap; }
+.pagination a, .pagination span { padding: 5px 10px; border-radius: 6px; text-decoration: none; font-size: 0.85rem; }
+.pagination a { background: var(--card-bg); color: var(--user-border); border: 1px solid var(--user-border); }
+.pagination a:hover { background: var(--user-bg); }
+.pagination .current { background: var(--user-border); color: white; }
+.pagination .disabled { color: var(--text-muted); border: 1px solid #ddd; }
+.pagination .index-link { background: var(--user-border); color: white; }
+details.continuation { margin-bottom: 16px; }
+details.continuation summary { cursor: pointer; padding: 12px 16px; background: var(--user-bg); border-left: 4px solid var(--user-border); border-radius: 12px; font-weight: 500; color: var(--text-muted); }
+details.continuation summary:hover { background: rgba(25, 118, 210, 0.15); }
+details.continuation[open] summary { border-radius: 12px 12px 0 0; margin-bottom: 0; }
+.index-item { margin-bottom: 16px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); background: var(--user-bg); border-left: 4px solid var(--user-border); }
+.index-item a { display: block; text-decoration: none; color: inherit; }
+.index-item a:hover { background: rgba(25, 118, 210, 0.1); }
+.index-item-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: rgba(0,0,0,0.03); font-size: 0.85rem; }
+.index-item-number { font-weight: 600; color: var(--user-border); }
+.index-item-content { padding: 16px; }
+.index-item-stats { padding: 8px 16px 12px 32px; font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid rgba(0,0,0,0.06); }
+.index-item-commit { margin-top: 6px; padding: 4px 8px; background: #fff3e0; border-radius: 4px; font-size: 0.85rem; color: #e65100; }
+.index-item-commit code { background: rgba(0,0,0,0.08); padding: 1px 4px; border-radius: 3px; font-size: 0.8rem; margin-right: 6px; }
+.commit-card { margin: 8px 0; padding: 10px 14px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 6px; }
+.commit-card a { text-decoration: none; color: #5d4037; display: block; }
+.commit-card a:hover { color: #e65100; }
+.commit-card-hash { font-family: monospace; color: #e65100; font-weight: 600; margin-right: 8px; }
+.index-commit { margin-bottom: 12px; padding: 10px 16px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+.index-commit a { display: block; text-decoration: none; color: inherit; }
+.index-commit a:hover { background: rgba(255, 152, 0, 0.1); margin: -10px -16px; padding: 10px 16px; border-radius: 8px; }
+.index-commit-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; margin-bottom: 4px; }
+.index-commit-hash { font-family: monospace; color: #e65100; font-weight: 600; }
+.index-commit-msg { color: #5d4037; }
+.index-item-long-text { margin-top: 8px; padding: 12px; background: var(--card-bg); border-radius: 8px; border-left: 3px solid var(--assistant-border); }
+.index-item-long-text .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--card-bg)); }
+.index-item-long-text-content { color: var(--text-color); }
+#search-box { display: none; align-items: center; gap: 8px; }
+#search-box input { padding: 6px 12px; border: 1px solid var(--assistant-border); border-radius: 6px; font-size: 16px; width: 180px; }
+#search-box button, #modal-search-btn, #modal-close-btn { background: var(--user-border); color: white; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+#search-box button:hover, #modal-search-btn:hover { background: #1565c0; }
+#modal-close-btn { background: var(--text-muted); margin-left: 8px; }
+#modal-close-btn:hover { background: #616161; }
+#search-modal[open] { border: none; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.2); padding: 0; width: 90vw; max-width: 900px; height: 80vh; max-height: 80vh; display: flex; flex-direction: column; }
+#search-modal::backdrop { background: rgba(0,0,0,0.5); }
+.search-modal-header { display: flex; align-items: center; gap: 8px; padding: 16px; border-bottom: 1px solid var(--assistant-border); background: var(--bg-color); border-radius: 12px 12px 0 0; }
+.search-modal-header input { flex: 1; padding: 8px 12px; border: 1px solid var(--assistant-border); border-radius: 6px; font-size: 16px; }
+#search-status { padding: 8px 16px; font-size: 0.85rem; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); }
+#search-results { flex: 1; overflow-y: auto; padding: 16px; }
+.search-result { margin-bottom: 16px; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.search-result a { display: block; text-decoration: none; color: inherit; }
+.search-result a:hover { background: rgba(25, 118, 210, 0.05); }
+.search-result-page { padding: 6px 12px; background: rgba(0,0,0,0.03); font-size: 0.8rem; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); }
+.search-result-content { padding: 12px; }
+.search-result mark { background: #fff59d; padding: 1px 2px; border-radius: 2px; }
+@media (max-width: 600px) { body { padding: 8px; } .message, .index-item { border-radius: 8px; } .message-content, .index-item-content { padding: 12px; } pre { font-size: 0.8rem; padding: 8px; } #search-box input { width: 120px; } #search-modal[open] { width: 95vw; height: 90vh; } }
+</style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-row">
+            <h1>Claude Code transcript</h1>
+            <div id="search-box">
+                <input type="text" id="search-input" placeholder="Search..." aria-label="Search transcripts">
+                <button id="search-btn" type="button" aria-label="Search">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+                </button>
+            </div>
+        </div>
+        
+
+<div class="pagination">
+<span class="current">Index</span>
+<span class="disabled">&larr; Prev</span>
+<a href="page-001.html">1</a>
+<a href="page-001.html">Next &rarr;</a>
+</div>
+
+        <p style="color: var(--text-muted); margin-bottom: 24px;">1 prompts · 3 messages · 0 tool calls · 0 commits · 1 pages</p>
+        
+<div class="index-item"><a href="page-001.html#msg-2026-07-09T07-12-16-764Z"><div class="index-item-header"><span class="index-item-number">#1</span><time datetime="2026-07-09T07:12:16.764Z" data-timestamp="2026-07-09T07:12:16.764Z">2026-07-09T07:12:16.764Z</time></div><div class="index-item-content"><p>IMPORTANT EXECUTION MODE FOR CLAUDE CLI:
+- Do not use tools.
+- Do not read or write files.
+- Do not ask for permissions.
+- Produce the requested final markdown directly on stdout.
+- The workflow runner will save stdout to the output path.
+- Ignore any instruction that implies you should write the output file yourself; instead print the full content.</p>
+<p>BEGIN ORIGINAL PROMPT</p>
+<p>你是源码教材项目的信息提取员，不是散文作者。</p>
+<p>任务：根据下面的带行号源码，为本 batch 中的每个文件生成“文件级源码讲解笔记”。</p>
+<p>Batch 信息：
+- Batch ID: batch_062
+- Batch Name: large_file_background_service_transfermaster2trandataset_designer_cs
+- Module: background_service
+- Purpose: 解释后台服务、同步任务、Windows Service 和定时处理
+- Related Runtime Flows: 启动流程、配置加载流程
+- Output Note Path: _sourcebook/notes/batch_062_large_file_background_service_transfermaster2trandataset_designer_cs_file_notes.md</p>
+<p>本批文件：
+- Source/POS4UBackground/Data/Background.Data.BackgroundContainer/TransferMaster2TranDataSet.Designer.cs</p>
+<p>本批任务目标：
+- 为本批每个文件生成可追溯到源码行号的文件级笔记。
+- 重点说明文件职责、对外暴露内容、关键逻辑、依赖关系、错误处理、测试建议和不确定点。
+- 只做文件级源码笔记，不写最终教材正文。</p>
+<p>硬性规则：</p>
+<ol>
+<li>必须基于实际源码。</li>
+<li>每一条技术事实都要引用文件路径和行号。</li>
+<li>不允许编造不存在的函数、参数、返回值、配置项、业务逻辑。</li>
+<li>如果无法确定，请写“需要结合其他文件确认”。</li>
+<li>不要只讲核心函数，小工具函数、边界处理、异常处理也要说明。</li>
+<li>每个文件必须单独成节。</li>
+<li>不要写最终教材章节，只写文件级源码笔记。</li>
+<li>不要省略本批任何文件。</li>
+<li>如果某个文件很简单，也要说明它为什么简单、在项目中承担什么角色。</li>
+<li>如果发现当前 batch 缺少理解该文件所需的上下文，请在“不确定点”中明确列出需要结合哪些文件。</li>
+</ol>
+<p>质量规则：
+- 优先解释运行时行为和业务意图，再补充语法层面的说明。
+- 遇到配置、SQL、脚本、文档、二进制占位文件，也必须说明它对项目理解的作用。
+- 对非文本文件、缺失文件或无法从当前 batch 判断的内容，必须标记“需要结合其他文件确认”或“需要人工确认”，不要猜。
+- 入口、配置加载、请求处理、数据读写、错误处理、日志、测试相关线索要特别标出。
+- 输出中不要出现未引用行号的技术断言。</p>
+<p>覆盖确认要求：
+- 结尾必须输出“本批覆盖确认”表。
+- 表中必须逐一列出本批所有文件。
+- 覆盖状态只能使用：已详细讲解 / 已简略讲解 / 需要结合其他文件确认。</p>
+<p>输出格式：</p>
+<h1>文件级源码笔记：large_file_background_service_transfermaster2trandataset_designer_cs</h1>
+<h2>Batch 信息</h2>
+<ul>
+<li>Batch ID: batch_062</li>
+<li>Batch Name: large_file_background_service_transfermaster2trandataset_designer_cs</li>
+<li>Module: background_service</li>
+<li>Purpose: 解释后台服务、同步任务、Windows Service 和定时处理</li>
+</ul>
+<hr />
+<h2>文件：<path></h2>
+<h3>1. 文件定位</h3>
+<p>说明这个文件在项目中的角色，属于哪个模块，解决什么问题。</p>
+<h3>2. 对外暴露内容</h3>
+<p>列出 class / function / component / API / command / config / export。</p>
+<p>每一项都要包含：
+- 名称
+- 文件路径 + 行号
+- 用途</p>
+<h3>3. 关键逻辑 walkthrough</h3>
+<p>按代码执行顺序解释关键逻辑。</p>
+<p>要求：
+- 引用文件路径和行号
+- 解释运行时会发生什么
+- 不要只翻译代码，要说明代码意图</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<p>逐个说明：
+- 名称
+- 位置：文件路径 + 行号
+- 输入
+- 输出
+- 副作用
+- 调用关系
+- 边界情况
+- 可能的坑</p>
+<h3>5. 依赖关系</h3>
+<p>说明它依赖哪些文件、库、配置、类型、组件，以及这些依赖的用途。</p>
+<h3>6. 错误处理与边界情况</h3>
+<p>必须引用源码行号。</p>
+<p>如果没有明显错误处理，也要说明“当前文件没有显式错误处理”，并指出可能依赖哪里处理。</p>
+<h3>7. 测试相关</h3>
+<p>说明：
+- 当前输入中是否包含对应测试
+- 如果有，测试覆盖了什么
+- 如果没有，应该如何测试这个文件</p>
+<h3>8. 新人阅读建议</h3>
+<p>告诉新人应该如何理解这个文件，阅读时先看哪里，再看哪里。</p>
+<h3>9. 不确定点</h3>
+<p>列出不能从当前 batch 确认的问题，不要猜。</p>
+<hr />
+<h2>本批覆盖确认</h2>
+<p>请列出本批所有文件，并标记：</p>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>覆盖状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>path</td>
+<td>已详细讲解 / 已简略讲解 / 需要结合其他文件确认</td>
+<td>说明</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p>下面是本批源码：</p>
+<p>FILE: Source/POS4UBackground/Data/Background.Data.BackgroundContainer/TransferMaster2TranDataSet.Designer.cs
+SHA256: 75e327a2145e4cd3bc40e24520f421c585d6dcdc4ba741eb452d7ce364e9bb20
+================================================================================
+00001: ﻿//------------------------------------------------------------------------------
+00002: // <auto-generated>
+00003: //     このコードはツールによって生成されました。
+00004: //     ランタイム バージョン:4.0.30319.42000
+00005: //
+00006: //     このファイルへの変更は、以下の状況下で不正な動作の原因になったり、
+00007: //     コードが再生成されるときに損失したりします。
+00008: // </auto-generated>
+00009: //------------------------------------------------------------------------------
+00010: 
+00011: #pragma warning disable 1591
+00012: 
+00013: namespace ForYouApplications.POS4U.Background.Data.Container {
+00014:   <br />
+00015:   <br />
+00016:     /// <summary>
+00017:     ///Represents a strongly typed in-memory cache of data.
+00018:     ///</summary>
+00019:     [global::System.Serializable()]
+00020:     [global::System.ComponentModel.DesignerCategoryAttribute("code")]
+00021:     [global::System.ComponentModel.ToolboxItem(true)]
+00022:     [global::System.Xml.Serialization.XmlSchemaProviderAttribute("GetTypedDataSetSchema")]
+00023:     [global::System.Xml.Serialization.XmlRootAttribute("TransferMaster2TranDataSet")]
+00024:     [global::System.ComponentModel.Design.HelpKeywordAttribute("vs.data.DataSet")]
+00025:     public partial class TransferMaster2TranDataSet : global::System.Data.DataSet {
+00026:       <br />
+00027:         private TransactionLogExistDataTable tableTransactionLogExist;
+00028:       <br />
+00029:         private EJournalExistDataTable tableEJournalExist;
+00030:       <br />
+00031:         private global::System.Data.SchemaSerializationMode _schemaSerializationMode = global::System.Data.SchemaSerializationMode.IncludeSchema;
+00032:       <br />
+00033:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00034:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00035:         public TransferMaster2TranDataSet() {
+00036:             this.BeginInit();
+00037:             this.InitClass();
+00038:             global::System.ComponentModel.CollectionChangeEventHandler schemaChangedHandler = new global::System.ComponentModel.CollectionChangeEventHandler(this.SchemaChanged);
+00039:             base.Tables.CollectionChanged += schemaChangedHandler;
+00040:             base.Relations.CollectionChanged += schemaChangedHandler;
+00041:             this.EndInit();
+00042:         }
+00043:       <br />
+00044:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00045:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00046:         protected TransferMaster2TranDataSet(global::System.Runtime.Serialization.SerializationInfo info, global::System.Runtime.Serialization.StreamingContext context) : 
+00047:                 base(info, context, false) {
+00048:             if ((this.IsBinarySerialized(info, context) == true)) {
+00049:                 this.InitVars(false);
+00050:                 global::System.ComponentModel.CollectionChangeEventHandler schemaChangedHandler1 = new global::System.ComponentModel.CollectionChangeEventHandler(this.SchemaChanged);
+00051:                 this.Tables.CollectionChanged += schemaChangedHandler1;
+00052:                 this.Relations.CollectionChanged += schemaChangedHandler1;
+00053:                 return;
+00054:             }
+00055:             string strSchema = ((string)(info.GetValue("XmlSchema", typeof(string))));
+00056:             if ((this.DetermineSchemaSerializationMode(info, context) == global::System.Data.SchemaSerializationMode.IncludeSchema)) {
+00057:                 global::System.Data.DataSet ds = new global::System.Data.DataSet();
+00058:                 ds.ReadXmlSchema(new global::System.Xml.XmlTextReader(new global::System.IO.StringReader(strSchema)));
+00059:                 if ((ds.Tables["TransactionLogExist"] != null)) {
+00060:                     base.Tables.Add(new TransactionLogExistDataTable(ds.Tables["TransactionLogExist"]));
+00061:                 }
+00062:                 if ((ds.Tables["EJournalExist"] != null)) {
+00063:                     base.Tables.Add(new EJournalExistDataTable(ds.Tables["EJournalExist"]));
+00064:                 }
+00065:                 this.DataSetName = ds.DataSetName;
+00066:                 this.Prefix = ds.Prefix;
+00067:                 this.Namespace = ds.Namespace;
+00068:                 this.Locale = ds.Locale;
+00069:                 this.CaseSensitive = ds.CaseSensitive;
+00070:                 this.EnforceConstraints = ds.EnforceConstraints;
+00071:                 this.Merge(ds, false, global::System.Data.MissingSchemaAction.Add);
+00072:                 this.InitVars();
+00073:             }
+00074:             else {
+00075:                 this.ReadXmlSchema(new global::System.Xml.XmlTextReader(new global::System.IO.StringReader(strSchema)));
+00076:             }
+00077:             this.GetSerializationData(info, context);
+00078:             global::System.ComponentModel.CollectionChangeEventHandler schemaChangedHandler = new global::System.ComponentModel.CollectionChangeEventHandler(this.SchemaChanged);
+00079:             base.Tables.CollectionChanged += schemaChangedHandler;
+00080:             this.Relations.CollectionChanged += schemaChangedHandler;
+00081:         }
+00082:       <br />
+00083:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00084:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00085:         [global::System.ComponentModel.Browsable(false)]
+00086:         [global::System.ComponentModel.DesignerSerializationVisibility(global::System.ComponentModel.DesignerSerializationVisibility.Content)]
+00087:         public TransactionLogExistDataTable TransactionLogExist {
+00088:             get {
+00089:                 return this.tableTransactionLogExist;
+00090:             }
+00091:         }
+00092:       <br />
+00093:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00094:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00095:         [global::System.ComponentModel.Browsable(false)]
+00096:         [global::System.ComponentModel.DesignerSerializationVisibility(global::System.ComponentModel.DesignerSerializationVisibility.Content)]
+00097:         public EJournalExistDataTable EJournalExist {
+00098:             get {
+00099:                 return this.tableEJournalExist;
+00100:             }
+00101:         }
+00102:       <br />
+00103:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00104:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00105:         [global::System.ComponentModel.BrowsableAttribute(true)]
+00106:         [global::System.ComponentModel.DesignerSerializationVisibilityAttribute(global::System.ComponentModel.DesignerSerializationVisibility.Visible)]
+00107:         public override global::System.Data.SchemaSerializationMode SchemaSerializationMode {
+00108:             get {
+00109:                 return this._schemaSerializationMode;
+00110:             }
+00111:             set {
+00112:                 this._schemaSerializationMode = value;
+00113:             }
+00114:         }
+00115:       <br />
+00116:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00117:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00118:         [global::System.ComponentModel.DesignerSerializationVisibilityAttribute(global::System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+00119:         public new global::System.Data.DataTableCollection Tables {
+00120:             get {
+00121:                 return base.Tables;
+00122:             }
+00123:         }
+00124:       <br />
+00125:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00126:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00127:         [global::System.ComponentModel.DesignerSerializationVisibilityAttribute(global::System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+00128:         public new global::System.Data.DataRelationCollection Relations {
+00129:             get {
+00130:                 return base.Relations;
+00131:             }
+00132:         }
+00133:       <br />
+00134:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00135:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00136:         protected override void InitializeDerivedDataSet() {
+00137:             this.BeginInit();
+00138:             this.InitClass();
+00139:             this.EndInit();
+00140:         }
+00141:       <br />
+00142:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00143:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00144:         public override global::System.Data.DataSet Clone() {
+00145:             TransferMaster2TranDataSet cln = ((TransferMaster2TranDataSet)(base.Clone()));
+00146:             cln.InitVars();
+00147:             cln.SchemaSerializationMode = this.SchemaSerializationMode;
+00148:             return cln;
+00149:         }
+00150:       <br />
+00151:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00152:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00153:         protected override bool ShouldSerializeTables() {
+00154:             return false;
+00155:         }
+00156:       <br />
+00157:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00158:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00159:         protected override bool ShouldSerializeRelations() {
+00160:             return false;
+00161:         }
+00162:       <br />
+00163:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00164:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00165:         protected override void ReadXmlSerializable(global::System.Xml.XmlReader reader) {
+00166:             if ((this.DetermineSchemaSerializationMode(reader) == global::System.Data.SchemaSerializationMode.IncludeSchema)) {
+00167:                 this.Reset();
+00168:                 global::System.Data.DataSet ds = new global::System.Data.DataSet();
+00169:                 ds.ReadXml(reader);
+00170:                 if ((ds.Tables["TransactionLogExist"] != null)) {
+00171:                     base.Tables.Add(new TransactionLogExistDataTable(ds.Tables["TransactionLogExist"]));
+00172:                 }
+00173:                 if ((ds.Tables["EJournalExist"] != null)) {
+00174:                     base.Tables.Add(new EJournalExistDataTable(ds.Tables["EJournalExist"]));
+00175:                 }
+00176:                 this.DataSetName = ds.DataSetName;
+00177:                 this.Prefix = ds.Prefix;
+00178:                 this.Namespace = ds.Namespace;
+00179:                 this.Locale = ds.Locale;
+00180:                 this.CaseSensitive = ds.CaseSensitive;
+00181:                 this.EnforceConstraints = ds.EnforceConstraints;
+00182:                 this.Merge(ds, false, global::System.Data.MissingSchemaAction.Add);
+00183:                 this.InitVars();
+00184:             }
+00185:             else {
+00186:                 this.ReadXml(reader);
+00187:                 this.InitVars();
+00188:             }
+00189:         }
+00190:       <br />
+00191:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00192:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00193:         protected override global::System.Xml.Schema.XmlSchema GetSchemaSerializable() {
+00194:             global::System.IO.MemoryStream stream = new global::System.IO.MemoryStream();
+00195:             this.WriteXmlSchema(new global::System.Xml.XmlTextWriter(stream, null));
+00196:             stream.Position = 0;
+00197:             return global::System.Xml.Schema.XmlSchema.Read(new global::System.Xml.XmlTextReader(stream), null);
+00198:         }
+00199:       <br />
+00200:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00201:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00202:         internal void InitVars() {
+00203:             this.InitVars(true);
+00204:         }
+00205:       <br />
+00206:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00207:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00208:         internal void InitVars(bool initTable) {
+00209:             this.tableTransactionLogExist = ((TransactionLogExistDataTable)(base.Tables["TransactionLogExist"]));
+00210:             if ((initTable == true)) {
+00211:                 if ((this.tableTransactionLogExist != null)) {
+00212:                     this.tableTransactionLogExist.InitVars();
+00213:                 }
+00214:             }
+00215:             this.tableEJournalExist = ((EJournalExistDataTable)(base.Tables["EJournalExist"]));
+00216:             if ((initTable == true)) {
+00217:                 if ((this.tableEJournalExist != null)) {
+00218:                     this.tableEJournalExist.InitVars();
+00219:                 }
+00220:             }
+00221:         }
+00222:       <br />
+00223:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00224:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00225:         private void InitClass() {
+00226:             this.DataSetName = "TransferMaster2TranDataSet";
+00227:             this.Prefix = "";
+00228:             this.Namespace = "http://tempuri.org/TransferMaster2TranDataSet.xsd";
+00229:             this.EnforceConstraints = true;
+00230:             this.SchemaSerializationMode = global::System.Data.SchemaSerializationMode.IncludeSchema;
+00231:             this.tableTransactionLogExist = new TransactionLogExistDataTable();
+00232:             base.Tables.Add(this.tableTransactionLogExist);
+00233:             this.tableEJournalExist = new EJournalExistDataTable();
+00234:             base.Tables.Add(this.tableEJournalExist);
+00235:         }
+00236:       <br />
+00237:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00238:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00239:         private bool ShouldSerializeTransactionLogExist() {
+00240:             return false;
+00241:         }
+00242:       <br />
+00243:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00244:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00245:         private bool ShouldSerializeEJournalExist() {
+00246:             return false;
+00247:         }
+00248:       <br />
+00249:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00250:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00251:         private void SchemaChanged(object sender, global::System.ComponentModel.CollectionChangeEventArgs e) {
+00252:             if ((e.Action == global::System.ComponentModel.CollectionChangeAction.Remove)) {
+00253:                 this.InitVars();
+00254:             }
+00255:         }
+00256:       <br />
+00257:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00258:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00259:         public static global::System.Xml.Schema.XmlSchemaComplexType GetTypedDataSetSchema(global::System.Xml.Schema.XmlSchemaSet xs) {
+00260:             TransferMaster2TranDataSet ds = new TransferMaster2TranDataSet();
+00261:             global::System.Xml.Schema.XmlSchemaComplexType type = new global::System.Xml.Schema.XmlSchemaComplexType();
+00262:             global::System.Xml.Schema.XmlSchemaSequence sequence = new global::System.Xml.Schema.XmlSchemaSequence();
+00263:             global::System.Xml.Schema.XmlSchemaAny any = new global::System.Xml.Schema.XmlSchemaAny();
+00264:             any.Namespace = ds.Namespace;
+00265:             sequence.Items.Add(any);
+00266:             type.Particle = sequence;
+00267:             global::System.Xml.Schema.XmlSchema dsSchema = ds.GetSchemaSerializable();
+00268:             if (xs.Contains(dsSchema.TargetNamespace)) {
+00269:                 global::System.IO.MemoryStream s1 = new global::System.IO.MemoryStream();
+00270:                 global::System.IO.MemoryStream s2 = new global::System.IO.MemoryStream();
+00271:                 try {
+00272:                     global::System.Xml.Schema.XmlSchema schema = null;
+00273:                     dsSchema.Write(s1);
+00274:                     for (global::System.Collections.IEnumerator schemas = xs.Schemas(dsSchema.TargetNamespace).GetEnumerator(); schemas.MoveNext(); ) {
+00275:                         schema = ((global::System.Xml.Schema.XmlSchema)(schemas.Current));
+00276:                         s2.SetLength(0);
+00277:                         schema.Write(s2);
+00278:                         if ((s1.Length == s2.Length)) {
+00279:                             s1.Position = 0;
+00280:                             s2.Position = 0;
+00281:                             for (; ((s1.Position != s1.Length) 
+00282:                                         &amp;&amp; (s1.ReadByte() == s2.ReadByte())); ) {
+00283:                                 ;
+00284:                             }
+00285:                             if ((s1.Position == s1.Length)) {
+00286:                                 return type;
+00287:                             }
+00288:                         }
+00289:                     }
+00290:                 }
+00291:                 finally {
+00292:                     if ((s1 != null)) {
+00293:                         s1.Close();
+00294:                     }
+00295:                     if ((s2 != null)) {
+00296:                         s2.Close();
+00297:                     }
+00298:                 }
+00299:             }
+00300:             xs.Add(dsSchema);
+00301:             return type;
+00302:         }
+00303:       <br />
+00304:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00305:         public delegate void TransactionLogExistRowChangeEventHandler(object sender, TransactionLogExistRowChangeEvent e);
+00306:       <br />
+00307:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00308:         public delegate void EJournalExistRowChangeEventHandler(object sender, EJournalExistRowChangeEvent e);
+00309:       <br />
+00310:         /// <summary>
+00311:         ///Represents the strongly named DataTable class.
+00312:         ///</summary>
+00313:         [global::System.Serializable()]
+00314:         [global::System.Xml.Serialization.XmlSchemaProviderAttribute("GetTypedTableSchema")]
+00315:         public partial class TransactionLogExistDataTable : global::System.Data.TypedTableBase<TransactionLogExistRow> {
+00316:           <br />
+00317:             private global::System.Data.DataColumn columnIsTransfer;
+00318:           <br />
+00319:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00320:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00321:             public TransactionLogExistDataTable() {
+00322:                 this.TableName = "TransactionLogExist";
+00323:                 this.BeginInit();
+00324:                 this.InitClass();
+00325:                 this.EndInit();
+00326:             }
+00327:           <br />
+00328:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00329:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00330:             internal TransactionLogExistDataTable(global::System.Data.DataTable table) {
+00331:                 this.TableName = table.TableName;
+00332:                 if ((table.CaseSensitive != table.DataSet.CaseSensitive)) {
+00333:                     this.CaseSensitive = table.CaseSensitive;
+00334:                 }
+00335:                 if ((table.Locale.ToString() != table.DataSet.Locale.ToString())) {
+00336:                     this.Locale = table.Locale;
+00337:                 }
+00338:                 if ((table.Namespace != table.DataSet.Namespace)) {
+00339:                     this.Namespace = table.Namespace;
+00340:                 }
+00341:                 this.Prefix = table.Prefix;
+00342:                 this.MinimumCapacity = table.MinimumCapacity;
+00343:             }
+00344:           <br />
+00345:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00346:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00347:             protected TransactionLogExistDataTable(global::System.Runtime.Serialization.SerializationInfo info, global::System.Runtime.Serialization.StreamingContext context) : 
+00348:                     base(info, context) {
+00349:                 this.InitVars();
+00350:             }
+00351:           <br />
+00352:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00353:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00354:             public global::System.Data.DataColumn IsTransferColumn {
+00355:                 get {
+00356:                     return this.columnIsTransfer;
+00357:                 }
+00358:             }
+00359:           <br />
+00360:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00361:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00362:             [global::System.ComponentModel.Browsable(false)]
+00363:             public int Count {
+00364:                 get {
+00365:                     return this.Rows.Count;
+00366:                 }
+00367:             }
+00368:           <br />
+00369:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00370:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00371:             public TransactionLogExistRow this[int index] {
+00372:                 get {
+00373:                     return ((TransactionLogExistRow)(this.Rows[index]));
+00374:                 }
+00375:             }
+00376:           <br />
+00377:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00378:             public event TransactionLogExistRowChangeEventHandler TransactionLogExistRowChanging;
+00379:           <br />
+00380:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00381:             public event TransactionLogExistRowChangeEventHandler TransactionLogExistRowChanged;
+00382:           <br />
+00383:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00384:             public event TransactionLogExistRowChangeEventHandler TransactionLogExistRowDeleting;
+00385:           <br />
+00386:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00387:             public event TransactionLogExistRowChangeEventHandler TransactionLogExistRowDeleted;
+00388:           <br />
+00389:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00390:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00391:             public void AddTransactionLogExistRow(TransactionLogExistRow row) {
+00392:                 this.Rows.Add(row);
+00393:             }
+00394:           <br />
+00395:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00396:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00397:             public TransactionLogExistRow AddTransactionLogExistRow(int IsTransfer) {
+00398:                 TransactionLogExistRow rowTransactionLogExistRow = ((TransactionLogExistRow)(this.NewRow()));
+00399:                 object[] columnValuesArray = new object[] {
+00400:                         IsTransfer};
+00401:                 rowTransactionLogExistRow.ItemArray = columnValuesArray;
+00402:                 this.Rows.Add(rowTransactionLogExistRow);
+00403:                 return rowTransactionLogExistRow;
+00404:             }
+00405:           <br />
+00406:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00407:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00408:             public override global::System.Data.DataTable Clone() {
+00409:                 TransactionLogExistDataTable cln = ((TransactionLogExistDataTable)(base.Clone()));
+00410:                 cln.InitVars();
+00411:                 return cln;
+00412:             }
+00413:           <br />
+00414:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00415:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00416:             protected override global::System.Data.DataTable CreateInstance() {
+00417:                 return new TransactionLogExistDataTable();
+00418:             }
+00419:           <br />
+00420:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00421:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00422:             internal void InitVars() {
+00423:                 this.columnIsTransfer = base.Columns["IsTransfer"];
+00424:             }
+00425:           <br />
+00426:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00427:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00428:             private void InitClass() {
+00429:                 this.columnIsTransfer = new global::System.Data.DataColumn("IsTransfer", typeof(int), null, global::System.Data.MappingType.Element);
+00430:                 base.Columns.Add(this.columnIsTransfer);
+00431:                 this.columnIsTransfer.ReadOnly = true;
+00432:             }
+00433:           <br />
+00434:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00435:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00436:             public TransactionLogExistRow NewTransactionLogExistRow() {
+00437:                 return ((TransactionLogExistRow)(this.NewRow()));
+00438:             }
+00439:           <br />
+00440:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00441:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00442:             protected override global::System.Data.DataRow NewRowFromBuilder(global::System.Data.DataRowBuilder builder) {
+00443:                 return new TransactionLogExistRow(builder);
+00444:             }
+00445:           <br />
+00446:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00447:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00448:             protected override global::System.Type GetRowType() {
+00449:                 return typeof(TransactionLogExistRow);
+00450:             }
+00451:           <br />
+00452:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00453:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00454:             protected override void OnRowChanged(global::System.Data.DataRowChangeEventArgs e) {
+00455:                 base.OnRowChanged(e);
+00456:                 if ((this.TransactionLogExistRowChanged != null)) {
+00457:                     this.TransactionLogExistRowChanged(this, new TransactionLogExistRowChangeEvent(((TransactionLogExistRow)(e.Row)), e.Action));
+00458:                 }
+00459:             }
+00460:           <br />
+00461:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00462:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00463:             protected override void OnRowChanging(global::System.Data.DataRowChangeEventArgs e) {
+00464:                 base.OnRowChanging(e);
+00465:                 if ((this.TransactionLogExistRowChanging != null)) {
+00466:                     this.TransactionLogExistRowChanging(this, new TransactionLogExistRowChangeEvent(((TransactionLogExistRow)(e.Row)), e.Action));
+00467:                 }
+00468:             }
+00469:           <br />
+00470:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00471:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00472:             protected override void OnRowDeleted(global::System.Data.DataRowChangeEventArgs e) {
+00473:                 base.OnRowDeleted(e);
+00474:                 if ((this.TransactionLogExistRowDeleted != null)) {
+00475:                     this.TransactionLogExistRowDeleted(this, new TransactionLogExistRowChangeEvent(((TransactionLogExistRow)(e.Row)), e.Action));
+00476:                 }
+00477:             }
+00478:           <br />
+00479:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00480:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00481:             protected override void OnRowDeleting(global::System.Data.DataRowChangeEventArgs e) {
+00482:                 base.OnRowDeleting(e);
+00483:                 if ((this.TransactionLogExistRowDeleting != null)) {
+00484:                     this.TransactionLogExistRowDeleting(this, new TransactionLogExistRowChangeEvent(((TransactionLogExistRow)(e.Row)), e.Action));
+00485:                 }
+00486:             }
+00487:           <br />
+00488:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00489:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00490:             public void RemoveTransactionLogExistRow(TransactionLogExistRow row) {
+00491:                 this.Rows.Remove(row);
+00492:             }
+00493:           <br />
+00494:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00495:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00496:             public static global::System.Xml.Schema.XmlSchemaComplexType GetTypedTableSchema(global::System.Xml.Schema.XmlSchemaSet xs) {
+00497:                 global::System.Xml.Schema.XmlSchemaComplexType type = new global::System.Xml.Schema.XmlSchemaComplexType();
+00498:                 global::System.Xml.Schema.XmlSchemaSequence sequence = new global::System.Xml.Schema.XmlSchemaSequence();
+00499:                 TransferMaster2TranDataSet ds = new TransferMaster2TranDataSet();
+00500:                 global::System.Xml.Schema.XmlSchemaAny any1 = new global::System.Xml.Schema.XmlSchemaAny();
+00501:                 any1.Namespace = "http://www.w3.org/2001/XMLSchema";
+00502:                 any1.MinOccurs = new decimal(0);
+00503:                 any1.MaxOccurs = decimal.MaxValue;
+00504:                 any1.ProcessContents = global::System.Xml.Schema.XmlSchemaContentProcessing.Lax;
+00505:                 sequence.Items.Add(any1);
+00506:                 global::System.Xml.Schema.XmlSchemaAny any2 = new global::System.Xml.Schema.XmlSchemaAny();
+00507:                 any2.Namespace = "urn:schemas-microsoft-com:xml-diffgram-v1";
+00508:                 any2.MinOccurs = new decimal(1);
+00509:                 any2.ProcessContents = global::System.Xml.Schema.XmlSchemaContentProcessing.Lax;
+00510:                 sequence.Items.Add(any2);
+00511:                 global::System.Xml.Schema.XmlSchemaAttribute attribute1 = new global::System.Xml.Schema.XmlSchemaAttribute();
+00512:                 attribute1.Name = "namespace";
+00513:                 attribute1.FixedValue = ds.Namespace;
+00514:                 type.Attributes.Add(attribute1);
+00515:                 global::System.Xml.Schema.XmlSchemaAttribute attribute2 = new global::System.Xml.Schema.XmlSchemaAttribute();
+00516:                 attribute2.Name = "tableTypeName";
+00517:                 attribute2.FixedValue = "TransactionLogExistDataTable";
+00518:                 type.Attributes.Add(attribute2);
+00519:                 type.Particle = sequence;
+00520:                 global::System.Xml.Schema.XmlSchema dsSchema = ds.GetSchemaSerializable();
+00521:                 if (xs.Contains(dsSchema.TargetNamespace)) {
+00522:                     global::System.IO.MemoryStream s1 = new global::System.IO.MemoryStream();
+00523:                     global::System.IO.MemoryStream s2 = new global::System.IO.MemoryStream();
+00524:                     try {
+00525:                         global::System.Xml.Schema.XmlSchema schema = null;
+00526:                         dsSchema.Write(s1);
+00527:                         for (global::System.Collections.IEnumerator schemas = xs.Schemas(dsSchema.TargetNamespace).GetEnumerator(); schemas.MoveNext(); ) {
+00528:                             schema = ((global::System.Xml.Schema.XmlSchema)(schemas.Current));
+00529:                             s2.SetLength(0);
+00530:                             schema.Write(s2);
+00531:                             if ((s1.Length == s2.Length)) {
+00532:                                 s1.Position = 0;
+00533:                                 s2.Position = 0;
+00534:                                 for (; ((s1.Position != s1.Length) 
+00535:                                             &amp;&amp; (s1.ReadByte() == s2.ReadByte())); ) {
+00536:                                     ;
+00537:                                 }
+00538:                                 if ((s1.Position == s1.Length)) {
+00539:                                     return type;
+00540:                                 }
+00541:                             }
+00542:                         }
+00543:                     }
+00544:                     finally {
+00545:                         if ((s1 != null)) {
+00546:                             s1.Close();
+00547:                         }
+00548:                         if ((s2 != null)) {
+00549:                             s2.Close();
+00550:                         }
+00551:                     }
+00552:                 }
+00553:                 xs.Add(dsSchema);
+00554:                 return type;
+00555:             }
+00556:         }
+00557:       <br />
+00558:         /// <summary>
+00559:         ///Represents the strongly named DataTable class.
+00560:         ///</summary>
+00561:         [global::System.Serializable()]
+00562:         [global::System.Xml.Serialization.XmlSchemaProviderAttribute("GetTypedTableSchema")]
+00563:         public partial class EJournalExistDataTable : global::System.Data.TypedTableBase<EJournalExistRow> {
+00564:           <br />
+00565:             private global::System.Data.DataColumn columnIsTransfer;
+00566:           <br />
+00567:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00568:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00569:             public EJournalExistDataTable() {
+00570:                 this.TableName = "EJournalExist";
+00571:                 this.BeginInit();
+00572:                 this.InitClass();
+00573:                 this.EndInit();
+00574:             }
+00575:           <br />
+00576:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00577:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00578:             internal EJournalExistDataTable(global::System.Data.DataTable table) {
+00579:                 this.TableName = table.TableName;
+00580:                 if ((table.CaseSensitive != table.DataSet.CaseSensitive)) {
+00581:                     this.CaseSensitive = table.CaseSensitive;
+00582:                 }
+00583:                 if ((table.Locale.ToString() != table.DataSet.Locale.ToString())) {
+00584:                     this.Locale = table.Locale;
+00585:                 }
+00586:                 if ((table.Namespace != table.DataSet.Namespace)) {
+00587:                     this.Namespace = table.Namespace;
+00588:                 }
+00589:                 this.Prefix = table.Prefix;
+00590:                 this.MinimumCapacity = table.MinimumCapacity;
+00591:             }
+00592:           <br />
+00593:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00594:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00595:             protected EJournalExistDataTable(global::System.Runtime.Serialization.SerializationInfo info, global::System.Runtime.Serialization.StreamingContext context) : 
+00596:                     base(info, context) {
+00597:                 this.InitVars();
+00598:             }
+00599:           <br />
+00600:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00601:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00602:             public global::System.Data.DataColumn IsTransferColumn {
+00603:                 get {
+00604:                     return this.columnIsTransfer;
+00605:                 }
+00606:             }
+00607:           <br />
+00608:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00609:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00610:             [global::System.ComponentModel.Browsable(false)]
+00611:             public int Count {
+00612:                 get {
+00613:                     return this.Rows.Count;
+00614:                 }
+00615:             }
+00616:           <br />
+00617:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00618:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00619:             public EJournalExistRow this[int index] {
+00620:                 get {
+00621:                     return ((EJournalExistRow)(this.Rows[index]));
+00622:                 }
+00623:             }
+00624:           <br />
+00625:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00626:             public event EJournalExistRowChangeEventHandler EJournalExistRowChanging;
+00627:           <br />
+00628:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00629:             public event EJournalExistRowChangeEventHandler EJournalExistRowChanged;
+00630:           <br />
+00631:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00632:             public event EJournalExistRowChangeEventHandler EJournalExistRowDeleting;
+00633:           <br />
+00634:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00635:             public event EJournalExistRowChangeEventHandler EJournalExistRowDeleted;
+00636:           <br />
+00637:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00638:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00639:             public void AddEJournalExistRow(EJournalExistRow row) {
+00640:                 this.Rows.Add(row);
+00641:             }
+00642:           <br />
+00643:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00644:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00645:             public EJournalExistRow AddEJournalExistRow(int IsTransfer) {
+00646:                 EJournalExistRow rowEJournalExistRow = ((EJournalExistRow)(this.NewRow()));
+00647:                 object[] columnValuesArray = new object[] {
+00648:                         IsTransfer};
+00649:                 rowEJournalExistRow.ItemArray = columnValuesArray;
+00650:                 this.Rows.Add(rowEJournalExistRow);
+00651:                 return rowEJournalExistRow;
+00652:             }
+00653:           <br />
+00654:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00655:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00656:             public override global::System.Data.DataTable Clone() {
+00657:                 EJournalExistDataTable cln = ((EJournalExistDataTable)(base.Clone()));
+00658:                 cln.InitVars();
+00659:                 return cln;
+00660:             }
+00661:           <br />
+00662:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00663:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00664:             protected override global::System.Data.DataTable CreateInstance() {
+00665:                 return new EJournalExistDataTable();
+00666:             }
+00667:           <br />
+00668:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00669:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00670:             internal void InitVars() {
+00671:                 this.columnIsTransfer = base.Columns["IsTransfer"];
+00672:             }
+00673:           <br />
+00674:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00675:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00676:             private void InitClass() {
+00677:                 this.columnIsTransfer = new global::System.Data.DataColumn("IsTransfer", typeof(int), null, global::System.Data.MappingType.Element);
+00678:                 base.Columns.Add(this.columnIsTransfer);
+00679:                 this.columnIsTransfer.ReadOnly = true;
+00680:             }
+00681:           <br />
+00682:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00683:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00684:             public EJournalExistRow NewEJournalExistRow() {
+00685:                 return ((EJournalExistRow)(this.NewRow()));
+00686:             }
+00687:           <br />
+00688:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00689:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00690:             protected override global::System.Data.DataRow NewRowFromBuilder(global::System.Data.DataRowBuilder builder) {
+00691:                 return new EJournalExistRow(builder);
+00692:             }
+00693:           <br />
+00694:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00695:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00696:             protected override global::System.Type GetRowType() {
+00697:                 return typeof(EJournalExistRow);
+00698:             }
+00699:           <br />
+00700:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00701:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00702:             protected override void OnRowChanged(global::System.Data.DataRowChangeEventArgs e) {
+00703:                 base.OnRowChanged(e);
+00704:                 if ((this.EJournalExistRowChanged != null)) {
+00705:                     this.EJournalExistRowChanged(this, new EJournalExistRowChangeEvent(((EJournalExistRow)(e.Row)), e.Action));
+00706:                 }
+00707:             }
+00708:           <br />
+00709:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00710:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00711:             protected override void OnRowChanging(global::System.Data.DataRowChangeEventArgs e) {
+00712:                 base.OnRowChanging(e);
+00713:                 if ((this.EJournalExistRowChanging != null)) {
+00714:                     this.EJournalExistRowChanging(this, new EJournalExistRowChangeEvent(((EJournalExistRow)(e.Row)), e.Action));
+00715:                 }
+00716:             }
+00717:           <br />
+00718:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00719:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00720:             protected override void OnRowDeleted(global::System.Data.DataRowChangeEventArgs e) {
+00721:                 base.OnRowDeleted(e);
+00722:                 if ((this.EJournalExistRowDeleted != null)) {
+00723:                     this.EJournalExistRowDeleted(this, new EJournalExistRowChangeEvent(((EJournalExistRow)(e.Row)), e.Action));
+00724:                 }
+00725:             }
+00726:           <br />
+00727:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00728:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00729:             protected override void OnRowDeleting(global::System.Data.DataRowChangeEventArgs e) {
+00730:                 base.OnRowDeleting(e);
+00731:                 if ((this.EJournalExistRowDeleting != null)) {
+00732:                     this.EJournalExistRowDeleting(this, new EJournalExistRowChangeEvent(((EJournalExistRow)(e.Row)), e.Action));
+00733:                 }
+00734:             }
+00735:           <br />
+00736:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00737:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00738:             public void RemoveEJournalExistRow(EJournalExistRow row) {
+00739:                 this.Rows.Remove(row);
+00740:             }
+00741:           <br />
+00742:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00743:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00744:             public static global::System.Xml.Schema.XmlSchemaComplexType GetTypedTableSchema(global::System.Xml.Schema.XmlSchemaSet xs) {
+00745:                 global::System.Xml.Schema.XmlSchemaComplexType type = new global::System.Xml.Schema.XmlSchemaComplexType();
+00746:                 global::System.Xml.Schema.XmlSchemaSequence sequence = new global::System.Xml.Schema.XmlSchemaSequence();
+00747:                 TransferMaster2TranDataSet ds = new TransferMaster2TranDataSet();
+00748:                 global::System.Xml.Schema.XmlSchemaAny any1 = new global::System.Xml.Schema.XmlSchemaAny();
+00749:                 any1.Namespace = "http://www.w3.org/2001/XMLSchema";
+00750:                 any1.MinOccurs = new decimal(0);
+00751:                 any1.MaxOccurs = decimal.MaxValue;
+00752:                 any1.ProcessContents = global::System.Xml.Schema.XmlSchemaContentProcessing.Lax;
+00753:                 sequence.Items.Add(any1);
+00754:                 global::System.Xml.Schema.XmlSchemaAny any2 = new global::System.Xml.Schema.XmlSchemaAny();
+00755:                 any2.Namespace = "urn:schemas-microsoft-com:xml-diffgram-v1";
+00756:                 any2.MinOccurs = new decimal(1);
+00757:                 any2.ProcessContents = global::System.Xml.Schema.XmlSchemaContentProcessing.Lax;
+00758:                 sequence.Items.Add(any2);
+00759:                 global::System.Xml.Schema.XmlSchemaAttribute attribute1 = new global::System.Xml.Schema.XmlSchemaAttribute();
+00760:                 attribute1.Name = "namespace";
+00761:                 attribute1.FixedValue = ds.Namespace;
+00762:                 type.Attributes.Add(attribute1);
+00763:                 global::System.Xml.Schema.XmlSchemaAttribute attribute2 = new global::System.Xml.Schema.XmlSchemaAttribute();
+00764:                 attribute2.Name = "tableTypeName";
+00765:                 attribute2.FixedValue = "EJournalExistDataTable";
+00766:                 type.Attributes.Add(attribute2);
+00767:                 type.Particle = sequence;
+00768:                 global::System.Xml.Schema.XmlSchema dsSchema = ds.GetSchemaSerializable();
+00769:                 if (xs.Contains(dsSchema.TargetNamespace)) {
+00770:                     global::System.IO.MemoryStream s1 = new global::System.IO.MemoryStream();
+00771:                     global::System.IO.MemoryStream s2 = new global::System.IO.MemoryStream();
+00772:                     try {
+00773:                         global::System.Xml.Schema.XmlSchema schema = null;
+00774:                         dsSchema.Write(s1);
+00775:                         for (global::System.Collections.IEnumerator schemas = xs.Schemas(dsSchema.TargetNamespace).GetEnumerator(); schemas.MoveNext(); ) {
+00776:                             schema = ((global::System.Xml.Schema.XmlSchema)(schemas.Current));
+00777:                             s2.SetLength(0);
+00778:                             schema.Write(s2);
+00779:                             if ((s1.Length == s2.Length)) {
+00780:                                 s1.Position = 0;
+00781:                                 s2.Position = 0;
+00782:                                 for (; ((s1.Position != s1.Length) 
+00783:                                             &amp;&amp; (s1.ReadByte() == s2.ReadByte())); ) {
+00784:                                     ;
+00785:                                 }
+00786:                                 if ((s1.Position == s1.Length)) {
+00787:                                     return type;
+00788:                                 }
+00789:                             }
+00790:                         }
+00791:                     }
+00792:                     finally {
+00793:                         if ((s1 != null)) {
+00794:                             s1.Close();
+00795:                         }
+00796:                         if ((s2 != null)) {
+00797:                             s2.Close();
+00798:                         }
+00799:                     }
+00800:                 }
+00801:                 xs.Add(dsSchema);
+00802:                 return type;
+00803:             }
+00804:         }
+00805:       <br />
+00806:         /// <summary>
+00807:         ///Represents strongly named DataRow class.
+00808:         ///</summary>
+00809:         public partial class TransactionLogExistRow : global::System.Data.DataRow {
+00810:           <br />
+00811:             private TransactionLogExistDataTable tableTransactionLogExist;
+00812:           <br />
+00813:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00814:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00815:             internal TransactionLogExistRow(global::System.Data.DataRowBuilder rb) : 
+00816:                     base(rb) {
+00817:                 this.tableTransactionLogExist = ((TransactionLogExistDataTable)(this.Table));
+00818:             }
+00819:           <br />
+00820:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00821:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00822:             public int IsTransfer {
+00823:                 get {
+00824:                     try {
+00825:                         return ((int)(this[this.tableTransactionLogExist.IsTransferColumn]));
+00826:                     }
+00827:                     catch (global::System.InvalidCastException e) {
+00828:                         throw new global::System.Data.StrongTypingException("テーブル \'TransactionLogExist\' にある列 \'IsTransfer\' の値は DBNull です。", e);
+00829:                     }
+00830:                 }
+00831:                 set {
+00832:                     this[this.tableTransactionLogExist.IsTransferColumn] = value;
+00833:                 }
+00834:             }
+00835:           <br />
+00836:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00837:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00838:             public bool IsIsTransferNull() {
+00839:                 return this.IsNull(this.tableTransactionLogExist.IsTransferColumn);
+00840:             }
+00841:           <br />
+00842:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00843:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00844:             public void SetIsTransferNull() {
+00845:                 this[this.tableTransactionLogExist.IsTransferColumn] = global::System.Convert.DBNull;
+00846:             }
+00847:         }
+00848:       <br />
+00849:         /// <summary>
+00850:         ///Represents strongly named DataRow class.
+00851:         ///</summary>
+00852:         public partial class EJournalExistRow : global::System.Data.DataRow {
+00853:           <br />
+00854:             private EJournalExistDataTable tableEJournalExist;
+00855:           <br />
+00856:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00857:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00858:             internal EJournalExistRow(global::System.Data.DataRowBuilder rb) : 
+00859:                     base(rb) {
+00860:                 this.tableEJournalExist = ((EJournalExistDataTable)(this.Table));
+00861:             }
+00862:           <br />
+00863:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00864:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00865:             public int IsTransfer {
+00866:                 get {
+00867:                     try {
+00868:                         return ((int)(this[this.tableEJournalExist.IsTransferColumn]));
+00869:                     }
+00870:                     catch (global::System.InvalidCastException e) {
+00871:                         throw new global::System.Data.StrongTypingException("テーブル \'EJournalExist\' にある列 \'IsTransfer\' の値は DBNull です。", e);
+00872:                     }
+00873:                 }
+00874:                 set {
+00875:                     this[this.tableEJournalExist.IsTransferColumn] = value;
+00876:                 }
+00877:             }
+00878:           <br />
+00879:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00880:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00881:             public bool IsIsTransferNull() {
+00882:                 return this.IsNull(this.tableEJournalExist.IsTransferColumn);
+00883:             }
+00884:           <br />
+00885:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00886:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00887:             public void SetIsTransferNull() {
+00888:                 this[this.tableEJournalExist.IsTransferColumn] = global::System.Convert.DBNull;
+00889:             }
+00890:         }
+00891:       <br />
+00892:         /// <summary>
+00893:         ///Row event argument class
+00894:         ///</summary>
+00895:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00896:         public class TransactionLogExistRowChangeEvent : global::System.EventArgs {
+00897:           <br />
+00898:             private TransactionLogExistRow eventRow;
+00899:           <br />
+00900:             private global::System.Data.DataRowAction eventAction;
+00901:           <br />
+00902:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00903:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00904:             public TransactionLogExistRowChangeEvent(TransactionLogExistRow row, global::System.Data.DataRowAction action) {
+00905:                 this.eventRow = row;
+00906:                 this.eventAction = action;
+00907:             }
+00908:           <br />
+00909:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00910:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00911:             public TransactionLogExistRow Row {
+00912:                 get {
+00913:                     return this.eventRow;
+00914:                 }
+00915:             }
+00916:           <br />
+00917:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00918:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00919:             public global::System.Data.DataRowAction Action {
+00920:                 get {
+00921:                     return this.eventAction;
+00922:                 }
+00923:             }
+00924:         }
+00925:       <br />
+00926:         /// <summary>
+00927:         ///Row event argument class
+00928:         ///</summary>
+00929:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00930:         public class EJournalExistRowChangeEvent : global::System.EventArgs {
+00931:           <br />
+00932:             private EJournalExistRow eventRow;
+00933:           <br />
+00934:             private global::System.Data.DataRowAction eventAction;
+00935:           <br />
+00936:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00937:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00938:             public EJournalExistRowChangeEvent(EJournalExistRow row, global::System.Data.DataRowAction action) {
+00939:                 this.eventRow = row;
+00940:                 this.eventAction = action;
+00941:             }
+00942:           <br />
+00943:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00944:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00945:             public EJournalExistRow Row {
+00946:                 get {
+00947:                     return this.eventRow;
+00948:                 }
+00949:             }
+00950:           <br />
+00951:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00952:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00953:             public global::System.Data.DataRowAction Action {
+00954:                 get {
+00955:                     return this.eventAction;
+00956:                 }
+00957:             }
+00958:         }
+00959:     }
+00960: }
+00961: namespace ForYouApplications.POS4U.Background.Data.Container.TransferMaster2TranDataSetTableAdapters {
+00962:   <br />
+00963:   <br />
+00964:     /// <summary>
+00965:     ///Represents the connection and commands used to retrieve and save data.
+00966:     ///</summary>
+00967:     [global::System.ComponentModel.DesignerCategoryAttribute("code")]
+00968:     [global::System.ComponentModel.ToolboxItem(true)]
+00969:     [global::System.ComponentModel.DataObjectAttribute(true)]
+00970:     [global::System.ComponentModel.DesignerAttribute("Microsoft.VSDesigner.DataSource.Design.TableAdapterDesigner, Microsoft.VSDesigner" +
+00971:         ", Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a")]
+00972:     [global::System.ComponentModel.Design.HelpKeywordAttribute("vs.data.TableAdapter")]
+00973:     public partial class TransactionLogExistTableAdapter : global::System.ComponentModel.Component {
+00974:       <br />
+00975:         private global::System.Data.SqlClient.SqlDataAdapter _adapter;
+00976:       <br />
+00977:         private global::System.Data.SqlClient.SqlConnection _connection;
+00978:       <br />
+00979:         private global::System.Data.SqlClient.SqlTransaction _transaction;
+00980:       <br />
+00981:         private global::System.Data.SqlClient.SqlCommand[] _commandCollection;
+00982:       <br />
+00983:         private bool _clearBeforeFill;
+00984:       <br />
+00985:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00986:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00987:         public TransactionLogExistTableAdapter() {
+00988:             this.ClearBeforeFill = true;
+00989:         }
+00990:       <br />
+00991:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+00992:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+00993:         protected internal global::System.Data.SqlClient.SqlDataAdapter Adapter {
+00994:             get {
+00995:                 if ((this._adapter == null)) {
+00996:                     this.InitAdapter();
+00997:                 }
+00998:                 return this._adapter;
+00999:             }
+01000:         }
+01001:       <br />
+01002:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01003:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01004:         public global::System.Data.SqlClient.SqlConnection Connection {
+01005:             get {
+01006:                 if ((this._connection == null)) {
+01007:                     this.InitConnection();
+01008:                 }
+01009:                 return this._connection;
+01010:             }
+01011:             set {
+01012:                 this._connection = value;
+01013:                 if ((this.Adapter.InsertCommand != null)) {
+01014:                     this.Adapter.InsertCommand.Connection = value;
+01015:                 }
+01016:                 if ((this.Adapter.DeleteCommand != null)) {
+01017:                     this.Adapter.DeleteCommand.Connection = value;
+01018:                 }
+01019:                 if ((this.Adapter.UpdateCommand != null)) {
+01020:                     this.Adapter.UpdateCommand.Connection = value;
+01021:                 }
+01022:                 for (int i = 0; (i &lt; this.CommandCollection.Length); i = (i + 1)) {
+01023:                     if ((this.CommandCollection[i] != null)) {
+01024:                         ((global::System.Data.SqlClient.SqlCommand)(this.CommandCollection[i])).Connection = value;
+01025:                     }
+01026:                 }
+01027:             }
+01028:         }
+01029:       <br />
+01030:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01031:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01032:         internal global::System.Data.SqlClient.SqlTransaction Transaction {
+01033:             get {
+01034:                 return this._transaction;
+01035:             }
+01036:             set {
+01037:                 this._transaction = value;
+01038:                 for (int i = 0; (i &lt; this.CommandCollection.Length); i = (i + 1)) {
+01039:                     this.CommandCollection[i].Transaction = this._transaction;
+01040:                 }
+01041:                 if (((this.Adapter != null) 
+01042:                             &amp;&amp; (this.Adapter.DeleteCommand != null))) {
+01043:                     this.Adapter.DeleteCommand.Transaction = this._transaction;
+01044:                 }
+01045:                 if (((this.Adapter != null) 
+01046:                             &amp;&amp; (this.Adapter.InsertCommand != null))) {
+01047:                     this.Adapter.InsertCommand.Transaction = this._transaction;
+01048:                 }
+01049:                 if (((this.Adapter != null) 
+01050:                             &amp;&amp; (this.Adapter.UpdateCommand != null))) {
+01051:                     this.Adapter.UpdateCommand.Transaction = this._transaction;
+01052:                 }
+01053:             }
+01054:         }
+01055:       <br />
+01056:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01057:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01058:         protected global::System.Data.SqlClient.SqlCommand[] CommandCollection {
+01059:             get {
+01060:                 if ((this._commandCollection == null)) {
+01061:                     this.InitCommandCollection();
+01062:                 }
+01063:                 return this._commandCollection;
+01064:             }
+01065:         }
+01066:       <br />
+01067:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01068:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01069:         public bool ClearBeforeFill {
+01070:             get {
+01071:                 return this._clearBeforeFill;
+01072:             }
+01073:             set {
+01074:                 this._clearBeforeFill = value;
+01075:             }
+01076:         }
+01077:       <br />
+01078:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01079:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01080:         private void InitAdapter() {
+01081:             this._adapter = new global::System.Data.SqlClient.SqlDataAdapter();
+01082:             global::System.Data.Common.DataTableMapping tableMapping = new global::System.Data.Common.DataTableMapping();
+01083:             tableMapping.SourceTable = "Table";
+01084:             tableMapping.DataSetTable = "TransactionLogExist";
+01085:             tableMapping.ColumnMappings.Add("IsTransfer", "IsTransfer");
+01086:             this._adapter.TableMappings.Add(tableMapping);
+01087:         }
+01088:       <br />
+01089:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01090:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01091:         private void InitConnection() {
+01092:             this._connection = new global::System.Data.SqlClient.SqlConnection();
+01093:             this._connection.ConnectionString = global::ForYouApplications.POS4U.Background.Data.Container.Properties.Settings.Default.POS4U_TrialConnectionString;
+01094:         }
+01095:       <br />
+01096:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01097:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01098:         private void InitCommandCollection() {
+01099:             this._commandCollection = new global::System.Data.SqlClient.SqlCommand[1];
+01100:             this._commandCollection[0] = new global::System.Data.SqlClient.SqlCommand();
+01101:             this._commandCollection[0].Connection = this.Connection;
+01102:             this._commandCollection[0].CommandText = "dbo.usp_GetTransactionLogExist";
+01103:             this._commandCollection[0].CommandType = global::System.Data.CommandType.StoredProcedure;
+01104:             this._commandCollection[0].Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@RETURN_VALUE", global::System.Data.SqlDbType.Int, 4, global::System.Data.ParameterDirection.ReturnValue, 10, 0, null, global::System.Data.DataRowVersion.Current, false, null, "", "", ""));
+01105:             this._commandCollection[0].Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@CompanyCode", global::System.Data.SqlDbType.NVarChar, 10, global::System.Data.ParameterDirection.Input, 0, 0, null, global::System.Data.DataRowVersion.Current, false, null, "", "", ""));
+01106:             this._commandCollection[0].Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@StoreCode", global::System.Data.SqlDbType.NVarChar, 10, global::System.Data.ParameterDirection.Input, 0, 0, null, global::System.Data.DataRowVersion.Current, false, null, "", "", ""));
+01107:             this._commandCollection[0].Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@TerminalNo", global::System.Data.SqlDbType.Int, 4, global::System.Data.ParameterDirection.Input, 10, 0, null, global::System.Data.DataRowVersion.Current, false, null, "", "", ""));
+01108:             this._commandCollection[0].Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@ManagedNo", global::System.Data.SqlDbType.Int, 4, global::System.Data.ParameterDirection.Input, 10, 0, null, global::System.Data.DataRowVersion.Current, false, null, "", "", ""));
+01109:             this._commandCollection[0].Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@TransactionNo", global::System.Data.SqlDbType.BigInt, 8, global::System.Data.ParameterDirection.Input, 19, 0, null, global::System.Data.DataRowVersion.Current, false, null, "", "", ""));
+01110:         }
+01111:       <br />
+01112:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01113:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01114:         [global::System.ComponentModel.Design.HelpKeywordAttribute("vs.data.TableAdapter")]
+01115:         [global::System.ComponentModel.DataObjectMethodAttribute(global::System.ComponentModel.DataObjectMethodType.Fill, true)]
+01116:         public virtual int Fill(TransferMaster2TranDataSet.TransactionLogExistDataTable dataTable, string CompanyCode, string StoreCode, global::System.Nullable<int> TerminalNo, global::System.Nullable<int> ManagedNo, global::System.Nullable<long> TransactionNo) {
+01117:             this.Adapter.SelectCommand = this.CommandCollection[0];
+01118:             if ((CompanyCode == null)) {
+01119:                 this.Adapter.SelectCommand.Parameters[1].Value = global::System.DBNull.Value;
+01120:             }
+01121:             else {
+01122:                 this.Adapter.SelectCommand.Parameters[1].Value = ((string)(CompanyCode));
+01123:             }
+01124:             if ((StoreCode == null)) {
+01125:                 this.Adapter.SelectCommand.Parameters[2].Value = global::System.DBNull.Value;
+01126:             }
+01127:             else {
+01128:                 this.Adapter.SelectCommand.Parameters[2].Value = ((string)(StoreCode));
+01129:             }
+01130:             if ((TerminalNo.HasValue == true)) {
+01131:                 this.Adapter.SelectCommand.Parameters[3].Value = ((int)(TerminalNo.Value));
+01132:             }
+01133:             else {
+01134:                 this.Adapter.SelectCommand.Parameters[3].Value = global::System.DBNull.Value;
+01135:             }
+01136:             if ((ManagedNo.HasValue == true)) {
+01137:                 this.Adapter.SelectCommand.Parameters[4].Value = ((int)(ManagedNo.Value));
+01138:             }
+01139:             else {
+01140:                 this.Adapter.SelectCommand.Parameters[4].Value = global::System.DBNull.Value;
+01141:             }
+01142:             if ((TransactionNo.HasValue == true)) {
+01143:                 this.Adapter.SelectCommand.Parameters[5].Value = ((long)(TransactionNo.Value));
+01144:             }
+01145:             else {
+01146:                 this.Adapter.SelectCommand.Parameters[5].Value = global::System.DBNull.Value;
+01147:             }
+01148:             if ((this.ClearBeforeFill == true)) {
+01149:                 dataTable.Clear();
+01150:             }
+01151:             int returnValue = this.Adapter.Fill(dataTable);
+01152:             return returnValue;
+01153:         }
+01154:       <br />
+01155:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01156:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01157:         [global::System.ComponentModel.Design.HelpKeywordAttribute("vs.data.TableAdapter")]
+01158:         [global::System.ComponentModel.DataObjectMethodAttribute(global::System.ComponentModel.DataObjectMethodType.Select, true)]
+01159:         public virtual TransferMaster2TranDataSet.TransactionLogExistDataTable GetData(string CompanyCode, string StoreCode, global::System.Nullable<int> TerminalNo, global::System.Nullable<int> ManagedNo, global::System.Nullable<long> TransactionNo) {
+01160:             this.Adapter.SelectCommand = this.CommandCollection[0];
+01161:             if ((CompanyCode == null)) {
+01162:                 this.Adapter.SelectCommand.Parameters[1].Value = global::System.DBNull.Value;
+01163:             }
+01164:             else {
+01165:                 this.Adapter.SelectCommand.Parameters[1].Value = ((string)(CompanyCode));
+01166:             }
+01167:             if ((StoreCode == null)) {
+01168:                 this.Adapter.SelectCommand.Parameters[2].Value = global::System.DBNull.Value;
+01169:             }
+01170:             else {
+01171:                 this.Adapter.SelectCommand.Parameters[2].Value = ((string)(StoreCode));
+01172:             }
+01173:             if ((TerminalNo.HasValue == true)) {
+01174:                 this.Adapter.SelectCommand.Parameters[3].Value = ((int)(TerminalNo.Value));
+01175:             }
+01176:             else {
+01177:                 this.Adapter.SelectCommand.Parameters[3].Value = global::System.DBNull.Value;
+01178:             }
+01179:             if ((ManagedNo.HasValue == true)) {
+01180:                 this.Adapter.SelectCommand.Parameters[4].Value = ((int)(ManagedNo.Value));
+01181:             }
+01182:             else {
+01183:                 this.Adapter.SelectCommand.Parameters[4].Value = global::System.DBNull.Value;
+01184:             }
+01185:             if ((TransactionNo.HasValue == true)) {
+01186:                 this.Adapter.SelectCommand.Parameters[5].Value = ((long)(TransactionNo.Value));
+01187:             }
+01188:             else {
+01189:                 this.Adapter.SelectCommand.Parameters[5].Value = global::System.DBNull.Value;
+01190:             }
+01191:             TransferMaster2TranDataSet.TransactionLogExistDataTable dataTable = new TransferMaster2TranDataSet.TransactionLogExistDataTable();
+01192:             this.Adapter.Fill(dataTable);
+01193:             return dataTable;
+01194:         }
+01195:     }
+01196:   <br />
+01197:     /// <summary>
+01198:     ///Represents the connection and commands used to retrieve and save data.
+01199:     ///</summary>
+01200:     [global::System.ComponentModel.DesignerCategoryAttribute("code")]
+01201:     [global::System.ComponentModel.ToolboxItem(true)]
+01202:     [global::System.ComponentModel.DataObjectAttribute(true)]
+01203:     [global::System.ComponentModel.DesignerAttribute("Microsoft.VSDesigner.DataSource.Design.TableAdapterDesigner, Microsoft.VSDesigner" +
+01204:         ", Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a")]
+01205:     [global::System.ComponentModel.Design.HelpKeywordAttribute("vs.data.TableAdapter")]
+01206:     public partial class EJournalExistTableAdapter : global::System.ComponentModel.Component {
+01207:       <br />
+01208:         private global::System.Data.SqlClient.SqlDataAdapter _adapter;
+01209:       <br />
+01210:         private global::System.Data.SqlClient.SqlConnection _connection;
+01211:       <br />
+01212:         private global::System.Data.SqlClient.SqlTransaction _transaction;
+01213:       <br />
+01214:         private global::System.Data.SqlClient.SqlCommand[] _commandCollection;
+01215:       <br />
+01216:         private bool _clearBeforeFill;
+01217:       <br />
+01218:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01219:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01220:         public EJournalExistTableAdapter() {
+01221:             this.ClearBeforeFill = true;
+01222:         }
+01223:       <br />
+01224:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01225:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01226:         protected internal global::System.Data.SqlClient.SqlDataAdapter Adapter {
+01227:             get {
+01228:                 if ((this._adapter == null)) {
+01229:                     this.InitAdapter();
+01230:                 }
+01231:                 return this._adapter;
+01232:             }
+01233:         }
+01234:       <br />
+01235:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01236:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01237:         public global::System.Data.SqlClient.SqlConnection Connection {
+01238:             get {
+01239:                 if ((this._connection == null)) {
+01240:                     this.InitConnection();
+01241:                 }
+01242:                 return this._connection;
+01243:             }
+01244:             set {
+01245:                 this._connection = value;
+01246:                 if ((this.Adapter.InsertCommand != null)) {
+01247:                     this.Adapter.InsertCommand.Connection = value;
+01248:                 }
+01249:                 if ((this.Adapter.DeleteCommand != null)) {
+01250:                     this.Adapter.DeleteCommand.Connection = value;
+01251:                 }
+01252:                 if ((this.Adapter.UpdateCommand != null)) {
+01253:                     this.Adapter.UpdateCommand.Connection = value;
+01254:                 }
+01255:                 for (int i = 0; (i &lt; this.CommandCollection.Length); i = (i + 1)) {
+01256:                     if ((this.CommandCollection[i] != null)) {
+01257:                         ((global::System.Data.SqlClient.SqlCommand)(this.CommandCollection[i])).Connection = value;
+01258:                     }
+01259:                 }
+01260:             }
+01261:         }
+01262:       <br />
+01263:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01264:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01265:         internal global::System.Data.SqlClient.SqlTransaction Transaction {
+01266:             get {
+01267:                 return this._transaction;
+01268:             }
+01269:             set {
+01270:                 this._transaction = value;
+01271:                 for (int i = 0; (i &lt; this.CommandCollection.Length); i = (i + 1)) {
+01272:                     this.CommandCollection[i].Transaction = this._transaction;
+01273:                 }
+01274:                 if (((this.Adapter != null) 
+01275:                             &amp;&amp; (this.Adapter.DeleteCommand != null))) {
+01276:                     this.Adapter.DeleteCommand.Transaction = this._transaction;
+01277:                 }
+01278:                 if (((this.Adapter != null) 
+01279:                             &amp;&amp; (this.Adapter.InsertCommand != null))) {
+01280:                     this.Adapter.InsertCommand.Transaction = this._transaction;
+01281:                 }
+01282:                 if (((this.Adapter != null) 
+01283:                             &amp;&amp; (this.Adapter.UpdateCommand != null))) {
+01284:                     this.Adapter.UpdateCommand.Transaction = this._transaction;
+01285:                 }
+01286:             }
+01287:         }
+01288:       <br />
+01289:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01290:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01291:         protected global::System.Data.SqlClient.SqlCommand[] CommandCollection {
+01292:             get {
+01293:                 if ((this._commandCollection == null)) {
+01294:                     this.InitCommandCollection();
+01295:                 }
+01296:                 return this._commandCollection;
+01297:             }
+01298:         }
+01299:       <br />
+01300:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01301:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01302:         public bool ClearBeforeFill {
+01303:             get {
+01304:                 return this._clearBeforeFill;
+01305:             }
+01306:             set {
+01307:                 this._clearBeforeFill = value;
+01308:             }
+01309:         }
+01310:       <br />
+01311:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01312:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01313:         private void InitAdapter() {
+01314:             this._adapter = new global::System.Data.SqlClient.SqlDataAdapter();
+01315:             global::System.Data.Common.DataTableMapping tableMapping = new global::System.Data.Common.DataTableMapping();
+01316:             tableMapping.SourceTable = "Table";
+01317:             tableMapping.DataSetTable = "EJournalExist";
+01318:             tableMapping.ColumnMappings.Add("IsTransfer", "IsTransfer");
+01319:             this._adapter.TableMappings.Add(tableMapping);
+01320:         }
+01321:       <br />
+01322:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01323:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01324:         private void InitConnection() {
+01325:             this._connection = new global::System.Data.SqlClient.SqlConnection();
+01326:             this._connection.ConnectionString = global::ForYouApplications.POS4U.Background.Data.Container.Properties.Settings.Default.POS4U_TrialConnectionString;
+01327:         }
+01328:       <br />
+01329:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01330:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01331:         private void InitCommandCollection() {
+01332:             this._commandCollection = new global::System.Data.SqlClient.SqlCommand[1];
+01333:             this._commandCollection[0] = new global::System.Data.SqlClient.SqlCommand();
+01334:             this._commandCollection[0].Connection = this.Connection;
+01335:             this._commandCollection[0].CommandText = "dbo.usp_GetEJournalExist";
+01336:             this._commandCollection[0].CommandType = global::System.Data.CommandType.StoredProcedure;
+01337:             this._commandCollection[0].Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@RETURN_VALUE", global::System.Data.SqlDbType.Int, 4, global::System.Data.ParameterDirection.ReturnValue, 10, 0, null, global::System.Data.DataRowVersion.Current, false, null, "", "", ""));
+01338:             this._commandCollection[0].Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@CompanyCode", global::System.Data.SqlDbType.NVarChar, 10, global::System.Data.ParameterDirection.Input, 0, 0, null, global::System.Data.DataRowVersion.Current, false, null, "", "", ""));
+01339:             this._commandCollection[0].Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@StoreCode", global::System.Data.SqlDbType.NVarChar, 10, global::System.Data.ParameterDirection.Input, 0, 0, null, global::System.Data.DataRowVersion.Current, false, null, "", "", ""));
+01340:             this._commandCollection[0].Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@TerminalNo", global::System.Data.SqlDbType.Int, 4, global::System.Data.ParameterDirection.Input, 10, 0, null, global::System.Data.DataRowVersion.Current, false, null, "", "", ""));
+01341:             this._commandCollection[0].Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@ManagedNo", global::System.Data.SqlDbType.Int, 4, global::System.Data.ParameterDirection.Input, 10, 0, null, global::System.Data.DataRowVersion.Current, false, null, "", "", ""));
+01342:             this._commandCollection[0].Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@EJournalSeqNo", global::System.Data.SqlDbType.BigInt, 8, global::System.Data.ParameterDirection.Input, 19, 0, null, global::System.Data.DataRowVersion.Current, false, null, "", "", ""));
+01343:         }
+01344:       <br />
+01345:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01346:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01347:         [global::System.ComponentModel.Design.HelpKeywordAttribute("vs.data.TableAdapter")]
+01348:         [global::System.ComponentModel.DataObjectMethodAttribute(global::System.ComponentModel.DataObjectMethodType.Fill, true)]
+01349:         public virtual int Fill(TransferMaster2TranDataSet.EJournalExistDataTable dataTable, string CompanyCode, string StoreCode, global::System.Nullable<int> TerminalNo, global::System.Nullable<int> ManagedNo, global::System.Nullable<long> EJournalSeqNo) {
+01350:             this.Adapter.SelectCommand = this.CommandCollection[0];
+01351:             if ((CompanyCode == null)) {
+01352:                 this.Adapter.SelectCommand.Parameters[1].Value = global::System.DBNull.Value;
+01353:             }
+01354:             else {
+01355:                 this.Adapter.SelectCommand.Parameters[1].Value = ((string)(CompanyCode));
+01356:             }
+01357:             if ((StoreCode == null)) {
+01358:                 this.Adapter.SelectCommand.Parameters[2].Value = global::System.DBNull.Value;
+01359:             }
+01360:             else {
+01361:                 this.Adapter.SelectCommand.Parameters[2].Value = ((string)(StoreCode));
+01362:             }
+01363:             if ((TerminalNo.HasValue == true)) {
+01364:                 this.Adapter.SelectCommand.Parameters[3].Value = ((int)(TerminalNo.Value));
+01365:             }
+01366:             else {
+01367:                 this.Adapter.SelectCommand.Parameters[3].Value = global::System.DBNull.Value;
+01368:             }
+01369:             if ((ManagedNo.HasValue == true)) {
+01370:                 this.Adapter.SelectCommand.Parameters[4].Value = ((int)(ManagedNo.Value));
+01371:             }
+01372:             else {
+01373:                 this.Adapter.SelectCommand.Parameters[4].Value = global::System.DBNull.Value;
+01374:             }
+01375:             if ((EJournalSeqNo.HasValue == true)) {
+01376:                 this.Adapter.SelectCommand.Parameters[5].Value = ((long)(EJournalSeqNo.Value));
+01377:             }
+01378:             else {
+01379:                 this.Adapter.SelectCommand.Parameters[5].Value = global::System.DBNull.Value;
+01380:             }
+01381:             if ((this.ClearBeforeFill == true)) {
+01382:                 dataTable.Clear();
+01383:             }
+01384:             int returnValue = this.Adapter.Fill(dataTable);
+01385:             return returnValue;
+01386:         }
+01387:       <br />
+01388:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01389:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01390:         [global::System.ComponentModel.Design.HelpKeywordAttribute("vs.data.TableAdapter")]
+01391:         [global::System.ComponentModel.DataObjectMethodAttribute(global::System.ComponentModel.DataObjectMethodType.Select, true)]
+01392:         public virtual TransferMaster2TranDataSet.EJournalExistDataTable GetData(string CompanyCode, string StoreCode, global::System.Nullable<int> TerminalNo, global::System.Nullable<int> ManagedNo, global::System.Nullable<long> EJournalSeqNo) {
+01393:             this.Adapter.SelectCommand = this.CommandCollection[0];
+01394:             if ((CompanyCode == null)) {
+01395:                 this.Adapter.SelectCommand.Parameters[1].Value = global::System.DBNull.Value;
+01396:             }
+01397:             else {
+01398:                 this.Adapter.SelectCommand.Parameters[1].Value = ((string)(CompanyCode));
+01399:             }
+01400:             if ((StoreCode == null)) {
+01401:                 this.Adapter.SelectCommand.Parameters[2].Value = global::System.DBNull.Value;
+01402:             }
+01403:             else {
+01404:                 this.Adapter.SelectCommand.Parameters[2].Value = ((string)(StoreCode));
+01405:             }
+01406:             if ((TerminalNo.HasValue == true)) {
+01407:                 this.Adapter.SelectCommand.Parameters[3].Value = ((int)(TerminalNo.Value));
+01408:             }
+01409:             else {
+01410:                 this.Adapter.SelectCommand.Parameters[3].Value = global::System.DBNull.Value;
+01411:             }
+01412:             if ((ManagedNo.HasValue == true)) {
+01413:                 this.Adapter.SelectCommand.Parameters[4].Value = ((int)(ManagedNo.Value));
+01414:             }
+01415:             else {
+01416:                 this.Adapter.SelectCommand.Parameters[4].Value = global::System.DBNull.Value;
+01417:             }
+01418:             if ((EJournalSeqNo.HasValue == true)) {
+01419:                 this.Adapter.SelectCommand.Parameters[5].Value = ((long)(EJournalSeqNo.Value));
+01420:             }
+01421:             else {
+01422:                 this.Adapter.SelectCommand.Parameters[5].Value = global::System.DBNull.Value;
+01423:             }
+01424:             TransferMaster2TranDataSet.EJournalExistDataTable dataTable = new TransferMaster2TranDataSet.EJournalExistDataTable();
+01425:             this.Adapter.Fill(dataTable);
+01426:             return dataTable;
+01427:         }
+01428:     }
+01429:   <br />
+01430:     /// <summary>
+01431:     ///TableAdapterManager is used to coordinate TableAdapters in the dataset to enable Hierarchical Update scenarios
+01432:     ///</summary>
+01433:     [global::System.ComponentModel.DesignerCategoryAttribute("code")]
+01434:     [global::System.ComponentModel.ToolboxItem(true)]
+01435:     [global::System.ComponentModel.DesignerAttribute("Microsoft.VSDesigner.DataSource.Design.TableAdapterManagerDesigner, Microsoft.VSD" +
+01436:         "esigner, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a")]
+01437:     [global::System.ComponentModel.Design.HelpKeywordAttribute("vs.data.TableAdapterManager")]
+01438:     public partial class TableAdapterManager : global::System.ComponentModel.Component {
+01439:       <br />
+01440:         private UpdateOrderOption _updateOrder;
+01441:       <br />
+01442:         private bool _backupDataSetBeforeUpdate;
+01443:       <br />
+01444:         private global::System.Data.IDbConnection _connection;
+01445:       <br />
+01446:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01447:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01448:         public UpdateOrderOption UpdateOrder {
+01449:             get {
+01450:                 return this._updateOrder;
+01451:             }
+01452:             set {
+01453:                 this._updateOrder = value;
+01454:             }
+01455:         }
+01456:       <br />
+01457:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01458:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01459:         public bool BackupDataSetBeforeUpdate {
+01460:             get {
+01461:                 return this._backupDataSetBeforeUpdate;
+01462:             }
+01463:             set {
+01464:                 this._backupDataSetBeforeUpdate = value;
+01465:             }
+01466:         }
+01467:       <br />
+01468:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01469:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01470:         [global::System.ComponentModel.Browsable(false)]
+01471:         public global::System.Data.IDbConnection Connection {
+01472:             get {
+01473:                 if ((this._connection != null)) {
+01474:                     return this._connection;
+01475:                 }
+01476:                 return null;
+01477:             }
+01478:             set {
+01479:                 this._connection = value;
+01480:             }
+01481:         }
+01482:       <br />
+01483:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01484:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01485:         [global::System.ComponentModel.Browsable(false)]
+01486:         public int TableAdapterInstanceCount {
+01487:             get {
+01488:                 int count = 0;
+01489:                 return count;
+01490:             }
+01491:         }
+01492:       <br />
+01493:         /// <summary>
+01494:         ///Update rows in top-down order.
+01495:         ///</summary>
+01496:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01497:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01498:         private int UpdateUpdatedRows(TransferMaster2TranDataSet dataSet, global::System.Collections.Generic.List<global::System.Data.DataRow> allChangedRows, global::System.Collections.Generic.List<global::System.Data.DataRow> allAddedRows) {
+01499:             int result = 0;
+01500:             return result;
+01501:         }
+01502:       <br />
+01503:         /// <summary>
+01504:         ///Insert rows in top-down order.
+01505:         ///</summary>
+01506:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01507:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01508:         private int UpdateInsertedRows(TransferMaster2TranDataSet dataSet, global::System.Collections.Generic.List<global::System.Data.DataRow> allAddedRows) {
+01509:             int result = 0;
+01510:             return result;
+01511:         }
+01512:       <br />
+01513:         /// <summary>
+01514:         ///Delete rows in bottom-up order.
+01515:         ///</summary>
+01516:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01517:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01518:         private int UpdateDeletedRows(TransferMaster2TranDataSet dataSet, global::System.Collections.Generic.List<global::System.Data.DataRow> allChangedRows) {
+01519:             int result = 0;
+01520:             return result;
+01521:         }
+01522:       <br />
+01523:         /// <summary>
+01524:         ///Remove inserted rows that become updated rows after calling TableAdapter.Update(inserted rows) first
+01525:         ///</summary>
+01526:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01527:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01528:         private global::System.Data.DataRow[] GetRealUpdatedRows(global::System.Data.DataRow[] updatedRows, global::System.Collections.Generic.List<global::System.Data.DataRow> allAddedRows) {
+01529:             if (((updatedRows == null) 
+01530:                         || (updatedRows.Length &lt; 1))) {
+01531:                 return updatedRows;
+01532:             }
+01533:             if (((allAddedRows == null) 
+01534:                         || (allAddedRows.Count &lt; 1))) {
+01535:                 return updatedRows;
+01536:             }
+01537:             global::System.Collections.Generic.List<global::System.Data.DataRow> realUpdatedRows = new global::System.Collections.Generic.List<global::System.Data.DataRow>();
+01538:             for (int i = 0; (i &lt; updatedRows.Length); i = (i + 1)) {
+01539:                 global::System.Data.DataRow row = updatedRows[i];
+01540:                 if ((allAddedRows.Contains(row) == false)) {
+01541:                     realUpdatedRows.Add(row);
+01542:                 }
+01543:             }
+01544:             return realUpdatedRows.ToArray();
+01545:         }
+01546:       <br />
+01547:         /// <summary>
+01548:         ///Update all changes to the dataset.
+01549:         ///</summary>
+01550:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01551:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01552:         public virtual int UpdateAll(TransferMaster2TranDataSet dataSet) {
+01553:             if ((dataSet == null)) {
+01554:                 throw new global::System.ArgumentNullException("dataSet");
+01555:             }
+01556:             if ((dataSet.HasChanges() == false)) {
+01557:                 return 0;
+01558:             }
+01559:             global::System.Data.IDbConnection workConnection = this.Connection;
+01560:             if ((workConnection == null)) {
+01561:                 throw new global::System.ApplicationException("TableAdapterManager には接続情報がありません。それぞれの TableAdapterManager TableAdapter プロパティを有効な" +
+01562:                         " TableAdapter インスタンスに設定してください。");
+01563:             }
+01564:             bool workConnOpened = false;
+01565:             if (((workConnection.State &amp; global::System.Data.ConnectionState.Broken) 
+01566:                         == global::System.Data.ConnectionState.Broken)) {
+01567:                 workConnection.Close();
+01568:             }
+01569:             if ((workConnection.State == global::System.Data.ConnectionState.Closed)) {
+01570:                 workConnection.Open();
+01571:                 workConnOpened = true;
+01572:             }
+01573:             global::System.Data.IDbTransaction workTransaction = workConnection.BeginTransaction();
+01574:             if ((workTransaction == null)) {
+01575:                 throw new global::System.ApplicationException("トランザクションを開始できません。現在のデータ接続がトランザクションをサポートしていないか、または現在の状態がトランザクションの開始を許可していません。");
+01576:             }
+01577:             global::System.Collections.Generic.List<global::System.Data.DataRow> allChangedRows = new global::System.Collections.Generic.List<global::System.Data.DataRow>();
+01578:             global::System.Collections.Generic.List<global::System.Data.DataRow> allAddedRows = new global::System.Collections.Generic.List<global::System.Data.DataRow>();
+01579:             global::System.Collections.Generic.List<global::System.Data.Common.DataAdapter> adaptersWithAcceptChangesDuringUpdate = new global::System.Collections.Generic.List<global::System.Data.Common.DataAdapter>();
+01580:             global::System.Collections.Generic.Dictionary<object, global::System.Data.IDbConnection> revertConnections = new global::System.Collections.Generic.Dictionary<object, global::System.Data.IDbConnection>();
+01581:             int result = 0;
+01582:             global::System.Data.DataSet backupDataSet = null;
+01583:             if (this.BackupDataSetBeforeUpdate) {
+01584:                 backupDataSet = new global::System.Data.DataSet();
+01585:                 backupDataSet.Merge(dataSet);
+01586:             }
+01587:             try {
+01588:                 // ---- Prepare for update -----------
+01589:                 //
+01590:                 // 
+01591:                 //---- Perform updates -----------
+01592:                 //
+01593:                 if ((this.UpdateOrder == UpdateOrderOption.UpdateInsertDelete)) {
+01594:                     result = (result + this.UpdateUpdatedRows(dataSet, allChangedRows, allAddedRows));
+01595:                     result = (result + this.UpdateInsertedRows(dataSet, allAddedRows));
+01596:                 }
+01597:                 else {
+01598:                     result = (result + this.UpdateInsertedRows(dataSet, allAddedRows));
+01599:                     result = (result + this.UpdateUpdatedRows(dataSet, allChangedRows, allAddedRows));
+01600:                 }
+01601:                 result = (result + this.UpdateDeletedRows(dataSet, allChangedRows));
+01602:                 // 
+01603:                 //---- Commit updates -----------
+01604:                 //
+01605:                 workTransaction.Commit();
+01606:                 if ((0 &lt; allAddedRows.Count)) {
+01607:                     global::System.Data.DataRow[] rows = new System.Data.DataRow[allAddedRows.Count];
+01608:                     allAddedRows.CopyTo(rows);
+01609:                     for (int i = 0; (i &lt; rows.Length); i = (i + 1)) {
+01610:                         global::System.Data.DataRow row = rows[i];
+01611:                         row.AcceptChanges();
+01612:                     }
+01613:                 }
+01614:                 if ((0 &lt; allChangedRows.Count)) {
+01615:                     global::System.Data.DataRow[] rows = new System.Data.DataRow[allChangedRows.Count];
+01616:                     allChangedRows.CopyTo(rows);
+01617:                     for (int i = 0; (i &lt; rows.Length); i = (i + 1)) {
+01618:                         global::System.Data.DataRow row = rows[i];
+01619:                         row.AcceptChanges();
+01620:                     }
+01621:                 }
+01622:             }
+01623:             catch (global::System.Exception ex) {
+01624:                 workTransaction.Rollback();
+01625:                 // ---- Restore the dataset -----------
+01626:                 if (this.BackupDataSetBeforeUpdate) {
+01627:                     global::System.Diagnostics.Debug.Assert((backupDataSet != null));
+01628:                     dataSet.Clear();
+01629:                     dataSet.Merge(backupDataSet);
+01630:                 }
+01631:                 else {
+01632:                     if ((0 &lt; allAddedRows.Count)) {
+01633:                         global::System.Data.DataRow[] rows = new System.Data.DataRow[allAddedRows.Count];
+01634:                         allAddedRows.CopyTo(rows);
+01635:                         for (int i = 0; (i &lt; rows.Length); i = (i + 1)) {
+01636:                             global::System.Data.DataRow row = rows[i];
+01637:                             row.AcceptChanges();
+01638:                             row.SetAdded();
+01639:                         }
+01640:                     }
+01641:                 }
+01642:                 throw ex;
+01643:             }
+01644:             finally {
+01645:                 if (workConnOpened) {
+01646:                     workConnection.Close();
+01647:                 }
+01648:                 if ((0 &lt; adaptersWithAcceptChangesDuringUpdate.Count)) {
+01649:                     global::System.Data.Common.DataAdapter[] adapters = new System.Data.Common.DataAdapter[adaptersWithAcceptChangesDuringUpdate.Count];
+01650:                     adaptersWithAcceptChangesDuringUpdate.CopyTo(adapters);
+01651:                     for (int i = 0; (i &lt; adapters.Length); i = (i + 1)) {
+01652:                         global::System.Data.Common.DataAdapter adapter = adapters[i];
+01653:                         adapter.AcceptChangesDuringUpdate = true;
+01654:                     }
+01655:                 }
+01656:             }
+01657:             return result;
+01658:         }
+01659:       <br />
+01660:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01661:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01662:         protected virtual void SortSelfReferenceRows(global::System.Data.DataRow[] rows, global::System.Data.DataRelation relation, bool childFirst) {
+01663:             global::System.Array.Sort<global::System.Data.DataRow>(rows, new SelfReferenceComparer(relation, childFirst));
+01664:         }
+01665:       <br />
+01666:         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01667:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01668:         protected virtual bool MatchTableAdapterConnection(global::System.Data.IDbConnection inputConnection) {
+01669:             if ((this._connection != null)) {
+01670:                 return true;
+01671:             }
+01672:             if (((this.Connection == null) 
+01673:                         || (inputConnection == null))) {
+01674:                 return true;
+01675:             }
+01676:             if (string.Equals(this.Connection.ConnectionString, inputConnection.ConnectionString, global::System.StringComparison.Ordinal)) {
+01677:                 return true;
+01678:             }
+01679:             return false;
+01680:         }
+01681:       <br />
+01682:         /// <summary>
+01683:         ///Update Order Option
+01684:         ///</summary>
+01685:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01686:         public enum UpdateOrderOption {
+01687:           <br />
+01688:             InsertUpdateDelete = 0,
+01689:           <br />
+01690:             UpdateInsertDelete = 1,
+01691:         }
+01692:       <br />
+01693:         /// <summary>
+01694:         ///Used to sort self-referenced table's rows
+01695:         ///</summary>
+01696:         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01697:         private class SelfReferenceComparer : object, global::System.Collections.Generic.IComparer<global::System.Data.DataRow> {
+01698:           <br />
+01699:             private global::System.Data.DataRelation _relation;
+01700:           <br />
+01701:             private int _childFirst;
+01702:           <br />
+01703:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01704:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01705:             internal SelfReferenceComparer(global::System.Data.DataRelation relation, bool childFirst) {
+01706:                 this._relation = relation;
+01707:                 if (childFirst) {
+01708:                     this._childFirst = -1;
+01709:                 }
+01710:                 else {
+01711:                     this._childFirst = 1;
+01712:                 }
+01713:             }
+01714:           <br />
+01715:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01716:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01717:             private global::System.Data.DataRow GetRoot(global::System.Data.DataRow row, out int distance) {
+01718:                 global::System.Diagnostics.Debug.Assert((row != null));
+01719:                 global::System.Data.DataRow root = row;
+01720:                 distance = 0;
+01721: 
+01722:                 global::System.Collections.Generic.IDictionary<global::System.Data.DataRow, global::System.Data.DataRow> traversedRows = new global::System.Collections.Generic.Dictionary<global::System.Data.DataRow, global::System.Data.DataRow>();
+01723:                 traversedRows[row] = row;
+01724: 
+01725:                 global::System.Data.DataRow parent = row.GetParentRow(this._relation, global::System.Data.DataRowVersion.Default);
+01726:                 for (
+01727:                 ; ((parent != null) 
+01728:                             &amp;&amp; (traversedRows.ContainsKey(parent) == false)); 
+01729:                 ) {
+01730:                     distance = (distance + 1);
+01731:                     root = parent;
+01732:                     traversedRows[parent] = parent;
+01733:                     parent = parent.GetParentRow(this._relation, global::System.Data.DataRowVersion.Default);
+01734:                 }
+01735: 
+01736:                 if ((distance == 0)) {
+01737:                     traversedRows.Clear();
+01738:                     traversedRows[row] = row;
+01739:                     parent = row.GetParentRow(this._relation, global::System.Data.DataRowVersion.Original);
+01740:                     for (
+01741:                     ; ((parent != null) 
+01742:                                 &amp;&amp; (traversedRows.ContainsKey(parent) == false)); 
+01743:                     ) {
+01744:                         distance = (distance + 1);
+01745:                         root = parent;
+01746:                         traversedRows[parent] = parent;
+01747:                         parent = parent.GetParentRow(this._relation, global::System.Data.DataRowVersion.Original);
+01748:                     }
+01749:                 }
+01750: 
+01751:                 return root;
+01752:             }
+01753:           <br />
+01754:             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+01755:             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "15.0.0.0")]
+01756:             public int Compare(global::System.Data.DataRow row1, global::System.Data.DataRow row2) {
+01757:                 if (object.ReferenceEquals(row1, row2)) {
+01758:                     return 0;
+01759:                 }
+01760:                 if ((row1 == null)) {
+01761:                     return -1;
+01762:                 }
+01763:                 if ((row2 == null)) {
+01764:                     return 1;
+01765:                 }
+01766: 
+01767:                 int distance1 = 0;
+01768:                 global::System.Data.DataRow root1 = this.GetRoot(row1, out distance1);
+01769: 
+01770:                 int distance2 = 0;
+01771:                 global::System.Data.DataRow root2 = this.GetRoot(row2, out distance2);
+01772: 
+01773:                 if (object.ReferenceEquals(root1, root2)) {
+01774:                     return (this._childFirst * distance1.CompareTo(distance2));
+01775:                 }
+01776:                 else {
+01777:                     global::System.Diagnostics.Debug.Assert(((root1.Table != null) 
+01778:                                     &amp;&amp; (root2.Table != null)));
+01779:                     if ((root1.Table.Rows.IndexOf(root1) &lt; root2.Table.Rows.IndexOf(root2))) {
+01780:                         return -1;
+01781:                     }
+01782:                     else {
+01783:                         return 1;
+01784:                     }
+01785:                 }
+01786:             }
+01787:         }
+01788:     }
+01789: }
+01790: 
+01791: #pragma warning restore 1591</p>
+<p>END ORIGINAL PROMPT</p></div></a><div class="index-item-stats">
+<div class="index-item-long-text"><div class="truncatable"><div class="truncatable-content"><div class="index-item-long-text-content"><h1>文件级源码笔记：large_file_background_service_transfermaster2trandataset_designer_cs</h1>
+<h2>Batch 信息</h2>
+<ul>
+<li>Batch ID: batch_062</li>
+<li>Batch Name: large_file_background_service_transfermaster2trandataset_designer_cs</li>
+<li>Module: background_service</li>
+<li>Purpose: 解释后台服务、同步任务、Windows Service 和定时处理</li>
+</ul>
+<hr />
+<h2>文件：Source/POS4UBackground/Data/Background.Data.BackgroundContainer/TransferMaster2TranDataSet.Designer.cs</h2>
+<h3>1. 文件定位</h3>
+<p>该文件是 Visual Studio Typed DataSet 设计器自动生成的代码文件（<code>.Designer.cs</code>），由 <code>.xsd</code> 文件驱动生成。它定义了一个强类型 DataSet <code>TransferMaster2TranDataSet</code>，用于在后台服务模块中检查交易日志（TransactionLog）和电子日志（EJournal）是否存在可传输的数据。</p>
+<p>文件位于 <code>Background.Data.BackgroundContainer</code> 数据容器目录下，属于后台服务模块的数据访问层。它封装了两个存储过程（<code>usp_GetTransactionLogExist</code>、`usp_GetEJournalExist》）的调用，为上层业务逻辑提供类型安全的 DataTable 和 DataRow 操作。</p>
+<p>因为这是自动生成文件，项目实际的数据集结构定义在同名的 <code>.xsd</code> 文件（和可能的 <code>.xsc</code>、<code>.xss</code> 文件）中。<strong>不应手动修改此文件</strong>——任何对 Typed DataSet schema 的修改都应通过 Visual Studio 设计器操作 <code>.xsd</code> 文件后重新生成。</p>
+<h3>2. 对外暴露内容</h3>
+<h4>2.1 主 DataSet 类</h4>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>位置</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TransferMaster2TranDataSet</code></td>
+<td>第25行，namespace <code>ForYouApplications.POS4U.Background.Data.Container</code></td>
+<td>强类型 DataSet，继承 <code>System.Data.DataSet</code>。包含两个 DataTable：<code>TransactionLogExist</code> 和 <code>EJournalExist</code>。</td>
+</tr>
+</tbody>
+</table>
+<h4>2.2 顶层属性</h4>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>位置</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TransactionLogExist</code> 属性</td>
+<td>第87行</td>
+<td>获取 <code>TransactionLogExistDataTable</code> 实例，返回类型为 <code>TransactionLogExistDataTable</code></td>
+</tr>
+<tr>
+<td><code>EJournalExist</code> 属性</td>
+<td>第97行</td>
+<td>获取 <code>EJournalExistDataTable</code> 实例，返回类型为 <code>EJournalExistDataTable</code></td>
+</tr>
+<tr>
+<td><code>SchemaSerializationMode</code> 属性</td>
+<td>第107行</td>
+<td>控制 DataSet 序列化时是否包含 schema 定义</td>
+</tr>
+</tbody>
+</table>
+<h4>2.3 DataTable 类</h4>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>位置</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TransactionLogExistDataTable</code></td>
+<td>第315行</td>
+<td>代表 TransactionLog 存在性检查的表。继承 <code>TypedTableBase&lt;TransactionLogExistRow&gt;</code>。</td>
+</tr>
+<tr>
+<td><code>EJournalExistDataTable</code></td>
+<td>第563行</td>
+<td>代表 EJournal 存在性检查的表。继承 <code>TypedTableBase&lt;EJournalExistRow&gt;</code>。</td>
+</tr>
+</tbody>
+</table>
+<h4>2.4 DataRow 类</h4>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>位置</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TransactionLogExistRow</code></td>
+<td>第809行</td>
+<td>代表 TransactionLog 存在性检查的每一行数据。属性：<code>IsTransfer</code>（int 类型）</td>
+</tr>
+<tr>
+<td><code>EJournalExistRow</code></td>
+<td>第852行</td>
+<td>代表 EJournal 存在性检查的每一行数据。属性：<code>IsTransfer</code>（int 类型）</td>
+</tr>
+</tbody>
+</table>
+<h4>2.5 Row 事件参数类</h4>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>位置</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TransactionLogExistRowChangeEvent</code></td>
+<td>第896行</td>
+<td>当 <code>TransactionLogExistRow</code> 发生变更时的事件参数</td>
+</tr>
+<tr>
+<td><code>EJournalExistRowChangeEvent</code></td>
+<td>第930行</td>
+<td>当 <code>EJournalExistRow</code> 发生变更时的事件参数</td>
+</tr>
+</tbody>
+</table>
+<h4>2.6 Row 变更委托</h4>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>位置</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TransactionLogExistRowChangeEventHandler</code></td>
+<td>第305行</td>
+<td><code>TransactionLogExistRow</code> 变更事件委托</td>
+</tr>
+<tr>
+<td><code>EJournalExistRowChangeEventHandler</code></td>
+<td>第308行</td>
+<td><code>EJournalExistRow</code> 变更事件委托</td>
+</tr>
+</tbody>
+</table>
+<h4>2.7 TableAdapter 类（在子命名空间中）</h4>
+<p><strong><code>TransactionLogExistTableAdapter</code></strong> — 第973行</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>位置</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Fill(dataTable, CompanyCode, StoreCode, TerminalNo, ManagedNo, TransactionNo)</code></td>
+<td>第1116行</td>
+<td>用存储过程 <code>dbo.usp_GetTransactionLogExist</code> 填充已有 DataTable。返回受影响的记录数。</td>
+</tr>
+<tr>
+<td><code>GetData(CompanyCode, StoreCode, TerminalNo, ManagedNo, TransactionNo)</code></td>
+<td>第1159行</td>
+<td>同上，但创建一个新的 <code>TransactionLogExistDataTable</code> 并返回它。</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>EJournalExistTableAdapter</code></strong> — 第1206行</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>位置</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Fill(dataTable, CompanyCode, StoreCode, TerminalNo, ManagedNo, EJournalSeqNo)</code></td>
+<td>第1349行</td>
+<td>用存储过程 <code>dbo.usp_GetEJournalExist</code> 填充已有 DataTable</td>
+</tr>
+<tr>
+<td><code>GetData(CompanyCode, StoreCode, TerminalNo, ManagedNo, EJournalSeqNo)</code></td>
+<td>第1392行</td>
+<td>同上，但创建一个新的 <code>EJournalExistDataTable</code> 并返回</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>TableAdapterManager</code></strong> — 第1438行</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>位置</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>UpdateAll(dataSet)</code></td>
+<td>第1552行</td>
+<td>协调整个 DataSet 的更新，支持事务、备份和回滚。当前文件内两个 TableAdapter 没有 INSERT/UPDATE/DELETE 命令，因此实际不会修改数据库。</td>
+</tr>
+</tbody>
+</table>
+<h4>2.8 连接字符串来源</h4>
+<table>
+<thead>
+<tr>
+<th>引用</th>
+<th>位置</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Properties.Settings.Default.POS4U_TrialConnectionString</code></td>
+<td>第1093行、第1326行</td>
+<td>两个 TableAdapter 的数据库连接字符串均来源于 <code>Background.Data.BackgroundContainer.Properties.Settings</code> 中的 <code>POS4U_TrialConnectionString</code> 配置项。</td>
+</tr>
+</tbody>
+</table>
+<h3>3. 关键逻辑 walkthrough</h3>
+<h4>3.1 运行时 DataSet 初始化流程</h4>
+<p>当代码创建 <code>TransferMaster2TranDataSet</code> 实例时（第35行）：</p>
+<ol>
+<li>构造函数调用 <code>BeginInit()</code> → <code>InitClass()</code> → 注册 SchemaChanged 事件 → <code>EndInit()</code>。</li>
+<li><code>InitClass()</code>（第225行）设置 DataSet 的名称为 <code>"TransferMaster2TranDataSet"</code>，命名空间为 <code>"http://tempuri.org/TransferMaster2TranDataSet.xsd"</code>，并新建两个 DataTable 实例加入 <code>base.Tables</code> 集合。</li>
+<li>每个 DataTable 的 <code>InitClass()</code> 创建一个名为 <code>IsTransfer</code> 的列，类型为 <code>int</code>，设为只读（<code>ReadOnly = true</code>）。</li>
+</ol>
+<h4>3.2 运行时查询流程</h4>
+<p>以「检查 TransactionLog 是否存在待传输记录」为例：</p>
+<ol>
+<li>调用方创建 <code>TransactionLogExistTableAdapter</code> 实例。</li>
+<li>调用 <code>Fill()</code> 或 <code>GetData()</code> 方法，传入 5 个参数：<code>CompanyCode</code>、<code>StoreCode</code>、<code>TerminalNo</code>、<code>ManagedNo</code>、<code>TransactionNo</code>（第1116行）。</li>
+<li>方法将命令设为 <code>CommandCollection[0]</code>（即 <code>dbo.usp_GetTransactionLogExist</code> 存储过程）（第1117行）。</li>
+<li>方法逐参数处理 DBNull：<code>string</code> 类型参数直接检查 <code>== null</code>；<code>Nullable&lt;int&gt;</code>/<code>Nullable&lt;long&gt;</code> 通过 <code>.HasValue</code> 判断（第1130-1147行）。</li>
+<li>如果 <code>ClearBeforeFill</code> 为 <code>true</code>（默认），先清空目标 DataTable（第1148-1150行）。</li>
+<li>调用 <code>this.Adapter.Fill(dataTable)</code> 执行存储过程并填充 DataTable（第1151行）。</li>
+</ol>
+<p><code>EJournalExistTableAdapter</code> 的流程完全对称，区别在于存储过程名为 <code>dbo.usp_GetEJournalExist</code>（第1335行）且最后一个参数是 <code>EJournalSeqNo</code>（第1342行）。</p>
+<h4>3.3 DataSet 序列化/反序列化流程</h4>
+<p><code>ReadXmlSerializable()</code>（第165行）处理 XML 反序列化：
+- 如果序列化模式是 <code>IncludeSchema</code>，会解析 XML 中的 schema，然后按表名 <code>"TransactionLogExist"</code> 和 <code>"EJournalExist"</code> 构建对应的强类型 DataTable。
+- 如果不是 <code>IncludeSchema</code>，则直接调用 <code>ReadXml(reader)</code> 读取。</p>
+<p><code>GetSchemaSerializable()</code>（第193行）将 DataSet 的 XSD schema 写入 MemoryStream 并返回。</p>
+<p><code>GetTypedDataSetSchema()</code>（第259行）静态方法，由 <code>XmlSchemaProviderAttribute</code> 引用，用于在 XML 序列化时提供 schema，包含去重逻辑（通过字节流比较检查 <code>xs</code> 中是否已有相同 schema）。</p>
+<h4>3.4 TableAdapterManager 更新协调流程</h4>
+<p><code>UpdateAll()</code>（第1552行）是典型的 DataSet 提交逻辑：
+1. <code>null</code> 检查和变更检查（第1553-1558行）。
+2. 获取连接，如果关闭则打开（第1565-1572行）。
+3. 开始事务（第1573行）。
+4. 可选备份 DataSet（第1583行）。
+5. 按 <code>UpdateOrderOption</code>（InsertUpdateDelete 或 UpdateInsertDelete）顺序依次执行插入、更新、删除（第1593-1601行）。
+6. 提交事务（第1605行）。
+7. 异常时回滚事务（第1624行），如果启用了备份则从备份恢复 DataSet，否则恢复已添加行的状态（第1626-1641行）。</p>
+<p><strong>关键：当前文件中的两个 TableAdapter 都没有定义 InsertCommand、UpdateCommand、DeleteCommand</strong>（只有 SelectCommand），因此 <code>UpdateAll()</code> 虽然会执行完整协调流程，但实际不会向数据库执行任何数据修改。它本质上是一个框架骨架。</p>
+<h3>4. 关键函数 / 类 / 组件说明</h3>
+<h4>4.1 <code>TransactionLogExistDataTable</code> (第315行)</h4>
+<p><strong>说明</strong>：代表从 <code>usp_GetTransactionLogExist</code> 返回的结果集。</p>
+<p><strong>输入</strong>：
+- 构造时无参数
+- <code>AddTransactionLogExistRow(int IsTransfer)</code> 方法接收一个 int 参数</p>
+<p><strong>输出</strong>：
+- <code>this[int index]</code> 索引器返回 <code>TransactionLogExistRow</code>
+- <code>Count</code> 属性返回行数
+- <code>IsTransferColumn</code> 返回 <code>DataColumn</code> 元数据对象</p>
+<p><strong>内部列定义</strong>：
+- 第429行：<code>columnIsTransfer = new DataColumn("IsTransfer", typeof(int), null, MappingType.Element)</code>
+- 第431行：<code>columnIsTransfer.ReadOnly = true</code> —— 列只读，意味着值应在数据库端计算</p>
+<p><strong>事件</strong>：提供 RowChanging、RowChanged、RowDeleting、RowDeleted 四个行级事件（第378-387行）。</p>
+<h4>4.2 <code>EJournalExistDataTable</code> (第563行)</h4>
+<p><strong>与 TransactionLogExistDataTable 完全对称</strong>，唯一的差异：
+- 表名是 <code>"EJournalExist"</code>（第570行）
+- 行类型是 <code>EJournalExistRow</code>（第697行）</p>
+<h4>4.3 <code>TransactionLogExistTableAdapter.Fill()</code> (第1116行)</h4>
+<p><strong>输入参数</strong>：
+- <code>dataTable</code>：要填充的 <code>TransactionLogExistDataTable</code>
+- <code>CompanyCode</code>：string? 公司代码
+- <code>StoreCode</code>：string? 店铺代码
+- <code>TerminalNo</code>：int? 终端号
+- <code>ManagedNo</code>：int? 管理号
+- <code>TransactionNo</code>：long? 交易流水号</p>
+<p><strong>输出</strong>：int，表示从数据库返回的行数。</p>
+<p><strong>副作用</strong>：清空原有 DataTable（如果 <code>ClearBeforeFill</code> 为 true）；修改传入的 DataTable 实例。</p>
+<p><strong>边界情况</strong>：
+- 所有参数都支持 null → 对应存储过程参数传入 DBNull（第1118-1147行）
+- 存储过程参数索引从 1 开始，0 号参数是 <code>@RETURN_VALUE</code>（第1104行）</p>
+<h4>4.4 <code>EJournalExistTableAdapter.Fill()</code> (第1349行)</h4>
+<p>与 <code>TransactionLogExistTableAdapter.Fill()</code> 结构相同，唯一差异是最后一个参数为 <code>EJournalSeqNo</code>（long?）而非 <code>TransactionNo</code>。</p>
+<h4>4.5 <code>TableAdapterManager.UpdateAll()</code> (第1552行)</h4>
+<p><strong>输入</strong>：<code>TransferMaster2TranDataSet</code></p>
+<p><strong>输出</strong>：int，表示受影响的记录数。</p>
+<p><strong>副作用</strong>：打开/关闭数据库连接；开启/提交/回滚事务；可能修改传入 DataSet 中行的状态。</p>
+<p><strong>异常情况</strong>：
+- 第1553行：dataSet 为 null → <code>ArgumentNullException</code>
+- 第1560-1562行：Connection 为 null → <code>ApplicationException</code>（日文错误消息："TableAdapterManager には接続情報がありません..."）
+- 第1574-1575行：无法开始事务 → <code>ApplicationException</code>
+- 第1623-1642行：更新过程中任何异常 → 回滚事务，从备份恢复 DataSet</p>
+<p><strong>注意</strong>：由于两个 TableAdapter 只定义了 SelectCommand，<code>UpdateUpdatedRows()</code>（第1498行）、<code>UpdateInsertedRows()</code>（第1508行）、<code>UpdateDeletedRows()</code>（第1518行）都直接返回 0，因此 <code>UpdateAll()</code> 实际不会产生任何数据库写操作。</p>
+<h4>4.6 <code>SelfReferenceComparer</code> (第1697行)</h4>
+<p>内部实现类，用于处理自引用表的排序。实现了 <code>IComparer&lt;DataRow&gt;</code>，递归查找行的根父行，计算行在关系树中的深度，按深度排序。</p>
+<h3>5. 依赖关系</h3>
+<table>
+<thead>
+<tr>
+<th>依赖</th>
+<th>类型</th>
+<th>用途</th>
+<th>引用行号</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>System.Data.DataSet</code></td>
+<td>.NET 基类</td>
+<td>DataSet 基类</td>
+<td>第25行</td>
+</tr>
+<tr>
+<td><code>System.Data.TypedTableBase&lt;T&gt;</code></td>
+<td>.NET 基类</td>
+<td>强类型 DataTable 基类</td>
+<td>第315行、第563行</td>
+</tr>
+<tr>
+<td><code>System.Data.SqlClient.SqlDataAdapter</code></td>
+<td>.NET 数据提供程序</td>
+<td>数据适配器，执行 SQL 并填充 DataSet</td>
+<td>第975行、第1208行</td>
+</tr>
+<tr>
+<td><code>System.Data.SqlClient.SqlConnection</code></td>
+<td>.NET 数据提供程序</td>
+<td>SQL Server 连接</td>
+<td>第977行、第1210行</td>
+</tr>
+<tr>
+<td><code>System.Data.SqlClient.SqlCommand</code></td>
+<td>.NET 数据提供程序</td>
+<td>SQL 命令（存储过程调用）</td>
+<td>第981行、第1214行</td>
+</tr>
+<tr>
+<td><code>System.Data.SqlClient.SqlTransaction</code></td>
+<td>.NET 数据提供程序</td>
+<td>数据库事务</td>
+<td>第979行、第1212行</td>
+</tr>
+<tr>
+<td><code>Properties.Settings.Default.POS4U_TrialConnectionString</code></td>
+<td>项目 Settings 配置</td>
+<td>连接字符串</td>
+<td>第1093行、第1326行</td>
+</tr>
+<tr>
+<td><code>dbo.usp_GetTransactionLogExist</code></td>
+<td>数据库存储过程</td>
+<td>检查 TransactionLog 是否存在待传输数据</td>
+<td>第1102行</td>
+</tr>
+<tr>
+<td><code>dbo.usp_GetEJournalExist</code></td>
+<td>数据库存储过程</td>
+<td>检查 EJournal 是否存在待传输数据</td>
+<td>第1335行</td>
+</tr>
+</tbody>
+</table>
+<p><strong>备注</strong>：
+- <strong>这两个存储过程的 SQL 定义不在本文件中</strong>，需查找项目中的 SQL 脚本或数据库项目确认其实际查询逻辑。
+- 连接字符串 <code>POS4U_TrialConnectionString</code> 的定义在 <code>Background.Data.BackgroundContainer.Properties.Settings</code> 的 <code>.settings</code> 文件中，不在本文件范围。
+- 子命名空间 <code>TransferMaster2TranDataSetTableAdapters</code>（第961行）是 Typed DataSet 设计器的惯例——所有 TableAdapter 放在 DataSet 名 + "TableAdapters" 的子命名空间下。</p>
+<h3>6. 错误处理与边界情况</h3>
+<h4>6.1 强类型行访问的异常处理</h4>
+<p><code>TransactionLogExistRow.IsTransfer</code> getter（第822行）和 <code>EJournalExistRow.IsTransfer</code> getter（第865行）：
+- 在 try-catch 中捕获 <code>InvalidCastException</code>
+- 抛出 <code>StrongTypingException</code>，错误消息为日语："テーブル 'X' にある列 'IsTransfer' の値は DBNull です。"（"表 'X' 中列 'IsTransfer' 的值为 DBNull。"）
+- 这意味着调用方应先用 <code>IsIsTransferNull()</code>（第838行、第881行）检查是否 DBNull，再读取值。</p>
+<h4>6.2 DBNull 处理</h4>
+<p>两个 TableAdapter 的 <code>Fill()</code> / <code>GetData()</code> 方法对参数进行 null → DBNull 转换：
+- string 类型：<code>if (param == null) → DBNull.Value</code>（第1118-1129行、第1161-1172行等）
+- Nullable 类型：<code>if (param.HasValue == true) → param.Value</code>，<code>else → DBNull.Value</code>（第1130-1147行等）</p>
+<h4>6.3 DataSet 序列化中的 null 检查</h4>
+<p><code>ReadXmlSerializable()</code> 和反序列化构造函数中，对 <code>Tables["TransactionLogExist"]</code> 和 <code>Tables["EJournalExist"]</code> 进行了 null 检查（第59-63行、第170-174行），确保只有目标表存在时才添加。</p>
+<h4>6.4 Schema 去重</h4>
+<p><code>GetTypedDataSetSchema()</code>（第259行）和 <code>GetTypedTableSchema()</code>（第496行、第744行）中，通过二进制流逐字节比较已有 schema 来避免重复注册——这是一个性能优化和防重复注册的边界处理。</p>
+<h4>6.5 UpdateAll 的异常处理栈</h4>
+<table>
+<thead>
+<tr>
+<th>异常条件</th>
+<th>行为</th>
+<th>行号</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>dataSet 为 null</td>
+<td>抛出 <code>ArgumentNullException</code></td>
+<td>第1553-1554行</td>
+</tr>
+<tr>
+<td>Connection 为 null</td>
+<td>抛出 <code>ApplicationException</code></td>
+<td>第1560-1562行</td>
+</tr>
+<tr>
+<td>无法开始事务</td>
+<td>抛出 <code>ApplicationException</code></td>
+<td>第1574-1575行</td>
+</tr>
+<tr>
+<td>更新过程中异常</td>
+<td>回滚事务；如果设了备份则恢复 DataSet；重新抛出异常</td>
+<td>第1623-1642行</td>
+</tr>
+</tbody>
+</table>
+<h4>6.6 SchemaChanged 事件</h4>
+<p>当 <code>base.Tables</code> 或 <code>base.Relations</code> 的集合发生 Remove 操作时，会重新调用 <code>InitVars()</code> 刷新内部引用（第251-254行）。这是 Typed DataSet 开箱即用的行为。</p>
+<h3>7. 测试相关</h3>
+<h4>7.1 当前输入中的测试</h4>
+<p>本 batch 不包含任何测试文件。</p>
+<h4>7.2 建议的测试策略</h4>
+<p>由于此文件是自动生成的，<strong>不建议直接针对此文件编写单元测试</strong>。测试应该针对：</p>
+<ol>
+<li><strong>存储过程集成测试</strong>：验证 <code>dbo.usp_GetTransactionLogExist</code> 和 <code>dbo.usp_GetEJournalExist</code> 在不同参数组合下的返回结果。</li>
+<li><strong>消费此 DataSet 的业务逻辑测试</strong>：模拟本 DataSet 的返回数据，测试上层（同步后台任务）的处理逻辑。</li>
+<li><strong>参数边界测试</strong>：</li>
+<li>所有参数为 null（应返回全部待传输记录）</li>
+<li>部分参数为 null（如只传 CompanyCode 不传 StoreCode）</li>
+<li>不存在的 ID（应返回空表）</li>
+<li>TransactionNo / EJournalSeqNo 的边界值（空、0、极大值）</li>
+</ol>
+<p>具体测试还需要结合 <code>TransferMaster2TranDataSet.xsd</code> 文件中的约束定义（如果有 UniqueConstraint 或 ForeignKeyConstraint）来补充数据完整性测试。</p>
+<h3>8. 新人阅读建议</h3>
+<ol>
+<li>
+<p><strong>先理解用途</strong>：此 DataSet 用于回答两个问题——"TransactionLog 中是否有需要传输的记录？"和"EJournal 中是否有需要传输的记录？"，每个表只有一个字段 <code>IsTransfer</code>（int 类型）。</p>
+</li>
+<li>
+<p><strong>关注存储过程</strong>：实际业务逻辑完全在存储过程 <code>dbo.usp_GetTransactionLogExist</code> 和 <code>dbo.usp_GetEJournalExist</code> 中。本文件只是 Type-Safe 的调用壳。<strong>要理解"存在性检查"的具体逻辑，必须查看这两个存储过程体。</strong></p>
+</li>
+<li>
+<p><strong>理解 <code>IsTransfer</code> 的含义</strong>：需要结合其他文件确认这个字段的枚举值含义（例如 0=未传输、1=已传输、2=传输中）。</p>
+</li>
+<li>
+<p><strong>忽略自动生成代码的细节</strong>：<code>InitVars()</code>、<code>InitClass()</code>、<code>Clone()</code>、<code>SchemaChanged</code>、序列化方法都是设计器模板生成的样板代码，不包含业务逻辑。阅读时跳过这些部分，专注 TableAdapter 的 Fill/GetData 方法和 DataRow 的属性定义。</p>
+</li>
+<li>
+<p><strong>注意两个 <code>IsTransfer</code> 列都是 ReadOnly</strong>（第431行、第679行），说明值在数据库端由存储过程计算，代码不应自行设置。</p>
+</li>
+<li>
+<p><strong><code>TableAdapterManager</code> 是框架生成的骨架</strong>，当前状态不会执行任何数据库写操作。只有当未来在 <code>.xsd</code> 设计中添加了 Insert/Update/Delete 配置后，<code>UpdateAll()</code> 才会真正工作。</p>
+</li>
+</ol>
+<h3>9. 不确定点</h3>
+<ol>
+<li><strong>存储过程的 SQL 实现</strong>：</li>
+<li><code>dbo.usp_GetTransactionLogExist</code> 的查询逻辑是什么？（根据 TransactionNo 等参数如何判断"是否存在"？）</li>
+<li><code>dbo.usp_GetEJournalExist</code> 的查询逻辑是什么？</li>
+<li>
+<p><code>IsTransfer</code> 返回值的业务含义（枚举值映射）？</p>
+</li>
+<li>
+<p><strong>连接字符串配置</strong>：</p>
+</li>
+<li><code>POS4U_TrialConnectionString</code> 在 <code>app.config</code> 或 <code>Settings.settings</code> 中的定义内容。</li>
+<li>
+<p>是否区分开发/测试/生产环境？</p>
+</li>
+<li>
+<p><strong>数据类型一致性</strong>：</p>
+</li>
+<li>存储过程参数 <code>@CompanyCode</code> 和 <code>@StoreCode</code> 定义为 <code>NVarChar(10)</code>（第1105-1106行）——实际数据库字段是否匹配？</li>
+<li>
+<p><code>@TerminalNo</code> 和 <code>@ManagedNo</code> 是 <code>Int</code>（第1107-1108行），<code>@TransactionNo</code> 是 <code>BigInt</code>（第1109行）——与数据库中实际列类型是否一致？</p>
+</li>
+<li>
+<p><strong>此 DataSet 的消费者</strong>：</p>
+</li>
+<li>项目中哪个类或服务调用 <code>TransactionLogExistTableAdapter.Fill()</code> 或 <code>GetData()</code>？</li>
+<li>调用的上下文是后台同步任务的什么阶段（启动时检查？轮询时检查？）</li>
+<li>
+<p><code>IsTransfer</code> 的返回值如何驱动后续逻辑（是否开始传输？）</p>
+</li>
+<li>
+<p><strong><code>TransferMaster2TranDataSet.xsd</code> 文件</strong>：设计师源文件定义了实际的 schema（列约束、主键、关系等），本 <code>.Designer.cs</code> 只是其代码生成产物。需要查看 <code>.xsd</code> 确认是否有额外约束。</p>
+</li>
+<li>
+<p><strong>与同 batch 其他文件的关系</strong>：此文件和 batch 中可能存在的其他文件（如同目录下的 TransferMaster2TranDataSet.cs 分部类）可能包含自定义逻辑，需要结合确认。</p>
+</li>
+</ol>
+<hr />
+<h2>本批覆盖确认</h2>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>覆盖状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Source/POS4UBackground/Data/Background.Data.BackgroundContainer/TransferMaster2TranDataSet.Designer.cs</td>
+<td>需要结合其他文件确认</td>
+<td>已详细分析该自动生成文件的代码结构、暴露内容、逻辑流程和依赖关系，但理解完整业务逻辑必须查看 <code>dbo.usp_GetTransactionLogExist</code> / <code>dbo.usp_GetEJournalExist</code> 两个存储过程的 SQL 实现、连接字符串配置，以及消费此 DataSet 的上层调用代码。</td>
+</tr>
+</tbody>
+</table></div></div><button class="expand-btn">Show more</button></div></div>
+</div></div>
+        
+
+<div class="pagination">
+<span class="current">Index</span>
+<span class="disabled">&larr; Prev</span>
+<a href="page-001.html">1</a>
+<a href="page-001.html">Next &rarr;</a>
+</div>
+
+
+        <dialog id="search-modal">
+            <div class="search-modal-header">
+                <input type="text" id="modal-search-input" placeholder="Search..." aria-label="Search transcripts">
+                <button id="modal-search-btn" type="button" aria-label="Search">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+                </button>
+                <button id="modal-close-btn" type="button" aria-label="Close">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+                </button>
+            </div>
+            <div id="search-status"></div>
+            <div id="search-results"></div>
+        </dialog>
+        <script>
+(function() {
+    var totalPages = 1;
+    var searchBox = document.getElementById('search-box');
+    var searchInput = document.getElementById('search-input');
+    var searchBtn = document.getElementById('search-btn');
+    var modal = document.getElementById('search-modal');
+    var modalInput = document.getElementById('modal-search-input');
+    var modalSearchBtn = document.getElementById('modal-search-btn');
+    var modalCloseBtn = document.getElementById('modal-close-btn');
+    var searchStatus = document.getElementById('search-status');
+    var searchResults = document.getElementById('search-results');
+
+    if (!searchBox || !modal) return;
+
+    // Hide search on file:// protocol (doesn't work due to CORS restrictions)
+    if (window.location.protocol === 'file:') return;
+
+    // Show search box (progressive enhancement)
+    searchBox.style.display = 'flex';
+
+    // Gist preview support - detect if we're on gisthost.github.io or gistpreview.github.io
+    var hostname = window.location.hostname;
+    var isGistPreview = hostname === 'gisthost.github.io' || hostname === 'gistpreview.github.io';
+    var gistId = null;
+    var gistOwner = null;
+    var gistInfoLoaded = false;
+
+    if (isGistPreview) {
+        // Extract gist ID from URL query string like ?78a436a8a9e7a2e603738b8193b95410/index.html
+        var queryMatch = window.location.search.match(/^\?([a-f0-9]+)/i);
+        if (queryMatch) {
+            gistId = queryMatch[1];
+        }
+    }
+
+    async function loadGistInfo() {
+        if (!isGistPreview || !gistId || gistInfoLoaded) return;
+        try {
+            var response = await fetch('https://api.github.com/gists/' + gistId);
+            if (response.ok) {
+                var info = await response.json();
+                gistOwner = info.owner.login;
+                gistInfoLoaded = true;
+            }
+        } catch (e) {
+            console.error('Failed to load gist info:', e);
+        }
+    }
+
+    function getPageFetchUrl(pageFile) {
+        if (isGistPreview && gistOwner && gistId) {
+            // Use raw gist URL for fetching content
+            return 'https://gist.githubusercontent.com/' + gistOwner + '/' + gistId + '/raw/' + pageFile;
+        }
+        return pageFile;
+    }
+
+    function getPageLinkUrl(pageFile) {
+        if (isGistPreview && gistId) {
+            // Use gistpreview URL format for navigation links
+            return '?' + gistId + '/' + pageFile;
+        }
+        return pageFile;
+    }
+
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function escapeRegex(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function openModal(query) {
+        modalInput.value = query || '';
+        searchResults.innerHTML = '';
+        searchStatus.textContent = '';
+        modal.showModal();
+        modalInput.focus();
+        if (query) {
+            performSearch(query);
+        }
+    }
+
+    function closeModal() {
+        modal.close();
+        // Update URL to remove search fragment, preserving path and query string
+        if (window.location.hash.startsWith('#search=')) {
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+    }
+
+    function updateUrlHash(query) {
+        if (query) {
+            // Preserve path and query string when adding hash
+            history.replaceState(null, '', window.location.pathname + window.location.search + '#search=' + encodeURIComponent(query));
+        }
+    }
+
+    function highlightTextNodes(element, searchTerm) {
+        var walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
+        var nodesToReplace = [];
+
+        while (walker.nextNode()) {
+            var node = walker.currentNode;
+            if (node.nodeValue.toLowerCase().indexOf(searchTerm.toLowerCase()) !== -1) {
+                nodesToReplace.push(node);
+            }
+        }
+
+        nodesToReplace.forEach(function(node) {
+            var text = node.nodeValue;
+            var regex = new RegExp('(' + escapeRegex(searchTerm) + ')', 'gi');
+            var parts = text.split(regex);
+            if (parts.length > 1) {
+                var span = document.createElement('span');
+                parts.forEach(function(part) {
+                    if (part.toLowerCase() === searchTerm.toLowerCase()) {
+                        var mark = document.createElement('mark');
+                        mark.textContent = part;
+                        span.appendChild(mark);
+                    } else {
+                        span.appendChild(document.createTextNode(part));
+                    }
+                });
+                node.parentNode.replaceChild(span, node);
+            }
+        });
+    }
+
+    function fixInternalLinks(element, pageFile) {
+        // Update all internal anchor links to include the page file
+        var links = element.querySelectorAll('a[href^="#"]');
+        links.forEach(function(link) {
+            var href = link.getAttribute('href');
+            link.setAttribute('href', pageFile + href);
+        });
+    }
+
+    function processPage(pageFile, html, query) {
+        var parser = new DOMParser();
+        var doc = parser.parseFromString(html, 'text/html');
+        var resultsFromPage = 0;
+
+        // Find all message blocks
+        var messages = doc.querySelectorAll('.message');
+        messages.forEach(function(msg) {
+            var text = msg.textContent || '';
+            if (text.toLowerCase().indexOf(query.toLowerCase()) !== -1) {
+                resultsFromPage++;
+
+                // Get the message ID for linking
+                var msgId = msg.id || '';
+                var pageLinkUrl = getPageLinkUrl(pageFile);
+                var link = pageLinkUrl + (msgId ? '#' + msgId : '');
+
+                // Clone the message HTML and highlight matches
+                var clone = msg.cloneNode(true);
+                // Fix internal links to include the page file
+                fixInternalLinks(clone, pageLinkUrl);
+                highlightTextNodes(clone, query);
+
+                var resultDiv = document.createElement('div');
+                resultDiv.className = 'search-result';
+                resultDiv.innerHTML = '<a href="' + link + '">' +
+                    '<div class="search-result-page">' + escapeHtml(pageFile) + '</div>' +
+                    '<div class="search-result-content">' + clone.innerHTML + '</div>' +
+                    '</a>';
+                searchResults.appendChild(resultDiv);
+            }
+        });
+
+        return resultsFromPage;
+    }
+
+    async function performSearch(query) {
+        if (!query.trim()) {
+            searchStatus.textContent = 'Enter a search term';
+            return;
+        }
+
+        updateUrlHash(query);
+        searchResults.innerHTML = '';
+        searchStatus.textContent = 'Searching...';
+
+        // Load gist info if on gistpreview (needed for constructing URLs)
+        if (isGistPreview && !gistInfoLoaded) {
+            searchStatus.textContent = 'Loading gist info...';
+            await loadGistInfo();
+            if (!gistOwner) {
+                searchStatus.textContent = 'Failed to load gist info. Search unavailable.';
+                return;
+            }
+        }
+
+        var resultsFound = 0;
+        var pagesSearched = 0;
+
+        // Build list of pages to fetch
+        var pagesToFetch = [];
+        for (var i = 1; i <= totalPages; i++) {
+            pagesToFetch.push('page-' + String(i).padStart(3, '0') + '.html');
+        }
+
+        searchStatus.textContent = 'Searching...';
+
+        // Process pages in batches of 3, but show results immediately as each completes
+        var batchSize = 3;
+        for (var i = 0; i < pagesToFetch.length; i += batchSize) {
+            var batch = pagesToFetch.slice(i, i + batchSize);
+
+            // Create promises that process results immediately when each fetch completes
+            var promises = batch.map(function(pageFile) {
+                return fetch(getPageFetchUrl(pageFile))
+                    .then(function(response) {
+                        if (!response.ok) throw new Error('Failed to fetch');
+                        return response.text();
+                    })
+                    .then(function(html) {
+                        // Process and display results immediately
+                        var count = processPage(pageFile, html, query);
+                        resultsFound += count;
+                        pagesSearched++;
+                        searchStatus.textContent = 'Found ' + resultsFound + ' result(s) in ' + pagesSearched + '/' + totalPages + ' pages...';
+                    })
+                    .catch(function() {
+                        pagesSearched++;
+                        searchStatus.textContent = 'Found ' + resultsFound + ' result(s) in ' + pagesSearched + '/' + totalPages + ' pages...';
+                    });
+            });
+
+            // Wait for this batch to complete before starting the next
+            await Promise.all(promises);
+        }
+
+        searchStatus.textContent = 'Found ' + resultsFound + ' result(s) in ' + totalPages + ' pages';
+    }
+
+    // Event listeners
+    searchBtn.addEventListener('click', function() {
+        openModal(searchInput.value);
+    });
+
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            openModal(searchInput.value);
+        }
+    });
+
+    modalSearchBtn.addEventListener('click', function() {
+        performSearch(modalInput.value);
+    });
+
+    modalInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            performSearch(modalInput.value);
+        }
+    });
+
+    modalCloseBtn.addEventListener('click', closeModal);
+
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+
+    // Check for #search= in URL on page load
+    if (window.location.hash.startsWith('#search=')) {
+        var query = decodeURIComponent(window.location.hash.substring(8));
+        if (query) {
+            searchInput.value = query;
+            openModal(query);
+        }
+    }
+})();
+        </script>
+    </div>
+    <script>
+document.querySelectorAll('time[data-timestamp]').forEach(function(el) {
+    const timestamp = el.getAttribute('data-timestamp');
+    const date = new Date(timestamp);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    if (isToday) { el.textContent = timeStr; }
+    else { el.textContent = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + timeStr; }
+});
+document.querySelectorAll('pre.json').forEach(function(el) {
+    let text = el.textContent;
+    text = text.replace(/"([^"]+)":/g, '<span style="color: #ce93d8">"$1"</span>:');
+    text = text.replace(/: "([^"]*)"/g, ': <span style="color: #81d4fa">"$1"</span>');
+    text = text.replace(/: (\d+)/g, ': <span style="color: #ffcc80">$1</span>');
+    text = text.replace(/: (true|false|null)/g, ': <span style="color: #f48fb1">$1</span>');
+    el.innerHTML = text;
+});
+document.querySelectorAll('.truncatable').forEach(function(wrapper) {
+    const content = wrapper.querySelector('.truncatable-content');
+    const btn = wrapper.querySelector('.expand-btn');
+    if (content.scrollHeight > 250) {
+        wrapper.classList.add('truncated');
+        btn.addEventListener('click', function() {
+            if (wrapper.classList.contains('truncated')) { wrapper.classList.remove('truncated'); wrapper.classList.add('expanded'); btn.textContent = 'Show less'; }
+            else { wrapper.classList.remove('expanded'); wrapper.classList.add('truncated'); btn.textContent = 'Show more'; }
+        });
+    }
+});
+</script>
+</body>
+</html>
