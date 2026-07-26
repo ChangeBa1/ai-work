@@ -221,6 +221,37 @@ class MemoryConfig(BaseModel):
         return self
 
 
+class ReplayConfig(BaseModel):
+    """Feature 016 (record-replay, FR-011): trajectory record/replay knobs.
+
+    ``enabled: false`` disables both auto-recording and replay-mode runs
+    (a mode:"replay" run then fails fast — spec Clarification 11).
+    ``patch_auto_apply`` exists but is deliberately inert in this MVP: even
+    ``true`` only logs a warning and never applies a patch (ADR-005 /
+    spec FR-009 — self-heal candidates require human review).
+    """
+
+    enabled: bool = True
+    # Auto-generate a candidate replay script after a fully-passed
+    # exploration run (design §10.1 "自动产生候选回放轨迹").
+    auto_generate: bool = True
+    # ADR-005 red line: MUST default to false; true is a no-op + warning in MVP.
+    patch_auto_apply: bool = False
+    # Minimum TM_CCOEFF_NORMED score for the replay template-locate stage.
+    # Independent from memory.template_match_threshold (spec Clarification 8).
+    template_match_threshold: float = Field(default=0.85, gt=0.0, le=1.0)
+    # Per-side search-neighborhood expansion around the recorded bbox.
+    bbox_expand_ratio: float = Field(default=0.5, ge=0.0, le=4.0)
+    # Minimum page-fingerprint match tier required before any direct locate
+    # (design §10.2; "high" is the design default — spec Clarification 8).
+    min_page_match_level: Literal["high", "medium"] = "high"
+    # Max pairwise disagreement (px, per axis) between matched anchor offsets
+    # for the anchor-translation locate stage (spec Clarification 2).
+    anchor_offset_tolerance_px: int = Field(default=8, ge=0)
+    # None => "<artifacts.root_dir>/replay/templates" derived at wiring time.
+    storage_dir: str | None = None
+
+
 class UiIndexConfig(BaseModel):
     """Optional external UI-analysis bundle consumption (feature 007)."""
 
@@ -264,6 +295,8 @@ class AgentConfig(BaseModel):
     ui_index: UiIndexConfig = Field(default_factory=UiIndexConfig)
     # Feature 015 (page-element-memory, FR-009)
     memory: MemoryConfig = Field(default_factory=MemoryConfig)
+    # Feature 016 (record-replay, FR-011)
+    replay: ReplayConfig = Field(default_factory=ReplayConfig)
 
     @model_validator(mode="before")
     @classmethod

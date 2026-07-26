@@ -74,7 +74,10 @@ class TestCase(BaseModel):
     id: str = Field(min_length=1)
     name: str = Field(min_length=1)
     target_id: str = Field(min_length=1)
-    mode: Literal["explicit"]
+    # Feature 016 (FR-011, additive): "replay" runs the latest recorded
+    # ReplayScript for this test case (design §8.1/§10.2); "explicit"
+    # semantics are unchanged.
+    mode: Literal["explicit", "replay"]
     steps: list[TestStep] = Field(min_length=1)
     timeout_seconds: int = Field(default=600, ge=1)
     # Feature 003 (FR-024): optional declarative run-start precondition.
@@ -88,9 +91,11 @@ class TestCase(BaseModel):
 
     @field_validator("mode")
     @classmethod
-    def mode_must_be_explicit(cls, v: str) -> str:
-        if v != "explicit":
-            raise ValueError("mode must be 'explicit' in this release (FR-004)")
+    def mode_must_be_known(cls, v: str) -> str:
+        # Feature 016: "replay" joins "explicit" (FR-011); anything else is
+        # still rejected with the original FR-004 message shape.
+        if v not in ("explicit", "replay"):
+            raise ValueError("mode must be 'explicit' or 'replay' (FR-004)")
         return v
 
     @model_validator(mode="after")
@@ -147,12 +152,15 @@ def load_test_case(path: str | Path) -> TestCase:
             [{"path": k, "reason": "required field missing"} for k in missing]
         )
 
-    if raw.get("mode") != "explicit":
+    if raw.get("mode") not in ("explicit", "replay"):
         raise FieldValidationError(
             [
                 {
                     "path": "mode",
-                    "reason": f"must be 'explicit', got {raw.get('mode')!r} (FR-004)",
+                    "reason": (
+                        f"must be 'explicit' or 'replay', got {raw.get('mode')!r} "
+                        "(FR-004)"
+                    ),
                 }
             ]
         )

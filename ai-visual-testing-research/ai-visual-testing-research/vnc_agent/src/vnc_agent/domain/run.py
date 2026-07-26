@@ -14,6 +14,7 @@ from vnc_agent.domain.grounding import GroundingResult
 from vnc_agent.domain.memory import MemoryHitAudit
 from vnc_agent.domain.observation import ScreenFrame
 from vnc_agent.domain.recovery import RecoveryAttempt
+from vnc_agent.domain.replay import ReplayStepAudit
 from vnc_agent.domain.repeat_guard import RepeatGuardDecision
 from vnc_agent.domain.verification import VerificationResult, VerificationSpec, WaitResult
 from vnc_agent.runtime.telemetry import (
@@ -56,6 +57,11 @@ class ActionIteration(BaseModel):
     # directly from element memory (grounder skipped). Verification is never
     # exempted by a memory hit (FR-008).
     memory_hit: MemoryHitAudit | None = None
+    # Feature 016 (FR-012): non-null iff this iteration belongs to a replay-
+    # mode run — records which ReplayStep/script version it replayed and how
+    # the target was located (template/anchor/bbox/fallback_grounding/
+    # keyboard). Always null on exploration iterations.
+    replay_audit: ReplayStepAudit | None = None
 
 
 class DeclaredFact(BaseModel):

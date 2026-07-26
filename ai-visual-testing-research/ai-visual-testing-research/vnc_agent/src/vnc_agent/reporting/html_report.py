@@ -76,6 +76,8 @@ details{margin-top:6px} code{font-size:0.85em}
     <tr><th>{{ t('performance.actual_model_call_count') }}</th><td>{{ report.performance_summary.actual_model_call_count }}</td></tr>
     <tr><th>{{ t('performance.skipped_model_call_count') }}</th><td>{{ report.performance_summary.skipped_model_call_count }}</td></tr>
     <tr><th>{{ t('performance.memory_hit_count') }}</th><td>{{ report.performance_summary.memory_hits.element_memory }}</td></tr>
+    <tr><th>{{ t('performance.replay_locate_methods') }}</th><td>{{ report.performance_summary.replay_locate_methods }}</td></tr>
+    <tr><th>{{ t('performance.replay_patch_count') }}</th><td>{{ report.performance_summary.replay_patch_count }}</td></tr>
     <tr><th>{{ t('performance.completeness') }}</th><td data-completeness="{{ report.performance_summary.completeness }}">{{ completeness_display(report.performance_summary.completeness).display_value }}</td></tr>
   </table>
   {% if report.performance_summary.consistency_errors %}

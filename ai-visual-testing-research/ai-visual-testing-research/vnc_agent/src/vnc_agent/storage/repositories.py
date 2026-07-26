@@ -6,12 +6,16 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from vnc_agent.domain.memory import ElementMemory, PageMemory
+from vnc_agent.domain.replay import ReplayPatch, ReplayScript, ReplayStep
 from vnc_agent.domain.run import StepRecord, TestRun, VisualExperience
 from vnc_agent.storage.database import (
     ActionIterationRow,
     ElementMemoryRow,
     PageMemoryRow,
     RecoveryAttemptRow,
+    ReplayPatchRow,
+    ReplayScriptRow,
+    ReplayStepRow,
     StepRecordRow,
     TestRunRow,
     VisualExperienceRow,
@@ -233,3 +237,181 @@ class MemoryRepository:
                 .where(ElementMemoryRow.page_id == page_id)
             )
             return int(result.scalar_one())
+
+
+class ReplayRepository:
+    """Feature 016 (FR-002): replay script / step / patch persistence — same
+    payload-column repository pattern as :class:`RunRepository`.
+
+    ADR-005 / spec FR-009: during replay only :meth:`bump_step_stats` may
+    touch a stored step, and it rewrites the success/failure counters alone —
+    target fields (template/bbox/anchors/action) are immutable once saved.
+    """
+
+    def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
+        self.session_factory = session_factory
+
+    # --- scripts ----------------------------------------------------------
+
+    async def save_script(self, script: ReplayScript) -> None:
+        """Insert a new script version with its ordered steps (never updates
+        an existing version — versions are immutable, spec FR-003)."""
+        async with self.session_factory() as session:
+            meta = script.model_dump(mode="json", exclude={"steps"})
+            session.add(
+                ReplayScriptRow(
+                    script_id=script.script_id,
+                    test_case_id=script.test_case_id,
+                    version=script.version,
+                    source_run_id=script.source_run_id,
+                    created_at=script.created_at,
+                    payload=meta,
+                )
+            )
+            for step in script.steps:
+                session.add(
+                    ReplayStepRow(
+                        replay_step_id=step.replay_step_id,
+                        script_id=script.script_id,
+                        step_id=step.step_id,
+                        order_index=step.order_index,
+                        success_count=step.success_count,
+                        failure_count=step.failure_count,
+                        payload=step.model_dump(mode="json"),
+                    )
+                )
+            await session.commit()
+
+    async def list_scripts(self, test_case_id: str) -> list[ReplayScript]:
+        """All script versions for a test case (ascending version), steps
+        included and ordered."""
+        async with self.session_factory() as session:
+            rows = (
+                (
+                    await session.execute(
+                        select(ReplayScriptRow)
+                        .where(ReplayScriptRow.test_case_id == test_case_id)
+                        .order_by(ReplayScriptRow.version)
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            scripts: list[ReplayScript] = []
+            for row in rows:
+                steps = await self._load_steps(session, row.script_id)
+                scripts.append(
+                    ReplayScript.model_validate({**row.payload, "steps": steps})
+                )
+            return scripts
+
+    async def get_latest_script(self, test_case_id: str) -> ReplayScript | None:
+        async with self.session_factory() as session:
+            row = (
+                (
+                    await session.execute(
+                        select(ReplayScriptRow)
+                        .where(ReplayScriptRow.test_case_id == test_case_id)
+                        .order_by(ReplayScriptRow.version.desc())
+                        .limit(1)
+                    )
+                )
+                .scalars()
+                .first()
+            )
+            if row is None:
+                return None
+            steps = await self._load_steps(session, row.script_id)
+            return ReplayScript.model_validate({**row.payload, "steps": steps})
+
+    async def next_version(self, test_case_id: str) -> int:
+        async with self.session_factory() as session:
+            result = await session.execute(
+                select(func.max(ReplayScriptRow.version)).where(
+                    ReplayScriptRow.test_case_id == test_case_id
+                )
+            )
+            current = result.scalar_one()
+            return int(current or 0) + 1
+
+    async def _load_steps(self, session: AsyncSession, script_id: str) -> list[dict]:
+        rows = (
+            (
+                await session.execute(
+                    select(ReplayStepRow)
+                    .where(ReplayStepRow.script_id == script_id)
+                    .order_by(ReplayStepRow.order_index)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        return [r.payload for r in rows]
+
+    # --- step statistics (the only replay-time write, spec Clarification 5)
+
+    async def bump_step_stats(self, replay_step_id: str, *, passed: bool) -> None:
+        """Update success/failure counters only — every target field of the
+        stored payload stays byte-identical (ADR-005 read-only red line)."""
+        async with self.session_factory() as session:
+            row = await session.get(ReplayStepRow, replay_step_id)
+            if row is None:
+                return
+            if passed:
+                row.success_count += 1
+            else:
+                row.failure_count += 1
+            payload = dict(row.payload)
+            payload["success_count"] = row.success_count
+            payload["failure_count"] = row.failure_count
+            row.payload = payload
+            await session.commit()
+
+    async def get_step(self, replay_step_id: str) -> ReplayStep | None:
+        async with self.session_factory() as session:
+            row = await session.get(ReplayStepRow, replay_step_id)
+            return ReplayStep.model_validate(row.payload) if row is not None else None
+
+    # --- patches ----------------------------------------------------------
+
+    async def save_patch(self, patch: ReplayPatch) -> None:
+        async with self.session_factory() as session:
+            session.add(
+                ReplayPatchRow(
+                    patch_id=patch.patch_id,
+                    script_id=patch.script_id,
+                    replay_step_id=patch.replay_step_id,
+                    status=patch.status,
+                    created_at=patch.created_at,
+                    payload=patch.model_dump(mode="json"),
+                )
+            )
+            await session.commit()
+
+    async def list_patches(
+        self, test_case_id: str, *, status: str | None = None
+    ) -> list[ReplayPatch]:
+        """Patches for every script version of a test case, oldest first."""
+        async with self.session_factory() as session:
+            script_ids = (
+                (
+                    await session.execute(
+                        select(ReplayScriptRow.script_id).where(
+                            ReplayScriptRow.test_case_id == test_case_id
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            if not script_ids:
+                return []
+            query = select(ReplayPatchRow).where(ReplayPatchRow.script_id.in_(script_ids))
+            if status is not None:
+                query = query.where(ReplayPatchRow.status == status)
+            rows = (
+                (await session.execute(query.order_by(ReplayPatchRow.patch_id)))
+                .scalars()
+                .all()
+            )
+            return [ReplayPatch.model_validate(r.payload) for r in rows]

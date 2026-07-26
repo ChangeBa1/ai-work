@@ -12,12 +12,15 @@ from vnc_agent.config import load_config
 from vnc_agent.domain.run import HumanConfirmedFact
 from vnc_agent.domain.testcase import FieldValidationError, TestCase, load_test_case
 from vnc_agent.logging_setup import configure_logging, get_logger
-from vnc_agent.runtime.exceptions import VNCConnectionError
+from vnc_agent.runtime.exceptions import ReplayUnavailableError, VNCConnectionError
 from vnc_agent.ui_index.cli import ui_index_app
 from vnc_agent.ui_index.repository import UiIndexValidationError
 
 app = typer.Typer(name="vnc-agent", help="VNC black-box GUI automation agent", no_args_is_help=True)
 app.add_typer(ui_index_app, name="ui-index")
+# Feature 016 (FR-011): replay script/patch inspection commands (JSON output).
+replay_app = typer.Typer(name="replay", help="Replay script / patch queries", no_args_is_help=True)
+app.add_typer(replay_app, name="replay")
 log = get_logger("cli")
 
 # Exit codes (cli-contract.md)
@@ -76,6 +79,12 @@ def run_cmd(
     ),
     dry_run: bool = typer.Option(False, "--dry-run", help="Validate only, no VNC"),
     json_only: bool = typer.Option(False, "--json-only", help="Skip HTML report"),
+    mode: str | None = typer.Option(
+        None,
+        "--mode",
+        help="Override test case mode: explicit (exploration) or replay "
+        "(run the latest recorded script; feature 016)",
+    ),
     confirm_precondition: list[str] = typer.Option(  # noqa: B008
         [],
         "--confirm-precondition",
@@ -98,6 +107,12 @@ def run_cmd(
 
     if target:
         case = case.model_copy(update={"target_id": target})
+
+    if mode is not None:
+        if mode not in ("explicit", "replay"):
+            typer.echo(f"--mode must be 'explicit' or 'replay', got {mode!r}", err=True)
+            raise typer.Exit(EXIT_VALIDATION)
+        case = case.model_copy(update={"mode": mode})
 
     human_confirmed_facts = _parse_confirm_precondition(
         case, confirm_precondition, confirm_screenshot
@@ -242,6 +257,12 @@ async def _execute(
         )
     except VNCConnectionError:
         return EXIT_VNC
+    except ReplayUnavailableError as e:
+        # Feature 016 (FR-005 / spec Clarification 11): a mode:"replay" run
+        # that cannot start (disabled / no script / step mismatch) fails
+        # fast before any VNC connection — validation-grade exit code.
+        typer.echo(f"Replay unavailable: {e}", err=True)
+        return EXIT_VALIDATION
     except UiIndexValidationError as e:
         # FR-012: an explicitly configured but invalid ui_index bundle fails
         # the run before any test step executes (Planner/Grounder/Executor
@@ -304,3 +325,81 @@ async def _report(run_id: str, fmt: str, config: Path) -> int:
     await repo.save_run(run)
     typer.echo(f"Report written for {run_id}")
     return EXIT_PASSED
+
+
+# ---------------------------------------------------------------------------
+# Feature 016 (FR-011): replay script / patch JSON queries (no VNC involved)
+# ---------------------------------------------------------------------------
+
+
+async def _replay_repo(config: Path):
+    from vnc_agent.storage.database import init_db, make_engine, make_session_factory
+    from vnc_agent.storage.repositories import ReplayRepository
+
+    cfg = load_config(config)
+    engine = make_engine(cfg.agent.artifacts.db_path)
+    await init_db(engine)
+    return ReplayRepository(make_session_factory(engine))
+
+
+async def _list_scripts(test_case_id: str, config: Path) -> str:
+    import json
+
+    repo = await _replay_repo(config)
+    scripts = await repo.list_scripts(test_case_id)
+    out = [
+        {
+            "script_id": s.script_id,
+            "test_case_id": s.test_case_id,
+            "version": s.version,
+            "source_run_id": s.source_run_id,
+            "created_at": s.created_at.isoformat() if s.created_at else None,
+            "step_count": len(s.steps),
+            "steps": [
+                {
+                    "replay_step_id": st.replay_step_id,
+                    "step_id": st.step_id,
+                    "preferred_method": st.preferred_method,
+                    "direct_fallback_only": st.direct_fallback_only,
+                    "success_count": st.success_count,
+                    "failure_count": st.failure_count,
+                }
+                for st in s.steps
+            ],
+        }
+        for s in scripts
+    ]
+    return json.dumps(out, ensure_ascii=False, indent=2)
+
+
+async def _list_patches(test_case_id: str, status: str | None, config: Path) -> str:
+    import json
+
+    repo = await _replay_repo(config)
+    patches = await repo.list_patches(test_case_id, status=status)
+    return json.dumps(
+        [p.model_dump(mode="json") for p in patches], ensure_ascii=False, indent=2
+    )
+
+
+@replay_app.command("scripts")
+def replay_scripts_cmd(
+    test_case_id: str = typer.Argument(..., help="Test case id"),
+    config: Path = typer.Option(Path("config"), "--config"),  # noqa: B008
+) -> None:
+    """List recorded replay script versions for a test case (JSON)."""
+    configure_logging()
+    typer.echo(_run_async(_list_scripts(test_case_id, config)))
+
+
+@replay_app.command("patches")
+def replay_patches_cmd(
+    test_case_id: str = typer.Argument(..., help="Test case id"),
+    status: str | None = typer.Option(
+        None, "--status", help="Filter by status: pending|approved|rejected"
+    ),
+    config: Path = typer.Option(Path("config"), "--config"),  # noqa: B008
+) -> None:
+    """List replay self-heal candidate patches for a test case (JSON)."""
+    configure_logging()
+    typer.echo(_run_async(_list_patches(test_case_id, status, config)))
