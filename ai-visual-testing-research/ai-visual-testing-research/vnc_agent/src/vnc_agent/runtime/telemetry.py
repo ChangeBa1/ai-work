@@ -271,7 +271,7 @@ def derive_performance_summary(test_run: Any) -> PerformanceSummary:
             skipped_model_call_count += 1
 
     physical_image_count = sum(physical_by_purpose.values())
-    for required in ("ocr", "template", "vision"):
+    for required in ("ocr", "template", "vision", "vision_answer"):
         cache_hits.setdefault(required, 0)
 
     stage_totals: dict[str, float | None] = {}

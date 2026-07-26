@@ -78,7 +78,10 @@ def test_context_sensitive_functions_have_no_pixel_or_content_hash_params():
 
 def test_analysis_cache_component_enum_excludes_context_sensitive_roles():
     allowed = set(get_args(Component))
-    assert allowed == {"ocr", "template", "diff", "vision_describe"}
+    # Feature 008 (vision-answer-cache-contract.md) narrowly amends the 004
+    # exclusions: the *pure* visual answer (content + question + model) is a
+    # cacheable content component; role-level results remain excluded.
+    assert allowed == {"ocr", "template", "diff", "vision_describe", "vision_answer"}
     assert "planner" not in allowed
     assert "grounder" not in allowed
     assert "verification" not in allowed
