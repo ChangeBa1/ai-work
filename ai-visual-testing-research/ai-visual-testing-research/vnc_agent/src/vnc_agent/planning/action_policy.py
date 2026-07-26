@@ -21,6 +21,7 @@ from vnc_agent.domain.grounding import (
 )
 from vnc_agent.domain.observation import OCRItem, StructuredScreen, TemplateMatch
 from vnc_agent.domain.recovery import FailureType, GroundingLowConfidenceReason
+from vnc_agent.planning.click_point import safe_click_point
 
 ResolveOutcome = Literal[
     "keyboard",
@@ -115,12 +116,16 @@ class ActionPolicy:
         # Feature 012 (rule R-B): default kept in sync with
         # config.PlanningConfig.ocr_direct_click_min_confidence (0.85).
         ocr_direct_click_min_confidence: float = 0.85,
+        click_edge_inset_ratio: float = 0.15,
     ) -> None:
         self.overall_confidence_threshold = overall_confidence_threshold
         self.top1_top2_min_gap = top1_top2_min_gap
         self.ocr_sanity_check_ratio = ocr_sanity_check_ratio
         self.known_hotkeys = known_hotkeys or {}
         self.ocr_direct_click_min_confidence = ocr_direct_click_min_confidence
+        # Feature 013 (safe-click-point): per-side safe-zone inset ratio
+        # (config: click.edge_inset_ratio).
+        self.click_edge_inset_ratio = click_edge_inset_ratio
 
     def resolve(
         self,
@@ -389,16 +394,32 @@ class ActionPolicy:
             return None
         needle, ocr_hits, tmpl_hits = found
 
+        # Feature 013 (safe-click-point): the hit-uniqueness decisions below are
+        # unchanged; only the returned click coordinates switch from mechanical
+        # centers to safe points. Siblings are the *other* hits computed above;
+        # target_region keeps the raw bbox (FR-007/009).
         if len(ocr_hits) == 1 and not tmpl_hits:
             # Feature 012: a suspicious unique hit must not be clicked —
             # fall through to the grounding path instead (FR-001).
             if self._ocr_hit_suspicion_reasons(needle, ocr_hits[0]):
                 return None
             b = ocr_hits[0].bbox
-            return ((b[0] + b[2]) // 2, (b[1] + b[3]) // 2, b)
+            pt = safe_click_point(
+                b,
+                siblings=[m.bbox for m in tmpl_hits],
+                screen_resolution=screen.resolution,
+                edge_inset_ratio=self.click_edge_inset_ratio,
+            )
+            return (pt.x, pt.y, b)
         if len(tmpl_hits) == 1 and not ocr_hits:
             b = tmpl_hits[0].bbox
-            return ((b[0] + b[2]) // 2, (b[1] + b[3]) // 2, b)
+            pt = safe_click_point(
+                b,
+                siblings=[i.bbox for i in ocr_hits],
+                screen_resolution=screen.resolution,
+                edge_inset_ratio=self.click_edge_inset_ratio,
+            )
+            return (pt.x, pt.y, b)
         if len(ocr_hits) == 1 and len(tmpl_hits) == 1:
             # Prefer higher confidence
             o, t = ocr_hits[0], tmpl_hits[0]
@@ -406,10 +427,18 @@ class ActionPolicy:
             # to the template evidence (pixel-level, no truncation problem) —
             # still a direct click, zero extra model calls.
             if self._ocr_hit_suspicion_reasons(needle, o):
-                pick = t.bbox
+                pick, other = t.bbox, o.bbox
+            elif o.confidence >= t.confidence:
+                pick, other = o.bbox, t.bbox
             else:
-                pick = o.bbox if o.confidence >= t.confidence else t.bbox
-            return ((pick[0] + pick[2]) // 2, (pick[1] + pick[3]) // 2, pick)
+                pick, other = t.bbox, o.bbox
+            pt = safe_click_point(
+                pick,
+                siblings=[other],
+                screen_resolution=screen.resolution,
+                edge_inset_ratio=self.click_edge_inset_ratio,
+            )
+            return (pt.x, pt.y, pick)
         return None
 
     def _from_grounding(
@@ -445,7 +474,7 @@ class ActionPolicy:
         # that upgrade instead of re-blocking on the same confidence heuristics.
         if candidate_index > 0:
             return self._executable_from_candidate(
-                action, in_bounds, candidate_index, filtered
+                action, in_bounds, candidate_index, filtered, resolution=(w, h)
             )
 
         # Confidence classification (first attempt only)
@@ -468,7 +497,7 @@ class ActionPolicy:
                 )
 
         return self._executable_from_candidate(
-            action, in_bounds, candidate_index, filtered
+            action, in_bounds, candidate_index, filtered, resolution=(w, h)
         )
 
     def _consistent_with_unique_ocr(
@@ -501,10 +530,22 @@ class ActionPolicy:
         in_bounds: list[GroundingCandidate],
         candidate_index: int,
         filtered: GroundingResult,
+        *,
+        resolution: tuple[int, int] | None = None,
     ) -> PolicyResult:
         idx = min(candidate_index, len(in_bounds) - 1)
         cand = in_bounds[idx]
-        cx, cy = cand.center()
+        # Feature 013 (safe-click-point): candidate selection is unchanged;
+        # only the click point moves off the mechanical center. Siblings are
+        # the non-selected in-bounds candidates (FR-008); target_region keeps
+        # the raw candidate bbox (FR-009).
+        pt = safe_click_point(
+            cand.bbox,
+            siblings=[c.bbox for i, c in enumerate(in_bounds) if i != idx],
+            screen_resolution=resolution,
+            edge_inset_ratio=self.click_edge_inset_ratio,
+        )
+        cx, cy = pt.x, pt.y
         op = action.action_type
         if op not in ("click", "double_click", "right_click", "drag", "scroll"):
             op = "click"
