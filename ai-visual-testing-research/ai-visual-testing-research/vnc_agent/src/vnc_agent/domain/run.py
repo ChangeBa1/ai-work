@@ -13,7 +13,7 @@ from vnc_agent.domain.action_identity import CanonicalActionIdentity
 from vnc_agent.domain.grounding import GroundingResult
 from vnc_agent.domain.memory import MemoryHitAudit
 from vnc_agent.domain.observation import ScreenFrame
-from vnc_agent.domain.recovery import RecoveryAttempt, WrongTargetEvidence
+from vnc_agent.domain.recovery import PostmortemAudit, RecoveryAttempt, WrongTargetEvidence
 from vnc_agent.domain.repeat_guard import RepeatGuardDecision
 from vnc_agent.domain.replay import ReplayStepAudit
 from vnc_agent.domain.verification import VerificationResult, VerificationSpec, WaitResult
@@ -72,6 +72,10 @@ class ActionIteration(BaseModel):
     # independent verification failed). Null on every other iteration; a
     # plain verification failure stays attributed via VerificationResult.
     failure_attribution: str | None = None
+    # Feature 023 (FR-010): non-null iff a WRONG_TARGET post-mortem ran for
+    # this iteration — outcome, corrected bbox/click point, gate evidence,
+    # undo flags and diagnosis artifact refs. Null everywhere else.
+    postmortem: PostmortemAudit | None = None
 
 
 class DeclaredFact(BaseModel):

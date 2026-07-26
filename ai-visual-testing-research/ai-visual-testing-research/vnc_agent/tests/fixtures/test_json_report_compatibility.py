@@ -49,6 +49,8 @@ _LEGACY_ITERATION_KEYS = {
     # failure attribution.
     "wrong_target_evidence",
     "failure_attribution",
+    # Feature 023 (FR-010): additive post-mortem audit.
+    "postmortem",
 }
 _LEGACY_STEP_KEYS = {
     "step_id", "status", "iterations", "model_names", "raw_model_response_refs",

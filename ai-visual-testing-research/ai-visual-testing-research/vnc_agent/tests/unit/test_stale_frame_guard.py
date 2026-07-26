@@ -122,16 +122,23 @@ def test_failure_type_members_exist():
 
 def test_routing_entries():
     assert ROUTING[FailureType.STALE_FRAME] == ["recapture"]
+    # Feature 023 (FR-007) prepends the post-mortem tier; the tail remains
+    # the 022 chain and still mirrors target_not_found (FR-B03), and the
+    # engine's strategies_for() restores the exact 022 list when
+    # wrong_target_postmortem is disabled (covered in
+    # tests/unit/test_postmortem_routing.py).
     assert ROUTING[FailureType.WRONG_TARGET] == [
+        "postmortem",
         "recapture",
         "zoom_reground",
         "re_ground",
     ]
-    # Mirrors the target_not_found re-observe/re-locate chain (FR-B03).
-    assert ROUTING[FailureType.WRONG_TARGET] == ROUTING[FailureType.TARGET_NOT_FOUND]
+    assert ROUTING[FailureType.WRONG_TARGET][1:] == ROUTING[FailureType.TARGET_NOT_FOUND]
 
 
 def _app_config(ft: str, *, path_change: bool) -> AppConfig:
+    from vnc_agent.config import WrongTargetPostmortemConfig
+
     return AppConfig(
         agent=AgentConfig(
             recovery={
@@ -143,7 +150,11 @@ def _app_config(ft: str, *, path_change: bool) -> AppConfig:
                     requires_strong_model=False,
                     requires_human_confirmation=False,
                 )
-            }
+            },
+            # Feature 023: this file pins the 022 baseline chain (FR-007:
+            # disabled == byte-identical); the enabled-tier progression is
+            # covered by tests/unit/test_postmortem_routing.py.
+            wrong_target_postmortem=WrongTargetPostmortemConfig(enabled=False),
         ),
         models=ModelsConfig(),
         vnc_targets=VNCTargetsConfig(),

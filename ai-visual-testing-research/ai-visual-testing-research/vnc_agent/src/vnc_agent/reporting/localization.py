@@ -115,6 +115,8 @@ _ZH_CN: dict[str, str] = {
     "stage_name.planner": "规划",
     "stage_name.grounder": "定位",
     "stage_name.verification": "验证",
+    # Feature 023: wrong-click post-mortem diagnosis stage
+    "stage_name.postmortem": "点击事后诊断",
     "stage_name.report_build": "报告构建",
     "stage_name.report_output": "报告输出",
 
@@ -146,6 +148,8 @@ _ZH_CN: dict[str, str] = {
     "model_role.planner": "规划模型",
     "model_role.grounder": "定位模型",
     "model_role.verification": "验证模型",
+    # Feature 023: wrong-click post-mortem diagnosis role
+    "model_role.postmortem": "点击诊断模型",
 
     # Performance summary fields
     "performance.total_capture_count": "总采集次数",

@@ -9,6 +9,7 @@ from vnc_agent.domain.focus_path import VerifiedFocusNavigationPath
 from vnc_agent.domain.observation import StructuredScreen
 from vnc_agent.domain.recovery import (
     FailureType,
+    PostmortemCorrectionPlan,
     RecoveryAttempt,
     RecoveryStrategy,
     ZoomRegroundPlan,
@@ -44,6 +45,11 @@ class RecoveryEngine:
         # grounding branch on the next ActionIteration) + per-step usage count.
         self.zoom_request: ZoomRegroundPlan | None = None
         self._zoom_attempts_step = 0
+        # Feature 023: one-shot corrected-click plan from an accepted
+        # post-mortem diagnosis (consumed by the next ActionIteration's
+        # grounding branch) + per-step diagnosis cap counter (FR-008).
+        self.postmortem_correction: PostmortemCorrectionPlan | None = None
+        self._postmortem_attempts_step = 0
         # 002: verified focus path for prefer_keyboard (FR-020~024)
         self.focus_path: VerifiedFocusNavigationPath | None = None
         self._last_screen: StructuredScreen | None = None
@@ -71,6 +77,8 @@ class RecoveryEngine:
         self.need_reground = False
         self.zoom_request = None
         self._zoom_attempts_step = 0
+        self.postmortem_correction = None
+        self._postmortem_attempts_step = 0
         self.focus_path = None
         self._last_screen = None
         self._last_target_hint = ""
@@ -124,7 +132,16 @@ class RecoveryEngine:
         return self.config.recovery_for(ft.value)
 
     def strategies_for(self, ft: FailureType) -> list[RecoveryStrategy]:
-        return list(ROUTING.get(ft, ["recapture"]))
+        strategies = list(ROUTING.get(ft, ["recapture"]))
+        # Feature 023 (FR-007): disabling the post-mortem restores the
+        # feature-022 WRONG_TARGET chain byte-for-byte (both the strategy
+        # list and the step-level index progression over it).
+        if (
+            ft == FailureType.WRONG_TARGET
+            and not self.config.agent.wrong_target_postmortem.enabled
+        ):
+            strategies = [s for s in strategies if s != "postmortem"]
+        return strategies
 
     async def handle(
         self,
@@ -195,11 +212,18 @@ class RecoveryEngine:
             zoom_plan = self._plan_zoom(ctx)
             if zoom_plan is None:
                 strategy = strategies[min(step_idx + 1, len(strategies) - 1)]
+        # Feature 023 (FR-008): postmortem needs a capable runtime (client +
+        # full evidence, signalled via ctx) and an unexhausted per-step cap;
+        # otherwise substitute the next strategy — same refusal semantics as
+        # the zoom escalation above.
+        if strategy == "postmortem" and not self._postmortem_allowed(ctx):
+            strategy = strategies[min(step_idx + 1, len(strategies) - 1)]
         path_changing = strategy in {
             "second_candidate",
             "re_ground",
             "zoom_reground",
             "switch_to_keyboard",
+            "postmortem",
         }
         prerequisites_met = (
             (not policy.requires_strong_model or ctx.strong_model_available)
@@ -234,6 +258,11 @@ class RecoveryEngine:
             self.zoom_request = zoom_plan
             self._zoom_attempts_step += 1
             self.need_reground = True
+        if strategy == "postmortem" and ok:
+            # Feature 023 (FR-008): the diagnosis itself runs in the runtime
+            # right after handle() returns; the per-step cap is consumed on
+            # selection so a failed diagnosis can never be re-attempted.
+            self._postmortem_attempts_step += 1
 
         self._tier2[ft.value] = used + 1
         self._step_strategy_index[ft.value] = step_idx + 1
@@ -295,6 +324,25 @@ class RecoveryEngine:
         """One-shot consumption of the pending zoom plan (Feature 014)."""
         plan = self.zoom_request
         self.zoom_request = None
+        return plan
+
+    def _postmortem_allowed(self, ctx: StrategyContext) -> bool:
+        """Feature 023 (FR-008): may the postmortem tier be selected now?"""
+        pm_cfg = self.config.agent.wrong_target_postmortem
+        if not pm_cfg.enabled:
+            return False
+        if self._postmortem_attempts_step >= pm_cfg.max_retries:
+            return False
+        return ctx.postmortem_capable
+
+    def set_postmortem_correction(self, plan: PostmortemCorrectionPlan) -> None:
+        """Store the one-shot corrected-click plan (Feature 023, FR-005)."""
+        self.postmortem_correction = plan
+
+    def take_postmortem_correction(self) -> PostmortemCorrectionPlan | None:
+        """One-shot consumption of the pending corrected-click plan."""
+        plan = self.postmortem_correction
+        self.postmortem_correction = None
         return plan
 
     def tier2_exhausted(self, ft: FailureType) -> bool:

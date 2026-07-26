@@ -17,6 +17,7 @@ from vnc_agent.config import (
     RecoveryPolicy,
     VNCTarget,
     VNCTargetsConfig,
+    WrongTargetPostmortemConfig,
 )
 from vnc_agent.domain.action import SemanticAction
 from vnc_agent.domain.grounding import GroundingCandidate, GroundingResult
@@ -164,9 +165,16 @@ def app_config() -> AppConfig:
         # stages. Legacy scenarios therefore run with the guard disabled
         # (spec FR-A03: disabled == byte-identical pre-022 behavior);
         # scenario 21 builds its own config with the guard enabled.
+        # Feature 023: the legacy scenarios (incl. scenario 21) script their
+        # frames and recovery expectations around the 022 WRONG_TARGET chain
+        # and carry no post-mortem model stub, so the post-mortem tier is
+        # pinned off here (spec FR-007: disabled == 022 chain byte-identical).
+        # Scenario 22 builds its own config with the tier enabled and a
+        # StubPostmortemClient injected.
         agent=AgentConfig(
             recovery=recovery,
             execution=ExecutionConfig(stale_frame_check_enabled=False),
+            wrong_target_postmortem=WrongTargetPostmortemConfig(enabled=False),
         ),
         models=ModelsConfig(),
         vnc_targets=VNCTargetsConfig(
@@ -206,6 +214,7 @@ async def build_runtime(
     planner: StubPlanner | None = None,
     grounder: StubGrounder | None = None,
     ocr_enabled: bool = False,
+    postmortem_client=None,
 ) -> tuple[AgentRuntime, FakeVNC]:
     drv = driver or FakeVNC()
     pl = planner or StubPlanner(
@@ -268,5 +277,6 @@ async def build_runtime(
         artifact_store=store,
         repo=repo,
         report_builder=ReportBuilder(store),
+        postmortem_client=postmortem_client,
     )
     return runtime, drv
