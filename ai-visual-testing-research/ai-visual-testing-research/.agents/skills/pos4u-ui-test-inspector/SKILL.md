@@ -1,6 +1,6 @@
 ---
 name: pos4u-ui-test-inspector
-description: Inspect, map, and automate controls in legacy C# 6/.NET Framework POS4U desktop applications that mix WPF, WinForms, WindowsFormsHost, Win32, and device UI. Use when Codex must correlate XAML or Designer.cs controls with a running UI tree, extract DPI-aware physical screen bounds, build stable multilingual locators, trace events into business or device calls, diagnose missing automation metadata, or prepare/execute safe POS desktop UI tests with WPFVisualTreeMcp, FlaUI/UI Automation, MSAA, AwdUI, or screenshot fallback.
+description: Inspect, map, and automate controls in legacy C# 6/.NET Framework POS4U desktop applications that mix WPF, WinForms, WindowsFormsHost, Win32, and device UI. Use when Codex must correlate XAML or Designer.cs controls with a running UI tree, extract DPI-aware physical screen bounds, build stable multilingual locators, trace events into business or device calls, diagnose missing automation metadata, prepare/execute safe POS desktop UI tests with WPFVisualTreeMcp, FlaUI/UI Automation, MSAA, AwdUI, or screenshot fallback, or supply POS4U-specific evidence to generate-ui-analysis-index for a validated ui-analysis-bundle-v1.
 ---
 
 # POS4U UI Test Inspector
@@ -9,11 +9,14 @@ Build a joined view of source structure, runtime accessibility/visual trees, and
 
 In a `Planner → Element Detector → Grounder → Executor` pipeline, act as the Element Detector and structural Grounder. Produce stable identities and current geometry for the Executor. Invoke visual grounding only when automation/visual trees cannot identify the target.
 
+Own POS4U-specific discovery and evidence. When the requested deliverable is a UI analysis index for vnc-agent, cooperate with `generate-ui-analysis-index`: use this skill to inspect the application, then use that skill as the authoritative bundle contract and producer workflow. Do not redefine or fork its contract here.
+
 ## Read supporting guidance
 
 - Read [references/runtime-adapters.md](references/runtime-adapters.md) before attaching to a process or choosing an inspection backend.
 - Read [references/source-mapping.md](references/source-mapping.md) before tracing handlers, business calls, templates, or hosted WinForms controls.
 - Read [references/output-contract.md](references/output-contract.md) before emitting or validating inspection JSON.
+- Read [references/ui-analysis-bundle-handoff.md](references/ui-analysis-bundle-handoff.md) before converting POS4U evidence into `ui-analysis-bundle-v1`.
 
 ## Enforce safety
 
@@ -145,7 +148,7 @@ control → event/command → handler/view model → logic/business service → 
 
 Label regex-derived calls as candidates. Claim a definitive `businessCall` only after reading the handler and following indirection far enough to establish the call path.
 
-### 8. Emit and validate artifacts
+### 8. Emit and validate inspection artifacts
 
 Emit the contract in [references/output-contract.md](references/output-contract.md). Include unmapped runtime nodes and source-only controls in separate arrays.
 
@@ -165,3 +168,20 @@ Report:
 - actions performed, if any, and observed outcomes.
 
 Never present a source-only estimate as `screenBoundsPhysical`.
+
+### 9. Hand off a standard UI analysis bundle
+
+Perform this step when the user asks for a UI analysis index/bundle, a vnc-agent-compatible export, or explicitly asks this skill to cooperate with `generate-ui-analysis-index`.
+
+1. Preserve `source-ui.json`, raw runtime snapshots, and `ui-inspection.json` as supporting evidence outside the bundle directory.
+2. Invoke `$generate-ui-analysis-index` and follow its `SKILL.md`, references, templates, confidence rules, and validation workflow as the authority.
+3. Map POS4U evidence according to [references/ui-analysis-bundle-handoff.md](references/ui-analysis-bundle-handoff.md).
+4. Deliver the flat `ui-analysis-bundle-v1` directory as the canonical consumer-facing artifact. Do not place inspection JSON, screenshots, or other private files inside it unless the bundle contract explicitly permits them.
+5. Run `vnc-agent ui-index validate <bundle-dir>` exactly as directed by `generate-ui-analysis-index`. Fix every error before delivery.
+
+Keep the two validation layers distinct:
+
+- `validate-inspection.ps1` validates POS4U inspection evidence.
+- `vnc-agent ui-index validate` validates the standard bundle.
+
+If `generate-ui-analysis-index` is unavailable, retain the validated inspection artifacts and report that the standard bundle handoff could not be completed. Do not invent a substitute wire format.

@@ -1,5 +1,7 @@
 # Inspection output contract
 
+This contract is the rich POS4U inspection/evidence format, not the vnc-agent exchange format. When the requested deliverable is `ui-analysis-bundle-v1`, keep this JSON outside the bundle and follow [ui-analysis-bundle-handoff.md](ui-analysis-bundle-handoff.md) plus `generate-ui-analysis-index`.
+
 ## Top-level shape
 
 Emit:
