@@ -45,6 +45,10 @@ _LEGACY_ITERATION_KEYS = {
     "memory_hit",
     # Feature 016 (FR-012): additive replay-attempt marker.
     "replay_audit",
+    # Feature 022 (FR-B04): additive wrong-click evidence + upgraded
+    # failure attribution.
+    "wrong_target_evidence",
+    "failure_attribution",
 }
 _LEGACY_STEP_KEYS = {
     "step_id", "status", "iterations", "model_names", "raw_model_response_refs",

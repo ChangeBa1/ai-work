@@ -1,11 +1,20 @@
-"""ActionEffect classification — local evidence independent of global threshold (FR-001~005)."""
+"""ActionEffect classification — local evidence independent of global threshold (FR-001~005).
+
+Feature 022 (wrong-click-detection) adds pure geometry helpers on top of the
+existing evidence: target-neighborhood expansion/intersection (shared by the
+pre-click stale-frame guard and the wrong-target assessment) and
+:func:`assess_wrong_target`. None of them changes the semantics of
+:func:`classify_action_effect`, and none of them calls VNC or a model.
+"""
 
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 from vnc_agent.domain.action_effect import ActionEffect, ActionEffectEvidence
 from vnc_agent.domain.observation import Region, StructuredScreen
+from vnc_agent.domain.recovery import WrongTargetDirection, WrongTargetEvidence
 from vnc_agent.perception.screen_diff import compute_diff
 
 _DEFAULT_ERROR_KEYWORDS = ["错误", "エラー", "Error", "失败", "失敗", "Failed"]
@@ -200,3 +209,176 @@ def classify_action_effect(
             f"(blobs={len(local_blobs)}, global_ratio={global_ratio:.5f})"
         ),
     )
+
+
+# ---------------------------------------------------------------------------
+# Feature 022 (wrong-click-detection): pure geometry helpers + assessment.
+# ---------------------------------------------------------------------------
+
+
+def expand_target_region(
+    region: Region,
+    *,
+    expand_ratio: float,
+    resolution: tuple[int, int],
+) -> Region:
+    """Per-side expansion of ``region`` by ``expand_ratio`` of its own
+    width/height, clamped to ``resolution`` (never inverted, never empty)."""
+    width, height = resolution
+    w = region.x2 - region.x1
+    h = region.y2 - region.y1
+    dx = int(round(w * expand_ratio))
+    dy = int(round(h * expand_ratio))
+    x1 = max(0, region.x1 - dx)
+    y1 = max(0, region.y1 - dy)
+    x2 = region.x2 + dx
+    y2 = region.y2 + dy
+    if width > 0:
+        x2 = min(width, x2)
+    if height > 0:
+        y2 = min(height, y2)
+    # Region requires x1<x2 / y1<y2; clamping can only shrink the outer edge,
+    # never below the original box, so this stays valid.
+    return Region(x1=x1, y1=y1, x2=max(x2, x1 + 1), y2=max(y2, y1 + 1))
+
+
+def _regions_intersect(a: Region, b: Region) -> bool:
+    return a.x1 < b.x2 and b.x1 < a.x2 and a.y1 < b.y2 and b.y1 < a.y2
+
+
+def region_iou(a: Region, b: Region) -> float:
+    """Intersection-over-union of two pixel regions (0.0 when disjoint)."""
+    ix1, iy1 = max(a.x1, b.x1), max(a.y1, b.y1)
+    ix2, iy2 = min(a.x2, b.x2), min(a.y2, b.y2)
+    if ix1 >= ix2 or iy1 >= iy2:
+        return 0.0
+    inter = (ix2 - ix1) * (iy2 - iy1)
+    area_a = (a.x2 - a.x1) * (a.y2 - a.y1)
+    area_b = (b.x2 - b.x1) * (b.y2 - b.y1)
+    union = area_a + area_b - inter
+    return inter / union if union > 0 else 0.0
+
+
+def blobs_intersecting_neighborhood(
+    blobs: list[Region],
+    target_region: Region,
+    *,
+    expand_ratio: float,
+    resolution: tuple[int, int],
+) -> list[Region]:
+    """Change blobs that touch the expanded target neighborhood — the shared
+    primitive behind the pre-click stale-frame guard (expand default 0.25)
+    and the wrong-target assessment (expand default 0.5)."""
+    neighborhood = expand_target_region(
+        target_region, expand_ratio=expand_ratio, resolution=resolution
+    )
+    return [b for b in blobs if _regions_intersect(b, neighborhood)]
+
+
+_DIRECTION_SECTORS: tuple[WrongTargetDirection, ...] = (
+    "right",
+    "up_right",
+    "up",
+    "up_left",
+    "left",
+    "down_left",
+    "down",
+    "down_right",
+)
+
+
+def direction_8(dx: int, dy: int) -> WrongTargetDirection:
+    """8-way compass direction of offset (dx, dy) in screen coordinates
+    (y grows downward; "up" therefore means dy < 0)."""
+    if dx == 0 and dy == 0:
+        return "center"
+    angle = math.degrees(math.atan2(-dy, dx)) % 360.0  # 0° = right, 90° = up
+    return _DIRECTION_SECTORS[int(((angle + 22.5) % 360.0) // 45.0)]
+
+
+def assess_wrong_target(
+    effect: ActionEffect,
+    *,
+    target_region: Region | None,
+    resolution: tuple[int, int],
+    click_point: tuple[int, int] | None = None,
+    neighborhood_expand_ratio: float = 0.5,
+    global_diff_ratio_max: float = 0.10,
+) -> WrongTargetEvidence:
+    """Feature 022 (FR-B02): pure wrong-click assessment over an already
+    classified :class:`ActionEffect` — zero VNC/model calls, no mutation.
+
+    ``suspected`` is True iff ALL of:
+
+    1. ``effect.status == "expected_effect"`` (something did change);
+    2. a ``target_region`` exists and at least one change blob was observed;
+    3. NO change blob intersects the target neighborhood
+       (``target_region`` expanded per-side by ``neighborhood_expand_ratio``);
+    4. ``global_diff_ratio < global_diff_ratio_max`` — a full-screen-scale
+       change (dialog popped, page navigated) is exempt because the response
+       legitimately covers regions far from the click.
+
+    Nearest-blob distance/direction (target center → blob center) is always
+    computed when blobs + target exist, suspected or not — feature 023
+    consumes it as relocation guidance.
+    """
+    evidence = effect.evidence
+    blobs = list(evidence.local_blobs)
+    out = WrongTargetEvidence(
+        suspected=False,
+        target_region=target_region.as_tuple() if target_region is not None else None,
+        click_point=click_point,
+        neighborhood_expand_ratio=neighborhood_expand_ratio,
+        global_diff_ratio_max=global_diff_ratio_max,
+        global_diff_ratio=evidence.global_diff_ratio,
+        blob_count=len(blobs),
+    )
+    if target_region is None or not blobs:
+        out.reason = "no target_region or no change blobs — not assessable"
+        return out
+
+    intersecting = blobs_intersecting_neighborhood(
+        blobs,
+        target_region,
+        expand_ratio=neighborhood_expand_ratio,
+        resolution=resolution,
+    )
+    out.blobs_intersecting_neighborhood = len(intersecting)
+    out.max_blob_target_iou = max(region_iou(b, target_region) for b in blobs)
+
+    tcx, tcy = target_region.center()
+    nearest = min(
+        blobs,
+        key=lambda b: math.hypot(b.center()[0] - tcx, b.center()[1] - tcy),
+    )
+    ncx, ncy = nearest.center()
+    dx, dy = ncx - tcx, ncy - tcy
+    out.nearest_blob_bbox = nearest.as_tuple()
+    out.nearest_blob_distance_px = math.hypot(dx, dy)
+    out.nearest_blob_offset = (dx, dy)
+    out.nearest_blob_direction = direction_8(dx, dy)
+
+    if effect.status != "expected_effect":
+        out.reason = f"effect status {effect.status!r} — only expected_effect is assessed"
+        return out
+    if intersecting:
+        out.reason = (
+            f"{len(intersecting)}/{len(blobs)} blob(s) intersect the "
+            f"x{neighborhood_expand_ratio} neighborhood — change is local to target"
+        )
+        return out
+    if evidence.global_diff_ratio >= global_diff_ratio_max:
+        out.reason = (
+            f"global_diff_ratio {evidence.global_diff_ratio:.5f} >= "
+            f"{global_diff_ratio_max} — screen-scale change (dialog/navigation) exempt"
+        )
+        return out
+
+    out.suspected = True
+    out.reason = (
+        f"expected_effect but all {len(blobs)} change blob(s) miss the "
+        f"x{neighborhood_expand_ratio} target neighborhood; nearest blob "
+        f"{out.nearest_blob_distance_px:.1f}px {out.nearest_blob_direction} of target "
+        f"(global_diff_ratio {evidence.global_diff_ratio:.5f} < {global_diff_ratio_max})"
+    )
+    return out

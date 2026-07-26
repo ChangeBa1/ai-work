@@ -12,6 +12,7 @@ import pytest
 from vnc_agent.config import (
     AgentConfig,
     AppConfig,
+    ExecutionConfig,
     ModelsConfig,
     RecoveryPolicy,
     VNCTarget,
@@ -133,6 +134,7 @@ def app_config() -> AppConfig:
                 "focus_error",
                 "input_method_error",
                 "timeout",
+                "wrong_target",
             },
             requires_strong_model=False,
             requires_human_confirmation=False,
@@ -150,10 +152,22 @@ def app_config() -> AppConfig:
             "unexpected_dialog",
             "verification_failed",
             "timeout",
+            # Feature 022 (wrong-click-detection)
+            "stale_frame",
+            "wrong_target",
         ]
     }
     return AppConfig(
-        agent=AgentConfig(recovery=recovery),
+        # Feature 022: the shared FakeVNC advances its scripted frame list on
+        # EVERY capture, so the production-default pre-click guard capture
+        # would consume frames the pre-022 scenarios scripted for later
+        # stages. Legacy scenarios therefore run with the guard disabled
+        # (spec FR-A03: disabled == byte-identical pre-022 behavior);
+        # scenario 21 builds its own config with the guard enabled.
+        agent=AgentConfig(
+            recovery=recovery,
+            execution=ExecutionConfig(stale_frame_check_enabled=False),
+        ),
         models=ModelsConfig(),
         vnc_targets=VNCTargetsConfig(
             targets=[VNCTarget(id="win10-test-01", host="127.0.0.1")]

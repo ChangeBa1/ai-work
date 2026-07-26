@@ -172,6 +172,14 @@ ROUTING: dict[FailureType, list[RecoveryStrategy]] = {
     FailureType.UNEXPECTED_DIALOG: ["press_escape", "win_d_reset"],
     FailureType.VERIFICATION_FAILED: ["recapture", "extra_wait"],
     FailureType.TIMEOUT: ["re_ground", "release_modifiers"],
+    # Feature 022: the action was never sent — a fresh observation (next
+    # ActionIteration re-observes + re-grounds by construction) is the whole
+    # remedy; no path change needed.
+    FailureType.STALE_FRAME: ["recapture"],
+    # Feature 022: click landed beside the target — same re-observe/re-locate
+    # escalation chain as target_not_found (recapture → zoom_reground →
+    # re_ground), reusing the feature-014 zoom plumbing unchanged.
+    FailureType.WRONG_TARGET: ["recapture", "zoom_reground", "re_ground"],
 }
 
 

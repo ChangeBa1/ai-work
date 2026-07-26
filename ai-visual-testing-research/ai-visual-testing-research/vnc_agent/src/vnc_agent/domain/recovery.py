@@ -21,6 +21,17 @@ class FailureType(str, Enum):
     UNEXPECTED_DIALOG = "unexpected_dialog"
     VERIFICATION_FAILED = "verification_failed"
     TIMEOUT = "timeout"
+    # Feature 022 (wrong-click-detection): the observation frame that produced
+    # this action's coordinates went stale before execution (pre-click guard
+    # detected a change inside the target neighborhood) — the action was NOT
+    # sent; recovery re-observes and re-locates.
+    STALE_FRAME = "stale_frame"
+    # Feature 022 (overall_design.md §9.10): the click landed but every
+    # observed change happened away from the target neighborhood AND the
+    # independent verification failed — the click most likely hit a
+    # neighboring control. Recovery re-observes + re-grounds (same chain as
+    # target_not_found).
+    WRONG_TARGET = "wrong_target"
 
 
 GroundingLowConfidenceReason = Literal["overall_low_confidence", "top1_top2_close"]
@@ -51,6 +62,53 @@ class ZoomRegroundPlan(BaseModel):
     roi: tuple[int, int, int, int]
     scale_factor: float = Field(gt=1.0)
     roi_source: ZoomRoiSource
+
+
+# Feature 022 (FR-B02): 8-way screen direction from the target's center to
+# the nearest change blob's center ("up" = toward smaller y). "center" is the
+# degenerate zero-offset case.
+WrongTargetDirection = Literal[
+    "up",
+    "up_right",
+    "right",
+    "down_right",
+    "down",
+    "down_left",
+    "left",
+    "up_left",
+    "center",
+]
+
+
+class WrongTargetEvidence(BaseModel):
+    """Feature 022 (FR-B02/FR-B04): deterministic wrong-click evidence
+    computed from the ActionEffect's local blobs vs. the executed action's
+    ``target_region`` — zero model calls. Attached additively to
+    ``ActionIteration.wrong_target_evidence`` and consumed by feature 023's
+    post-hoc diagnosis.
+
+    ``suspected`` alone never fails an iteration; the runtime upgrades the
+    failure attribution to ``WRONG_TARGET`` only when the same iteration's
+    independent verification also failed (FR-B03)."""
+
+    suspected: bool
+    target_region: tuple[int, int, int, int] | None = None
+    click_point: tuple[int, int] | None = None
+    # Thresholds actually applied (config echo, for auditability).
+    neighborhood_expand_ratio: float = Field(default=0.5, ge=0.0)
+    global_diff_ratio_max: float = Field(default=0.10, gt=0.0, le=1.0)
+    # Observed evidence.
+    global_diff_ratio: float = 0.0
+    blob_count: int = 0
+    blobs_intersecting_neighborhood: int = 0
+    max_blob_target_iou: float = 0.0
+    nearest_blob_bbox: tuple[int, int, int, int] | None = None
+    nearest_blob_distance_px: float | None = None
+    # (dx, dy) from target center to nearest blob center, screen coordinates
+    # (y grows downward).
+    nearest_blob_offset: tuple[int, int] | None = None
+    nearest_blob_direction: WrongTargetDirection | None = None
+    reason: str = ""
 
 
 class RecoveryAttempt(BaseModel):

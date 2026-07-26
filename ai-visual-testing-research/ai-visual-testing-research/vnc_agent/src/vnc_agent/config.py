@@ -38,6 +38,22 @@ class ZoomRegroundConfig(BaseModel):
     min_roi_size_px: int = Field(default=64, ge=16)
 
 
+class ExecutionConfig(BaseModel):
+    """Feature 022 (wrong-click-detection, FR-A03): pre-execution stale-frame
+    guard for mouse actions.
+
+    ``stale_frame_check_enabled: false`` skips the guard entirely — no
+    pre_click_guard capture, no STALE_FRAME classification; runtime behavior
+    is byte-identical to the pre-022 codebase.
+    ``stale_frame_region_expand_ratio`` is the per-side expansion of the
+    action's ``target_region`` (relative to its own width/height) defining
+    the neighborhood whose change vetoes execution.
+    """
+
+    stale_frame_check_enabled: bool = True
+    stale_frame_region_expand_ratio: float = Field(default=0.25, ge=0.0, le=4.0)
+
+
 class StepConfig(BaseModel):
     default_timeout_seconds: int = 60
     default_max_retries: int = 3
@@ -89,6 +105,13 @@ class PerceptionConfig(BaseModel):
     # Feature 004: bounded analysis-cache window, most-recent-frame references
     # only (perception-cache-contract.md "Capacity and lifecycle")
     cache_max_frames: int = Field(default=5, ge=3, le=5)
+    # Feature 022 (FR-B02): wrong-target assessment thresholds. The
+    # neighborhood is target_region expanded per-side by this ratio of its
+    # own width/height; a change blob inside it counts as "at the target".
+    wrong_target_neighborhood_expand_ratio: float = Field(default=0.5, ge=0.0, le=4.0)
+    # Screen-scale exemption: at/above this global diff ratio the response is
+    # treated as a legitimate dialog/page transition, never wrong-target.
+    wrong_target_global_diff_ratio_max: float = Field(default=0.10, gt=0.0, le=1.0)
 
 
 class ArtifactsConfig(BaseModel):
@@ -300,6 +323,8 @@ class UiIndexConfig(BaseModel):
 
 class AgentConfig(BaseModel):
     step: StepConfig = Field(default_factory=StepConfig)
+    # Feature 022 (FR-A03): pre-execution stale-frame guard knobs.
+    execution: ExecutionConfig = Field(default_factory=ExecutionConfig)
     wait: WaitConfig = Field(default_factory=WaitConfig)
     perception: PerceptionConfig = Field(default_factory=PerceptionConfig)
     artifacts: ArtifactsConfig = Field(default_factory=ArtifactsConfig)
