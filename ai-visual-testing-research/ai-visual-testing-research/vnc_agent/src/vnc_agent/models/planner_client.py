@@ -2,16 +2,24 @@
 
 from __future__ import annotations
 
-import base64
 import json
-import mimetypes
-from pathlib import Path
 from typing import Any
 
 import httpx
 
 from vnc_agent.config import PlannerModelConfig
 from vnc_agent.domain.action import SemanticAction
+
+# Feature 018 (model-image-downscale): the passthrough encoder moved verbatim
+# to models/image_payload.py and is re-exported here under its historical name
+# so mimo_grounder.py's `from vnc_agent.models.planner_client import
+# _image_url_content_part` keeps resolving to the byte-identical original-PNG
+# path (spec FR-004 red line: the Grounder outputs coordinates and MUST see
+# the unmodified image).
+from vnc_agent.models.image_payload import (  # noqa: F401 (re-export)
+    _image_url_content_part,
+    planner_image_url_content_part,
+)
 from vnc_agent.models.provider import (
     PlannerRequest,
     PlannerResponse,
@@ -74,27 +82,6 @@ _PLANNER_SYSTEM_PROMPT = (
 )
 
 
-def _image_url_content_part(image_path: str) -> dict[str, Any]:
-    """
-    Read a local image file and return an OpenAI-compatible multimodal
-    `image_url` content part with the bytes inlined as a base64 data URI.
-
-    Wire-protocol fix (contracts/model-provider-contract.md, 2026-07-22):
-    the model server cannot read our local filesystem, so `image_ref`
-    MUST be resolved to actual bytes before being sent, never passed as a
-    bare path string.
-    """
-    path = Path(image_path)
-    data = path.read_bytes()
-    mime, _ = mimetypes.guess_type(path.name)
-    mime = mime or "image/png"
-    b64 = base64.b64encode(data).decode("ascii")
-    return {
-        "type": "image_url",
-        "image_url": {"url": f"data:{mime};base64,{b64}"},
-    }
-
-
 class HttpPlannerClient:
     def __init__(
         self,
@@ -136,6 +123,11 @@ class HttpPlannerClient:
         return headers
 
     async def plan(self, request: PlannerRequest) -> PlannerResponse:
+        # Feature 018: plan()'s user content is a JSON text dump of
+        # PlannerRequest, which has no image field — no image part is sent
+        # here. If an image part is ever added, it MUST go through
+        # planner_image_url_content_part() (the planner never outputs
+        # coordinates, so it never needs full resolution).
         payload = {
             "model": self.cfg.model,
             "messages": [
@@ -179,7 +171,17 @@ class HttpPlannerClient:
             )
         user_content: list[dict[str, Any]] = [
             {"type": "text", "text": "\n".join(text_parts)},
-            _image_url_content_part(request.image_ref),
+            # Feature 018: the planner never outputs coordinates, so the
+            # screenshot is proportionally downscaled + JPEG-encoded before
+            # upload (config-driven; disabled/undecodable → byte-identical
+            # pre-018 passthrough). Every describe_screen() caller (008
+            # cached visual answers, 011 reviews) benefits automatically.
+            planner_image_url_content_part(
+                request.image_ref,
+                enabled=self.cfg.planner_image_downscale_enabled,
+                max_width=self.cfg.planner_image_max_width,
+                jpeg_quality=self.cfg.planner_image_jpeg_quality,
+            ),
         ]
         payload = {
             "model": self.cfg.model,
