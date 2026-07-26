@@ -1,0 +1,162 @@
+# Default agent runtime configuration (data-model.md §11)
+
+step:
+  default_timeout_seconds: 60
+  default_max_retries: 3
+
+wait:
+  min_delay_ms: 300
+  max_delay_ms: 20000
+  capture_interval_ms: 500
+  stable_frame_count: 3
+  pixel_diff_threshold: 0.02
+
+perception:
+  ocr_enabled: true
+  template_enabled: true
+  vision_fallback_enabled: true
+  # 002-action-effect-verification
+  error_keywords:
+    - "错误"
+    - "エラー"
+    - "Error"
+    - "失败"
+    - "失敗"
+    - "Failed"
+  local_blob_min_ratio: 0.0005
+  # Feature 004: bounded analysis-cache window (3..5 most-recent logical frames)
+  cache_max_frames: 5
+
+artifacts:
+  screenshot_policy: "all"  # step | all | on_failure
+  root_dir: "artifacts"
+  db_path: "data/vnc_agent.db"
+
+security:
+  mask_regions: []  # list of [x1, y1, x2, y2]
+  sensitive_field_names:
+    - password
+    - api_key
+    - secret
+    - token
+
+# Grounding confidence thresholds (research.md §11 — defaults for implementation)
+grounding:
+  overall_confidence_threshold: 0.55
+  top1_top2_min_gap: 0.08
+
+# Action-level timeouts
+action:
+  default_timeout_seconds: 10
+
+planning:
+  ocr_sanity_check_ratio: 0.10
+  # Feature 003 (safety issue A): spatial-conflict threshold, generic geometry
+  target_region_conflict_iou_threshold: 0.10
+  # Feature 003 (safety issue B): generic UI-interaction risk categories, not
+  # business vocabulary — deployments MAY override per-category.
+  micro_action_risk_thresholds:
+    dismiss_overlay: medium
+    scroll_reveal: medium
+    refocus: medium
+    wait: high
+    re_observe: high
+
+reporting:
+  # Feature 003: core no longer hardcodes any business category. Testcases/
+  # scenario profiles declare their own tags (domain/testcase.py::
+  # TestCase.action_tags); core default is an empty list.
+  action_tags: []
+  # Feature 004: zh-CN is the default and only required resource bundle;
+  # unregistered locales fail at config load (report-contract.md).
+  locale: zh-CN
+
+# Recovery Tier-2 budgets per FailureType (data-model.md §8/§11)
+recovery:
+  vnc_connect_failed:
+    max_retries: 3
+    cooldown_ms: 1000
+    consumes_global_retry_budget: true
+    allows_action_path_change: false
+    requires_strong_model: false
+    requires_human_confirmation: false
+  vnc_disconnected:
+    max_retries: 1
+    cooldown_ms: 500
+    consumes_global_retry_budget: true
+    allows_action_path_change: false
+    requires_strong_model: false
+    requires_human_confirmation: false
+  black_screen:
+    max_retries: 2
+    cooldown_ms: 500
+    consumes_global_retry_budget: true
+    allows_action_path_change: false
+    requires_strong_model: false
+    requires_human_confirmation: false
+  page_not_stable:
+    max_retries: 2
+    cooldown_ms: 1000
+    consumes_global_retry_budget: true
+    allows_action_path_change: false
+    requires_strong_model: false
+    requires_human_confirmation: false
+  target_not_found:
+    max_retries: 2
+    cooldown_ms: 300
+    consumes_global_retry_budget: true
+    allows_action_path_change: true
+    requires_strong_model: false
+    requires_human_confirmation: false
+  grounding_low_confidence:
+    max_retries: 2
+    cooldown_ms: 300
+    consumes_global_retry_budget: true
+    allows_action_path_change: true
+    requires_strong_model: false
+    requires_human_confirmation: false
+  action_no_effect:
+    max_retries: 2
+    cooldown_ms: 300
+    consumes_global_retry_budget: true
+    allows_action_path_change: true
+    requires_strong_model: false
+    requires_human_confirmation: false
+  focus_error:
+    max_retries: 2
+    cooldown_ms: 200
+    consumes_global_retry_budget: true
+    allows_action_path_change: true
+    requires_strong_model: false
+    requires_human_confirmation: false
+  input_method_error:
+    max_retries: 2
+    cooldown_ms: 200
+    consumes_global_retry_budget: true
+    allows_action_path_change: true
+    requires_strong_model: false
+    requires_human_confirmation: false
+  unexpected_dialog:
+    max_retries: 2
+    cooldown_ms: 300
+    consumes_global_retry_budget: true
+    allows_action_path_change: false
+    requires_strong_model: false
+    requires_human_confirmation: false
+  verification_failed:
+    max_retries: 2
+    cooldown_ms: 500
+    consumes_global_retry_budget: true
+    allows_action_path_change: false
+    requires_strong_model: false
+    requires_human_confirmation: false
+  timeout:
+    max_retries: 1
+    cooldown_ms: 200
+    consumes_global_retry_budget: true
+    allows_action_path_change: true
+    requires_strong_model: false
+    requires_human_confirmation: false
+
+ui_index:
+  bundle_dir: "D:\\POJ\\NodeMaster\\ui-analysis-output\\pos4u-full"

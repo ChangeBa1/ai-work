@@ -1,0 +1,43 @@
+# Planner / Grounder provider configuration (data-model.md §11)
+# API keys MUST come from environment variables named by api_key_env (FR-047).
+
+planner:
+  # Planner is on OpenCode Go too (2026-07-22), reusing MiMo-V2.5 — same model as
+  # the Grounder, already confirmed vision-capable, so describe_screen() gets a
+  # real answer instead of the graceful low-confidence/uncertain degradation that
+  # non-vision OpenCode Go models (DeepSeek/GLM/Kimi/Qwen) would fall back to
+  # (contracts/model-provider-contract.md "PlannerProvider MUST 实现 describe_screen").
+  # FR-046 still holds: this is a config-only swap, HttpPlannerClient (models/
+  # planner_client.py) is already a generic OpenAI-compatible /chat/completions
+  # client, no code change was needed to point it at OpenCode Go.
+  provider: "opencode-go"
+  base_url: "https://opencode.ai/zen/go/v1"
+  # Re-confirmed 2026-07-22 by live testing against the real endpoint: the bare
+  # model id is correct. "opencode-go/mimo-v2.5" was tried first (per initial
+  # guidance) but the real API rejects it with 401
+  # {"type":"ModelError","message":"Model opencode-go/mimo-v2.5 is not
+  # supported"}; GET {base_url}/models lists bare ids only, and POST
+  # {base_url}/chat/completions with "model": "mimo-v2.5" returns 200. The
+  # "opencode-go/<id>" form appears to be OpenCode's own TUI/internal
+  # provider-config syntax, not what the raw REST API expects in the body.
+  model: "mimo-v2.5"
+  timeout_seconds: 60
+  describe_screen_timeout_seconds: 60
+  # Same OpenCode Go subscription/API key as grounder.api_key_env — set both env
+  # vars to the same value unless you deliberately want separate keys/quotas.
+  api_key_env: "VNC_AGENT_PLANNER_API_KEY"
+
+grounder:
+  provider: "opencode-go"
+  # 真实 OpenCode Go 云端端点（订正 2026-07-22，见
+  # contracts/model-provider-contract.md "GrounderProvider 默认实现" 章节）。
+  # 旧值 http://127.0.0.1:4096 是错误的本地占位地址，不可用。
+  base_url: "https://opencode.ai/zen/go/v1"
+  # 2026-07-22 已用真实端点实测复核：裸模型名才对。"opencode-go/mimo-v2.5" 会被
+  # 真实 API 拒绝（401，错误信息 "Model opencode-go/mimo-v2.5 is not
+  # supported"）；GET {base_url}/models 返回的全部是裸 ID，POST
+  # {base_url}/chat/completions 用 "model": "mimo-v2.5" 实测返回 200。
+  model: "mimo-v2.5"
+  timeout_seconds: 30
+  top_k: 3
+  api_key_env: "VNC_AGENT_GROUNDER_API_KEY"
