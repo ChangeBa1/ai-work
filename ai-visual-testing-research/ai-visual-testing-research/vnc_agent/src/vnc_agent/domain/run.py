@@ -43,6 +43,14 @@ class ActionIteration(BaseModel):
     # no bundle is configured is never the case — build_hints() always
     # returns a record (outcome="not_configured" in that case).
     ui_index_audit: IndexUsageAuditRecord | None = None
+    # Feature 009 (FR-007/FR-009): planner short-circuit marker + this
+    # iteration's observation content identity. `planner_skipped_reason` is
+    # non-null iff the planner call was skipped for this iteration
+    # ("duplicate_frame_blocked_action"); in that case repeat_guard_decision
+    # is a carried copy of the previous iteration's blocking decision, not a
+    # fresh guard evaluation (contract §4).
+    planner_skipped_reason: str | None = None
+    before_content_hash: str | None = None
 
 
 class DeclaredFact(BaseModel):
