@@ -120,6 +120,128 @@ class RunRepository:
             await session.commit()
 
 
+class EvolutionExportRepository:
+    """Feature 021 (evolution-hardcase-export, FR-006): query-only access for
+    the offline hard-case exporter. SELECTs only — this class MUST never
+    add/update/delete rows (zero-runtime-impact red line; the run store's
+    write path stays exclusively in :class:`RunRepository`)."""
+
+    def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
+        self.session_factory = session_factory
+
+    async def list_runs(self) -> list[dict]:
+        """All runs, oldest-first by run_id for determinism. Each entry:
+        run_id / test_case_id / started_at / payload (full TestRun dump —
+        including ``frames[]`` used for frame-id → screenshot-path mapping).
+        `--since` filtering happens in the exporter (UTC normalization of
+        naive SQLite datetimes is policy, not storage)."""
+        async with self.session_factory() as session:
+            rows = (
+                (await session.execute(select(TestRunRow).order_by(TestRunRow.run_id)))
+                .scalars()
+                .all()
+            )
+            return [
+                {
+                    "run_id": r.run_id,
+                    "test_case_id": r.test_case_id,
+                    "status": r.status,
+                    "started_at": r.started_at,
+                    "payload": r.payload or {},
+                }
+                for r in rows
+            ]
+
+    async def list_step_rows(self, run_id: str) -> list[dict]:
+        async with self.session_factory() as session:
+            rows = (
+                (
+                    await session.execute(
+                        select(StepRecordRow)
+                        .where(StepRecordRow.run_id == run_id)
+                        .order_by(StepRecordRow.id)
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            return [
+                {
+                    "step_id": r.step_id,
+                    "final_status": r.final_status,
+                    "failure_reason": r.failure_reason,
+                    "payload": r.payload or {},
+                }
+                for r in rows
+            ]
+
+    async def list_iteration_rows(self, run_id: str) -> list[dict]:
+        async with self.session_factory() as session:
+            rows = (
+                (
+                    await session.execute(
+                        select(ActionIterationRow)
+                        .where(ActionIterationRow.run_id == run_id)
+                        .order_by(ActionIterationRow.step_id, ActionIterationRow.iteration_index)
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            return [
+                {
+                    "step_id": r.step_id,
+                    "iteration_index": r.iteration_index,
+                    "payload": r.payload or {},
+                }
+                for r in rows
+            ]
+
+    async def list_recovery_rows(self, run_id: str) -> list[dict]:
+        async with self.session_factory() as session:
+            rows = (
+                (
+                    await session.execute(
+                        select(RecoveryAttemptRow)
+                        .where(RecoveryAttemptRow.run_id == run_id)
+                        .order_by(RecoveryAttemptRow.id)
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            return [
+                {
+                    "step_id": r.step_id,
+                    "iteration_index": r.iteration_index,
+                    "payload": r.payload or {},
+                }
+                for r in rows
+            ]
+
+    async def list_experience_rows(self, run_id: str) -> list[dict]:
+        async with self.session_factory() as session:
+            rows = (
+                (
+                    await session.execute(
+                        select(VisualExperienceRow)
+                        .where(VisualExperienceRow.run_id == run_id)
+                        .order_by(VisualExperienceRow.id)
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            return [
+                {
+                    "step_id": r.step_id,
+                    "outcome": r.outcome,
+                    "payload": r.payload or {},
+                }
+                for r in rows
+            ]
+
+
 class MemoryRepository:
     """Feature 015 (FR-003): page/element memory persistence — same
     payload-column repository pattern as :class:`RunRepository`."""

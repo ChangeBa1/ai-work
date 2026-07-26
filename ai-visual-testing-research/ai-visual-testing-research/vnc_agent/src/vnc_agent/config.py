@@ -264,6 +264,29 @@ class ReplayConfig(BaseModel):
     storage_dir: str | None = None
 
 
+class EvolutionConfig(BaseModel):
+    """Feature 021 (evolution-hardcase-export, FR-008): offline hard-case
+    mining thresholds (overall_design.md §12.3).
+
+    Consumed ONLY by the `vnc-agent evolution export` CLI path
+    (`evolution/hard_case_miner.py` / `evolution/dataset_exporter.py`) —
+    never read on the runtime hot path. Additive: an absent `evolution:`
+    yaml section keeps these defaults and existing configs load unchanged.
+    """
+
+    # A step is a hard case when any iteration's top-1 grounding confidence
+    # is strictly below this (label: low_grounding_confidence).
+    hard_case_grounding_confidence_below: float = Field(default=0.7, ge=0.0, le=1.0)
+    # High-confidence prediction that still failed verification (label:
+    # high_confidence_failure) — inclusive threshold.
+    hard_case_high_confidence_at_least: float = Field(default=0.9, ge=0.0, le=1.0)
+    # Persisted FailureType values that mark a step as a hard case (label:
+    # failure_type_hit). Values follow domain/recovery.py::FailureType.
+    hard_case_failure_types: list[str] = Field(
+        default_factory=lambda: ["unexpected_dialog", "target_not_found"]
+    )
+
+
 class UiIndexConfig(BaseModel):
     """Optional external UI-analysis bundle consumption (feature 007)."""
 
@@ -309,6 +332,8 @@ class AgentConfig(BaseModel):
     memory: MemoryConfig = Field(default_factory=MemoryConfig)
     # Feature 016 (record-replay, FR-011)
     replay: ReplayConfig = Field(default_factory=ReplayConfig)
+    # Feature 021 (evolution-hardcase-export, FR-008) — offline CLI only
+    evolution: EvolutionConfig = Field(default_factory=EvolutionConfig)
 
     @model_validator(mode="before")
     @classmethod
