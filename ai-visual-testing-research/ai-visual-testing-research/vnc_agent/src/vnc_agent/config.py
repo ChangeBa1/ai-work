@@ -111,6 +111,14 @@ class ActionConfig(BaseModel):
 
 class PlanningConfig(BaseModel):
     ocr_sanity_check_ratio: float = Field(gt=0.0, le=1.0)
+    # Feature 012 (ocr-partial-hit-grounder-fallback): minimum OCR confidence a
+    # unique OCR hit needs before the Action Policy may click it directly
+    # without grounding (suspicion rule R-B). Below this, resolution falls
+    # through to MiMo Grounding with the hit forwarded as an ocr_candidates
+    # hint. Default 0.85 — deliberately stricter than the grounding-consensus
+    # threshold (grounding.overall_confidence_threshold, 0.55) because a direct
+    # click trusts a single piece of OCR evidence.
+    ocr_direct_click_min_confidence: float = Field(default=0.85, ge=0.0, le=1.0)
     # Feature 003 (safety issue A): spatial-conflict IoU threshold — generic
     # geometry, not business-specific.
     target_region_conflict_iou_threshold: float = Field(default=0.10, gt=0.0, le=1.0)
