@@ -79,6 +79,7 @@ CounterKind = Literal[
     "physical_write_avoided",
     "frame_dedup_decision",
     "capture_attempt_failed",
+    "element_memory_hit",
 ]
 
 _REQUIRED_PAYLOAD_KEYS: dict[str, tuple[str, ...]] = {
@@ -97,6 +98,8 @@ _REQUIRED_PAYLOAD_KEYS: dict[str, tuple[str, ...]] = {
         "error_type",
         "measurement_id",
     ),
+    # Feature 015 (FR-010): one event per element-memory direct click.
+    "element_memory_hit": ("element_memory_id", "page_similarity", "template_score"),
 }
 
 
@@ -192,6 +195,10 @@ class PerformanceSummary(BaseModel):
     stage_totals_ms: dict[str, float | None]
     completeness: Completeness
     consistency_errors: list[str] = Field(default_factory=list)
+    # Feature 015 (FR-010, additive): memory-hit counters keyed by source —
+    # mirrors the cache_hits dict convention ("element_memory" always
+    # present, 0 when the run had no memory hits).
+    memory_hits: dict[str, int] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def _dedup_ratio_null_iff_zero_total(self) -> PerformanceSummary:
@@ -237,6 +244,7 @@ def derive_performance_summary(test_run: Any) -> PerformanceSummary:
     analysis_invocations: dict[str, int] = {}
     model_calls: dict[str, int] = {}
     skipped_model_call_count = 0
+    memory_hits: dict[str, int] = {}
 
     for event in test_run.counter_events:
         if event.kind == "physical_image_written":
@@ -269,10 +277,13 @@ def derive_performance_summary(test_run: Any) -> PerformanceSummary:
             model_calls[role] = model_calls.get(role, 0) + 1
         elif event.kind == "model_call_skipped":
             skipped_model_call_count += 1
+        elif event.kind == "element_memory_hit":
+            memory_hits["element_memory"] = memory_hits.get("element_memory", 0) + 1
 
     physical_image_count = sum(physical_by_purpose.values())
     for required in ("ocr", "template", "vision", "vision_answer"):
         cache_hits.setdefault(required, 0)
+    memory_hits.setdefault("element_memory", 0)
 
     stage_totals: dict[str, float | None] = {}
     for m in test_run.stage_measurements:
@@ -302,6 +313,7 @@ def derive_performance_summary(test_run: Any) -> PerformanceSummary:
         stage_totals_ms=stage_totals,
         completeness=completeness,  # type: ignore[arg-type]
         consistency_errors=consistency_errors,
+        memory_hits=memory_hits,
     )
     return summary
 

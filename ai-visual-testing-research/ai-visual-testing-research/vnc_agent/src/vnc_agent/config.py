@@ -182,6 +182,45 @@ class ReportingConfig(BaseModel):
         return value
 
 
+class MemoryConfig(BaseModel):
+    """Feature 015 (page-element-memory, FR-009): page/element memory knobs.
+
+    ``enabled: false`` short-circuits every memory read/write — runtime
+    behavior is byte-identical to the pre-015 codebase. Threshold semantics
+    follow overall_design.md §13 (high => historical experience usable
+    directly; medium => hint only, must re-verify via the grounder; low =>
+    planner-reference tier, unused by the hot path in this MVP).
+    """
+
+    enabled: bool = True
+    page_match_high: float = Field(default=0.88, gt=0.0, le=1.0)
+    page_match_medium: float = Field(default=0.72, gt=0.0, le=1.0)
+    page_match_low: float = Field(default=0.55, gt=0.0, le=1.0)
+    # Minimum TM_CCOEFF_NORMED score for a neighborhood template match to
+    # produce a direct click (spec FR-006).
+    template_match_threshold: float = Field(default=0.85, gt=0.0, le=1.0)
+    # Per-side search-neighborhood expansion around the remembered bbox,
+    # relative to the bbox's own width/height (spec FR-006).
+    bbox_expand_ratio: float = Field(default=0.5, ge=0.0, le=4.0)
+    # Deterministic eviction cap (spec Clarification 8).
+    max_elements_per_page: int = Field(default=64, ge=1)
+    # Template image is refreshed only after this many *consecutive*
+    # verified successes (spec Clarification 4).
+    template_refresh_min_consecutive_successes: int = Field(default=3, ge=1)
+    # None => "<artifacts.root_dir>/memory/templates" derived at wiring time.
+    storage_dir: str | None = None
+
+    @model_validator(mode="after")
+    def _thresholds_ordered(self) -> MemoryConfig:
+        if not (self.page_match_high > self.page_match_medium > self.page_match_low):
+            raise ValueError(
+                "memory thresholds must satisfy page_match_high > page_match_medium "
+                f"> page_match_low, got {self.page_match_high} / "
+                f"{self.page_match_medium} / {self.page_match_low}"
+            )
+        return self
+
+
 class UiIndexConfig(BaseModel):
     """Optional external UI-analysis bundle consumption (feature 007)."""
 
@@ -223,6 +262,8 @@ class AgentConfig(BaseModel):
     # RecoveryPolicy dict stays homogeneous.
     zoom_reground: ZoomRegroundConfig = Field(default_factory=ZoomRegroundConfig)
     ui_index: UiIndexConfig = Field(default_factory=UiIndexConfig)
+    # Feature 015 (page-element-memory, FR-009)
+    memory: MemoryConfig = Field(default_factory=MemoryConfig)
 
     @model_validator(mode="before")
     @classmethod

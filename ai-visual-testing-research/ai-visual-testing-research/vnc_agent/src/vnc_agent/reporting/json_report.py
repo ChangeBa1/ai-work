@@ -147,6 +147,14 @@ def build_report_dict(
                     # "duplicate_frame_blocked_action" on skipped rounds,
                     # explicit null on every normal round (contract §3).
                     "planner_skipped_reason": it.planner_skipped_reason,
+                    # Feature 015 (FR-010): non-null iff this iteration's
+                    # click came directly from element memory (grounder
+                    # skipped); explicit null on every normal round.
+                    "memory_hit": (
+                        it.memory_hit.model_dump(mode="json")
+                        if it.memory_hit
+                        else None
+                    ),
                 }
             )
             if it.execution_result is not None and it.execution_result.success is True:
