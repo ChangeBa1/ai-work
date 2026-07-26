@@ -960,6 +960,23 @@ class AgentRuntime:
                 if sa.target
                 else {"description": sa.intent}
             )
+            # Feature 014 (FR-003/FR-005): a pending zoom_reground plan from
+            # the previous iteration's recovery replaces this grounding call's
+            # input with the crop+upscale observation. observe_zoom failure
+            # falls open to the normal full-screen request.
+            zoom_plan = self.recovery.take_zoom_request()
+            zoom_obs = None
+            if zoom_plan is not None:
+                zx1, zy1, zx2, zy2 = zoom_plan.roi
+                try:
+                    zoom_obs = await self.pipeline.observe_zoom(
+                        roi=Region(x1=zx1, y1=zy1, x2=zx2, y2=zy2),
+                        scale_factor=zoom_plan.scale_factor,
+                        step_id=step.id,
+                        capture_source="recovery",
+                    )
+                except Exception:
+                    zoom_obs = None
             # FR-049: model API receives unmasked image (model_image_path)
             with measure_stage(
                 ctx.test_run, stage="grounder", run_id=ctx.run_id, step_id=step.id,
@@ -973,8 +990,20 @@ class AgentRuntime:
                     screen,
                     self.config.agent.ui_index,
                 )
-                grounding = await self.grounder.ground(
-                    GroundingRequest(
+                if zoom_obs is not None:
+                    grounding_request = GroundingRequest(
+                        image_ref=zoom_obs.image_path,
+                        crop_offset=zoom_obs.crop_offset,
+                        scale_factor=zoom_obs.scale_factor,
+                        resolution=zoom_obs.resolution,
+                        original_resolution=screen.resolution,
+                        target=target,
+                        ocr_candidates=[i.model_dump() for i in zoom_obs.ocr_items],
+                        template_candidates=[],
+                        ui_index_candidates=[],
+                    )
+                else:
+                    grounding_request = GroundingRequest(
                         image_ref=screen.path_for_model(),
                         crop_offset=screen.crop_offset,
                         resolution=screen.resolution,
@@ -983,7 +1012,7 @@ class AgentRuntime:
                         template_candidates=[m.model_dump() for m in screen.template_matches],
                         ui_index_candidates=ui_index_candidates,
                     )
-                )
+                grounding = await self.grounder.ground(grounding_request)
             iteration.grounding_result = grounding
             try:
                 grounder_req_id = grounder_identity(
@@ -994,8 +1023,11 @@ class AgentRuntime:
                         "screen": screen.content_hash or screen.frame_id,
                     },
                     coordinate_transform_identity={
-                        "crop_offset": screen.crop_offset,
-                        "resolution": screen.resolution,
+                        "crop_offset": grounding_request.crop_offset,
+                        "resolution": grounding_request.resolution,
+                        # Feature 014 (FR-008): zoom transform identity
+                        "scale_factor": grounding_request.scale_factor,
+                        "original_resolution": grounding_request.original_resolution,
                     },
                     requested_model_config=_provider_identity_snapshot(self.grounder),
                     retry_grounding_state={
@@ -1033,10 +1065,28 @@ class AgentRuntime:
                 failure_type=policy_result.failure_type,  # type: ignore[arg-type]
                 sub_reason=policy_result.sub_reason,
             )
+            # Feature 014 (FR-002): give recovery the evidence to derive a
+            # zoom_reground ROI — prefer the raw grounding result (it may
+            # still hold out-of-bounds/low-confidence candidates that the
+            # policy filtered away, which are exactly the ROI hints we want).
+            raw_grounding = (
+                grounding
+                if grounding is not None and grounding.candidates
+                else policy_result.grounding_result
+            )
             attempt = await self.recovery.handle(
                 clf,
                 step_controller=controller,
-                ctx=StrategyContext(driver=self.driver),
+                ctx=StrategyContext(
+                    driver=self.driver,
+                    screen=screen,
+                    grounding_result=raw_grounding,
+                    target=(
+                        sa.target.model_dump()
+                        if sa.target
+                        else {"description": sa.intent}
+                    ),
+                ),
             )
             iteration.recovery_attempts.append(attempt)
             if policy_result.grounding_result:

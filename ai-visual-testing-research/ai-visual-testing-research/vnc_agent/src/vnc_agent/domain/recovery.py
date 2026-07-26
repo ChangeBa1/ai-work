@@ -30,12 +30,27 @@ RecoveryStrategy = Literal[
     "extra_wait",
     "second_candidate",
     "re_ground",
+    "zoom_reground",
     "switch_to_keyboard",
     "release_modifiers",
     "press_escape",
     "win_d_reset",
     "restart_step",
 ]
+
+# Feature 014 (FR-002): how the zoom_reground ROI was derived.
+ZoomRoiSource = Literal["grounding_candidate", "anchor_text"]
+
+
+class ZoomRegroundPlan(BaseModel):
+    """Feature 014: one-shot zoom escalation plan produced by the recovery
+    engine and consumed by the next ActionIteration's grounding branch.
+
+    ``roi`` is in original full-frame pixel coordinates (x1, y1, x2, y2)."""
+
+    roi: tuple[int, int, int, int]
+    scale_factor: float = Field(gt=1.0)
+    roi_source: ZoomRoiSource
 
 
 class RecoveryAttempt(BaseModel):
@@ -45,3 +60,8 @@ class RecoveryAttempt(BaseModel):
     attempt_index: int = Field(ge=0)
     max_retries: int = Field(ge=1)
     resolved: bool = False
+    # Feature 014 (FR-008): zoom_reground observability — populated only for
+    # strategy == "zoom_reground"; None for every other strategy.
+    roi: tuple[int, int, int, int] | None = None
+    scale_factor: float | None = None
+    roi_source: ZoomRoiSource | None = None

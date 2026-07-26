@@ -77,7 +77,14 @@ class FakeVNC:
         return buf.tobytes()
 
     async def capture_region(self, x, y, w, h) -> bytes:
-        return await self.capture_screen()
+        # Feature 014: a real ROI crop (fidelity for zoom_reground e2e); the
+        # production contract allows drivers to return full frames instead —
+        # observe_zoom then crops in memory (covered by unit paths).
+        self.call_log.append("capture_region")
+        f = self.frames[min(self.i, len(self.frames) - 1)]
+        crop = f[y : y + h, x : x + w]
+        ok, buf = cv2.imencode(".png", crop)
+        return buf.tobytes()
 
     async def send_key(self, key: str):
         self.call_log.append(f"key:{key}")
@@ -184,6 +191,7 @@ async def build_runtime(
     driver: FakeVNC | None = None,
     planner: StubPlanner | None = None,
     grounder: StubGrounder | None = None,
+    ocr_enabled: bool = False,
 ) -> tuple[AgentRuntime, FakeVNC]:
     drv = driver or FakeVNC()
     pl = planner or StubPlanner(
@@ -222,7 +230,7 @@ async def build_runtime(
     pipeline = ObservationPipeline(
         capture_service,
         planner=pl,
-        ocr_enabled=False,
+        ocr_enabled=ocr_enabled,
         template_enabled=False,
         vision_fallback=False,
     )

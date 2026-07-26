@@ -17,11 +17,13 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from vnc_agent.domain.observation import (
+    OCRItem,
     Region,
     ScreenFrame,
     StructuredScreen,
@@ -41,6 +43,22 @@ def _config_fingerprint(payload: dict) -> str:
     return hashlib.sha256(
         json.dumps(payload, ensure_ascii=False, sort_keys=True, default=str).encode("utf-8")
     ).hexdigest()
+
+
+@dataclass(frozen=True)
+class ZoomObservation:
+    """Feature 014 (FR-003/FR-008): one bounded crop+upscale observation.
+
+    ``image_path`` is the persisted upscaled image sent to the Grounder;
+    ``resolution`` is that image's own (zoomed) dimensions; ``ocr_items``
+    are already mapped back to original full-frame pixel coordinates."""
+
+    image_path: str
+    crop_offset: tuple[int, int]
+    scale_factor: float
+    resolution: tuple[int, int]
+    frame_id: str
+    ocr_items: list[OCRItem] = field(default_factory=list)
 
 
 class ObservationPipeline:
@@ -140,6 +158,141 @@ class ObservationPipeline:
                 screen = screen.model_copy(update={"vision_understanding": vision})
 
         return screen
+
+    async def observe_zoom(
+        self,
+        *,
+        roi: Region,
+        scale_factor: float,
+        step_id: str | None = None,
+        capture_source: str = "recovery",
+    ) -> ZoomObservation | None:
+        """Feature 014 (FR-003): one bounded ROI capture → upscale → re-OCR
+        observation for the zoom_reground recovery escalation.
+
+        Uses the shared FrameCaptureService (the ROI ScreenFrame lands in
+        `TestRun.frames` per the normal capture contract); the upscaled image
+        is persisted as a run artifact and is the image sent to the Grounder.
+        Every failure returns None — the caller falls back to the normal
+        full-screen grounding path (never a new fatal path).
+        """
+        import cv2
+        import numpy as np
+
+        from vnc_agent.perception.screenshot import (
+            FrameCaptureFailedError,
+            _apply_mask_to_pixels,
+            _encode_png,
+            _local_mask_regions,
+        )
+
+        if scale_factor <= 1.0:
+            return None
+        try:
+            outcome = await self.capture_service.capture(
+                step_id=step_id, capture_source=capture_source, roi=roi
+            )
+        except FrameCaptureFailedError:
+            return None
+        except Exception:
+            return None
+        decoded = outcome.decoded
+        frame = outcome.frame
+        roi_w, roi_h = roi.x2 - roi.x1, roi.y2 - roi.y1
+        if (decoded.width, decoded.height) == (roi_w, roi_h):
+            crop = decoded.pixels
+        elif decoded.width >= roi.x2 and decoded.height >= roi.y2:
+            # Driver returned a larger frame (e.g. full screen fallback):
+            # crop the same ROI in memory — identical semantics.
+            crop = decoded.pixels[roi.y1 : roi.y2, roi.x1 : roi.x2]
+        else:
+            return None
+        if crop.size == 0:
+            return None
+
+        try:
+            zoomed = cv2.resize(
+                np.ascontiguousarray(crop),
+                None,
+                fx=scale_factor,
+                fy=scale_factor,
+                interpolation=cv2.INTER_CUBIC,
+            )
+        except Exception:
+            return None
+        zoom_h, zoom_w = zoomed.shape[0], zoomed.shape[1]
+
+        ocr_items: list[OCRItem] = []
+        if self.ocr_enabled:
+            try:
+                from vnc_agent.perception.ocr.engine import run_ocr_array
+
+                for item in run_ocr_array(zoomed):
+                    bx1, by1, bx2, by2 = item.bbox
+                    ocr_items.append(
+                        item.model_copy(
+                            update={
+                                "bbox": (
+                                    int(bx1 / scale_factor) + roi.x1,
+                                    int(by1 / scale_factor) + roi.y1,
+                                    int(bx2 / scale_factor) + roi.x1,
+                                    int(by2 / scale_factor) + roi.y1,
+                                )
+                            }
+                        )
+                    )
+            except Exception:
+                ocr_items = []
+
+        # Masking: translate global mask rects into ROI-local space and scale
+        # them up. The safe evidence copy is always masked; the model copy is
+        # unmasked only when private persistence is allowed (FR-049 parity
+        # with FrameCaptureService).
+        local_masks = _local_mask_regions(
+            self.capture_service.mask_regions, roi.x1, roi.y1, roi_w, roi_h
+        )
+        scaled_masks = [
+            [int(v * scale_factor) for v in rect] for rect in local_masks
+        ]
+        store = self.capture_service.artifact_store
+        run_id = self.capture_service.run_id
+        try:
+            if scaled_masks:
+                safe_pixels = _apply_mask_to_pixels(zoomed, scaled_masks)
+                safe_path = store.save_bytes(
+                    run_id, f"zoom/{frame.id}-zoom-safe.png", _encode_png(safe_pixels)
+                )
+                if self.capture_service.private_persistence_allowed:
+                    model_path = store.save_bytes(
+                        run_id, f"zoom/{frame.id}-zoom-model.png", _encode_png(zoomed)
+                    )
+                else:
+                    model_path = safe_path
+            else:
+                model_path = store.save_bytes(
+                    run_id, f"zoom/{frame.id}-zoom.png", _encode_png(zoomed)
+                )
+        except Exception:
+            return None
+
+        log_event(
+            "zoom_reground_observation",
+            run_id=run_id,
+            step_id=step_id,
+            frame_id=frame.id,
+            roi=roi.as_tuple(),
+            scale_factor=scale_factor,
+            zoom_image=model_path,
+            ocr_item_count=len(ocr_items),
+        )
+        return ZoomObservation(
+            image_path=model_path,
+            crop_offset=(roi.x1, roi.y1),
+            scale_factor=scale_factor,
+            resolution=(zoom_w, zoom_h),
+            frame_id=frame.id,
+            ocr_items=ocr_items,
+        )
 
     async def _vision_describe_or_cache(
         self, frame: ScreenFrame, screen: StructuredScreen
