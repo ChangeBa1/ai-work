@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any
 
 import httpx
 
-from vnc_agent.config import PlannerModelConfig
+from vnc_agent.config import PlannerModelConfig, PlanningConfig
 from vnc_agent.domain.action import SemanticAction
 
 # Feature 018 (model-image-downscale): the passthrough encoder moved verbatim
@@ -27,7 +28,14 @@ from vnc_agent.models.provider import (
     VisionUnderstandingResponse,
 )
 from vnc_agent.models.response_parser import parse_planner_response
+from vnc_agent.planning.request_slimming import (
+    DEFAULT_LIST_ITEMS_MAX,
+    DEFAULT_OCR_ITEMS_MAX,
+    slim_planner_payload,
+)
 from vnc_agent.runtime.exceptions import PlanValidationError
+
+logger = logging.getLogger(__name__)
 
 # Feature 017 (httpx-client-reuse): shared connection-pool limits for the
 # long-lived per-instance AsyncClient. Model calls are sequential today, so
@@ -88,10 +96,29 @@ class HttpPlannerClient:
         cfg: PlannerModelConfig,
         *,
         transport: httpx.AsyncBaseTransport | None = None,
+        planning_cfg: PlanningConfig | None = None,
     ) -> None:
         self.cfg = cfg
         self._transport = transport
         self._client: httpx.AsyncClient | None = None
+        # Feature 019 (planner-request-slimming): plan()-payload slimming knobs
+        # from the agent.yaml `planning:` section. None (direct construction in
+        # tests, unwired callers) → module defaults, which equal the
+        # PlanningConfig defaults, so behavior is identical either way.
+        self._slimming_enabled = True
+        self._ocr_items_max = DEFAULT_OCR_ITEMS_MAX
+        self._list_items_max = DEFAULT_LIST_ITEMS_MAX
+        if planning_cfg is not None:
+            self.configure_planning(planning_cfg)
+
+    def configure_planning(self, planning_cfg: PlanningConfig) -> None:
+        """Feature 019: composition-root hook (used by api/cli.py via
+        duck-typing so stub planners and monkeypatched single-argument
+        build_planner factories are unaffected) to apply the agent.yaml
+        `planning:` slimming knobs after construction."""
+        self._slimming_enabled = planning_cfg.prompt_slimming_enabled
+        self._ocr_items_max = planning_cfg.prompt_ocr_items_max
+        self._list_items_max = planning_cfg.prompt_list_items_max
 
     def _get_client(self) -> httpx.AsyncClient:
         """Feature 017: lazily create one long-lived AsyncClient per instance
@@ -128,16 +155,31 @@ class HttpPlannerClient:
         # here. If an image part is ever added, it MUST go through
         # planner_image_url_content_part() (the planner never outputs
         # coordinates, so it never needs full resolution).
+        #
+        # Feature 019: that JSON dump is slimmed at serialization time only
+        # (OCR/list caps, float rounding, null/empty drops — see
+        # planning/request_slimming.py). The PlannerRequest object itself is
+        # never modified; disabled → byte-identical pre-019 serialization.
+        data = request.model_dump(mode="json")
+        if self._slimming_enabled:
+            slimmed = slim_planner_payload(
+                data,
+                ocr_items_max=self._ocr_items_max,
+                list_items_max=self._list_items_max,
+            )
+            content = json.dumps(slimmed, ensure_ascii=False)
+            if logger.isEnabledFor(logging.DEBUG):
+                raw_len = len(json.dumps(data, ensure_ascii=False))
+                logger.debug(
+                    "planner request slimming: %d -> %d chars", raw_len, len(content)
+                )
+        else:
+            content = json.dumps(data, ensure_ascii=False)
         payload = {
             "model": self.cfg.model,
             "messages": [
                 {"role": "system", "content": _PLANNER_SYSTEM_PROMPT},
-                {
-                    "role": "user",
-                    "content": json.dumps(
-                        request.model_dump(mode="json"), ensure_ascii=False
-                    ),
-                },
+                {"role": "user", "content": content},
             ],
             "response_format": {"type": "json_object"},
         }
