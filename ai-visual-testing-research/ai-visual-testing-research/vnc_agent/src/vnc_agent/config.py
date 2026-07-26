@@ -44,10 +44,13 @@ class StepConfig(BaseModel):
 
 
 class WaitConfig(BaseModel):
-    min_delay_ms: int = 300
+    # Feature 020 (wait-tuning): kept in lockstep with config/agent.yaml —
+    # tuned for a fast local native app (rollback order: stable_frame_count
+    # first, then capture_interval_ms; see specs/020-wait-tuning/spec.md).
+    min_delay_ms: int = 200
     max_delay_ms: int = 20000
-    capture_interval_ms: int = 500
-    stable_frame_count: int = 3
+    capture_interval_ms: int = 300
+    stable_frame_count: int = 2
     pixel_diff_threshold: float = 0.02
 
 
