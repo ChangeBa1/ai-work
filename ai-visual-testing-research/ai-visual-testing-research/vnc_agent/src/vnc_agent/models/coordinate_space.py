@@ -46,6 +46,44 @@ def _sibling_space(siblings: Sequence[GroundingCandidate]) -> CoordinateSpace | 
     return None
 
 
+def restore_original_bbox(
+    bbox: tuple[int, int, int, int],
+    *,
+    scale_factor: float = 1.0,
+    crop_offset: tuple[int, int] = (0, 0),
+    original_resolution: tuple[int, int] | None = None,
+) -> tuple[int, int, int, int] | None:
+    """Feature 014 (FR-004): map a bbox from the model-seen (cropped and/or
+    upscaled) image back to original full-frame pixel coordinates.
+
+    ``bbox' = round(v / scale_factor) + crop_offset`` per coordinate. Strict
+    rejection semantics — never clamp, never guess:
+
+    - ``scale_factor <= 0`` → None
+    - degenerate result (x1 >= x2 or y1 >= y2 after rounding) → None
+    - outside ``original_resolution`` (when provided) → None
+
+    ``scale_factor=1.0`` + ``crop_offset=(0, 0)`` is the identity (legacy
+    full-screen path byte-for-byte unchanged).
+    """
+    if scale_factor <= 0:
+        return None
+    ox, oy = crop_offset
+    x1, y1, x2, y2 = bbox
+    restored = (
+        round(x1 / scale_factor) + ox,
+        round(y1 / scale_factor) + oy,
+        round(x2 / scale_factor) + ox,
+        round(y2 / scale_factor) + oy,
+    )
+    rx1, ry1, rx2, ry2 = restored
+    if not (rx1 < rx2 and ry1 < ry2):
+        return None
+    if original_resolution is not None and not _valid_bbox(restored, original_resolution):
+        return None
+    return restored
+
+
 def resolve_pixel_bbox(
     raw_bbox: tuple[int, int, int, int],
     declared_space: Literal["pixel", "normalized_1000"] | None,

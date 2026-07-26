@@ -9,7 +9,7 @@ import httpx
 
 from vnc_agent.config import GrounderModelConfig
 from vnc_agent.domain.grounding import GroundingCandidate, GroundingResult
-from vnc_agent.models.coordinate_space import resolve_pixel_bbox
+from vnc_agent.models.coordinate_space import resolve_pixel_bbox, restore_original_bbox
 from vnc_agent.models.planner_client import _image_url_content_part
 from vnc_agent.models.provider import GroundingRequest
 from vnc_agent.models.response_parser import parse_grounding_response
@@ -132,6 +132,59 @@ def _merge_ui_index_candidates(
     return result.model_copy(update={"candidates": merged, "found": bool(merged)})
 
 
+def _restore_and_cap(
+    result: GroundingResult,
+    request: GroundingRequest,
+    *,
+    model_name: str,
+    top_k: int = 3,
+) -> GroundingResult:
+    """Feature 014 (FR-004): map already coordinate-space-resolved candidate
+    bboxes from the model-seen image back to original frame pixels via
+    ``round(v / scale_factor) + crop_offset``, strictly rejecting degenerate
+    or out-of-original-bounds results (never clamping). Shared by
+    MimoGrounderClient and StubGrounder so tests exercise the same math.
+    Identity for the legacy full-screen path (scale=1, offset=(0, 0),
+    original_resolution=None)."""
+    ox, oy = request.crop_offset
+    scale = request.scale_factor
+    candidates: list[GroundingCandidate] = []
+    audit = list(result.coordinate_space_audit)
+    needs_restore = bool(ox or oy) or scale != 1.0 or request.original_resolution is not None
+    for candidate in result.candidates:
+        if needs_restore:
+            restored = restore_original_bbox(
+                candidate.bbox,
+                scale_factor=scale,
+                crop_offset=(ox, oy),
+                original_resolution=request.original_resolution,
+            )
+            audit.append(
+                {
+                    "stage": "zoom_restore",
+                    "model_bbox": candidate.bbox,
+                    "scale_factor": scale,
+                    "crop_offset": (ox, oy),
+                    "restored_bbox": restored,
+                    "accepted": restored is not None,
+                }
+            )
+            if restored is None:
+                continue
+            candidates.append(candidate.model_copy(update={"bbox": restored}))
+        else:
+            candidates.append(candidate)
+    candidates = candidates[: min(3, top_k)]
+    return result.model_copy(
+        update={
+            "candidates": candidates,
+            "found": result.found and bool(candidates),
+            "model_name": model_name or result.model_name,
+            "coordinate_space_audit": audit,
+        }
+    )
+
+
 def _target_text(target: dict[str, Any]) -> str:
     role = target.get("role")
     text = target.get("text")
@@ -223,33 +276,6 @@ class MimoGrounderClient:
             "response_format": {"type": "json_object"},
         }
 
-    def _apply_crop_and_cap(
-        self, result: GroundingResult, request: GroundingRequest
-    ) -> GroundingResult:
-        ox, oy = request.crop_offset
-        candidates = list(result.candidates)
-        if ox or oy:
-            restored = []
-            for c in candidates:
-                x1, y1, x2, y2 = c.bbox
-                restored.append(
-                    c.model_copy(
-                        update={"bbox": (x1 + ox, y1 + oy, x2 + ox, y2 + oy)}
-                    )
-                )
-            candidates = restored
-        if len(candidates) > 3:
-            candidates = candidates[:3]
-        top_k = min(3, self.cfg.top_k)
-        candidates = candidates[:top_k]
-        return result.model_copy(
-            update={
-                "candidates": candidates,
-                "found": result.found and bool(candidates) if result.found else False,
-                "model_name": self.cfg.model,
-            }
-        )
-
     async def ground(self, request: GroundingRequest) -> GroundingResult:
         payload = self._build_payload(request)
         url = f"{self.cfg.base_url.rstrip('/')}/chat/completions"
@@ -281,9 +307,15 @@ class MimoGrounderClient:
                 model_name=self.cfg.model,
             )
 
-        cropped = self._apply_crop_and_cap(result, request)
-        merged = _merge_ui_index_candidates(cropped, request)
-        return _resolve_coordinate_spaces(merged, request)
+        # Feature 014 (FR-004) pipeline order: parse → merge ui_index →
+        # coordinate-space resolution in the model-seen image's resolution →
+        # strict restore (÷scale_factor, +crop_offset) back to original frame
+        # pixels. Identity for the legacy full-screen path.
+        merged = _merge_ui_index_candidates(result, request)
+        resolved = _resolve_coordinate_spaces(merged, request)
+        return _restore_and_cap(
+            resolved, request, model_name=self.cfg.model, top_k=self.cfg.top_k
+        )
 
 
 class StubGrounder:
@@ -297,22 +329,11 @@ class StubGrounder:
 
     async def ground(self, request: GroundingRequest) -> GroundingResult:
         self.calls.append(request)
-        ox, oy = request.crop_offset
-        if ox or oy:
-            restored = []
-            for c in self.result.candidates:
-                x1, y1, x2, y2 = c.bbox
-                restored.append(
-                    c.model_copy(
-                        update={"bbox": (x1 + ox, y1 + oy, x2 + ox, y2 + oy)}
-                    )
-                )
-            cropped = GroundingResult(
-                found=self.result.found and bool(restored),
-                candidates=restored,
-                model_name=self.result.model_name,
-            )
-            merged = _merge_ui_index_candidates(cropped, request)
-            return _resolve_coordinate_spaces(merged, request)
+        # Same finalize path as MimoGrounderClient (Feature 014): stub-declared
+        # bboxes are interpreted in the model-seen image's coordinate space and
+        # go through the identical resolve + restore math.
         merged = _merge_ui_index_candidates(self.result, request)
-        return _resolve_coordinate_spaces(merged, request)
+        resolved = _resolve_coordinate_spaces(merged, request)
+        return _restore_and_cap(
+            resolved, request, model_name=self.result.model_name, top_k=3
+        )

@@ -24,6 +24,20 @@ class RecoveryPolicy(BaseModel):
     requires_human_confirmation: bool
 
 
+class ZoomRegroundConfig(BaseModel):
+    """Feature 014 (FR-007): budgets/geometry for the zoom_reground escalation.
+
+    Declared inside the yaml ``recovery:`` section as ``recovery.zoom_reground``
+    (AgentConfig extracts it before the per-failure-type RecoveryPolicy dict is
+    validated). ``max_per_step=0`` disables the escalation entirely.
+    """
+
+    max_per_step: int = Field(default=1, ge=0)
+    scale_factor: float = Field(default=2.0, gt=1.0, le=8.0)
+    roi_expand_factor: float = Field(default=2.0, ge=1.0, le=8.0)
+    min_roi_size_px: int = Field(default=64, ge=16)
+
+
 class StepConfig(BaseModel):
     default_timeout_seconds: int = 60
     default_max_retries: int = 3
@@ -204,7 +218,25 @@ class AgentConfig(BaseModel):
     )
     reporting: ReportingConfig = Field(default_factory=ReportingConfig)
     recovery: dict[str, RecoveryPolicy] = Field(default_factory=dict)
+    # Feature 014 (FR-007): declared under the yaml `recovery:` section as
+    # `recovery.zoom_reground`; extracted below so the per-failure-type
+    # RecoveryPolicy dict stays homogeneous.
+    zoom_reground: ZoomRegroundConfig = Field(default_factory=ZoomRegroundConfig)
     ui_index: UiIndexConfig = Field(default_factory=UiIndexConfig)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _extract_zoom_reground_from_recovery(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            recovery = data.get("recovery")
+            if isinstance(recovery, dict) and "zoom_reground" in recovery:
+                recovery = dict(recovery)
+                zoom = recovery.pop("zoom_reground")
+                data = {**data, "recovery": recovery}
+                # An explicit top-level `zoom_reground` (tests / programmatic
+                # construction) wins over the yaml-section spelling.
+                data.setdefault("zoom_reground", zoom)
+        return data
 
 
 class PlannerModelConfig(BaseModel):

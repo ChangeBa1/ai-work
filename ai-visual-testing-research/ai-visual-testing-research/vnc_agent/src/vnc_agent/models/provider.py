@@ -104,8 +104,18 @@ class VisionUnderstandingResponse(BaseModel):
 class GroundingRequest(BaseModel):
     image_ref: str
     crop_offset: tuple[int, int] = (0, 0)
+    # Feature 014 (FR-004): magnification applied to the image the model sees
+    # relative to original frame pixels. Candidate bboxes are restored via
+    # round(v / scale_factor) + crop_offset. 1.0 = legacy behavior.
+    scale_factor: float = 1.0
     target: dict[str, Any]
+    # Resolution of the image sent to the model (crop/zoom dims for zoomed
+    # requests) — the basis for normalized_1000 resolution and the in-image
+    # bounds check in resolve_pixel_bbox.
     resolution: tuple[int, int] | None = None
+    # Feature 014: original full-frame resolution; when set, restored bboxes
+    # outside it are strictly rejected (never clamped).
+    original_resolution: tuple[int, int] | None = None
     ocr_candidates: list[dict[str, Any]] = Field(default_factory=list)
     template_candidates: list[dict[str, Any]] = Field(default_factory=list)
     # Feature 007 (FR-007/009): candidates derived from Element.normalized_bounds,

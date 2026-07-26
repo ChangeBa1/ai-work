@@ -156,14 +156,16 @@ def try_build_focus_path(
     )
 
 
-# Preferred then fallback strategies (data-model.md §8)
+# Preferred then fallback strategies (data-model.md §8; feature 014 FR-001
+# inserts zoom_reground as the escalation tier after the first strategy for
+# target_not_found / grounding_low_confidence, keeping re_ground terminal).
 ROUTING: dict[FailureType, list[RecoveryStrategy]] = {
     FailureType.VNC_CONNECT_FAILED: ["recapture"],
     FailureType.VNC_DISCONNECTED: ["restart_step"],
     FailureType.BLACK_SCREEN: ["recapture", "extra_wait"],
     FailureType.PAGE_NOT_STABLE: ["extra_wait", "recapture"],
-    FailureType.TARGET_NOT_FOUND: ["recapture", "re_ground"],
-    FailureType.GROUNDING_LOW_CONFIDENCE: ["second_candidate", "re_ground"],
+    FailureType.TARGET_NOT_FOUND: ["recapture", "zoom_reground", "re_ground"],
+    FailureType.GROUNDING_LOW_CONFIDENCE: ["second_candidate", "zoom_reground", "re_ground"],
     FailureType.ACTION_NO_EFFECT: ["second_candidate", "switch_to_keyboard"],
     FailureType.FOCUS_ERROR: ["press_escape", "switch_to_keyboard"],
     FailureType.INPUT_METHOD_ERROR: ["release_modifiers", "switch_to_keyboard"],
@@ -180,6 +182,12 @@ class StrategyContext:
     extra_wait_ms: int = 1000
     strong_model_available: bool = False
     human_confirmation_granted: bool = False
+    # Feature 014 (FR-002): evidence for zoom_reground ROI derivation. All
+    # optional — when absent the engine skips the escalation and substitutes
+    # the next strategy in the sequence.
+    screen: StructuredScreen | None = None
+    grounding_result: Any | None = None
+    target: dict[str, Any] | None = None
 
 
 async def execute_strategy(
@@ -212,6 +220,10 @@ async def _run(strategy: RecoveryStrategy, ctx: StrategyContext) -> None:
         return  # policy layer bumps candidate_index
     if strategy == "re_ground":
         return  # policy/runtime re-invokes grounder
+    if strategy == "zoom_reground":
+        # Feature 014: the actual crop+upscale observation happens in the next
+        # ActionIteration's grounding branch (engine sets the one-shot plan).
+        return
     if strategy == "switch_to_keyboard":
         return  # policy prefer_keyboard flag
     if strategy == "release_modifiers":

@@ -7,7 +7,12 @@ import asyncio
 from vnc_agent.config import AppConfig, RecoveryPolicy
 from vnc_agent.domain.focus_path import VerifiedFocusNavigationPath
 from vnc_agent.domain.observation import StructuredScreen
-from vnc_agent.domain.recovery import FailureType, RecoveryAttempt, RecoveryStrategy
+from vnc_agent.domain.recovery import (
+    FailureType,
+    RecoveryAttempt,
+    RecoveryStrategy,
+    ZoomRegroundPlan,
+)
 from vnc_agent.recovery.classifier import Classification
 from vnc_agent.recovery.strategies import (
     ROUTING,
@@ -16,6 +21,7 @@ from vnc_agent.recovery.strategies import (
     normalize_focus_hint,
     try_build_focus_path,
 )
+from vnc_agent.recovery.zoom import determine_zoom_roi
 from vnc_agent.runtime.exceptions import StepBudgetExhaustedError
 from vnc_agent.runtime.step_controller import StepController
 
@@ -34,6 +40,10 @@ class RecoveryEngine:
         self.candidate_index = 0
         self.need_restart_step = False
         self.need_reground = False
+        # Feature 014: one-shot zoom escalation plan (consumed by the runtime's
+        # grounding branch on the next ActionIteration) + per-step usage count.
+        self.zoom_request: ZoomRegroundPlan | None = None
+        self._zoom_attempts_step = 0
         # 002: verified focus path for prefer_keyboard (FR-020~024)
         self.focus_path: VerifiedFocusNavigationPath | None = None
         self._last_screen: StructuredScreen | None = None
@@ -59,6 +69,8 @@ class RecoveryEngine:
         self.candidate_index = 0
         self.need_restart_step = False
         self.need_reground = False
+        self.zoom_request = None
+        self._zoom_attempts_step = 0
         self.focus_path = None
         self._last_screen = None
         self._last_target_hint = ""
@@ -175,7 +187,20 @@ class RecoveryEngine:
         # Progress through preferred → fallback across the whole TestStep
         step_idx = self._step_strategy_index.get(ft.value, 0)
         strategy = strategies[min(step_idx, len(strategies) - 1)]
-        path_changing = strategy in {"second_candidate", "re_ground", "switch_to_keyboard"}
+        # Feature 014 (FR-002/FR-006): the zoom escalation needs a derivable
+        # ROI and an unexhausted per-step cap; otherwise substitute the next
+        # strategy in the sequence (existing path continues, no grid sweep).
+        zoom_plan: ZoomRegroundPlan | None = None
+        if strategy == "zoom_reground":
+            zoom_plan = self._plan_zoom(ctx)
+            if zoom_plan is None:
+                strategy = strategies[min(step_idx + 1, len(strategies) - 1)]
+        path_changing = strategy in {
+            "second_candidate",
+            "re_ground",
+            "zoom_reground",
+            "switch_to_keyboard",
+        }
         prerequisites_met = (
             (not policy.requires_strong_model or ctx.strong_model_available)
             and (
@@ -203,6 +228,12 @@ class RecoveryEngine:
 
         ok = await execute_strategy(strategy, ctx, timeout_seconds=action_timeout)
         self._apply_side_effects(strategy)
+        if strategy == "zoom_reground" and zoom_plan is not None and ok:
+            # One-shot plan for the next ActionIteration's grounding branch;
+            # counted against the per-step cap (FR-006).
+            self.zoom_request = zoom_plan
+            self._zoom_attempts_step += 1
+            self.need_reground = True
 
         self._tier2[ft.value] = used + 1
         self._step_strategy_index[ft.value] = step_idx + 1
@@ -213,9 +244,58 @@ class RecoveryEngine:
             attempt_index=used,
             max_retries=policy.max_retries,
             resolved=ok,
+            roi=zoom_plan.roi if strategy == "zoom_reground" and zoom_plan else None,
+            scale_factor=(
+                zoom_plan.scale_factor
+                if strategy == "zoom_reground" and zoom_plan
+                else None
+            ),
+            roi_source=(
+                zoom_plan.roi_source
+                if strategy == "zoom_reground" and zoom_plan
+                else None
+            ),
         )
         self.attempts.append(attempt)
         return attempt
+
+    def _plan_zoom(self, ctx: StrategyContext) -> ZoomRegroundPlan | None:
+        """Feature 014: derive a one-shot zoom plan or refuse (FR-002/FR-006).
+
+        Refusal reasons: per-step cap exhausted, escalation disabled
+        (max_per_step=0), no screen/resolution evidence, or no derivable ROI
+        (no prior candidates and no anchor-text hit). The caller then
+        substitutes the next strategy in the sequence.
+        """
+        zoom_cfg = self.config.agent.zoom_reground
+        if self._zoom_attempts_step >= zoom_cfg.max_per_step:
+            return None
+        screen = ctx.screen or self._last_screen
+        if screen is None:
+            return None
+        resolution = screen.resolution
+        derived = determine_zoom_roi(
+            resolution=resolution,
+            grounding_result=ctx.grounding_result,
+            ocr_items=screen.ocr_items,
+            target=ctx.target,
+            expand_factor=zoom_cfg.roi_expand_factor,
+            min_size_px=zoom_cfg.min_roi_size_px,
+        )
+        if derived is None:
+            return None
+        roi, source = derived
+        return ZoomRegroundPlan(
+            roi=roi.as_tuple(),
+            scale_factor=zoom_cfg.scale_factor,
+            roi_source=source,  # type: ignore[arg-type]
+        )
+
+    def take_zoom_request(self) -> ZoomRegroundPlan | None:
+        """One-shot consumption of the pending zoom plan (Feature 014)."""
+        plan = self.zoom_request
+        self.zoom_request = None
+        return plan
 
     def tier2_exhausted(self, ft: FailureType) -> bool:
         policy = self.policy_for(ft)
