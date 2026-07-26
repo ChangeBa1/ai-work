@@ -23,7 +23,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-Component = Literal["ocr", "template", "diff", "vision_describe"]
+Component = Literal["ocr", "template", "diff", "vision_describe", "vision_answer"]
 
 
 def _canonical_json(value: Any) -> str:

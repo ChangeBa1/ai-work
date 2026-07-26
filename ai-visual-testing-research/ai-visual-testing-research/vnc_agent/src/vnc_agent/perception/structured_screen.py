@@ -250,6 +250,8 @@ def assemble_structured_screen_from_pixels(
         deduplicated=frame.deduplicated,
         duplicate_of_frame_id=frame.duplicate_of_frame_id,
         comparison_available=frame.comparison_available,
+        capture_sequence=frame.capture_sequence,
+        scope_key=scope_id,
         analysis_source_refs=analysis_source_refs,
     )
 
@@ -289,4 +291,6 @@ def assemble_structured_screen(
         image_path=frame.image_path,
         crop_offset=frame.crop_offset,
         model_image_path=frame.model_image_path or frame.image_path,
+        capture_sequence=frame.capture_sequence,
+        scope_key=scope_identity(frame.scope),
     )

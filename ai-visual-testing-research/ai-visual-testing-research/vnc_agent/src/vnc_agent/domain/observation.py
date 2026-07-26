@@ -199,6 +199,12 @@ class StructuredScreen(BaseModel):
     deduplicated: bool = False
     duplicate_of_frame_id: str | None = None
     comparison_available: bool = True
+    # Feature 008: additional identity mirrored from the owning ScreenFrame so
+    # the verification path can key/window the vision_answer cached component
+    # without access to the frame itself. Defaults disable caching (guarded
+    # eligibility), never produce a wrong-key hit.
+    capture_sequence: int = 0
+    scope_key: str = ""
     analysis_source_refs: dict[str, str] = Field(default_factory=dict)
     crop_offset: tuple[int, int] = (0, 0)
     model_image_path: str = ""  # unmasked for model API (FR-049)
