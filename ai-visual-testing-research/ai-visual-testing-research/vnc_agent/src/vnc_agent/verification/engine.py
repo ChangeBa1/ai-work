@@ -13,15 +13,42 @@ from vnc_agent.domain.verification import (
     aggregate_conditions,
 )
 from vnc_agent.verification import ocr_verifier, screen_change_verifier, template_verifier
+from vnc_agent.verification.answer_cache import CachedVisualAnswerer
 from vnc_agent.verification.visual_verifier import verify_visual_question
 
 if TYPE_CHECKING:
-    from vnc_agent.models.provider import PlannerProvider
+    from vnc_agent.models.provider import (
+        PlannerProvider,
+        VisionUnderstandingResponse,
+    )
 
 
 class VerificationEngine:
-    def __init__(self, planner: PlannerProvider | None = None) -> None:
+    def __init__(
+        self,
+        planner: PlannerProvider | None = None,
+        *,
+        answerer: CachedVisualAnswerer | None = None,
+    ) -> None:
         self.planner = planner
+        # Feature 008: shared cached-answer helper for every verification-path
+        # answer_question call; the default (no cache) is byte-identical to a
+        # direct planner call.
+        self.answerer = answerer or CachedVisualAnswerer()
+
+    async def answer_visual_question(
+        self,
+        screen: StructuredScreen,
+        question: str,
+        *,
+        planner: PlannerProvider | None = None,
+    ) -> VisionUnderstandingResponse:
+        """Delegate used by business_resolver's escalation fallback so both
+        verification call sites share one cache (FR-004)."""
+        active = planner or self.planner
+        if active is None:
+            raise ValueError("no planner available for visual question")
+        return await self.answerer.answer(active, screen, question)
 
     async def verify(
         self,
@@ -76,5 +103,7 @@ class VerificationEngine:
         if t == "visual_question":
             if self.planner is None:
                 return "uncertain", "no planner for visual_question"
-            return await verify_visual_question(cond, screen, self.planner)
+            return await verify_visual_question(
+                cond, screen, self.planner, answerer=self.answerer
+            )
         return "uncertain", f"unknown condition type {t}"

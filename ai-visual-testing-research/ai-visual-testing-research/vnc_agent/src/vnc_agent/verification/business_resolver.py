@@ -15,7 +15,7 @@ from vnc_agent.domain.verification import (
     VerificationStatus,
     aggregate_conditions,
 )
-from vnc_agent.models.provider import PlannerProvider, VisionUnderstandingRequest
+from vnc_agent.models.provider import PlannerProvider
 from vnc_agent.verification.engine import VerificationEngine
 
 WEAK_TYPES = frozenset({"screen_changed", "region_changed"})
@@ -175,13 +175,13 @@ async def resolve_step_result(
         if planner is not None and describe_calls == 0 and current.status == "uncertain":
             describe_calls += 1
             try:
-                resp = await planner.describe_screen(
-                    VisionUnderstandingRequest(
-                        mode="answer_question",
-                        image_ref=screen.path_for_model() or screen.image_path or "stub",
-                        structured_screen_hint=screen.to_hint_dict(),
-                        question="Did the expected business result appear on screen?",
-                    )
+                # Feature 008: route through the engine's shared cached-answer
+                # helper (same frame content + question + model reuses the
+                # cached answer; no cache configured → direct call as before).
+                resp = await ver.answer_visual_question(
+                    screen,
+                    "Did the expected business result appear on screen?",
+                    planner=planner,
                 )
                 visual_answer = resp.answer or "uncertain"
                 det, _vis = _partition_statuses(engine_result, spec)

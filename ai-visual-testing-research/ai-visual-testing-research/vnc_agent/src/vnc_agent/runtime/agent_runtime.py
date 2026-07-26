@@ -49,6 +49,7 @@ from vnc_agent.runtime.run_context import RunContext
 from vnc_agent.runtime.state_machine import AgentState
 from vnc_agent.runtime.step_controller import StepController
 from vnc_agent.runtime.telemetry import measure_stage
+from vnc_agent.verification.answer_cache import CachedVisualAnswerer
 from vnc_agent.verification.business_resolver import (
     evaluate_precondition,
     resolve_step_result,
@@ -141,7 +142,18 @@ class AgentRuntime:
             driver,
             default_timeout_seconds=config.agent.action.default_timeout_seconds,
         )
-        self.verifier = VerificationEngine(planner)
+        # Feature 008: verification-path visual answers share the pipeline's
+        # bounded AnalysisResultCache; test_run is resolved lazily because the
+        # CLI attaches it to the capture service after construction.
+        self.verifier = VerificationEngine(
+            planner,
+            answerer=CachedVisualAnswerer(
+                cache=getattr(pipeline, "cache", None),
+                test_run_provider=lambda: capture_service.test_run,
+                provider_name=getattr(pipeline, "vision_provider_name", "planner-provider"),
+                model=getattr(pipeline, "vision_model", "default"),
+            ),
+        )
         self.recovery = RecoveryEngine(config)
         self.repeat_guard = RepeatGuard(
             micro_action_risk_thresholds=config.agent.planning.micro_action_risk_thresholds,
