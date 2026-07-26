@@ -109,6 +109,18 @@ class ActionConfig(BaseModel):
     default_timeout_seconds: int = 10
 
 
+class ClickConfig(BaseModel):
+    """Feature 013 (safe-click-point): click-point geometry parameters.
+
+    ``edge_inset_ratio`` — per-side inset ratio defining the safe zone inside
+    a target bbox (overall_design.md §9.6 "避开边缘 15%"). Applies to both the
+    OCR/template path and the grounding path. Values >= 0.5 are rejected
+    because the safe zone would always be empty.
+    """
+
+    edge_inset_ratio: float = Field(default=0.15, ge=0.0, lt=0.5)
+
+
 class PlanningConfig(BaseModel):
     ocr_sanity_check_ratio: float = Field(gt=0.0, le=1.0)
     # Feature 003 (safety issue A): spatial-conflict IoU threshold — generic
@@ -168,6 +180,7 @@ class AgentConfig(BaseModel):
     grounding: GroundingConfig = Field(default_factory=GroundingConfig)
     verification: VerificationConfig = Field(default_factory=VerificationConfig)
     action: ActionConfig = Field(default_factory=ActionConfig)
+    click: ClickConfig = Field(default_factory=ClickConfig)
     planning: PlanningConfig = Field(
         default_factory=lambda: PlanningConfig(
             ocr_sanity_check_ratio=0.10,
