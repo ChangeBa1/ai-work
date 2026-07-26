@@ -137,6 +137,10 @@ class AgentRuntime:
             overall_confidence_threshold=config.agent.grounding.overall_confidence_threshold,
             top1_top2_min_gap=config.agent.grounding.top1_top2_min_gap,
             ocr_sanity_check_ratio=config.agent.planning.ocr_sanity_check_ratio,
+            ocr_direct_click_min_confidence=(
+                config.agent.planning.ocr_direct_click_min_confidence
+            ),
+            click_edge_inset_ratio=config.agent.click.edge_inset_ratio,
         )
         self.executor = ExecutionRouter(
             driver,
