@@ -675,6 +675,9 @@ class AgentRuntime:
             reobserve=_reobserve,
             engine=self.verifier,
             escalate=True,
+            visual_override_confidence_threshold=(
+                self.config.agent.verification.visual_override_confidence_threshold
+            ),
         )
         t_stages["verifying"] = int((time.monotonic() - t0) * 1000)
         ctx.state_machine.force(AgentState.RECORDING, "record")
@@ -1133,6 +1136,9 @@ class AgentRuntime:
                 reobserve=_reobserve_after,
                 engine=self.verifier,
                 escalate=True,
+                visual_override_confidence_threshold=(
+                    self.config.agent.verification.visual_override_confidence_threshold
+                ),
             )
         mark("verifying", t0)
 
