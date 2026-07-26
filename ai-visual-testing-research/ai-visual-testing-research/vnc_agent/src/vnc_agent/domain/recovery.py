@@ -47,6 +47,12 @@ RecoveryStrategy = Literal[
     "press_escape",
     "win_d_reset",
     "restart_step",
+    # Feature 023 (click-postmortem-correction): VLM post-mortem diagnosis of
+    # a WRONG_TARGET click (engine selects; runtime performs the work) + the
+    # single safe Esc that restores an accidentally changed page before the
+    # diagnosis. Both are non-destructive by construction.
+    "postmortem",
+    "postmortem_undo",
 ]
 
 # Feature 014 (FR-002): how the zoom_reground ROI was derived.
@@ -108,6 +114,62 @@ class WrongTargetEvidence(BaseModel):
     # (y grows downward).
     nearest_blob_offset: tuple[int, int] | None = None
     nearest_blob_direction: WrongTargetDirection | None = None
+    reason: str = ""
+
+
+# Feature 023 (FR-010): why a post-mortem ended the way it did. "corrected"
+# is the only outcome that produces a PostmortemCorrectionPlan; every other
+# value is a distinct fail-safe refusal that falls back to the 022 chain.
+PostmortemOutcome = Literal[
+    "corrected",
+    "page_not_restored",
+    "diagnosis_failed",
+    "target_not_found",
+    "low_confidence",
+    "distance_exceeded",
+]
+
+
+class PostmortemCorrectionPlan(BaseModel):
+    """Feature 023 (FR-005): one-shot corrected-click plan produced by an
+    accepted post-mortem diagnosis and consumed by the next ActionIteration's
+    grounding branch (skipping memory + grounder for that round).
+
+    ``corrected_bbox`` is in original full-frame pixel coordinates;
+    ``click_point`` is the deterministic ``safe_click_point(corrected_bbox,
+    siblings=[])`` result computed at diagnosis time."""
+
+    corrected_bbox: tuple[int, int, int, int]
+    click_point: tuple[int, int]
+    confidence: float = Field(ge=0.0, le=1.0)
+    clicked_element: str = ""
+    source_iteration_index: int = Field(default=0, ge=0)
+
+
+class PostmortemAudit(BaseModel):
+    """Feature 023 (FR-010): full audit of one post-mortem attempt, attached
+    additively to ``ActionIteration.postmortem`` and mirrored in the JSON
+    report. Null fields simply mean the pipeline refused before that stage."""
+
+    outcome: PostmortemOutcome
+    clicked_element: str | None = None
+    target_found: bool | None = None
+    confidence: float | None = None
+    corrected_bbox: tuple[int, int, int, int] | None = None
+    corrected_click_point: tuple[int, int] | None = None
+    # Distance gate evidence (original click point → corrected click point).
+    distance_px: float | None = None
+    max_distance_px: float | None = None
+    # Thresholds actually applied (config echo, for auditability).
+    confidence_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
+    # Undo (page restore) evidence — at most one Esc per diagnosis (FR-003).
+    undo_performed: bool = False
+    undo_restored_page: bool | None = None
+    page_similarity: float | None = None
+    # Artifact references (run-relative model/ directory convention).
+    annotated_image_ref: str | None = None
+    request_ref: str | None = None
+    response_ref: str | None = None
     reason: str = ""
 
 

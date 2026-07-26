@@ -175,6 +175,14 @@ def build_report_dict(
                     # Feature 022: "stale_frame" / "wrong_target" upgraded
                     # attribution; explicit null on every other round.
                     "failure_attribution": it.failure_attribution,
+                    # Feature 023 (FR-010): non-null iff a WRONG_TARGET
+                    # post-mortem ran for this iteration; explicit null on
+                    # every other round.
+                    "postmortem": (
+                        it.postmortem.model_dump(mode="json")
+                        if it.postmortem
+                        else None
+                    ),
                 }
             )
             if it.execution_result is not None and it.execution_result.success is True:

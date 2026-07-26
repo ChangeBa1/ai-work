@@ -127,6 +127,7 @@ class AgentRuntime:
         experience: ExperienceCollector | None = None,
         report_formats: tuple[str, ...] = ("json", "html"),
         clock: Any = None,
+        postmortem_client: Any = None,
     ) -> None:
         self.config = config
         self.driver = driver
@@ -203,6 +204,11 @@ class AgentRuntime:
         # Feature 015 (FR-008): element ids banned for the rest of the current
         # step after a memory direct click failed independent verification.
         self._memory_blocked_element_ids: set[str] = set()
+        # Feature 023 (click-postmortem-correction): optional injected
+        # diagnosis client (offline tests); None => a lightweight HTTP client
+        # over the grounder endpoint/model config is built lazily on the
+        # first WRONG_TARGET post-mortem (never on the hot path).
+        self._postmortem_client = postmortem_client
         # Feature 016 (record-replay): replay persistence + auto-recorder.
         # Both exist only when replay is enabled AND persistence is
         # available; None short-circuits every 016 wiring point so
@@ -903,6 +909,198 @@ class AgentRuntime:
             template_score=hit.template_score,
         )
 
+    def _get_postmortem_client(self) -> Any:
+        """Feature 023: injected stub (tests) or a lazily built HTTP client
+        over the grounder endpoint/model config (spec Clarification 5)."""
+        if self._postmortem_client is None:
+            from vnc_agent.models.postmortem_client import HttpPostmortemClient
+
+            self._postmortem_client = HttpPostmortemClient(self.config.models.grounder)
+        return self._postmortem_client
+
+    def _record_postmortem_correction_applied(
+        self,
+        ctx: RunContext,
+        *,
+        step: TestStep,
+        screen: StructuredScreen,
+        iteration: ActionIteration,
+        correction: Any,
+    ) -> None:
+        """Feature 023 (FR-005): telemetry for one applied corrected-click
+        plan — the grounder call is skipped for this round, audited with the
+        same `model_call_skipped` shape the 009/015 skips use. Never a
+        grounder `model_call` event, so `model_calls.grounder` cannot grow."""
+        from vnc_agent.runtime.telemetry import CounterEvent, ModelCallAudit, log_event
+
+        request_identity = (
+            f"postmortem_correction:{screen.content_hash or screen.frame_id}:"
+            f"{list(correction.corrected_bbox)}"
+        )
+        skipped_payload = {
+            "model_role": "grounder",
+            "reason": "postmortem_correction",
+            "request_identity": request_identity,
+        }
+        ctx.test_run.counter_events.append(
+            CounterEvent(
+                kind="model_call_skipped",
+                occurred_at=datetime.now(UTC),
+                payload=skipped_payload,
+            )
+        )
+        log_event("model_call_skipped_event", **skipped_payload)
+        ctx.test_run.model_call_audits.append(
+            ModelCallAudit(
+                audit_id=str(uuid.uuid4()),
+                run_id=ctx.run_id,
+                step_id=step.id,
+                frame_id=screen.frame_id,
+                iteration_index=iteration.iteration_index,
+                model_role="grounder",
+                request_identity=request_identity,
+                context_identity=request_identity,
+                sanitized_request={"source_iteration": correction.source_iteration_index},
+                sanitized_response={
+                    "corrected_bbox": list(correction.corrected_bbox),
+                    "click_point": list(correction.click_point),
+                    "confidence": correction.confidence,
+                },
+                outcome="skipped",
+                source_ref=None,
+                reason="postmortem_correction",
+            )
+        )
+        log_event(
+            "postmortem_correction_applied",
+            run_id=ctx.run_id,
+            step_id=step.id,
+            iteration_index=iteration.iteration_index,
+            corrected_bbox=list(correction.corrected_bbox),
+            click_point=list(correction.click_point),
+            confidence=correction.confidence,
+        )
+        log.info(
+            "postmortem_correction_applied",
+            run_id=ctx.run_id,
+            step_id=step.id,
+            iteration_index=iteration.iteration_index,
+            corrected_bbox=list(correction.corrected_bbox),
+        )
+
+    async def _run_wrong_target_postmortem(
+        self,
+        ctx: RunContext,
+        *,
+        step: TestStep,
+        iteration: ActionIteration,
+        screen: StructuredScreen,
+        after: StructuredScreen,
+        target: dict[str, Any],
+        wt_ev: Any,
+        attempt: Any,
+    ) -> bool:
+        """Feature 023: run the full post-mortem (undo → annotate → diagnose
+        → gates) for a WRONG_TARGET iteration whose recovery routing selected
+        the `postmortem` strategy. Returns True iff an accepted correction
+        plan was stored for the next ActionIteration; on refusal the attempt
+        is downgraded to unresolved and the caller falls back to the 022
+        chain. Fail-safe throughout (the diagnostician never raises)."""
+        from vnc_agent.recovery.postmortem import PostmortemDiagnostician
+        from vnc_agent.recovery.strategies import execute_strategy
+
+        diagnostician = PostmortemDiagnostician(
+            run_id=ctx.run_id,
+            artifact_store=self.artifact_store,
+            client=self._get_postmortem_client(),
+            postmortem_cfg=self.config.agent.wrong_target_postmortem,
+            memory_cfg=self.config.agent.memory,
+            click_edge_inset_ratio=self.config.agent.click.edge_inset_ratio,
+        )
+
+        async def _send_undo() -> bool:
+            return await execute_strategy(
+                "postmortem_undo",
+                StrategyContext(driver=self.driver),
+                timeout_seconds=self.config.agent.action.default_timeout_seconds,
+            )
+
+        async def _reobserve() -> StructuredScreen:
+            return await self.pipeline.observe(
+                step_id=step.id, capture_source="recovery"
+            )
+
+        with measure_stage(
+            ctx.test_run, stage="postmortem", run_id=ctx.run_id, step_id=step.id,
+            frame_id=after.frame_id, iteration_index=iteration.iteration_index,
+            clock=self.clock,
+        ):
+            result = await diagnostician.run(
+                step_id=step.id,
+                iteration_index=iteration.iteration_index,
+                before_screen=screen,
+                after_screen=after,
+                target=target,
+                evidence=wt_ev,
+                send_undo=_send_undo,
+                reobserve=_reobserve,
+            )
+        if result.undo_attempt is not None:
+            iteration.recovery_attempts.append(result.undo_attempt)
+        iteration.postmortem = result.audit
+        # The engine recorded the attempt as "strategy ran"; the diagnosis
+        # verdict decides whether the recovery actually resolved anything.
+        attempt.resolved = result.plan is not None
+        # Every actual diagnosis call is audited with the existing
+        # ModelCallAudit convention (model_role="postmortem") and thereby
+        # counted in performance_summary.model_calls (FR-010). A refusal
+        # before the call (e.g. page_not_restored) leaves no response_ref
+        # and records no model call — truthful accounting.
+        if result.audit.response_ref is not None:
+            identity = (
+                f"postmortem:{screen.content_hash or screen.frame_id}:"
+                f"{after.content_hash or after.frame_id}:{iteration.iteration_index}"
+            )
+            self._record_model_call_audit(
+                ctx,
+                step_id=step.id,
+                frame_id=after.frame_id,
+                iteration_index=iteration.iteration_index,
+                model_role="postmortem",
+                request_identity=identity,
+                context_identity=identity,
+                sanitized_request={
+                    "target": target,
+                    "evidence_reason": wt_ev.reason,
+                },
+                sanitized_response={
+                    "outcome": result.audit.outcome,
+                    "target_found": result.audit.target_found,
+                    "confidence": result.audit.confidence,
+                    "corrected_bbox": (
+                        list(result.audit.corrected_bbox)
+                        if result.audit.corrected_bbox is not None
+                        else None
+                    ),
+                },
+            )
+        if result.plan is not None:
+            self.recovery.set_postmortem_correction(result.plan)
+        log.info(
+            "postmortem_completed",
+            run_id=ctx.run_id,
+            step_id=step.id,
+            iteration_index=iteration.iteration_index,
+            outcome=result.audit.outcome,
+            undo_performed=result.audit.undo_performed,
+            corrected_bbox=(
+                list(result.audit.corrected_bbox)
+                if result.audit.corrected_bbox is not None
+                else None
+            ),
+        )
+        return result.plan is not None
+
     async def _pre_click_stale_check(
         self,
         ctx: RunContext,
@@ -1237,6 +1435,10 @@ class AgentRuntime:
         # Feature 015 (FR-006): non-null iff this iteration's click comes
         # straight from element memory (the grounder call is skipped).
         memory_executable: ExecutableAction | None = None
+        # Feature 023 (FR-005): non-null iff this iteration's click comes
+        # from an accepted post-mortem correction plan (memory + grounder
+        # both skipped for this round; verification unchanged).
+        postmortem_executable: ExecutableAction | None = None
 
         if policy_result.needs_grounding:
             ctx.state_machine.force(AgentState.GROUNDING, "ground")
@@ -1263,15 +1465,45 @@ class AgentRuntime:
                 except Exception:
                     zoom_obs = None
 
+            # Feature 023 (FR-005): a pending corrected-click plan from the
+            # previous iteration's post-mortem is consumed here — one-shot,
+            # highest priority for coordinate-producing click actions. A
+            # pending plan facing a non-click proposal is dropped (fail-open
+            # to the normal path — never applied to a non-click).
+            correction = None
+            if zoom_obs is None:
+                correction = self.recovery.take_postmortem_correction()
+            if correction is not None and sa.action_type in (
+                "click",
+                "double_click",
+                "right_click",
+            ):
+                cb = correction.corrected_bbox
+                postmortem_executable = ExecutableAction(
+                    method="mouse",
+                    operation=sa.action_type,
+                    coordinates=correction.click_point,
+                    target_region=Region(x1=cb[0], y1=cb[1], x2=cb[2], y2=cb[3]),
+                )
+                self._record_postmortem_correction_applied(
+                    ctx,
+                    step=step,
+                    screen=screen,
+                    iteration=iteration,
+                    correction=correction,
+                )
+
             # Feature 015 (FR-006): memory-first hot path — before any
             # grounder call, query page/element memory. A pending zoom plan
             # (feature 014) takes precedence over memory (the memory/normal
             # path already failed when zoom was scheduled); only coordinate-
-            # producing mouse actions participate.
+            # producing mouse actions participate. A feature-023 corrected
+            # click also bypasses memory (it is this step's targeted fix).
             memory_lookup: MemoryLookupResult | None = None
             if (
                 self.memory is not None
                 and zoom_obs is None
+                and postmortem_executable is None
                 and sa.action_type in ("click", "double_click", "right_click")
             ):
                 memory_lookup = await self.memory.lookup(
@@ -1279,7 +1511,12 @@ class AgentRuntime:
                     target_hint,
                     exclude_element_ids=self._memory_blocked_element_ids,
                 )
-            if (
+            if postmortem_executable is not None:
+                # Feature 023 (FR-005): corrected click this round — memory
+                # and grounder both skipped (audited above); execution and
+                # verification below run completely unchanged.
+                pass
+            elif (
                 memory_lookup is not None
                 and memory_lookup.level == "high"
                 and memory_lookup.matched_bbox is not None
@@ -1408,7 +1645,11 @@ class AgentRuntime:
                     candidate_index=self.recovery.candidate_index,
                 )
 
-        if memory_executable is None and policy_result.outcome == "stop_recover":
+        if (
+            memory_executable is None
+            and postmortem_executable is None
+            and policy_result.outcome == "stop_recover"
+        ):
             clf = Classification(
                 failure_type=policy_result.failure_type,  # type: ignore[arg-type]
                 sub_reason=policy_result.sub_reason,
@@ -1446,9 +1687,12 @@ class AgentRuntime:
                 reason=f"action policy stop: {clf.failure_type}",
             )
 
-        executable = (
-            memory_executable if memory_executable is not None else policy_result.executable
-        )
+        if postmortem_executable is not None:
+            executable = postmortem_executable
+        elif memory_executable is not None:
+            executable = memory_executable
+        else:
+            executable = policy_result.executable
         if executable is None:
             return VerificationResult(status="failed", reason="no executable action")
         iteration.executable_action = executable
@@ -1728,6 +1972,18 @@ class AgentRuntime:
                 target_hint=target_hint,
                 known_focus_hint=self.recovery._last_known_focus_hint,
             )
+            wt_target = (
+                sa.target.model_dump() if sa.target else {"description": sa.intent}
+            )
+            # Feature 023 (FR-008): the runtime can diagnose only with full
+            # click geometry + a readable post-click frame; the flag makes
+            # the engine substitute the next chain entry otherwise.
+            postmortem_capable = (
+                self.config.agent.wrong_target_postmortem.enabled
+                and wt_ev.click_point is not None
+                and wt_ev.target_region is not None
+                and bool(after.image_path)
+            )
             attempt = await self.recovery.handle(
                 Classification(
                     failure_type=FailureType.WRONG_TARGET,
@@ -1738,15 +1994,43 @@ class AgentRuntime:
                     driver=self.driver,
                     screen=after,
                     grounding_result=iteration.grounding_result,
-                    target=(
-                        sa.target.model_dump()
-                        if sa.target
-                        else {"description": sa.intent}
-                    ),
+                    target=wt_target,
+                    postmortem_capable=postmortem_capable,
                 ),
                 action_timeout=self.config.agent.action.default_timeout_seconds,
             )
             iteration.recovery_attempts.append(attempt)
+            # Feature 023: routing selected the post-mortem tier — run the
+            # undo/diagnose/gate pipeline now. A refusal downgrades the
+            # attempt to unresolved and routes one normal fallback attempt
+            # through the same budgets (022 chain resumes at recapture).
+            if attempt.strategy == "postmortem" and attempt.resolved:
+                corrected = await self._run_wrong_target_postmortem(
+                    ctx,
+                    step=step,
+                    iteration=iteration,
+                    screen=screen,
+                    after=after,
+                    target=wt_target,
+                    wt_ev=wt_ev,
+                    attempt=attempt,
+                )
+                if not corrected:
+                    fallback = await self.recovery.handle(
+                        Classification(
+                            failure_type=FailureType.WRONG_TARGET,
+                            detail="postmortem_fallback",
+                        ),
+                        step_controller=controller,
+                        ctx=StrategyContext(
+                            driver=self.driver,
+                            screen=after,
+                            grounding_result=iteration.grounding_result,
+                            target=wt_target,
+                        ),
+                        action_timeout=self.config.agent.action.default_timeout_seconds,
+                    )
+                    iteration.recovery_attempts.append(fallback)
             log.info(
                 "wrong_target_attributed",
                 run_id=ctx.run_id,

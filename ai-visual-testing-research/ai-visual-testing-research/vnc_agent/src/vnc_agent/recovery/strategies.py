@@ -176,10 +176,14 @@ ROUTING: dict[FailureType, list[RecoveryStrategy]] = {
     # ActionIteration re-observes + re-grounds by construction) is the whole
     # remedy; no path change needed.
     FailureType.STALE_FRAME: ["recapture"],
-    # Feature 022: click landed beside the target — same re-observe/re-locate
-    # escalation chain as target_not_found (recapture → zoom_reground →
-    # re_ground), reusing the feature-014 zoom plumbing unchanged.
-    FailureType.WRONG_TARGET: ["recapture", "zoom_reground", "re_ground"],
+    # Feature 022: click landed beside the target — re-observe/re-locate
+    # escalation chain (recapture → zoom_reground → re_ground), reusing the
+    # feature-014 zoom plumbing unchanged. Feature 023 (FR-007) prepends the
+    # VLM post-mortem tier as first choice; with
+    # `recovery.wrong_target_postmortem.enabled: false` the engine's
+    # strategies_for() drops "postmortem" and the effective chain is
+    # byte-identical to the 022 baseline.
+    FailureType.WRONG_TARGET: ["postmortem", "recapture", "zoom_reground", "re_ground"],
 }
 
 
@@ -196,6 +200,11 @@ class StrategyContext:
     screen: StructuredScreen | None = None
     grounding_result: Any | None = None
     target: dict[str, Any] | None = None
+    # Feature 023 (FR-008): the runtime sets this True only when it can
+    # actually run a post-mortem diagnosis (client available + full
+    # wrong-target evidence). False makes the engine substitute the next
+    # strategy in the WRONG_TARGET chain — the zoom_reground refusal idiom.
+    postmortem_capable: bool = False
 
 
 async def execute_strategy(
@@ -231,6 +240,17 @@ async def _run(strategy: RecoveryStrategy, ctx: StrategyContext) -> None:
     if strategy == "zoom_reground":
         # Feature 014: the actual crop+upscale observation happens in the next
         # ActionIteration's grounding branch (engine sets the one-shot plan).
+        return
+    if strategy == "postmortem":
+        # Feature 023: selection only — the runtime's WRONG_TARGET branch
+        # performs the undo/diagnose/correct work right after handle()
+        # returns (the engine records budgets + the RecoveryAttempt).
+        return
+    if strategy == "postmortem_undo":
+        # Feature 023 (FR-003): the single safe undo before a diagnosis —
+        # Esc only, the same non-destructive key press_escape uses.
+        if driver is not None:
+            await driver.send_key("escape")
         return
     if strategy == "switch_to_keyboard":
         return  # policy prefer_keyboard flag

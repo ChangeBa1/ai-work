@@ -28,6 +28,9 @@ CANONICAL_STAGES: tuple[str, ...] = (
     "planner",
     "grounder",
     "verification",
+    # Feature 023: wrong-click post-mortem diagnosis (undo + annotate +
+    # model call + gates), measured as one stage.
+    "postmortem",
     "report_build",
     "report_output",
 )
@@ -124,7 +127,8 @@ class CounterEvent(BaseModel):
         return self
 
 
-ModelRole = Literal["vision", "planner", "grounder", "verification"]
+# Feature 023 adds "postmortem" (wrong-click post-mortem diagnosis calls).
+ModelRole = Literal["vision", "planner", "grounder", "verification", "postmortem"]
 AuditOutcome = Literal["actual", "skipped"]
 
 _FORBIDDEN_KEY_TOKENS = (

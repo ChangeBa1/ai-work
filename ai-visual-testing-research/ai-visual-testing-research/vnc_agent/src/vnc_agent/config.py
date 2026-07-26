@@ -38,6 +38,30 @@ class ZoomRegroundConfig(BaseModel):
     min_roi_size_px: int = Field(default=64, ge=16)
 
 
+class WrongTargetPostmortemConfig(BaseModel):
+    """Feature 023 (click-postmortem-correction, FR-009): VLM post-mortem
+    diagnosis tier for WRONG_TARGET recoveries.
+
+    Declared inside the yaml ``recovery:`` section as
+    ``recovery.wrong_target_postmortem`` (AgentConfig extracts it before the
+    per-failure-type RecoveryPolicy dict is validated, the feature-014
+    zoom_reground precedent). ``enabled: false`` removes the ``postmortem``
+    strategy from the WRONG_TARGET chain entirely — routing and behavior are
+    byte-identical to the feature-022 baseline.
+    """
+
+    enabled: bool = True
+    # Minimum diagnosis confidence before a corrected_bbox may be re-clicked.
+    confidence_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
+    # Anti-hallucination distance gate: the corrected click point must lie
+    # within this ratio of the screen width from the original click point.
+    max_click_distance_ratio: float = Field(default=0.4, gt=0.0, le=1.0)
+    # Post-mortem attempts (undo + diagnosis + corrected re-click) per
+    # TestStep. A corrected click that fails verification again never gets a
+    # second diagnosis in the same step (FR-008).
+    max_retries: int = Field(default=1, ge=1)
+
+
 class ExecutionConfig(BaseModel):
     """Feature 022 (wrong-click-detection, FR-A03): pre-execution stale-frame
     guard for mouse actions.
@@ -352,6 +376,11 @@ class AgentConfig(BaseModel):
     # `recovery.zoom_reground`; extracted below so the per-failure-type
     # RecoveryPolicy dict stays homogeneous.
     zoom_reground: ZoomRegroundConfig = Field(default_factory=ZoomRegroundConfig)
+    # Feature 023 (FR-009): declared under the yaml `recovery:` section as
+    # `recovery.wrong_target_postmortem`; extracted below like zoom_reground.
+    wrong_target_postmortem: WrongTargetPostmortemConfig = Field(
+        default_factory=WrongTargetPostmortemConfig
+    )
     ui_index: UiIndexConfig = Field(default_factory=UiIndexConfig)
     # Feature 015 (page-element-memory, FR-009)
     memory: MemoryConfig = Field(default_factory=MemoryConfig)
@@ -363,15 +392,25 @@ class AgentConfig(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def _extract_zoom_reground_from_recovery(cls, data: Any) -> Any:
+        # Feature 014 (zoom_reground) + feature 023 (wrong_target_postmortem):
+        # both live under the yaml `recovery:` section for operator locality
+        # but are not per-failure-type RecoveryPolicy entries — extract them
+        # so the policy dict stays homogeneous.
         if isinstance(data, dict):
             recovery = data.get("recovery")
-            if isinstance(recovery, dict) and "zoom_reground" in recovery:
-                recovery = dict(recovery)
-                zoom = recovery.pop("zoom_reground")
-                data = {**data, "recovery": recovery}
-                # An explicit top-level `zoom_reground` (tests / programmatic
-                # construction) wins over the yaml-section spelling.
-                data.setdefault("zoom_reground", zoom)
+            if isinstance(recovery, dict):
+                extracted = dict(recovery)
+                changed = False
+                for key in ("zoom_reground", "wrong_target_postmortem"):
+                    if key in extracted:
+                        value = extracted.pop(key)
+                        changed = True
+                        # An explicit top-level spelling (tests / programmatic
+                        # construction) wins over the yaml-section spelling.
+                        data = {**data, "recovery": extracted}
+                        data.setdefault(key, value)
+                if changed:
+                    data = {**data, "recovery": extracted}
         return data
 
 
