@@ -80,6 +80,8 @@ CounterKind = Literal[
     "frame_dedup_decision",
     "capture_attempt_failed",
     "element_memory_hit",
+    "replay_step_replayed",
+    "replay_patch_generated",
 ]
 
 _REQUIRED_PAYLOAD_KEYS: dict[str, tuple[str, ...]] = {
@@ -100,6 +102,10 @@ _REQUIRED_PAYLOAD_KEYS: dict[str, tuple[str, ...]] = {
     ),
     # Feature 015 (FR-010): one event per element-memory direct click.
     "element_memory_hit": ("element_memory_id", "page_similarity", "template_score"),
+    # Feature 016 (FR-012): one event per replayed step (method = template/
+    # anchor/bbox/fallback_grounding/keyboard) and one per generated patch.
+    "replay_step_replayed": ("replay_step_id", "method", "script_version"),
+    "replay_patch_generated": ("patch_id", "replay_step_id", "script_version"),
 }
 
 
@@ -199,6 +205,13 @@ class PerformanceSummary(BaseModel):
     # mirrors the cache_hits dict convention ("element_memory" always
     # present, 0 when the run had no memory hits).
     memory_hits: dict[str, int] = Field(default_factory=dict)
+    # Feature 016 (FR-012, additive): replayed-step counters keyed by locate
+    # method (template/anchor/bbox/fallback_grounding/keyboard) — empty on
+    # non-replay runs — plus the number of self-heal candidate patches
+    # generated. `model_calls` above is the replay-vs-exploration comparison
+    # basis (a replay happy path has zero planner/grounder entries).
+    replay_locate_methods: dict[str, int] = Field(default_factory=dict)
+    replay_patch_count: int = 0
 
     @model_validator(mode="after")
     def _dedup_ratio_null_iff_zero_total(self) -> PerformanceSummary:
@@ -245,6 +258,8 @@ def derive_performance_summary(test_run: Any) -> PerformanceSummary:
     model_calls: dict[str, int] = {}
     skipped_model_call_count = 0
     memory_hits: dict[str, int] = {}
+    replay_locate_methods: dict[str, int] = {}
+    replay_patch_count = 0
 
     for event in test_run.counter_events:
         if event.kind == "physical_image_written":
@@ -279,6 +294,11 @@ def derive_performance_summary(test_run: Any) -> PerformanceSummary:
             skipped_model_call_count += 1
         elif event.kind == "element_memory_hit":
             memory_hits["element_memory"] = memory_hits.get("element_memory", 0) + 1
+        elif event.kind == "replay_step_replayed":
+            method = event.payload.get("method", "unknown")
+            replay_locate_methods[method] = replay_locate_methods.get(method, 0) + 1
+        elif event.kind == "replay_patch_generated":
+            replay_patch_count += 1
 
     physical_image_count = sum(physical_by_purpose.values())
     for required in ("ocr", "template", "vision", "vision_answer"):
@@ -314,6 +334,8 @@ def derive_performance_summary(test_run: Any) -> PerformanceSummary:
         completeness=completeness,  # type: ignore[arg-type]
         consistency_errors=consistency_errors,
         memory_hits=memory_hits,
+        replay_locate_methods=replay_locate_methods,
+        replay_patch_count=replay_patch_count,
     )
     return summary
 

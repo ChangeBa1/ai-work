@@ -160,6 +160,8 @@ _ZH_CN: dict[str, str] = {
     "performance.model_calls": "模型调用次数",
     "performance.actual_model_call_count": "实际模型调用次数",
     "performance.memory_hit_count": "记忆命中次数",
+    "performance.replay_locate_methods": "回放定位方式统计",
+    "performance.replay_patch_count": "回放候选补丁数",
     "performance.skipped_model_call_count": "跳过模型调用次数",
     "performance.completeness": "数据完整性",
     "performance.consistency_errors": "一致性错误",

@@ -199,6 +199,32 @@ class AgentRuntime:
         # Feature 015 (FR-008): element ids banned for the rest of the current
         # step after a memory direct click failed independent verification.
         self._memory_blocked_element_ids: set[str] = set()
+        # Feature 016 (record-replay): replay persistence + auto-recorder.
+        # Both exist only when replay is enabled AND persistence is
+        # available; None short-circuits every 016 wiring point so
+        # `replay.enabled: false` keeps exploration byte-identical (FR-013).
+        self.replay_repo = None
+        self.replay_recorder = None
+        rp_cfg = config.agent.replay
+        if rp_cfg.enabled and repo is not None:
+            from pathlib import Path
+
+            from vnc_agent.storage.repositories import ReplayRepository
+
+            self.replay_repo = ReplayRepository(repo.session_factory)
+            if rp_cfg.auto_generate:
+                from vnc_agent.replay.recorder import ReplayRecorder
+
+                replay_template_dir = (
+                    Path(rp_cfg.storage_dir)
+                    if rp_cfg.storage_dir
+                    else Path(self.artifact_store.root) / "replay" / "templates"
+                )
+                self.replay_recorder = ReplayRecorder(
+                    repo=self.replay_repo,
+                    template_dir=replay_template_dir,
+                    mask_regions=config.agent.security.mask_regions,
+                )
 
     def _load_ui_index_preflight(self) -> None:
         """FR-012: fail before first step when an explicit invalid bundle is configured."""
@@ -219,8 +245,24 @@ class AgentRuntime:
         *,
         human_confirmed_facts: list[HumanConfirmedFact] | None = None,
     ) -> RunContext:
+        # Feature 016 (FR-005/FR-013): replay mode runs on its own execution
+        # path — the exploration iteration loop below is never entered. The
+        # player fails fast (ReplayUnavailableError) before any VNC
+        # connection when replay is disabled or no script exists.
+        if test_case.mode == "replay":
+            from vnc_agent.replay.player import ReplayPlayer
+
+            return await ReplayPlayer(self).run(
+                test_case, human_confirmed_facts=human_confirmed_facts
+            )
+
         # Preflight UI index before any step (and before VNC connect for fail-fast).
         self._load_ui_index_preflight()
+
+        # Feature 016 (FR-003): fresh recording drafts for this exploration
+        # run (fail-open side channel; no behavioral effect on the run).
+        if self.replay_recorder is not None:
+            self.replay_recorder.reset()
 
         ctx = RunContext(
             test_case,
@@ -371,6 +413,12 @@ class AgentRuntime:
             # all steps passed
             ctx.finish_run("passed")
             ctx.state_machine.force(AgentState.PASSED, "all_passed")
+
+        # Feature 016 (FR-003): a fully-passed exploration run auto-generates
+        # a candidate replay script (design §10.1). Fail-open inside the
+        # recorder — never affects the run result.
+        if self.replay_recorder is not None and ctx.test_run.status == "passed":
+            await self.replay_recorder.finalize(ctx)
 
         if self.repo:
             await self.repo.save_run(ctx.test_run)
@@ -1492,6 +1540,13 @@ class AgentRuntime:
                 await self.memory.record_success(
                     screen, target_hint, executable.target_region
                 )
+
+        # Feature 016 (FR-003/FR-004): hand the verified-passed iteration to
+        # the replay recorder as an in-memory draft (pre-action frame + the
+        # resolved executable). Pure side channel — fail-open, no effect on
+        # the exploration verdict (FR-013).
+        if self.replay_recorder is not None and vr.status == "passed":
+            self.replay_recorder.observe_passed_iteration(step, screen, sa, executable)
 
         # Recovery routing based on ActionEffect (replaces bare changed_since_last)
         if vr.status in ("failed", "uncertain"):

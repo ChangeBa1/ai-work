@@ -43,6 +43,8 @@ _LEGACY_ITERATION_KEYS = {
     "recovery_attempts", "ui_index_audit", "planner_skipped_reason",
     # Feature 015 (FR-010): additive memory direct-click marker.
     "memory_hit",
+    # Feature 016 (FR-012): additive replay-attempt marker.
+    "replay_audit",
 }
 _LEGACY_STEP_KEYS = {
     "step_id", "status", "iterations", "model_names", "raw_model_response_refs",

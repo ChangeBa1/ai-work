@@ -43,6 +43,13 @@ class ProviderContractError(VNCAgentError):
     """Model provider failed Protocol structural check at startup."""
 
 
+class ReplayUnavailableError(VNCAgentError):
+    """Feature 016 (FR-005): a mode:"replay" run cannot start — replay is
+    disabled, persistence is missing, no script exists for the test case, or
+    the stored script no longer matches the declared step sequence. Raised
+    before any VNC connection (fail fast, spec Clarification 11)."""
+
+
 class KeyRepeatSendError(VNCAgentError):
     """A key send within a batch repeat failed partway through (Feature 005 FR-009)."""
 

@@ -102,6 +102,49 @@ class ElementMemoryRow(Base):
     payload: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
 
 
+class ReplayScriptRow(Base):
+    """Feature 016 (FR-002): one versioned replay script (payload = script
+    metadata JSON; ordered steps live in replay_steps)."""
+
+    __tablename__ = "replay_scripts"
+
+    script_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    test_case_id: Mapped[str] = mapped_column(String(128), index=True)
+    version: Mapped[int] = mapped_column(Integer)
+    source_run_id: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+
+
+class ReplayStepRow(Base):
+    """Feature 016 (FR-002): one recorded replay step (payload = ReplayStep JSON)."""
+
+    __tablename__ = "replay_steps"
+
+    replay_step_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    script_id: Mapped[str] = mapped_column(String(64), index=True)
+    step_id: Mapped[str] = mapped_column(String(128))
+    order_index: Mapped[int] = mapped_column(Integer)
+    success_count: Mapped[int] = mapped_column(Integer, default=0)
+    failure_count: Mapped[int] = mapped_column(Integer, default=0)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+
+
+class ReplayPatchRow(Base):
+    """Feature 016 (FR-002): one self-heal candidate patch (payload =
+    ReplayPatch JSON). ADR-005: rows are only ever inserted as pending by
+    the runtime — status transitions are a human-review concern."""
+
+    __tablename__ = "replay_patches"
+
+    patch_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    script_id: Mapped[str] = mapped_column(String(64), index=True)
+    replay_step_id: Mapped[str] = mapped_column(String(64), index=True)
+    status: Mapped[str] = mapped_column(String(16), index=True)
+    created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+
+
 def make_engine(db_path: str) -> AsyncEngine:
     # Ensure parent dir exists for sqlite file
     from pathlib import Path

@@ -155,6 +155,15 @@ def build_report_dict(
                         if it.memory_hit
                         else None
                     ),
+                    # Feature 016 (FR-012): non-null iff this iteration was a
+                    # replay attempt (records the ReplayStep/script version
+                    # and how the target was located); explicit null on every
+                    # exploration round.
+                    "replay_audit": (
+                        it.replay_audit.model_dump(mode="json")
+                        if it.replay_audit
+                        else None
+                    ),
                 }
             )
             if it.execution_result is not None and it.execution_result.success is True:
