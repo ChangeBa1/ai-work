@@ -154,6 +154,15 @@ class PlanningConfig(BaseModel):
     micro_action_risk_thresholds: dict[str, Literal["low", "medium", "high"]] = Field(
         default_factory=dict
     )
+    # Feature 019 (planner-request-slimming): serialization-time slimming of
+    # the plan() user message (planning/request_slimming.py). The PlannerRequest
+    # model itself is never changed; `prompt_slimming_enabled: false` restores
+    # the byte-identical pre-019 wire payload. Defaults mirror
+    # request_slimming.DEFAULT_OCR_ITEMS_MAX / DEFAULT_LIST_ITEMS_MAX so an
+    # unwired HttpPlannerClient behaves identically to a default config.
+    prompt_slimming_enabled: bool = True
+    prompt_ocr_items_max: int = Field(default=40, ge=1)
+    prompt_list_items_max: int = Field(default=10, ge=1)
 
 
 # Feature 004: locale resource-registry membership (report-contract.md

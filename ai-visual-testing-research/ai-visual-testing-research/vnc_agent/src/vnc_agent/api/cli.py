@@ -190,6 +190,14 @@ async def _execute(
         typer.echo(f"Provider assembly failed: {e}", err=True)
         return EXIT_VALIDATION
 
+    # Feature 019 (planner-request-slimming): deliver the agent.yaml
+    # `planning:` slimming knobs to the HTTP planner without changing
+    # build_planner's signature (offline tests monkeypatch it with
+    # single-argument stubs). Planners without the hook (stubs) are skipped.
+    configure_planning = getattr(planner, "configure_planning", None)
+    if callable(configure_planning):
+        configure_planning(cfg.agent.planning)
+
     artifacts_root = cfg.agent.artifacts.root_dir
     store = ArtifactStore(
         artifacts_root, mask_regions=cfg.agent.security.mask_regions
