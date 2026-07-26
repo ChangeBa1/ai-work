@@ -21,6 +21,11 @@ app.add_typer(ui_index_app, name="ui-index")
 # Feature 016 (FR-011): replay script/patch inspection commands (JSON output).
 replay_app = typer.Typer(name="replay", help="Replay script / patch queries", no_args_is_help=True)
 app.add_typer(replay_app, name="replay")
+# Feature 021 (FR-005): offline hard-case dataset export (read-only, no VNC).
+evolution_app = typer.Typer(
+    name="evolution", help="Offline evolution/training-data tools", no_args_is_help=True
+)
+app.add_typer(evolution_app, name="evolution")
 log = get_logger("cli")
 
 # Exit codes (cli-contract.md)
@@ -399,6 +404,111 @@ async def _list_patches(test_case_id: str, status: str | None, config: Path) -> 
     patches = await repo.list_patches(test_case_id, status=status)
     return json.dumps(
         [p.model_dump(mode="json") for p in patches], ensure_ascii=False, indent=2
+    )
+
+
+# ---------------------------------------------------------------------------
+# Feature 021 (FR-005): offline hard-case dataset export (specs/021-…).
+# Read-only over the run store; zero runtime impact — the miner/exporter
+# modules are imported only inside this command path (FR-007).
+# ---------------------------------------------------------------------------
+
+
+async def _evolution_export(
+    *,
+    out: Path,
+    db: str | None,
+    config: Path,
+    artifacts_root: str | None,
+    since: str | None,
+    criteria: list[str],
+) -> str:
+    import json
+
+    from vnc_agent.evolution.dataset_exporter import (
+        UnknownCriterionError,
+        export_hard_cases,
+        validate_criteria_filter,
+    )
+    from vnc_agent.storage.database import init_db, make_engine, make_session_factory
+
+    cfg = load_config(config)
+
+    try:
+        validate_criteria_filter(criteria)
+    except UnknownCriterionError as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(EXIT_VALIDATION) from e
+
+    since_dt = None
+    if since is not None:
+        from datetime import datetime as _dt
+
+        try:
+            since_dt = _dt.fromisoformat(since)
+        except ValueError as e:
+            typer.echo(f"--since expects an ISO date/datetime, got: {since!r}", err=True)
+            raise typer.Exit(EXIT_VALIDATION) from e
+
+    engine = make_engine(db or cfg.agent.artifacts.db_path)
+    await init_db(engine)
+    try:
+        summary = await export_hard_cases(
+            make_session_factory(engine),
+            out_path=out,
+            evolution_cfg=cfg.agent.evolution,
+            sensitive_fields=cfg.agent.security.sensitive_field_names,
+            artifacts_root=artifacts_root or cfg.agent.artifacts.root_dir,
+            since=since_dt,
+            criteria_filter=criteria or None,
+        )
+    finally:
+        await engine.dispose()
+    return json.dumps(summary.to_json_dict(), ensure_ascii=False, indent=2)
+
+
+@evolution_app.command("export")
+def evolution_export_cmd(
+    out: Path = typer.Option(  # noqa: B008 - Typer declares CLI metadata here
+        ..., "--out", help="Output JSONL dataset path"
+    ),
+    db: str | None = typer.Option(
+        None, "--db", help="SQLite db path (default: config artifacts.db_path)"
+    ),
+    config: Path = typer.Option(Path("config"), "--config"),  # noqa: B008
+    artifacts_root: str | None = typer.Option(
+        None,
+        "--artifacts-root",
+        help="Artifacts root for relative screenshot paths "
+        "(default: config artifacts.root_dir)",
+    ),
+    since: str | None = typer.Option(
+        None, "--since", help="Only runs started at/after this ISO date/datetime (UTC)"
+    ),
+    criteria: list[str] = typer.Option(  # noqa: B008
+        [],
+        "--criteria",
+        help="Only export samples matching at least one named criterion (repeatable)",
+    ),
+) -> None:
+    """Mine hard-case steps from historical runs into a JSONL dataset.
+
+    Offline and read-only (overall_design.md §12.3/§12.4): scans the run
+    store, applies the hard-case criteria, writes one JSON object per sample
+    to --out and prints a JSON summary (totals + per-criterion hit counts).
+    """
+    configure_logging()
+    typer.echo(
+        _run_async(
+            _evolution_export(
+                out=out,
+                db=db,
+                config=config,
+                artifacts_root=artifacts_root,
+                since=since,
+                criteria=criteria,
+            )
+        )
     )
 
 
