@@ -92,6 +92,19 @@ class GroundingConfig(BaseModel):
     top1_top2_min_gap: float = 0.08
 
 
+class VerificationConfig(BaseModel):
+    """Feature 011 (FR-007): step-verification arbitration thresholds.
+
+    ``visual_override_confidence_threshold`` — minimum confidence a re-checked
+    ``visual_question`` "passed" answer needs before a deterministic ``failed``
+    built solely from weak-negative OCR misses (``text_appears`` not found) may
+    be overridden (spec 011, revised FR-010). Raising it tightens arbitration;
+    1.0 effectively disables the override.
+    """
+
+    visual_override_confidence_threshold: float = Field(default=0.8, ge=0.0, le=1.0)
+
+
 class ActionConfig(BaseModel):
     default_timeout_seconds: int = 10
 
@@ -153,6 +166,7 @@ class AgentConfig(BaseModel):
     artifacts: ArtifactsConfig = Field(default_factory=ArtifactsConfig)
     security: SecurityConfig = Field(default_factory=SecurityConfig)
     grounding: GroundingConfig = Field(default_factory=GroundingConfig)
+    verification: VerificationConfig = Field(default_factory=VerificationConfig)
     action: ActionConfig = Field(default_factory=ActionConfig)
     planning: PlanningConfig = Field(
         default_factory=lambda: PlanningConfig(
