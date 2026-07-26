@@ -73,6 +73,35 @@ class VisualExperienceRow(Base):
     payload: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
 
 
+class PageMemoryRow(Base):
+    """Feature 015 (FR-003): one remembered page (payload = PageMemory JSON)."""
+
+    __tablename__ = "page_memories"
+
+    page_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    resolution_w: Mapped[int] = mapped_column(Integer)
+    resolution_h: Mapped[int] = mapped_column(Integer)
+    hit_count: Mapped[int] = mapped_column(Integer, default=0)
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+
+
+class ElementMemoryRow(Base):
+    """Feature 015 (FR-003): one remembered element (payload = ElementMemory JSON)."""
+
+    __tablename__ = "element_memories"
+
+    element_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    page_id: Mapped[str] = mapped_column(String(64), index=True)
+    target_label: Mapped[str] = mapped_column(String(512), index=True)
+    success_count: Mapped[int] = mapped_column(Integer, default=0)
+    failure_count: Mapped[int] = mapped_column(Integer, default=0)
+    last_success_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+
+
 def make_engine(db_path: str) -> AsyncEngine:
     # Ensure parent dir exists for sqlite file
     from pathlib import Path

@@ -11,6 +11,7 @@ from vnc_agent.domain.action import ExecutableAction, ExecutionResult, SemanticA
 from vnc_agent.domain.action_effect import ActionEffect
 from vnc_agent.domain.action_identity import CanonicalActionIdentity
 from vnc_agent.domain.grounding import GroundingResult
+from vnc_agent.domain.memory import MemoryHitAudit
 from vnc_agent.domain.observation import ScreenFrame
 from vnc_agent.domain.recovery import RecoveryAttempt
 from vnc_agent.domain.repeat_guard import RepeatGuardDecision
@@ -51,6 +52,10 @@ class ActionIteration(BaseModel):
     # fresh guard evaluation (contract §4).
     planner_skipped_reason: str | None = None
     before_content_hash: str | None = None
+    # Feature 015 (FR-010): non-null iff this iteration's click was produced
+    # directly from element memory (grounder skipped). Verification is never
+    # exempted by a memory hit (FR-008).
+    memory_hit: MemoryHitAudit | None = None
 
 
 class DeclaredFact(BaseModel):

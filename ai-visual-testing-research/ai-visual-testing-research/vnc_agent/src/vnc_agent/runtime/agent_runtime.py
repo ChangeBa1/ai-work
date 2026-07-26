@@ -7,9 +7,10 @@ import uuid
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
-from vnc_agent.domain.action import SemanticAction
+from vnc_agent.domain.action import ExecutableAction, SemanticAction
 from vnc_agent.domain.action_effect import ActionEffect, ActionEffectEvidence
 from vnc_agent.domain.grounding import GroundingResult
+from vnc_agent.domain.memory import MemoryHitAudit, MemoryLookupResult
 from vnc_agent.domain.observation import Region, StructuredScreen
 from vnc_agent.domain.recovery import FailureType
 from vnc_agent.domain.run import ActionIteration, HumanConfirmedFact
@@ -26,6 +27,7 @@ from vnc_agent.perception.pipeline import ObservationPipeline
 from vnc_agent.perception.stability import StabilityEngine
 from vnc_agent.planning.action_classification import classify_action_kind
 from vnc_agent.planning.action_policy import ActionPolicy
+from vnc_agent.planning.click_point import safe_click_point
 from vnc_agent.planning.planner import PlannerOrchestrator
 from vnc_agent.recovery.classifier import (
     Classification,
@@ -171,6 +173,32 @@ class AgentRuntime:
         self.report_formats = report_formats
         self.planner = planner
         self._ui_index_bundle = None
+        # Feature 015 (page-element-memory, spec Clarification 10): the memory
+        # service exists only when enabled AND persistence is available; None
+        # short-circuits every 015 wiring point below, keeping
+        # `memory.enabled: false` byte-identical to the pre-015 runtime.
+        self.memory = None
+        mem_cfg = config.agent.memory
+        if mem_cfg.enabled and repo is not None:
+            from pathlib import Path
+
+            from vnc_agent.memory.service import PageElementMemory
+            from vnc_agent.storage.repositories import MemoryRepository
+
+            template_dir = (
+                Path(mem_cfg.storage_dir)
+                if mem_cfg.storage_dir
+                else Path(self.artifact_store.root) / "memory" / "templates"
+            )
+            self.memory = PageElementMemory(
+                repo=MemoryRepository(repo.session_factory),
+                template_dir=template_dir,
+                config=mem_cfg,
+                mask_regions=config.agent.security.mask_regions,
+            )
+        # Feature 015 (FR-008): element ids banned for the rest of the current
+        # step after a memory direct click failed independent verification.
+        self._memory_blocked_element_ids: set[str] = set()
 
     def _load_ui_index_preflight(self) -> None:
         """FR-012: fail before first step when an explicit invalid bundle is configured."""
@@ -243,6 +271,8 @@ class AgentRuntime:
             # (candidate_index / prefer_keyboard / need_reground) survive across
             # ActionIterations within the same step.
             self.recovery.reset_iteration()
+            # Feature 015 (FR-008): the memory ban list is per-step.
+            self._memory_blocked_element_ids.clear()
 
             while True:
                 if ctx.cancelled:
@@ -689,6 +719,132 @@ class AgentRuntime:
             ctx.current_step_record.stage_durations_ms.update(t_stages)
         return vr
 
+    def _memory_direct_executable(
+        self,
+        sa: SemanticAction,
+        lookup: MemoryLookupResult,
+        screen: StructuredScreen,
+    ) -> ExecutableAction:
+        """Feature 015 (FR-006): build the direct-click ExecutableAction from
+        a high-tier memory match — same safe_click_point geometry (feature
+        013) and target_region conventions as the policy's mouse paths.
+        ActionPolicy.resolve is deliberately not involved (FR-011)."""
+        bbox = lookup.matched_bbox
+        assert bbox is not None
+        pt = safe_click_point(
+            bbox,
+            siblings=[],
+            screen_resolution=screen.resolution,
+            edge_inset_ratio=self.config.agent.click.edge_inset_ratio,
+        )
+        op = sa.action_type
+        if op not in ("click", "double_click", "right_click"):
+            op = "click"
+        return ExecutableAction(
+            method="mouse",
+            operation=op,
+            coordinates=(pt.x, pt.y),
+            target_region=Region(x1=bbox[0], y1=bbox[1], x2=bbox[2], y2=bbox[3]),
+        )
+
+    def _record_memory_hit(
+        self,
+        ctx: RunContext,
+        *,
+        step: TestStep,
+        screen: StructuredScreen,
+        iteration: ActionIteration,
+        target: dict[str, Any],
+        hit: MemoryHitAudit,
+    ) -> None:
+        """Feature 015 (FR-010): telemetry for one memory direct click —
+        an `element_memory_hit` CounterEvent, a grounder `model_call_skipped`
+        CounterEvent and an outcome="skipped" ModelCallAudit (same shape the
+        feature-009 planner skip uses), plus a structured log event. Never a
+        grounder `model_call` event or StageMeasurement — `model_calls.
+        grounder` cannot grow from a memory hit."""
+        from vnc_agent.runtime.telemetry import CounterEvent, ModelCallAudit, log_event
+
+        try:
+            request_identity = grounder_identity(
+                target_semantics=target,
+                candidate_set_identity={
+                    "ocr_count": len(screen.ocr_items),
+                    "template_count": len(screen.template_matches),
+                    "screen": screen.content_hash or screen.frame_id,
+                },
+                coordinate_transform_identity={
+                    "crop_offset": screen.crop_offset,
+                    "resolution": screen.resolution,
+                },
+                requested_model_config=_provider_identity_snapshot(self.grounder),
+                retry_grounding_state={
+                    "iteration_index": iteration.iteration_index,
+                    "candidate_index": self.recovery.candidate_index,
+                },
+            )
+        except MissingIdentityFieldError:
+            request_identity = screen.content_hash or screen.frame_id
+        now = datetime.now(UTC)
+        hit_payload = {
+            "element_memory_id": hit.element_memory_id,
+            "page_similarity": hit.page_similarity,
+            "template_score": hit.template_score,
+        }
+        ctx.test_run.counter_events.append(
+            CounterEvent(kind="element_memory_hit", occurred_at=now, payload=hit_payload)
+        )
+        skipped_payload = {
+            "model_role": "grounder",
+            "reason": "element_memory_hit",
+            "request_identity": request_identity,
+        }
+        ctx.test_run.counter_events.append(
+            CounterEvent(kind="model_call_skipped", occurred_at=now, payload=skipped_payload)
+        )
+        log_event("model_call_skipped_event", **skipped_payload)
+        ctx.test_run.model_call_audits.append(
+            ModelCallAudit(
+                audit_id=str(uuid.uuid4()),
+                run_id=ctx.run_id,
+                step_id=step.id,
+                frame_id=screen.frame_id,
+                iteration_index=iteration.iteration_index,
+                model_role="grounder",
+                request_identity=request_identity,
+                context_identity=request_identity,
+                sanitized_request={"target": target},
+                sanitized_response={
+                    "matched_bbox": list(hit.matched_bbox),
+                    "template_score": hit.template_score,
+                },
+                outcome="skipped",
+                source_ref=hit.element_memory_id,
+                reason="element_memory_hit",
+            )
+        )
+        log_event(
+            "element_memory_hit",
+            run_id=ctx.run_id,
+            step_id=step.id,
+            frame_id=screen.frame_id,
+            iteration_index=iteration.iteration_index,
+            element_memory_id=hit.element_memory_id,
+            page_memory_id=hit.page_memory_id,
+            page_similarity=hit.page_similarity,
+            template_score=hit.template_score,
+            matched_bbox=list(hit.matched_bbox),
+        )
+        log.info(
+            "element_memory_direct_click",
+            run_id=ctx.run_id,
+            step_id=step.id,
+            iteration_index=iteration.iteration_index,
+            element_memory_id=hit.element_memory_id,
+            page_similarity=hit.page_similarity,
+            template_score=hit.template_score,
+        )
+
     async def run_action_iteration(
         self,
         ctx: RunContext,
@@ -957,6 +1113,10 @@ class AgentRuntime:
             else None
         )
 
+        # Feature 015 (FR-006): non-null iff this iteration's click comes
+        # straight from element memory (the grounder call is skipped).
+        memory_executable: ExecutableAction | None = None
+
         if policy_result.needs_grounding:
             ctx.state_machine.force(AgentState.GROUNDING, "ground")
             target = (
@@ -981,90 +1141,153 @@ class AgentRuntime:
                     )
                 except Exception:
                     zoom_obs = None
-            # FR-049: model API receives unmasked image (model_image_path)
-            with measure_stage(
-                ctx.test_run, stage="grounder", run_id=ctx.run_id, step_id=step.id,
-                frame_id=screen.frame_id, iteration_index=iteration.iteration_index,
-                clock=self.clock,
+
+            # Feature 015 (FR-006): memory-first hot path — before any
+            # grounder call, query page/element memory. A pending zoom plan
+            # (feature 014) takes precedence over memory (the memory/normal
+            # path already failed when zoom was scheduled); only coordinate-
+            # producing mouse actions participate.
+            memory_lookup: MemoryLookupResult | None = None
+            if (
+                self.memory is not None
+                and zoom_obs is None
+                and sa.action_type in ("click", "double_click", "right_click")
             ):
-                from vnc_agent.ui_index.runtime_adapter import build_hints
-
-                _hints, ui_index_candidates, _audit = build_hints(
-                    self._ui_index_bundle,
+                memory_lookup = await self.memory.lookup(
                     screen,
-                    self.config.agent.ui_index,
+                    target_hint,
+                    exclude_element_ids=self._memory_blocked_element_ids,
                 )
-                if zoom_obs is not None:
-                    grounding_request = GroundingRequest(
-                        image_ref=zoom_obs.image_path,
-                        crop_offset=zoom_obs.crop_offset,
-                        scale_factor=zoom_obs.scale_factor,
-                        resolution=zoom_obs.resolution,
-                        original_resolution=screen.resolution,
-                        target=target,
-                        ocr_candidates=[i.model_dump() for i in zoom_obs.ocr_items],
-                        template_candidates=[],
-                        ui_index_candidates=[],
-                    )
-                else:
-                    grounding_request = GroundingRequest(
-                        image_ref=screen.path_for_model(),
-                        crop_offset=screen.crop_offset,
-                        resolution=screen.resolution,
-                        target=target,
-                        ocr_candidates=[i.model_dump() for i in screen.ocr_items],
-                        template_candidates=[m.model_dump() for m in screen.template_matches],
-                        ui_index_candidates=ui_index_candidates,
-                    )
-                grounding = await self.grounder.ground(grounding_request)
-            iteration.grounding_result = grounding
-            try:
-                grounder_req_id = grounder_identity(
-                    target_semantics=target,
-                    candidate_set_identity={
-                        "ocr_count": len(screen.ocr_items),
-                        "template_count": len(screen.template_matches),
-                        "screen": screen.content_hash or screen.frame_id,
-                    },
-                    coordinate_transform_identity={
-                        "crop_offset": grounding_request.crop_offset,
-                        "resolution": grounding_request.resolution,
-                        # Feature 014 (FR-008): zoom transform identity
-                        "scale_factor": grounding_request.scale_factor,
-                        "original_resolution": grounding_request.original_resolution,
-                    },
-                    requested_model_config=_provider_identity_snapshot(self.grounder),
-                    retry_grounding_state={
-                        "iteration_index": iteration.iteration_index,
-                        "candidate_index": self.recovery.candidate_index,
-                    },
+            if (
+                memory_lookup is not None
+                and memory_lookup.level == "high"
+                and memory_lookup.matched_bbox is not None
+                and memory_lookup.element is not None
+                and memory_lookup.page is not None
+            ):
+                # Direct click from remembered evidence (design §21.3 "历史
+                # 经验命中时不立即调用 MiMo") — the grounder is not called at
+                # all this round. Independent verification below is unchanged
+                # (FR-008 / Constitution IV).
+                memory_executable = self._memory_direct_executable(
+                    sa, memory_lookup, screen
                 )
-                self._record_model_call_audit(
+                iteration.memory_hit = MemoryHitAudit(
+                    element_memory_id=memory_lookup.element.element_id,
+                    page_memory_id=memory_lookup.page.page_id,
+                    target_label=memory_lookup.element.target_label,
+                    page_similarity=memory_lookup.page_similarity,
+                    template_score=memory_lookup.template_score or 0.0,
+                    matched_bbox=memory_lookup.matched_bbox,
+                )
+                self._record_memory_hit(
                     ctx,
-                    step_id=step.id,
-                    frame_id=screen.frame_id,
-                    iteration_index=iteration.iteration_index,
-                    model_role="grounder",
-                    request_identity=grounder_req_id,
-                    context_identity=grounder_req_id,
-                    sanitized_request={"target": target},
-                    sanitized_response={
-                        "found": grounding.found,
-                        "candidate_count": len(grounding.candidates),
-                    },
+                    step=step,
+                    screen=screen,
+                    iteration=iteration,
+                    target=target,
+                    hit=iteration.memory_hit,
                 )
-            except MissingIdentityFieldError:
-                pass
-            policy_result = self.policy.resolve(
-                sa,
-                screen,
-                grounding_result=grounding,
-                prefer_keyboard=self.recovery.prefer_keyboard,
-                focus_path=self.recovery.focus_path,
-                candidate_index=self.recovery.candidate_index,
-            )
+            else:
+                # FR-049: model API receives unmasked image (model_image_path)
+                with measure_stage(
+                    ctx.test_run, stage="grounder", run_id=ctx.run_id, step_id=step.id,
+                    frame_id=screen.frame_id, iteration_index=iteration.iteration_index,
+                    clock=self.clock,
+                ):
+                    from vnc_agent.ui_index.runtime_adapter import build_hints
 
-        if policy_result.outcome == "stop_recover":
+                    _hints, ui_index_candidates, _audit = build_hints(
+                        self._ui_index_bundle,
+                        screen,
+                        self.config.agent.ui_index,
+                    )
+                    if zoom_obs is not None:
+                        grounding_request = GroundingRequest(
+                            image_ref=zoom_obs.image_path,
+                            crop_offset=zoom_obs.crop_offset,
+                            scale_factor=zoom_obs.scale_factor,
+                            resolution=zoom_obs.resolution,
+                            original_resolution=screen.resolution,
+                            target=target,
+                            ocr_candidates=[i.model_dump() for i in zoom_obs.ocr_items],
+                            template_candidates=[],
+                            ui_index_candidates=[],
+                        )
+                    else:
+                        grounding_request = GroundingRequest(
+                            image_ref=screen.path_for_model(),
+                            crop_offset=screen.crop_offset,
+                            resolution=screen.resolution,
+                            target=target,
+                            ocr_candidates=[i.model_dump() for i in screen.ocr_items],
+                            template_candidates=[m.model_dump() for m in screen.template_matches],
+                            ui_index_candidates=ui_index_candidates,
+                        )
+                        # Feature 015 (FR-007): medium-tier memory evidence
+                        # (or high without a template confirmation) rides the
+                        # existing template_candidates hint channel — never a
+                        # direct click, the grounder decides.
+                        if memory_lookup is not None and memory_lookup.element is not None:
+                            grounding_request.template_candidates.append(
+                                {
+                                    "template_id": (
+                                        "element_memory:"
+                                        f"{memory_lookup.element.target_label}"
+                                    ),
+                                    "bbox": list(memory_lookup.element.bbox),
+                                    "confidence": memory_lookup.page_similarity,
+                                }
+                            )
+                    grounding = await self.grounder.ground(grounding_request)
+                iteration.grounding_result = grounding
+                try:
+                    grounder_req_id = grounder_identity(
+                        target_semantics=target,
+                        candidate_set_identity={
+                            "ocr_count": len(screen.ocr_items),
+                            "template_count": len(screen.template_matches),
+                            "screen": screen.content_hash or screen.frame_id,
+                        },
+                        coordinate_transform_identity={
+                            "crop_offset": grounding_request.crop_offset,
+                            "resolution": grounding_request.resolution,
+                            # Feature 014 (FR-008): zoom transform identity
+                            "scale_factor": grounding_request.scale_factor,
+                            "original_resolution": grounding_request.original_resolution,
+                        },
+                        requested_model_config=_provider_identity_snapshot(self.grounder),
+                        retry_grounding_state={
+                            "iteration_index": iteration.iteration_index,
+                            "candidate_index": self.recovery.candidate_index,
+                        },
+                    )
+                    self._record_model_call_audit(
+                        ctx,
+                        step_id=step.id,
+                        frame_id=screen.frame_id,
+                        iteration_index=iteration.iteration_index,
+                        model_role="grounder",
+                        request_identity=grounder_req_id,
+                        context_identity=grounder_req_id,
+                        sanitized_request={"target": target},
+                        sanitized_response={
+                            "found": grounding.found,
+                            "candidate_count": len(grounding.candidates),
+                        },
+                    )
+                except MissingIdentityFieldError:
+                    pass
+                policy_result = self.policy.resolve(
+                    sa,
+                    screen,
+                    grounding_result=grounding,
+                    prefer_keyboard=self.recovery.prefer_keyboard,
+                    focus_path=self.recovery.focus_path,
+                    candidate_index=self.recovery.candidate_index,
+                )
+
+        if memory_executable is None and policy_result.outcome == "stop_recover":
             clf = Classification(
                 failure_type=policy_result.failure_type,  # type: ignore[arg-type]
                 sub_reason=policy_result.sub_reason,
@@ -1102,7 +1325,9 @@ class AgentRuntime:
                 reason=f"action policy stop: {clf.failure_type}",
             )
 
-        executable = policy_result.executable
+        executable = (
+            memory_executable if memory_executable is not None else policy_result.executable
+        )
         if executable is None:
             return VerificationResult(status="failed", reason="no executable action")
         iteration.executable_action = executable
@@ -1243,6 +1468,30 @@ class AgentRuntime:
         # record it for prior_successful_replay within this run.
         if action_landed and active_focus_path is not None:
             self.recovery.record_successful_focus_path(active_focus_path)
+
+        # Feature 015 (FR-004/FR-008): settle memory strictly *after* the
+        # independent verification verdict. A memory-derived click that did
+        # not pass bans that element for the rest of this step and bumps its
+        # failure counter; every verified-passed mouse action with a resolved
+        # target_region is written back (pre-action frame + region). Both
+        # calls are fail-open inside the service.
+        if self.memory is not None:
+            if iteration.memory_hit is not None and vr.status != "passed":
+                self._memory_blocked_element_ids.add(
+                    iteration.memory_hit.element_memory_id
+                )
+                await self.memory.record_element_failure(
+                    iteration.memory_hit.element_memory_id
+                )
+            if (
+                vr.status == "passed"
+                and executable.method == "mouse"
+                and executable.target_region is not None
+                and target_hint
+            ):
+                await self.memory.record_success(
+                    screen, target_hint, executable.target_region
+                )
 
         # Recovery routing based on ActionEffect (replaces bare changed_since_last)
         if vr.status in ("failed", "uncertain"):
