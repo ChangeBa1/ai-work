@@ -22,7 +22,11 @@ from vnc_agent.execution.repeat_guard import RepeatGuard
 from vnc_agent.execution.router import ExecutionRouter, compute_batch_repeat_timeout_seconds
 from vnc_agent.logging_setup import get_logger
 from vnc_agent.models.provider import GrounderProvider, GroundingRequest, PlannerProvider
-from vnc_agent.perception.action_effect import classify_action_effect
+from vnc_agent.perception.action_effect import (
+    assess_wrong_target,
+    blobs_intersecting_neighborhood,
+    classify_action_effect,
+)
 from vnc_agent.perception.pipeline import ObservationPipeline
 from vnc_agent.perception.stability import StabilityEngine
 from vnc_agent.planning.action_classification import classify_action_kind
@@ -378,8 +382,14 @@ class AgentRuntime:
                     break
 
                 iteration.verification_result = vr
+                # Feature 022: upgraded attribution (stale_frame /
+                # wrong_target) flows into the experience row's failure_type
+                # — None on every other iteration (pre-022 value).
                 await self.experience.collect(
-                    run_id=ctx.run_id, step_id=step.id, iteration=iteration
+                    run_id=ctx.run_id,
+                    step_id=step.id,
+                    iteration=iteration,
+                    failure_type=iteration.failure_attribution,
                 )
 
                 if vr.status == "passed":
@@ -893,6 +903,69 @@ class AgentRuntime:
             template_score=hit.template_score,
         )
 
+    async def _pre_click_stale_check(
+        self,
+        ctx: RunContext,
+        step: TestStep,
+        screen: StructuredScreen,
+        executable: ExecutableAction,
+    ) -> str | None:
+        """Feature 022 (FR-A01/FR-A02): quick pre-execution guard for mouse
+        actions — one fresh capture through the shared FrameCaptureService
+        (capture_source="pre_click_guard"; dedup/audit apply as for any other
+        capture), then a deterministic ROI comparison of the target
+        neighborhood against the observation frame that produced this
+        action's coordinates. Zero model calls.
+
+        Returns a detail string when the neighborhood changed (the action
+        MUST NOT be sent), None to proceed. Every internal failure fails
+        open to None — the guard is protective, never a new failure mode.
+        """
+        target_region = executable.target_region
+        if target_region is None or not screen.image_path:
+            return None
+        try:
+            outcome = await self.capture_service.capture(
+                step_id=step.id, capture_source="pre_click_guard"
+            )
+        except Exception as exc:  # capture failure → existing flows own it later
+            log.warning("pre_click_guard_capture_failed", error=str(exc), run_id=ctx.run_id)
+            return None
+        frame = outcome.frame
+        # Fast path: identical logical content ⇒ nothing moved anywhere.
+        if (
+            frame.content_hash is not None
+            and screen.content_hash is not None
+            and frame.content_hash == screen.content_hash
+        ):
+            return None
+        try:
+            from vnc_agent.perception.screen_diff import compute_diff
+
+            # Both sides are safe-evidence PNGs (identically masked) —
+            # threshold=1.0 keeps `regions` empty, we only want local_blobs.
+            _, _, guard_ratio, guard_blobs = compute_diff(
+                screen.image_path, frame.image_path, threshold=1.0
+            )
+        except Exception as exc:
+            log.warning("pre_click_guard_diff_failed", error=str(exc), run_id=ctx.run_id)
+            return None
+        hits = blobs_intersecting_neighborhood(
+            guard_blobs,
+            target_region,
+            expand_ratio=self.config.agent.execution.stale_frame_region_expand_ratio,
+            resolution=screen.resolution,
+        )
+        if not hits:
+            return None
+        h0 = hits[0]
+        return (
+            f"target neighborhood changed between observation and execution: "
+            f"{len(hits)}/{len(guard_blobs)} blob(s) in neighborhood, "
+            f"first=({h0.x1},{h0.y1},{h0.x2},{h0.y2}), "
+            f"global_ratio={guard_ratio:.5f}, guard_frame={frame.id}"
+        )
+
     async def run_action_iteration(
         self,
         ctx: RunContext,
@@ -1383,6 +1456,47 @@ class AgentRuntime:
             iteration.grounding_result = policy_result.grounding_result
         mark("resolving", t0)
 
+        # Feature 022 (FR-A01/FR-A02): stale-frame guard — the coordinates in
+        # `executable` were derived from `screen`, captured several model
+        # calls ago. Before EXECUTING, re-capture once and veto the action if
+        # the target neighborhood changed; the iteration then fails into the
+        # STALE_FRAME recovery path (re-observe + re-locate on the next
+        # iteration). Disabled ⇒ this block is skipped entirely (byte-
+        # identical pre-022 behavior).
+        if (
+            self.config.agent.execution.stale_frame_check_enabled
+            and executable.method == "mouse"
+        ):
+            t0 = time.monotonic()
+            stale_detail = await self._pre_click_stale_check(
+                ctx, step, screen, executable
+            )
+            mark("pre_click_guard", t0)
+            if stale_detail is not None:
+                iteration.failure_attribution = FailureType.STALE_FRAME.value
+                log.info(
+                    "stale_frame_detected",
+                    run_id=ctx.run_id,
+                    step_id=step.id,
+                    iteration_index=iteration.iteration_index,
+                    detail=stale_detail,
+                )
+                attempt = await self.recovery.handle(
+                    Classification(
+                        failure_type=FailureType.STALE_FRAME, detail=stale_detail
+                    ),
+                    step_controller=controller,
+                    ctx=StrategyContext(driver=self.driver, screen=screen),
+                    action_timeout=self.config.agent.action.default_timeout_seconds,
+                )
+                iteration.recovery_attempts.append(attempt)
+                ctx.state_machine.force(AgentState.RECORDING, "stale_frame")
+                if ctx.current_step_record is not None:
+                    ctx.current_step_record.stage_durations_ms.update(t_stages)
+                return VerificationResult(
+                    status="failed", reason=f"stale_frame: {stale_detail}"
+                )
+
         # EXECUTING
         ctx.state_machine.force(AgentState.EXECUTING, "execute")
         t0 = time.monotonic()
@@ -1443,6 +1557,38 @@ class AgentRuntime:
             error_keywords=list(perc.error_keywords),
         )
         iteration.action_effect = action_effect
+
+        # Feature 022 (FR-B02/FR-B04): deterministic wrong-target assessment
+        # for every executed mouse action with a resolved target_region —
+        # pure geometry over the ActionEffect evidence, zero model calls.
+        # `suspected` alone never changes the verdict (FR-B03 upgrade below
+        # additionally requires a failed verification); it is always recorded
+        # for telemetry/023.
+        if executable.method == "mouse" and executable.target_region is not None:
+            iteration.wrong_target_evidence = assess_wrong_target(
+                action_effect,
+                target_region=executable.target_region,
+                click_point=executable.coordinates,
+                resolution=(
+                    after.resolution if after.resolution != (0, 0) else screen.resolution
+                ),
+                neighborhood_expand_ratio=perc.wrong_target_neighborhood_expand_ratio,
+                global_diff_ratio_max=perc.wrong_target_global_diff_ratio_max,
+            )
+            if iteration.wrong_target_evidence.suspected:
+                from vnc_agent.runtime.telemetry import log_event
+
+                wt_ev = iteration.wrong_target_evidence
+                log_event(
+                    "wrong_target_suspected",
+                    run_id=ctx.run_id,
+                    step_id=step.id,
+                    iteration_index=iteration.iteration_index,
+                    nearest_blob_distance_px=wt_ev.nearest_blob_distance_px,
+                    nearest_blob_direction=wt_ev.nearest_blob_direction,
+                    global_diff_ratio=wt_ev.global_diff_ratio,
+                    blob_count=wt_ev.blob_count,
+                )
 
         async def _reobserve_after() -> StructuredScreen:
             return await self.pipeline.observe(
@@ -1564,6 +1710,52 @@ class AgentRuntime:
                     action_timeout=self.config.agent.action.default_timeout_seconds,
                 )
                 iteration.recovery_attempts.append(attempt)
+
+        # Feature 022 (FR-B03): only "suspected AND verification failed"
+        # upgrades this iteration's attribution to WRONG_TARGET — a suspected
+        # iteration whose verification passed stays passed (the response
+        # region may legitimately live elsewhere) and was already logged
+        # above. classify_action_no_effect() is None for expected_effect, so
+        # this never double-routes recovery for the same iteration.
+        wt_ev = iteration.wrong_target_evidence
+        if wt_ev is not None and wt_ev.suspected and vr.status == "failed":
+            iteration.failure_attribution = FailureType.WRONG_TARGET.value
+            vr = vr.model_copy(
+                update={"reason": f"wrong_target: {vr.reason or 'verification failed'}"}
+            )
+            self.recovery.remember_screen(
+                after,
+                target_hint=target_hint,
+                known_focus_hint=self.recovery._last_known_focus_hint,
+            )
+            attempt = await self.recovery.handle(
+                Classification(
+                    failure_type=FailureType.WRONG_TARGET,
+                    detail=wt_ev.reason or "wrong_target_suspected",
+                ),
+                step_controller=controller,
+                ctx=StrategyContext(
+                    driver=self.driver,
+                    screen=after,
+                    grounding_result=iteration.grounding_result,
+                    target=(
+                        sa.target.model_dump()
+                        if sa.target
+                        else {"description": sa.intent}
+                    ),
+                ),
+                action_timeout=self.config.agent.action.default_timeout_seconds,
+            )
+            iteration.recovery_attempts.append(attempt)
+            log.info(
+                "wrong_target_attributed",
+                run_id=ctx.run_id,
+                step_id=step.id,
+                iteration_index=iteration.iteration_index,
+                nearest_blob_distance_px=wt_ev.nearest_blob_distance_px,
+                nearest_blob_direction=wt_ev.nearest_blob_direction,
+                recovery_strategy=attempt.strategy,
+            )
 
         # RECORDING
         ctx.state_machine.force(AgentState.RECORDING, "record")

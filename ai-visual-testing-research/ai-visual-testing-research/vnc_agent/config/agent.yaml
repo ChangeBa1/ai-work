@@ -4,6 +4,18 @@ step:
   default_timeout_seconds: 60
   default_max_retries: 3
 
+# Feature 022 (wrong-click-detection): pre-execution stale-frame guard.
+# Grounding coordinates are derived from an observation frame captured
+# several model calls before execution; the guard re-captures once (capture
+# source "pre_click_guard", normal dedup/audit) and vetoes the mouse action
+# when the target neighborhood changed (FailureType stale_frame → re-observe
+# + re-locate). stale_frame_check_enabled: false restores the pre-022
+# behavior byte-for-byte. The neighborhood is target_region expanded per-side
+# by stale_frame_region_expand_ratio of its own width/height.
+execution:
+  stale_frame_check_enabled: true
+  stale_frame_region_expand_ratio: 0.25
+
 # Feature 020 (wait-tuning): defaults tuned for a fast local native POS app —
 # stable_frame_count 3→2 (one real unchanged comparison, floor max(2,…) in
 # StabilityEngine), capture_interval_ms 500→300, min_delay_ms 300→200; the
@@ -41,6 +53,14 @@ perception:
   local_blob_min_ratio: 0.0005
   # Feature 004: bounded analysis-cache window (3..5 most-recent logical frames)
   cache_max_frames: 5
+  # Feature 022 (wrong-click-detection): wrong-target assessment. A mouse
+  # action classified expected_effect whose change blobs ALL miss the target
+  # neighborhood (target_region expanded per-side by the ratio below) while
+  # the global diff stays under the screen-scale exemption is marked
+  # wrong_target_suspected; the failure attribution upgrades to wrong_target
+  # only when the same iteration's independent verification also fails.
+  wrong_target_neighborhood_expand_ratio: 0.5
+  wrong_target_global_diff_ratio_max: 0.10
 
 artifacts:
   screenshot_policy: "all"  # step | all | on_failure
@@ -164,8 +184,10 @@ evolution:
   # (label: high_confidence_failure).
   hard_case_high_confidence_at_least: 0.9
   # FailureType values (domain/recovery.py) counted as hard-case hits
-  # (label: failure_type_hit). WRONG_TARGET does not exist in the enum —
-  # unexpected_dialog / target_not_found are the closest persisted signals.
+  # (label: failure_type_hit). Feature 022 added wrong_target / stale_frame
+  # to the enum — deployments MAY add them here (the miner matches any
+  # configured value against persisted recovery_attempts); the shipped
+  # default set is kept unchanged.
   hard_case_failure_types:
     - unexpected_dialog
     - target_not_found
@@ -252,6 +274,26 @@ recovery:
   timeout:
     max_retries: 1
     cooldown_ms: 200
+    consumes_global_retry_budget: true
+    allows_action_path_change: true
+    requires_strong_model: false
+    requires_human_confirmation: false
+  # Feature 022: pre-execution guard vetoed a mouse action on a stale
+  # observation frame — remedy is re-observe + re-locate (recapture; the
+  # next ActionIteration re-observes and re-grounds by construction).
+  stale_frame:
+    max_retries: 2
+    cooldown_ms: 200
+    consumes_global_retry_budget: true
+    allows_action_path_change: false
+    requires_strong_model: false
+    requires_human_confirmation: false
+  # Feature 022: suspected wrong click confirmed by a failed verification —
+  # same re-observe/re-locate chain as target_not_found (recapture →
+  # zoom_reground → re_ground), hence path change allowed.
+  wrong_target:
+    max_retries: 2
+    cooldown_ms: 300
     consumes_global_retry_budget: true
     allows_action_path_change: true
     requires_strong_model: false

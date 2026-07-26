@@ -94,7 +94,14 @@ class ScreenFrame(BaseModel):
     step_id: str | None = None
     capture_sequence: int
     capture_source: Literal[
-        "observation", "stability_wait", "retry", "recovery", "post_action_verification"
+        "observation",
+        "stability_wait",
+        "retry",
+        "recovery",
+        "post_action_verification",
+        # Feature 022: quick pre-execution re-capture guarding a mouse action
+        # against a stale observation frame (stale-frame check).
+        "pre_click_guard",
     ]
     timestamp: datetime
     scope: CaptureScope

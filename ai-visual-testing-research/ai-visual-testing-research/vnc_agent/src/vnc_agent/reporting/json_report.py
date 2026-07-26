@@ -164,6 +164,17 @@ def build_report_dict(
                         if it.replay_audit
                         else None
                     ),
+                    # Feature 022 (FR-B04): non-null for every executed mouse
+                    # action with a resolved target_region (suspected or
+                    # not); consumed by feature 023's post-hoc diagnosis.
+                    "wrong_target_evidence": (
+                        it.wrong_target_evidence.model_dump(mode="json")
+                        if it.wrong_target_evidence
+                        else None
+                    ),
+                    # Feature 022: "stale_frame" / "wrong_target" upgraded
+                    # attribution; explicit null on every other round.
+                    "failure_attribution": it.failure_attribution,
                 }
             )
             if it.execution_result is not None and it.execution_result.success is True:

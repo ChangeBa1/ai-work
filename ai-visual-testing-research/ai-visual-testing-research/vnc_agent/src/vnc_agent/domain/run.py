@@ -13,9 +13,9 @@ from vnc_agent.domain.action_identity import CanonicalActionIdentity
 from vnc_agent.domain.grounding import GroundingResult
 from vnc_agent.domain.memory import MemoryHitAudit
 from vnc_agent.domain.observation import ScreenFrame
-from vnc_agent.domain.recovery import RecoveryAttempt
-from vnc_agent.domain.replay import ReplayStepAudit
+from vnc_agent.domain.recovery import RecoveryAttempt, WrongTargetEvidence
 from vnc_agent.domain.repeat_guard import RepeatGuardDecision
+from vnc_agent.domain.replay import ReplayStepAudit
 from vnc_agent.domain.verification import VerificationResult, VerificationSpec, WaitResult
 from vnc_agent.runtime.telemetry import (
     CounterEvent,
@@ -62,6 +62,16 @@ class ActionIteration(BaseModel):
     # the target was located (template/anchor/bbox/fallback_grounding/
     # keyboard). Always null on exploration iterations.
     replay_audit: ReplayStepAudit | None = None
+    # Feature 022 (FR-B04): deterministic wrong-click evidence computed for
+    # every executed mouse action with a resolved target_region (suspected or
+    # not); null for keyboard/region-less iterations. Consumed by feature
+    # 023's post-hoc diagnosis.
+    wrong_target_evidence: WrongTargetEvidence | None = None
+    # Feature 022: upgraded failure attribution for this iteration —
+    # "stale_frame" (guard vetoed execution) or "wrong_target" (suspected +
+    # independent verification failed). Null on every other iteration; a
+    # plain verification failure stays attributed via VerificationResult.
+    failure_attribution: str | None = None
 
 
 class DeclaredFact(BaseModel):
