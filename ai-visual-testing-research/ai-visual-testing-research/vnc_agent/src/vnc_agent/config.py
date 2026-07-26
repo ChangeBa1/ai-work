@@ -320,6 +320,16 @@ class PlannerModelConfig(BaseModel):
     timeout_seconds: int = 60
     describe_screen_timeout_seconds: int | None = None
     api_key_env: str = "VNC_AGENT_PLANNER_API_KEY"
+    # Feature 018 (model-image-downscale): planner-bound screenshots are
+    # proportionally downscaled to at most `planner_image_max_width` px wide
+    # (never upscaled) and JPEG-encoded at `planner_image_jpeg_quality`
+    # before base64 inlining — the planner never outputs coordinates, so
+    # full resolution is wasted upload/model latency. `enabled=false`
+    # restores the pre-018 byte-identical PNG passthrough. Grounder payloads
+    # are never affected (they must stay pixel-exact for coordinates).
+    planner_image_downscale_enabled: bool = True
+    planner_image_max_width: int = Field(default=1024, ge=1)
+    planner_image_jpeg_quality: int = Field(default=80, ge=1, le=100)
 
     def resolve_api_key(self) -> str | None:
         return os.environ.get(self.api_key_env)
