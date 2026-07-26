@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from vnc_agent.domain.reporting_tags import ActionTagRule
@@ -41,6 +41,29 @@ class PerceptionConfig(BaseModel):
     ocr_enabled: bool = True
     template_enabled: bool = True
     vision_fallback_enabled: bool = True
+    # Feature 010 (ocr-japanese-model): OCR recognition language / model
+    # selection. All three default to None = pre-feature behavior (bundled
+    # recognition model). `ocr_lang` values with a project asset mapping are
+    # defined in perception/ocr/engine.py::OCR_LANG_ASSETS; an explicit
+    # `ocr_rec_model_path` overrides the language mapping. Path existence is
+    # validated fail-fast by configure_ocr() at composition time, not here
+    # (config objects are built in offline tests with no filesystem context).
+    ocr_lang: str | None = None
+    ocr_rec_model_path: str | None = None
+    ocr_rec_keys_path: str | None = None
+
+    @model_validator(mode="after")
+    def _ocr_lang_known_or_explicit_path(self) -> PerceptionConfig:
+        if self.ocr_lang is not None and self.ocr_rec_model_path is None:
+            from vnc_agent.perception.ocr.engine import OCR_LANG_ASSETS
+
+            if self.ocr_lang not in OCR_LANG_ASSETS:
+                raise ValueError(
+                    f"unknown perception.ocr_lang {self.ocr_lang!r} without an "
+                    "explicit ocr_rec_model_path; known languages: "
+                    f"{sorted(OCR_LANG_ASSETS)}"
+                )
+        return self
     # 002-action-effect-verification: error popup OCR keywords + local blob min area ratio
     error_keywords: list[str] = Field(
         default_factory=lambda: ["错误", "エラー", "Error", "失败", "失敗", "Failed"]

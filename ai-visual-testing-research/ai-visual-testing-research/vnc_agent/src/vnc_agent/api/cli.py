@@ -131,6 +131,7 @@ async def _execute(
     from vnc_agent.drivers.vncdotool_driver import VNCToolDriver
     from vnc_agent.models.provider import build_grounder, build_planner
     from vnc_agent.perception.cache import AnalysisResultCache
+    from vnc_agent.perception.ocr.engine import configure_ocr
     from vnc_agent.perception.pipeline import ObservationPipeline
     from vnc_agent.perception.screenshot import FrameCaptureService
     from vnc_agent.perception.stability import StabilityEngine
@@ -143,6 +144,19 @@ async def _execute(
     target = cfg.vnc_targets.get(case.target_id)
     if target is None:
         typer.echo(f"Unknown target_id: {case.target_id}", err=True)
+        return EXIT_VALIDATION
+
+    # Feature 010: apply OCR language/model settings at the composition root,
+    # before any VNC connection — a missing configured model asset fails
+    # fast here with the offending path named (FR-005/SC-004).
+    try:
+        configure_ocr(
+            lang=cfg.agent.perception.ocr_lang,
+            rec_model_path=cfg.agent.perception.ocr_rec_model_path,
+            rec_keys_path=cfg.agent.perception.ocr_rec_keys_path,
+        )
+    except (ValueError, FileNotFoundError) as e:
+        typer.echo(f"OCR configuration invalid: {e}", err=True)
         return EXIT_VALIDATION
 
     password = target.resolve_password()
