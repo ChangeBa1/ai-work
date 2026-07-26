@@ -31,6 +31,35 @@ verify the exact `model` id string your account accepts via `GET {base_url}/mode
 `mimo-v2.5` vs. an `opencode-go/mimo-v2.5` prefixed form — see
 `specs/001-vnc-core-execution-loop/contracts/model-provider-contract.md`).
 
+### OCR recognition language / model (feature 010)
+
+The OCR *recognition* stage is configurable per deployment via
+`config/agent.yaml` → `perception`:
+
+```yaml
+perception:
+  ocr_lang: japan                                          # language with a project model mapping
+  ocr_rec_model_path: models/ocr/japan_PP-OCRv4_rec_mobile.onnx  # optional explicit override
+  ocr_rec_keys_path: models/ocr/japan_dict.txt
+```
+
+- All three unset → the engine's bundled default recognition model
+  (pre-feature behavior). Text detection/orientation models are always the
+  bundled ones — only recognition is language-specific.
+- `ocr_lang` values with an in-repo model mapping are defined in
+  `perception/ocr/engine.py::OCR_LANG_ASSETS` (currently: `japan`). An
+  explicit `ocr_rec_model_path` overrides the mapping (any `ocr_lang` value
+  is then accepted as a label).
+- Relative paths resolve against the `vnc_agent/` working directory.
+- This repo ships the Japanese deployment default; model files are committed
+  under `models/ocr/` with provenance (source URLs, sizes, manual-placement
+  instructions for offline environments) in `models/ocr/README.md`. Runtime
+  never downloads models; a configured-but-missing file fails composition
+  fast with the offending path named, before any VNC connection.
+- Verifier bonus: a `text_appears` condition that declares a `region` gets
+  one bounded 2x-upscale re-OCR of that region before failing (small-glyph
+  rescue). `text_disappears` never uses it.
+
 ## CLI
 
 ```bash

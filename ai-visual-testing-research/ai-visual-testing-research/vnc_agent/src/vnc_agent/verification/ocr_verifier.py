@@ -120,13 +120,57 @@ def _text_found(needle: str, screen: StructuredScreen) -> bool:
     return False
 
 
+def _found_in_items(needle: str, items: list[OCRItem]) -> bool:
+    """Needle match over a standalone OCR item list using the same
+    normalization pipeline as the main haystack check."""
+    hays: list[str] = []
+    for item in items:
+        hays.append(normalize_ocr_text(item.text))
+        hays.append(normalize_ocr_text(item.normalized_text))
+    hays.extend(_line_joined_texts(items))
+    hays = [h for h in hays if h]
+    if any(needle in hay for hay in hays):
+        return True
+    needle_amt = amount_digit_key(needle)
+    if needle_amt is None:
+        return False
+    for hay in hays:
+        hay_digits = re.sub(r"\D", "", hay)
+        if hay_digits and needle_amt == hay_digits:
+            return True
+    return False
+
+
+def _roi_retry_found(
+    needle: str, condition: VerificationCondition, screen: StructuredScreen
+) -> bool:
+    """Feature 010 (FR-008): one bounded 2x-upscale re-OCR of the declared
+    region when a regioned `text_appears` needle was not found. Retry items
+    stay local to this decision — `screen.ocr_items` is never mutated."""
+    if condition.region is None or not screen.image_path:
+        return False
+    from vnc_agent.perception.ocr.engine import run_ocr_region_scaled
+
+    try:
+        retry_items = run_ocr_region_scaled(screen.image_path, condition.region)
+    except Exception:
+        return False
+    if not retry_items:
+        return False
+    return _found_in_items(needle, retry_items)
+
+
 def verify_text(condition: VerificationCondition, screen: StructuredScreen) -> VerificationStatus:
     needle = normalize_ocr_text(condition.value or "")
     if not needle:
         return "uncertain"
     found = _text_found(needle, screen)
     if condition.type == "text_appears":
+        if not found and _roi_retry_found(needle, condition, screen):
+            found = True
         return "passed" if found else "failed"
     if condition.type == "text_disappears":
+        # FR-008: the upscale retry never applies here — finding *more* text
+        # could only flip a pass into a fail.
         return "passed" if not found else "failed"
     return "uncertain"

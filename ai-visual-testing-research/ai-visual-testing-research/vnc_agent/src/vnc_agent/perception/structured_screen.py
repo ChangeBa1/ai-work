@@ -31,7 +31,11 @@ from vnc_agent.domain.observation import (
     scope_identity,
 )
 from vnc_agent.perception.cache import AnalysisCacheKey, AnalysisResultCache
-from vnc_agent.perception.ocr.engine import run_ocr, run_ocr_array
+from vnc_agent.perception.ocr.engine import (
+    ocr_component_identity,
+    run_ocr,
+    run_ocr_array,
+)
 from vnc_agent.perception.screen_diff import compute_diff, compute_diff_arrays
 from vnc_agent.perception.template.matcher import (
     match_templates_in_dir,
@@ -41,6 +45,9 @@ from vnc_agent.perception.template.matcher import (
 
 AnalysisEventFn = Callable[[dict[str, Any]], None]
 
+# Fallback identity shape; at call time the engine's live
+# `ocr_component_identity()` is preferred so the analysis-cache key reflects
+# the configured recognition language (feature 010, FR-011).
 _DEFAULT_OCR_IDENTITY = {
     "backend": "rapidocr-onnxruntime",
     "version": "1.0",
@@ -167,7 +174,7 @@ def assemble_structured_screen_from_pixels(
     analysis_source_refs: dict[str, str] = {}
 
     if ocr_enabled:
-        identity = dict(ocr_identity or _DEFAULT_OCR_IDENTITY)
+        identity = dict(ocr_identity or ocr_component_identity())
         ocr_items, source = _lookup_or_compute(
             cache=cache,
             component="ocr",

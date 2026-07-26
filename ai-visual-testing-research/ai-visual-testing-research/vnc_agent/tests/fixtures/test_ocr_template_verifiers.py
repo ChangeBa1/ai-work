@@ -1,9 +1,15 @@
 """US7: OCR/template verifiers."""
 
 from datetime import UTC, datetime
+from pathlib import Path
+
+import cv2
+import numpy as np
+import pytest
 
 from vnc_agent.domain.observation import OCRItem, StructuredScreen, TemplateMatch
 from vnc_agent.domain.verification import VerificationCondition
+from vnc_agent.perception.ocr import engine as ocr_engine
 from vnc_agent.verification.ocr_verifier import verify_text
 from vnc_agent.verification.template_verifier import verify_template
 
@@ -75,3 +81,111 @@ def test_template_appears():
         verify_template(VerificationCondition(type="template_appears", value="logo"), s)
         == "passed"
     )
+
+
+# ---------------------------------------------------------------------------
+# Feature 010 (FR-008/009): failed-needle ROI 2x upscale re-OCR retry.
+# Cross-scenario coverage (Principle VI): the retry is exercised with two
+# unrelated generic GUI scenarios — a form-dialog label and an icon-menu
+# caption — neither tied to any business domain.
+# ---------------------------------------------------------------------------
+
+
+class _RetrySpyEngine:
+    """Stub engine emitting `text` for every call, counting invocations."""
+
+    def __init__(self, text: str | None):
+        self.text = text
+        self.calls = 0
+
+    def __call__(self, img):
+        self.calls += 1
+        if self.text is None:
+            return None, None
+        box = [[4, 4], [60, 4], [60, 24], [4, 24]]
+        return [[box, self.text, 0.9]], None
+
+
+@pytest.fixture(autouse=True)
+def _clean_engine_state():
+    yield
+    ocr_engine.configure_ocr()
+    ocr_engine.reset_engine()
+
+
+def _frame(tmp_path: Path) -> str:
+    p = tmp_path / "frame.png"
+    cv2.imwrite(str(p), np.zeros((100, 100, 3), dtype=np.uint8))
+    return str(p)
+
+
+@pytest.mark.parametrize("needle", ["Submit", "設定一覧"])  # two unrelated scenarios
+def test_regioned_text_appears_rescued_by_single_upscale_retry(tmp_path: Path, needle: str):
+    spy = _RetrySpyEngine(needle)
+    ocr_engine.set_engine(spy)
+    s = _screen(
+        ocr_items=[OCRItem(text="unrelated", bbox=(0, 0, 10, 10), confidence=0.9)],
+        image_path=_frame(tmp_path),
+    )
+    cond = VerificationCondition(
+        type="text_appears", value=needle, region=[10, 10, 90, 40]
+    )
+    assert verify_text(cond, s) == "passed"
+    assert spy.calls == 1, "exactly one bounded retry OCR pass"
+    # retry items must stay local — screen ocr_items untouched
+    assert [i.text for i in s.ocr_items] == ["unrelated"]
+
+
+def test_text_appears_without_region_never_retries(tmp_path: Path):
+    spy = _RetrySpyEngine("Submit")
+    ocr_engine.set_engine(spy)
+    s = _screen(ocr_items=[], image_path=_frame(tmp_path))
+    cond = VerificationCondition(type="text_appears", value="Submit")
+    assert verify_text(cond, s) == "failed"
+    assert spy.calls == 0
+
+
+def test_text_appears_without_image_path_never_retries():
+    spy = _RetrySpyEngine("Submit")
+    ocr_engine.set_engine(spy)
+    s = _screen(ocr_items=[])
+    cond = VerificationCondition(
+        type="text_appears", value="Submit", region=[10, 10, 90, 40]
+    )
+    assert verify_text(cond, s) == "failed"
+    assert spy.calls == 0
+
+
+def test_text_disappears_never_uses_the_retry(tmp_path: Path):
+    """Finding more text via retry may only rescue text_appears — it must
+    never flip a text_disappears pass into a fail."""
+    spy = _RetrySpyEngine("Ghost")
+    ocr_engine.set_engine(spy)
+    s = _screen(ocr_items=[], image_path=_frame(tmp_path))
+    cond = VerificationCondition(
+        type="text_disappears", value="Ghost", region=[10, 10, 90, 40]
+    )
+    assert verify_text(cond, s) == "passed"
+    assert spy.calls == 0
+
+
+def test_empty_retry_result_still_fails(tmp_path: Path):
+    spy = _RetrySpyEngine(None)  # retry OCR finds nothing
+    ocr_engine.set_engine(spy)
+    s = _screen(ocr_items=[], image_path=_frame(tmp_path))
+    cond = VerificationCondition(
+        type="text_appears", value="Options", region=[10, 10, 90, 40]
+    )
+    assert verify_text(cond, s) == "failed"
+    assert spy.calls == 1
+
+
+def test_retry_wrong_text_still_fails(tmp_path: Path):
+    spy = _RetrySpyEngine("Other")
+    ocr_engine.set_engine(spy)
+    s = _screen(ocr_items=[], image_path=_frame(tmp_path))
+    cond = VerificationCondition(
+        type="text_appears", value="Options", region=[10, 10, 90, 40]
+    )
+    assert verify_text(cond, s) == "failed"
+    assert spy.calls == 1
