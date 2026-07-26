@@ -21,6 +21,16 @@ from vnc_agent.models.provider import (
 from vnc_agent.models.response_parser import parse_planner_response
 from vnc_agent.runtime.exceptions import PlanValidationError
 
+# Feature 017 (httpx-client-reuse): shared connection-pool limits for the
+# long-lived per-instance AsyncClient. Model calls are sequential today, so
+# these are headroom; keepalive_expiry=30s keeps the TLS connection warm
+# across a typical plan→ground→verify cadence without holding sockets forever.
+_KEEPALIVE_LIMITS = httpx.Limits(
+    max_connections=10,
+    max_keepalive_connections=5,
+    keepalive_expiry=30.0,
+)
+
 _PLANNER_SYSTEM_PROMPT = (
     "你是一个 GUI 测试的语义动作规划器（Planner）。你会收到当前测试步骤的意图"
     "（step_intent）、预期结果（expected）和当前屏幕的结构化观察（structured_screen，"
@@ -86,8 +96,37 @@ def _image_url_content_part(image_path: str) -> dict[str, Any]:
 
 
 class HttpPlannerClient:
-    def __init__(self, cfg: PlannerModelConfig) -> None:
+    def __init__(
+        self,
+        cfg: PlannerModelConfig,
+        *,
+        transport: httpx.AsyncBaseTransport | None = None,
+    ) -> None:
         self.cfg = cfg
+        self._transport = transport
+        self._client: httpx.AsyncClient | None = None
+
+    def _get_client(self) -> httpx.AsyncClient:
+        """Feature 017: lazily create one long-lived AsyncClient per instance
+        (on the first request's event loop) and reuse its keep-alive pool for
+        every subsequent request. Client default timeout is `timeout_seconds`;
+        describe_screen() overrides per request (FR-005)."""
+        if self._client is None:
+            client_kwargs: dict[str, Any] = {
+                "timeout": self.cfg.timeout_seconds,
+                "limits": _KEEPALIVE_LIMITS,
+            }
+            if self._transport is not None:
+                client_kwargs["transport"] = self._transport
+            self._client = httpx.AsyncClient(**client_kwargs)
+        return self._client
+
+    async def aclose(self) -> None:
+        """Close the shared client. Idempotent; safe when no request was ever
+        made; a later request lazily re-creates a fresh client (FR-003)."""
+        if self._client is not None:
+            client, self._client = self._client, None
+            await client.aclose()
 
     def _headers(self) -> dict[str, str]:
         headers = {"Content-Type": "application/json"}
@@ -110,19 +149,19 @@ class HttpPlannerClient:
             ],
             "response_format": {"type": "json_object"},
         }
-        async with httpx.AsyncClient(timeout=self.cfg.timeout_seconds) as client:
-            try:
-                resp = await client.post(
-                    f"{self.cfg.base_url.rstrip('/')}/chat/completions",
-                    headers=self._headers(),
-                    json=payload,
-                )
-                resp.raise_for_status()
-                data = resp.json()
-                content = data["choices"][0]["message"]["content"]
-                return parse_planner_response(content)
-            except (httpx.HTTPError, KeyError, IndexError, PlanValidationError) as e:
-                raise PlanValidationError(f"planner plan() failed: {e}") from e
+        client = self._get_client()
+        try:
+            resp = await client.post(
+                f"{self.cfg.base_url.rstrip('/')}/chat/completions",
+                headers=self._headers(),
+                json=payload,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            content = data["choices"][0]["message"]["content"]
+            return parse_planner_response(content)
+        except (httpx.HTTPError, KeyError, IndexError, PlanValidationError) as e:
+            raise PlanValidationError(f"planner plan() failed: {e}") from e
 
     async def describe_screen(
         self, request: VisionUnderstandingRequest
@@ -161,30 +200,33 @@ class HttpPlannerClient:
             ],
             "response_format": {"type": "json_object"},
         }
-        timeout = self.cfg.describe_timeout()
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            try:
-                resp = await client.post(
-                    f"{self.cfg.base_url.rstrip('/')}/chat/completions",
-                    headers=self._headers(),
-                    json=payload,
-                )
-                resp.raise_for_status()
-                data = resp.json()
-                content = data["choices"][0]["message"]["content"]
-                if isinstance(content, str):
+        # Feature 017: the shared client's default timeout is timeout_seconds;
+        # describe_screen keeps its own (possibly longer) budget via a
+        # per-request override — behavior identical to the old per-call client.
+        client = self._get_client()
+        try:
+            resp = await client.post(
+                f"{self.cfg.base_url.rstrip('/')}/chat/completions",
+                headers=self._headers(),
+                json=payload,
+                timeout=self.cfg.describe_timeout(),
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            content = data["choices"][0]["message"]["content"]
+            if isinstance(content, str):
+                content = content.strip()
+                if content.startswith("```"):
+                    content = content.strip("`")
+                    if content.lower().startswith("json"):
+                        content = content[4:]
                     content = content.strip()
-                    if content.startswith("```"):
-                        content = content.strip("`")
-                        if content.lower().startswith("json"):
-                            content = content[4:]
-                        content = content.strip()
-                    parsed = json.loads(content)
-                else:
-                    parsed = content
-                return VisionUnderstandingResponse.model_validate(parsed)
-            except Exception as e:
-                raise PlanValidationError(f"describe_screen failed: {e}") from e
+                parsed = json.loads(content)
+            else:
+                parsed = content
+            return VisionUnderstandingResponse.model_validate(parsed)
+        except Exception as e:
+            raise PlanValidationError(f"describe_screen failed: {e}") from e
 
 
 class StubPlanner:

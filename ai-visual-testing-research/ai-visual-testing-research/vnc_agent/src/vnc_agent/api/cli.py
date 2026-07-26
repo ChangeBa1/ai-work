@@ -280,6 +280,18 @@ async def _execute(
             await driver.disconnect()
         except Exception:
             pass
+        # Feature 017 (httpx-client-reuse): release the providers' long-lived
+        # httpx connection pools on every exit path (success, failure,
+        # exception). Duck-typed so stub providers without aclose() are fine;
+        # close failures must never mask the run's real outcome.
+        for provider in (planner, grounder):
+            aclose = getattr(provider, "aclose", None)
+            if aclose is None:
+                continue
+            try:
+                await aclose()
+            except Exception:
+                pass
 
     status = ctx.test_run.status
 

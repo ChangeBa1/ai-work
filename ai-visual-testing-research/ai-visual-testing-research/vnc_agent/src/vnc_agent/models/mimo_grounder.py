@@ -10,7 +10,7 @@ import httpx
 from vnc_agent.config import GrounderModelConfig
 from vnc_agent.domain.grounding import GroundingCandidate, GroundingResult
 from vnc_agent.models.coordinate_space import resolve_pixel_bbox, restore_original_bbox
-from vnc_agent.models.planner_client import _image_url_content_part
+from vnc_agent.models.planner_client import _KEEPALIVE_LIMITS, _image_url_content_part
 from vnc_agent.models.provider import GroundingRequest
 from vnc_agent.models.response_parser import parse_grounding_response
 from vnc_agent.runtime.exceptions import GroundingError, PlanValidationError
@@ -240,6 +240,29 @@ class MimoGrounderClient:
     ) -> None:
         self.cfg = cfg
         self._transport = transport
+        self._client: httpx.AsyncClient | None = None
+
+    def _get_client(self) -> httpx.AsyncClient:
+        """Feature 017 (httpx-client-reuse): lazily create one long-lived
+        AsyncClient per instance (on the first request's event loop) and reuse
+        its keep-alive pool for every subsequent ground() call. An injected
+        test transport backs this same long-lived client."""
+        if self._client is None:
+            client_kwargs: dict[str, Any] = {
+                "timeout": self.cfg.timeout_seconds,
+                "limits": _KEEPALIVE_LIMITS,
+            }
+            if self._transport is not None:
+                client_kwargs["transport"] = self._transport
+            self._client = httpx.AsyncClient(**client_kwargs)
+        return self._client
+
+    async def aclose(self) -> None:
+        """Close the shared client. Idempotent; safe when no request was ever
+        made; a later request lazily re-creates a fresh client (FR-003)."""
+        if self._client is not None:
+            client, self._client = self._client, None
+            await client.aclose()
 
     def _headers(self) -> dict[str, str]:
         headers = {"Content-Type": "application/json"}
@@ -279,21 +302,17 @@ class MimoGrounderClient:
     async def ground(self, request: GroundingRequest) -> GroundingResult:
         payload = self._build_payload(request)
         url = f"{self.cfg.base_url.rstrip('/')}/chat/completions"
-        client_kwargs: dict[str, Any] = {"timeout": self.cfg.timeout_seconds}
-        if self._transport is not None:
-            client_kwargs["transport"] = self._transport
-
-        async with httpx.AsyncClient(**client_kwargs) as client:
-            try:
-                resp = await client.post(
-                    url, headers=self._headers(), json=payload
-                )
-                resp.raise_for_status()
-                data = resp.json()
-            except httpx.HTTPError as e:
-                raise GroundingError(f"grounding HTTP failed: {e}") from e
-            except Exception as e:
-                raise GroundingError(f"grounding request failed: {e}") from e
+        client = self._get_client()
+        try:
+            resp = await client.post(
+                url, headers=self._headers(), json=payload
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        except httpx.HTTPError as e:
+            raise GroundingError(f"grounding HTTP failed: {e}") from e
+        except Exception as e:
+            raise GroundingError(f"grounding request failed: {e}") from e
 
         # Parse chat.completion → GroundingResult. Parse failures MUST NOT kill
         # the whole TestRun: return found=false so Action Policy / recovery can
