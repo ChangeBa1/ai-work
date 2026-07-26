@@ -428,6 +428,260 @@ class AgentRuntime:
             outcome="actual",
         )
 
+    # Feature 009 (planner-skip-contract.md §1.2): blocked reasons that make
+    # a re-plan on an identical frame provably informationless. blocked_
+    # uncertain(_normalized_target) is deliberately excluded — an uncertain
+    # previous effect leaves the Planner a chance to propose a *different*
+    # corrective action on the same frame (research.md R3).
+    _PLANNER_SKIP_BLOCKED_REASONS = frozenset(
+        {
+            "blocked_effect_pending",
+            "blocked_effect_pending_normalized_target",
+            "ambiguous_fail_safe",
+        }
+    )
+
+    @classmethod
+    def _planner_skip_reason(
+        cls,
+        step: TestStep,
+        screen: StructuredScreen,
+        previous_iteration: ActionIteration | None,
+    ) -> str | None:
+        """Feature 009 (FR-001/FR-006): stateless skip predicate
+        (planner-skip-contract.md §1). Returns the skip reason when the
+        planner call for this iteration would be provably informationless,
+        else None. Missing evidence (null hashes / missing records) always
+        disables the skip — fail open to the normal, more expensive path.
+        """
+        if previous_iteration is None:
+            return None
+        guard = previous_iteration.repeat_guard_decision
+        if guard is None or guard.allowed:
+            return None
+        if guard.reason not in cls._PLANNER_SKIP_BLOCKED_REASONS:
+            return None
+        # §1.3 duplicate logical frame: non-null content-hash equality with
+        # the previous round's observation (subsumes the capture-layer
+        # `deduplicated` flag; robust to interleaved stability/post-action
+        # captures — research.md R2).
+        if screen.content_hash is None or previous_iteration.before_content_hash is None:
+            return None
+        if screen.content_hash != previous_iteration.before_content_hash:
+            return None
+        # §1.4 wait-semantics exception (a): previous planned action was
+        # wait-type — time alone can change the next observation.
+        prev_sa = previous_iteration.semantic_action
+        if prev_sa is not None and (
+            prev_sa.action_type == "wait" or prev_sa.micro_action_purpose == "wait"
+        ):
+            return None
+        # §1.5 wait-semantics exception (b): the verification spec declares
+        # an explicit time budget — an unchanged frame is an expected
+        # intermediate state, not a dead end.
+        if step.expected.timeout_seconds is not None:
+            return None
+        return "duplicate_frame_blocked_action"
+
+    def _record_planner_skip(
+        self,
+        ctx: RunContext,
+        *,
+        step: TestStep,
+        screen: StructuredScreen,
+        iteration: ActionIteration,
+        previous_iteration: ActionIteration,
+        skip_reason: str,
+        remaining_budget: int,
+    ) -> None:
+        """Feature 009 (FR-008): one `model_call_skipped` CounterEvent + one
+        outcome="skipped" ModelCallAudit per skipped round — and never a
+        planner `model_call` event or StageMeasurement, so
+        `model_calls.planner` cannot grow (planner-skip-contract.md §3)."""
+        from vnc_agent.runtime.telemetry import CounterEvent, ModelCallAudit, log_event
+
+        try:
+            request_identity = planner_identity(
+                request_semantics={
+                    "intent": step.intent,
+                    "conditions": [c.type for c in step.expected.conditions],
+                },
+                step_intent=step.intent,
+                action_history_state=(
+                    f"iterations={len(ctx.current_step_record.iterations)}"
+                    if ctx.current_step_record
+                    else "iterations=0"
+                ),
+                retry_iteration_state={
+                    "iteration_index": iteration.iteration_index,
+                    "remaining_budget": remaining_budget,
+                },
+                structured_screen_identity=screen.content_hash or screen.frame_id,
+                requested_model_config=_provider_identity_snapshot(self.planner),
+                route_state=str(ctx.state_machine.state),
+            )
+        except MissingIdentityFieldError:
+            request_identity = screen.content_hash or screen.frame_id
+        source_ref = screen.duplicate_of_frame_id or previous_iteration.before_frame_id
+        skipped_payload = {
+            "model_role": "planner",
+            "reason": skip_reason,
+            "request_identity": request_identity,
+        }
+        ctx.test_run.counter_events.append(
+            CounterEvent(
+                kind="model_call_skipped",
+                occurred_at=datetime.now(UTC),
+                payload=skipped_payload,
+            )
+        )
+        log_event("model_call_skipped_event", **skipped_payload)
+        audit = ModelCallAudit(
+            audit_id=str(uuid.uuid4()),
+            run_id=ctx.run_id,
+            step_id=step.id,
+            frame_id=screen.frame_id,
+            iteration_index=iteration.iteration_index,
+            model_role="planner",
+            request_identity=request_identity,
+            context_identity=request_identity,
+            sanitized_request={
+                "step_intent": step.intent,
+                "iteration_index": iteration.iteration_index,
+            },
+            sanitized_response={},
+            outcome="skipped",
+            source_ref=source_ref,
+            reason=skip_reason,
+        )
+        ctx.test_run.model_call_audits.append(audit)
+        log_event(
+            "model_call_audit",
+            run_id=ctx.run_id,
+            step_id=step.id,
+            frame_id=screen.frame_id,
+            iteration_index=iteration.iteration_index,
+            model_role="planner",
+            request_identity=request_identity,
+            context_identity=request_identity,
+            outcome="skipped",
+            reason=skip_reason,
+        )
+
+    async def _skip_planner_iteration(
+        self,
+        ctx: RunContext,
+        step: TestStep,
+        controller: StepController,
+        iteration: ActionIteration,
+        screen: StructuredScreen,
+        previous_iteration: ActionIteration | None,
+        skip_reason: str,
+        t_stages: dict[str, int],
+    ) -> VerificationResult:
+        """Feature 009 (FR-002/FR-005/FR-007): a planner-skipped iteration —
+        marks the record, carries the previous blocking RepeatGuardDecision
+        forward (so identical-frame chains keep skipping,
+        planner-skip-contract.md §4), emits the skip telemetry and follows
+        the exact verdict path an in-iteration RepeatGuard block follows."""
+        assert previous_iteration is not None
+        carried = previous_iteration.repeat_guard_decision
+        assert carried is not None and not carried.allowed
+        iteration.planner_skipped_reason = skip_reason
+        # Carried copy — distinguishable from a fresh guard evaluation by the
+        # non-null planner_skipped_reason on this same record (FR-005).
+        iteration.repeat_guard_decision = carried.model_copy()
+        self._record_planner_skip(
+            ctx,
+            step=step,
+            screen=screen,
+            iteration=iteration,
+            previous_iteration=previous_iteration,
+            skip_reason=skip_reason,
+            remaining_budget=controller.remaining_budget(),
+        )
+        log.info(
+            "planner_skipped",
+            run_id=ctx.run_id,
+            step_id=step.id,
+            iteration_index=iteration.iteration_index,
+            reason=skip_reason,
+            blocked_reason=carried.reason,
+        )
+        return await self._blocked_iteration_verdict(
+            ctx,
+            step,
+            controller,
+            iteration,
+            screen,
+            previous_iteration,
+            carried.reason,
+            t_stages,
+            verify_trigger="planner_skip_duplicate_frame",
+        )
+
+    async def _blocked_iteration_verdict(
+        self,
+        ctx: RunContext,
+        step: TestStep,
+        controller: StepController,
+        iteration: ActionIteration,
+        screen: StructuredScreen,
+        previous_iteration: ActionIteration | None,
+        blocked_reason: str,
+        t_stages: dict[str, int],
+        *,
+        verify_trigger: str,
+    ) -> VerificationResult:
+        """Shared no-execution verdict path: used both when RepeatGuard
+        blocks this round's fresh proposal and when Feature 009 skips the
+        planner on a duplicate frame with a carried blocked decision
+        (planner-skip-contract.md §2 requires the two to be identical).
+        Body extracted verbatim from the pre-009 in-iteration block branch."""
+        if blocked_reason in {"dangerous_drift", "ambiguous_fail_safe"}:
+            attempt = await self.recovery.handle(
+                Classification(
+                    failure_type=FailureType.TARGET_NOT_FOUND,
+                    detail=blocked_reason,
+                ),
+                step_controller=controller,
+                ctx=StrategyContext(driver=self.driver),
+                action_timeout=self.config.agent.action.default_timeout_seconds,
+            )
+            iteration.recovery_attempts.append(attempt)
+        # Strengthen verification without re-executing the non-idempotent action
+        ctx.state_machine.force(AgentState.VERIFYING, verify_trigger)
+        t0 = time.monotonic()
+        prev_ae = (
+            previous_iteration.action_effect
+            if previous_iteration and previous_iteration.action_effect
+            else ActionEffect(
+                status="effect_uncertain",
+                evidence=ActionEffectEvidence(),
+                reason="repeat_guard_block",
+            )
+        )
+        iteration.action_effect = prev_ae
+
+        async def _reobserve() -> StructuredScreen:
+            return await self.pipeline.observe(step_id=step.id, capture_source="retry")
+
+        vr = await resolve_step_result(
+            step.expected,
+            step.verification_mode,
+            prev_ae,
+            screen,
+            planner=self.planner,
+            reobserve=_reobserve,
+            engine=self.verifier,
+            escalate=True,
+        )
+        t_stages["verifying"] = int((time.monotonic() - t0) * 1000)
+        ctx.state_machine.force(AgentState.RECORDING, "record")
+        if ctx.current_step_record is not None:
+            ctx.current_step_record.stage_durations_ms.update(t_stages)
+        return vr
+
     async def run_action_iteration(
         self,
         ctx: RunContext,
@@ -449,6 +703,10 @@ class AgentRuntime:
         t0 = time.monotonic()
         screen = await self.pipeline.observe(step_id=step.id, capture_source="observation")
         iteration.before_frame_id = screen.image_path
+        # Feature 009 (FR-009): record this round's observation content
+        # identity so the duplicate-frame comparison is auditable from the
+        # run record alone (planner-skip-contract.md §1.3).
+        iteration.before_content_hash = screen.content_hash
         mark("observing", t0)
         if ctx.cancelled:
             return None
@@ -480,6 +738,34 @@ class AgentRuntime:
                 ctx.state_machine.force(AgentState.RECORDING, "precondition_failed")
                 return result
         ctx.state_machine.force(AgentState.PLANNING, "plan")
+
+        # Previous ActionIteration within this step (used by the Feature 009
+        # planner short-circuit below and by RepeatGuard further down).
+        previous_iteration: ActionIteration | None = None
+        if ctx.current_step_record and len(ctx.current_step_record.iterations) > 1:
+            previous_iteration = ctx.current_step_record.iterations[-2]
+
+        # Feature 009 (FR-001, planner-skip-contract.md §1/§2): when this
+        # round's observation is pixel-identical to the previous round's AND
+        # the previous round's action was blocked by RepeatGuard
+        # (blocked_effect_pending / ambiguous_fail_safe), a re-plan cannot
+        # produce new information — skip the Planner call entirely and go
+        # straight to the same verdict/recovery path an in-iteration block
+        # follows. Never applies to batch_repeat_key steps (no planner call
+        # exists on that path).
+        if step.batch_repeat_key is None:
+            skip_reason = self._planner_skip_reason(step, screen, previous_iteration)
+            if skip_reason is not None:
+                return await self._skip_planner_iteration(
+                    ctx,
+                    step,
+                    controller,
+                    iteration,
+                    screen,
+                    previous_iteration,
+                    skip_reason,
+                    t_stages,
+                )
 
         # PLANNING
         t0 = time.monotonic()
@@ -587,9 +873,18 @@ class AgentRuntime:
         iteration.canonical_identity = compute_identity(step.id, sa)
 
         # RepeatGuard before RESOLVING_ACTION (contracts §5)
-        previous_iteration: ActionIteration | None = None
-        if ctx.current_step_record and len(ctx.current_step_record.iterations) > 1:
-            previous_iteration = ctx.current_step_record.iterations[-2]
+        # Feature 009: a planner-skipped iteration proposed and executed
+        # nothing — it is transparent to RepeatGuard. Compare the new
+        # proposal against the most recent iteration that actually carried a
+        # planner proposal, so guard semantics are byte-for-byte identical to
+        # the pre-skip behavior (a skip chain never weakens or strengthens
+        # the identity comparison basis).
+        guard_reference_iteration = previous_iteration
+        if previous_iteration is not None and ctx.current_step_record:
+            for prev in reversed(ctx.current_step_record.iterations[:-1]):
+                if prev.planner_skipped_reason is None:
+                    guard_reference_iteration = prev
+                    break
         # Feature 003 (safety issue A): the previous round's resolved target
         # region, if grounding already happened for it. The proposed round's
         # region is always None here — grounding for it has not run yet at
@@ -597,61 +892,29 @@ class AgentRuntime:
         # ACTION/GROUNDING) — has_target_evidence_conflict() treats a missing
         # region as "this dimension does not participate," it never
         # manufactures a conflict out of unavailable evidence.
-        previous_resolved_region = _resolved_region_from_iteration(previous_iteration)
+        previous_resolved_region = _resolved_region_from_iteration(guard_reference_iteration)
         guard = self.repeat_guard.check(
             step.id,
             step.intent,
             sa,
-            previous_iteration,
+            guard_reference_iteration,
             previous_resolved_region=previous_resolved_region,
             proposed_resolved_region=None,
         )
         iteration.repeat_guard_decision = guard
 
         if not guard.allowed:
-            if guard.reason in {"dangerous_drift", "ambiguous_fail_safe"}:
-                attempt = await self.recovery.handle(
-                    Classification(
-                        failure_type=FailureType.TARGET_NOT_FOUND,
-                        detail=guard.reason,
-                    ),
-                    step_controller=controller,
-                    ctx=StrategyContext(driver=self.driver),
-                    action_timeout=self.config.agent.action.default_timeout_seconds,
-                )
-                iteration.recovery_attempts.append(attempt)
-            # Strengthen verification without re-executing the non-idempotent action
-            ctx.state_machine.force(AgentState.VERIFYING, "repeat_guard_block")
-            t0 = time.monotonic()
-            prev_ae = (
-                previous_iteration.action_effect
-                if previous_iteration and previous_iteration.action_effect
-                else ActionEffect(
-                    status="effect_uncertain",
-                    evidence=ActionEffectEvidence(),
-                    reason="repeat_guard_block",
-                )
-            )
-            iteration.action_effect = prev_ae
-
-            async def _reobserve() -> StructuredScreen:
-                return await self.pipeline.observe(step_id=step.id, capture_source="retry")
-
-            vr = await resolve_step_result(
-                step.expected,
-                step.verification_mode,
-                prev_ae,
+            return await self._blocked_iteration_verdict(
+                ctx,
+                step,
+                controller,
+                iteration,
                 screen,
-                planner=self.planner,
-                reobserve=_reobserve,
-                engine=self.verifier,
-                escalate=True,
+                guard_reference_iteration,
+                guard.reason,
+                t_stages,
+                verify_trigger="repeat_guard_block",
             )
-            mark("verifying", t0)
-            ctx.state_machine.force(AgentState.RECORDING, "record")
-            if ctx.current_step_record is not None:
-                ctx.current_step_record.stage_durations_ms.update(t_stages)
-            return vr
 
         # RESOLVING_ACTION (+ optional GROUNDING)
         ctx.state_machine.force(AgentState.RESOLVING_ACTION, "resolve")

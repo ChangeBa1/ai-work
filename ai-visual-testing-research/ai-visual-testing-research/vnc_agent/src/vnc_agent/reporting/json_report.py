@@ -143,6 +143,10 @@ def build_report_dict(
                         if it.ui_index_audit
                         else None
                     ),
+                    # Feature 009 (FR-007): planner short-circuit marker —
+                    # "duplicate_frame_blocked_action" on skipped rounds,
+                    # explicit null on every normal round (contract §3).
+                    "planner_skipped_reason": it.planner_skipped_reason,
                 }
             )
             if it.execution_result is not None and it.execution_result.success is True:
