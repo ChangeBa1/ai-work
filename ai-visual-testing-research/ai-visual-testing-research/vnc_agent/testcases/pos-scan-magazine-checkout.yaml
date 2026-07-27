@@ -1,10 +1,46 @@
 id: pos-scan-magazine-checkout-001
-name: 任务视图切换ScannerSimulator扫描杂志并现金结账
+name: 任务视图切换ScannerSimulator扫码后金券+现金混合结账
 mode: explicit
 target_id: win10-test-01
-timeout_seconds: 420
+timeout_seconds: 600
 
-# Start from empty cart on POS sales screen when visible; if Task View already open, later steps recover.
+# =============================================================================
+# 2026-07-26 全量重写（按用户确认的标准操作流 + 三张实机截图基线）：
+#   图1 任务视图：Win+Tab 呼出（用户口述为 shift+tab，系任务视图实际快捷键
+#       Win+Tab 之误——历次 run 均证明 win+tab 可打开该画面；若环境有特殊
+#       映射，仅需改 open-task-view 的 keys）。
+#   图2 ScannerSimulator 前台：Barcode: 标签正下方输入框（残留数据则双击全选
+#       → Backspace 清空；无数据则跳过清除语义，双击仅取焦点，Backspace 空打
+#       无副作用）→ 输入 45127366 → 点 Scan 登记一件商品。
+#   图3 点击 POS 画面中间空白处，模拟器退回背面，POS 全前台。
+#   之后结账流程完全借鉴已验证通过的 pos-buy-bag-mixed-kinken-cash-001：
+#   小計 → 小键盘输入 4 → 金券 → 預/現計（找零机自动入金 10,000）→ 確定 → 済。
+#
+# 验证策略（本次重写的性能要点）：
+#   - RapidOCR 当前为中文模型，日文假名会被读花（メ→入 等），因此 OCR 断言
+#     只用 ASCII / 汉字 / 数字锚点（TopMost、Favorite、Barcode、CashChanger、
+#     合計、小計、不足、金券、10,000、45127366），假名一律不作 text 断言。
+#   - 能用 OCR/文本判定的步骤不再调用 visual_question（省 ~10s/迭代）；
+#     visual_question 仅保留在真正视觉性的判定上：全选蓝底反白、输入框已空、
+#     错误弹窗甄别、购物车数量、金额显示框、済 完成标记。
+#
+# 2026-07-26 五次修订（run 4d4f01ea 复盘）：
+#   - type-barcode 的 OCR 断言区域曾覆盖到 Favorite 表格首屏，而表内恰有
+#     「45127366 JAN8」一行 → pre_action_goal_check 判"目标已达成"直接跳过
+#     type_text，输入框保持空白。区域收紧为 [10,76,480,118]（仅输入框行）。
+#   - click-scan 验证曾以状态栏 DataCount 残留旧值误判通过；改为以窗口右侧
+#     未被遮挡的 POS 合計区域（0 個 → ≥1 個）为准。
+#
+# 保留的历史教训（勿删）：
+#   - POS 残留红色错误弹窗（バーコードが不正です）期间 Win+Tab 会被 POS 立即
+#     抢回前台而无效：open-task-view 保留"先点戻る清弹窗"分支。
+#   - 任务视图缩略图定位：grounder 曾锁定 y≈50 标题栏，select 步骤保留
+#     "target.text 必须为 null、标题只作锚点"硬规则。
+#   - 重试必须换措辞并声明 micro_action_purpose="refocus"，否则被 repeat guard
+#     拦截空耗迭代。
+#   - 支付画面严禁 Escape（会弹出挡住支付按钮的确认对话框）。
+# =============================================================================
+
 precondition:
   facts:
     - key: environment_ready
@@ -13,22 +49,23 @@ precondition:
         conditions:
           - type: visual_question
             value: >-
-              当前画面是否大致可用：要么是 Windows 任务视图（多窗口缩略图深蓝背景），
-              要么是 POS 主画面（可见合計/小計等）？
-              仅当不是完全黑屏/断开时回答 passed。
+              当前画面是否大致可用：要么是 Windows 任务视图（深蓝背景多窗口缩略图），
+              要么是 POS 主画面（可见合計/小計等，即使中央有红色错误对话框也算可用），
+              要么是 ScannerSimulator 前台？仅当不是完全黑屏/断开时回答 passed。
 
 action_tags:
   - tag: open_task_view
     matcher:
       action_type: hotkey
-  # Do not match title text "Scanner*" — grounder was latching title bar at y≈50.
   - tag: select_scanner
     matcher:
       action_type: click
   - tag: focus_barcode
     matcher:
       action_type: double_click
-      target_text_contains: "Barcode"
+  - tag: clear_barcode
+    matcher:
+      action_type: press_key_repeat
   - tag: type_barcode
     matcher:
       action_type: type_text
@@ -36,13 +73,18 @@ action_tags:
     matcher:
       action_type: click
       target_text_contains: "Scan"
-  - tag: focus_pos
-    matcher:
-      action_type: hotkey
   - tag: subtotal
     matcher:
       action_type: click
       target_text_contains: "小計"
+  - tag: amount_type
+    matcher:
+      action_type: click
+      target_text_contains: "4"
+  - tag: voucher_pay
+    matcher:
+      action_type: click
+      target_text_contains: "金券"
   - tag: cash_start
     matcher:
       action_type: click
@@ -53,184 +95,265 @@ action_tags:
       target_text_contains: "確定"
 
 steps:
+  # ---------------------------------------------------------------------------
+  # 阶段 A：呼出任务视图，把 ScannerSimulator 切到前台
+  # ---------------------------------------------------------------------------
   - id: open-task-view
-    name: 打开Windows任务视图
+    name: Win+Tab打开Windows任务视图
     intent: >-
-      本步骤唯一动作：使用 action_type=hotkey，keys 为 ["win", "tab"]（即 Win+Tab），
-      打开 Windows 任务视图（Task View）。
-      不要 click 任何窗口；不要只按 Win；不要 Escape。
-      成功后应出现深蓝背景上的多个应用缩略图网格。
-    max_retries: 2
-    verification_mode: business
-    expected:
-      operator: all
-      conditions:
-        - type: visual_question
-          value: >-
-            当前是否为 Windows 任务视图：深蓝/蓝色桌面背景上排列多个窗口缩略图，
-            标题可能带省略号（如 ScannerSi...、CT6100ModeSelfSimulatorF...）？
-            仅当明确是任务视图多窗口网格时回答 passed。
-            若仍是单个全屏应用、或看不到缩略图网格，不要回答 passed。
-
-  - id: select-scanner-simulator
-    name: 在任务视图点击ScannerSimulator预览区
-    intent: >-
-      本步骤唯一动作：click 一次，把前台切到 ScannerSimulator。
-      【target 字段硬性规则】
-      - target.text 必须为 null（不要填 Scanner / ScannerSi / ScannerSimulator / 任何窗口标题）。
-      - target.role 可为 null 或 "window_preview"。
-      - target.description 只描述几何与预览内容，不要把标题字符串当作可点文字。
-      - nearby_texts 必须包含可见标题 ScannerSimulator / ScannerSi... / ScannerS...，
-        但该标题只作锚点，不是 click 目标。
-      【相对标题定位（窗口位置和排列可能变化）】
-      - 先找到以 Scanner 开头的标题文字；完整或带省略号都可以。
-      - 从该标题文字的水平中心，垂直向正下方移动约 50–100 像素，
-        点击同一缩略图内部的浅色预览区域。
-      - 落点必须在标题正下方的多行黑色条码列表中，不能仍落在标题文字或标题图标上。
-      - 若标题下方预览很窄，仍以该标题水平中心向下进入预览区为准；
-        不要根据它当前处于第几排、第几个或任何绝对 x/y 坐标判断。
-      - Scanner 预览特征是非常密集的多行条码/文本列表；借此与 POS 数字键、
-        CT6100 表单日志、CashChanger 表格、文件夹和红色 X 窗口区分。
-      【禁止】
-      - 禁止 click 任何标题文字条；禁止点深蓝空白、顶部栏、其它模拟器、POS 小键盘缩略图。
-      - 禁止 Win+Tab、Escape。
+      目标：打开 Windows 任务视图（Task View，深蓝背景多窗口缩略图网格）。
+      【先清理残留弹窗】若当前画面中央有红色标题的错误对话框
+      （如「バーコードが不正です。」），本次迭代唯一动作是 click 该对话框
+      右下角的「戻る」按钮把它关闭——错误弹窗存在时 Win+Tab 会被 POS 立即
+      抢回前台而无效，必须先关弹窗。
+      【无弹窗时】本次迭代唯一动作：action_type=hotkey，keys 为 ["win", "tab"]。
+      除上述「戻る」外不要 click 任何窗口或按钮；不要只按 Win；不要 Escape。
+      成功后应出现深蓝背景上的多个应用缩略图（ScannerSi...、CashChanger、
+      CT5100SimulatorForm、ValueCardSimulatorForm 等标题可见）。
     max_retries: 4
     verification_mode: business
     expected:
+      # 任务视图独有的 ASCII 窗口标题作为 OCR 锚点（POS 全屏或模拟器前台时
+      # 这些标题都不可见）；不调用 visual_question。
+      operator: any
+      conditions:
+        - type: text_appears
+          value: "CashChanger"
+        - type: text_appears
+          value: "SimulatorForm"
+        - type: text_appears
+          value: "PointInfinity"
+
+  - id: select-scanner-simulator
+    name: 点击ScannerSi标题下方缩略图切到前台
+    intent: >-
+      本步骤唯一动作：click 一次，把前台切到 ScannerSimulator。
+      【target 字段硬性规则】
+      - target.text 必须为 null（不要填 Scanner / ScannerSi / ScannerSimulator
+        或任何窗口标题）。
+      - target.role 可为 null 或 "window_preview"。
+      - nearby_texts 必须包含可见标题 ScannerSimulator / ScannerSi... /
+        ScannerS...，但该标题只作锚点，不是 click 目标。
+      【相对标题定位（窗口排列可能变化，不要用绝对坐标或第几排判断）】
+      - 先找到以 Scanner 开头的标题文字（完整或带省略号均可）。
+      - 落点 x 取该标题文字的水平中心；y 取标题文字底边向下约 30 像素
+        （20–60 像素范围内），落入同一缩略图内部的浅色预览区域。
+      - 预览特征是非常密集的多行黑色条码/文本列表；借此与 POS 小键盘缩略图、
+        CT5100 表单、CashChanger 表格、红色 X 窗口区分。
+      - 落点不能仍在标题文字或标题小图标上。
+      【重试规则】第 2 次及以后进入本步骤时，用与上次明显不同的措辞描述
+      target，并声明 micro_action_purpose="refocus"、risk_level=low，
+      否则会被 repeat guard 拦截而空耗迭代。
+      【禁止】click 任何标题文字条、深蓝空白、顶部栏、其它模拟器缩略图；
+      禁止 Win+Tab、Escape。
+    max_retries: 4
+    verification_mode: business
+    expected:
+      # ScannerSimulator 前台的 ASCII 锚点：TopMost 复选框与 Favorite: 标签。
+      # 任务视图里缩略图内容太小 OCR 读不出，POS 前台时二者也不可见，
+      # 因此两锚点齐备即可确认切换成功；不调用 visual_question。
       operator: all
       conditions:
+        - type: text_appears
+          value: "TopMost"
+        - type: text_appears
+          value: "Favorite"
+
+  # ---------------------------------------------------------------------------
+  # 阶段 B：清空 Barcode 输入框并输入 45127366，点 Scan 登记商品
+  # ---------------------------------------------------------------------------
+  - id: focus-barcode-field
+    name: 双击Barcode输入框（有数据则全选）
+    intent: >-
+      本步骤唯一动作：action_type=double_click，双击 ScannerSimulator 窗口
+      顶部「Barcode:」标签正下方的白色长条输入框内部。
+      框内若残留一串数字（如 45127366、2000900010268 等，具体值不定），
+      双击后整段数字呈蓝底反白的全选状态；若框内恰好无数据，双击空白框内部
+      同样可以——目的都是把键盘焦点放进输入框（下一步 Backspace 对空框无副作用）。
+      【输入框的唯一判定】它是「Barcode:」标签与「Favorite:」标签**之间**的
+      那个白色长条；在「Favorite:」标签之上、更在表格表头（Barcode | Description
+      一行）之上。凡是 y 坐标低于「Favorite:」标签的位置都不是输入框——
+      此前多次失败都是把落点定到了下方的表格区。
+      【落点规则】
+      - x 取框左缘向右约 30–80 像素（数字从框左端开始排列），
+        y 取「Barcode:」标签与「Favorite:」标签两行文字的正中间。
+      - 不要点「Barcode:」标签文字本身；不要点框右侧远端空白。
+      - 若框内有数字，target.text 建议直接填从画面读出的那串数字，
+        nearby_texts 含 "Barcode:"——让定位吸附到框内文字的 OCR 位置。
+      【重试规则】重试时换措辞、声明 micro_action_purpose="refocus"、
+      risk_level=low；若上次落点偏低（进了 Favorite 区），本次紧贴
+      「Barcode:」标签正下方。
+      不要点 Favorite 表格行、表头、Scan、TopMost 或窗口外的 POS 控件。
+      禁止单击后结束本步骤；禁止 Win+Tab、Escape、Ctrl+A。
+    max_retries: 3
+    verification_mode: business
+    expected:
+      operator: all
+      conditions:
+        # 全选高亮是纯视觉状态，保留 visual_question（本步骤是后续所有键盘
+        # 操作的焦点前提，必须严格把关）。
         - type: visual_question
           value: >-
-            是否已离开 Windows 任务视图，且前台明确是 ScannerSimulator：
-            同时可见顶部「Barcode:」标签及其输入框、中部「Favorite:」条码列表、
-            右下角「Scan」按钮？仅当这三处都明确可见时回答 passed。
-            若窗口标题为 CT6100ModeSelfSimulatorForm、画面是决済情報/応答方法/日志区域，
-            或仍是深蓝底多窗口缩略图、POS、其它应用，必须回答 failed，不要 passed。
+            ScannerSimulator 是否仍在前台，且「Barcode:」标签正下方的输入框满足
+            以下任一状态：①框内整段数字呈蓝底反白的全选状态；②框内本来就没有
+            任何数字（空框，允许只有光标）？
+            仅当满足①或②时回答 passed。
+            注意区分：若蓝色高亮出现在「Favorite:」表格的某一行上，而输入框内
+            是普通黑字数字，这是点错了位置，必须回答 failed；
+            若框内数字只有部分被选中或仅有光标且仍有数字，也必须回答 failed。
 
-  # ScannerSimulator UI: label "Barcode:" + text box under it; Favorite grid;
-  # bottom-right "Scan" button. Double-click the field to select its current value.
-  - id: focus-barcode-field
-    name: 双击Barcode输入框全选原条码
+  - id: clear-barcode-box
+    name: Backspace清空Barcode输入框
     intent: >-
-      本步骤唯一动作：使用 action_type=double_click，双击 ScannerSimulator 窗口顶部「Barcode:」标签
-      正下方的白色输入框内部（当前通常显示默认条码 2000900010268）。
-      双击输入框中的现有数字文本，使完整条码呈蓝色高亮的全选状态。
-      不要点 Favorite 表格行、Scan、TopMost 或窗口外的 POS 控件。
-      禁止单击后结束本步骤；禁止 Win+Tab、Escape、Ctrl+A、Backspace。
+      本步骤为声明式批量按键：连续按 Backspace 清空 Barcode 输入框。
+      上一步已把框内数据全选（或框本就为空），第一下 Backspace 即删除全部
+      选中内容，其余次数为兜底（应对未全选、仅光标在末尾的情况）。
+      框本来就空时本步骤等效于无操作，同样算达成目标。
+      按键期间不做任何鼠标操作。
+    batch_repeat_key:
+      key: backspace
+      count: 20
+      interval_ms: 40
     max_retries: 2
     verification_mode: business
     expected:
       operator: all
       conditions:
+        # 残留内容不可预知，无法用 text_disappears 断言，保留 visual_question。
         - type: visual_question
           value: >-
-            ScannerSimulator 是否仍在前台，且「Barcode:」下方输入框内的原条码
-            是否像参考图一样完整呈蓝色高亮全选状态？
-            仅当输入框中的整段现有条码已被选中时回答 passed。
-            若只有插入光标、仅选中部分数字，或焦点在 Favorite 表格/Scan/其它控件，
-            必须回答 failed。
+            「Barcode:」标签正下方的输入框现在是否已完全为空（框内没有任何
+            数字或字符，允许只有闪烁光标）？
+            仅当输入框内完全无内容时回答 passed。
+            若框内仍残留任何数字（包括部分残留），必须回答 failed。
 
   - id: type-barcode-45127366
     name: 输入条码45127366
     intent: >-
       本步骤唯一动作：action_type=type_text，text_value 为字符串 "45127366"
       （八位数字，不要空格或其它字符）。
-      Barcode 输入框中的原条码应已完整高亮选中，直接输入以覆盖所选内容；
-      不要先 Backspace；不要 Ctrl+A；
-      不要 click Scan；不要点 Favorite 里的「雑誌(JAN)」行（本 case 用手动输入 45127366）。
-      禁止 Escape、Win+Tab。
+      输入框已在上一步清空、键盘焦点应仍在框内，直接输入即可。
+      不要 click Scan；不要点 Favorite 里的任何行（本 case 用手动输入）。
+      禁止 Escape、Win+Tab、Ctrl+A、Backspace。
     max_retries: 2
     verification_mode: business
     expected:
+      # 纯数字 OCR 可靠，用区域限定的 text_appears 替代 visual_question。
+      # 【2026-07-26 五次修订，run 4d4f01ea 教训】区域必须只覆盖 Barcode 输入框
+      # 本身（y 约 86–105），绝不能碰到 Favorite 表格——表格里恰好有
+      # 「45127366 JAN8」一行（y≈228），上一版区域 [0,40,512,240] 把它框了
+      # 进去，导致 pre_action_goal_check 在动作执行前就判定"目标已达成"，
+      # type_text 被整个跳过、输入框保持空白。
+      # 现区域 [10,76,480,118]：上到 Barcode: 标签下缘、下到 Favorite: 标签
+      # 上缘，只含输入框行。若按键漏进 POS（焦点错误），数字出现在右上置数区
+      # （区域外）而框内为空 → 正确判 failed。
       operator: all
       conditions:
-        - type: visual_question
-          value: >-
-            「Barcode:」下方输入框中显示的内容是否明确为完整的 45127366
-            （八位，不多不少）？
-            仅当框内为 45127366 时回答 passed。
-            若为空、缺位、多位或其它数字，不要回答 passed。
+        - type: text_appears
+          value: "45127366"
+          region: [10, 76, 480, 118]
 
   - id: click-scan-button
     name: 点击Scan发送条码
     intent: >-
       本步骤唯一动作：click 一次 ScannerSimulator 窗口右下角的「Scan」按钮
       （白色按钮，文案 Scan，在 TopMost 复选框右侧）。
+      【落点几何硬性规则】
+      - target.text 可直接填 "Scan"（按钮上的白底黑字文案，OCR 可读，
+        利于低置信度时吸附到按钮文字位置；注意不要吸附到窗口标题
+        ScannerSimulator 上——标题在窗口最顶部，Scan 按钮在窗口最底部）。
+      - Scan 按钮与「TopMost」复选框文字在**同一水平线**上、其右侧；
+        点击点的 y 必须与 TopMost 文字同行，x 在 TopMost 右侧的白色按钮上。
+      - 该按钮在窗口底部状态栏（Idle, Claimed, Enabled / DataCount 文字）之上；
+        点击坐标必须落在 ScannerSimulator 窗口边界内，绝不能低于状态栏、
+        更不能落到窗口外的 POS 画面（レジ袋/マイタグ 等按钮区域）上。
+      【重试规则】重试时换措辞描述 target 并声明 micro_action_purpose="refocus"、
+      risk_level=low，避免被 repeat guard 拦截空耗迭代。
       不要点 TopMost 复选框；不要点 Favorite 表格；不要再改 Barcode 内容。
       禁止 Escape、Win+Tab。
-    max_retries: 2
+    max_retries: 3
     verification_mode: business
     expected:
+      # 【2026-07-26 五次修订，run 4d4f01ea 教训】不得以状态栏 DataCount 的
+      # 数值作为通过依据——它是上一轮扫描的残留旧值，曾导致"Scan 根本没点、
+      # 框是空的"却被误判通过。真正可靠的证据是模拟器窗口右侧未被遮挡的
+      # POS 合計区域：扫描生效时它会立即从 0 個变为 ≥1 個。
       operator: all
       conditions:
         - type: visual_question
           value: >-
-            是否已点击 Scan 并完成一次扫描发送？
-            可依据：按钮按下反馈、状态栏变化（如 DataCount/Idle 等）、
-            或 Barcode 流程已执行完毕的界面迹象。
-            仅当有合理依据认为 Scan 已执行时回答 passed。
-            若 Scan 明显未点、仍停在未发送状态，不要回答 passed。
+            请依据以下两处证据判断 Scan 是否真的完成了一次有效的扫描发送：
+            ① ScannerSimulator 窗口右侧、未被该窗口遮挡的 POS 合計区域：
+            绿色商品数量是否已变为 ≥ 1 個、合计金额是否大于 0？
+            ② 画面上是否没有红色错误对话框（如「バーコードが不正です。」）？
+            仅当①②同时成立时回答 passed。
+            严禁以状态栏 DataCount 的数值作为通过依据（它可能是上一轮残留的
+            旧值）。若 POS 合計仍为 0 個、金额为 0，说明扫描未生效
+            （可能 Scan 未点中、或 Barcode 输入框为空），必须回答 failed。
+            若出现红色错误对话框，多为条码不在商品主档，必须回答 failed。
 
-  - id: return-to-pos-via-task-view
-    name: 再次打开任务视图以回到POS
+  # ---------------------------------------------------------------------------
+  # 阶段 C：点击 POS 空白处让模拟器退到背面，确认商品入车
+  # ---------------------------------------------------------------------------
+  - id: return-to-pos-click-blank
+    name: 点击POS中间空白处使模拟器退回背面
     intent: >-
-      本步骤唯一动作：hotkey ["win", "tab"] 再次打开任务视图。
-      不要 click；不要 Escape。
-    max_retries: 2
+      本步骤唯一动作：click 一次 POS 画面中间的空白区域，把输入焦点交还 POS，
+      使 ScannerSimulator 退回背面、POS 全前台显示。
+      【落点规则】
+      - 点 POS 商品明细表格中部的空白白色行区域：在 ScannerSimulator 窗口
+        右缘与右侧按钮区（選択取消/クリア/数字小键盘）之间、红色上下箭头
+        之间的无文字白色区域。
+      - target.text 必须为 null；nearby_texts 可含 行、商品名称、金額 等表头字样。
+      【禁止】不要点 ScannerSimulator 窗口内任何位置；不要点任何 POS 按钮
+      （選択取消/指定取消/クリア/小計/レジ袋/マイタグ/数字键等）、
+      商品行文字、红色箭头；禁止 Win+Tab、Escape。
+      【重试规则】重试时换措辞并声明 micro_action_purpose="refocus"、risk_level=low。
+    max_retries: 3
     verification_mode: business
     expected:
+      # 模拟器退到背面后其 ASCII 锚点消失，POS 汉字锚点仍在 → 全部 OCR 判定，
+      # 不调用 visual_question。
       operator: all
       conditions:
-        - type: visual_question
-          value: >-
-            是否再次出现 Windows 任务视图的多窗口缩略图网格？
-            仅当任务视图可见时回答 passed。
-
-  - id: select-pos-main
-    name: 在任务视图切回POS主画面
-    intent: >-
-      本步骤唯一动作：click 一次 POS 销售主画面缩略图的预览区中心，回到 POS。
-      【target 规则】
-      - target.text 必须为 null（不要用窗口标题当 target.text）。
-      - 点预览图内部（数字小键盘/クリア/レジ袋/合計 可见的那块中心），不要点标题条。
-      - 常见位置：任务视图偏左上或中上的大缩略图；点击 y 应落在预览内容区而非 y≈50 标题。
-      【禁止】Scanner 列表预览、CashChanger、各 Simulator、资源管理器、TRAN4U、深蓝空白。
-      禁止 Win+Tab、Escape。
-    max_retries: 4
-    verification_mode: business
-    expected:
-      operator: all
-      conditions:
-        - type: visual_question
-          value: >-
-            是否已离开任务视图，且前台为 POS 销售主画面
-            （可见合計/商品区/小計等），不是 ScannerSimulator、不是多缩略图网格？
-            仅当 POS 主画面为前台时回答 passed。
+        - type: text_disappears
+          value: "TopMost"
+        - type: text_disappears
+          value: "Favorite"
+        - type: text_appears
+          value: "小計"
 
   - id: verify-scanned-item-in-cart
     name: 确认扫描商品已加入购物车
     intent: >-
-      本步骤不要再扫描。刚通过 ScannerSimulator 发送了条码 45127366
-      （Favorite 中对应 JAN8 一行；与「雑誌(JAN)」4910026530008 不同）。
-      若商品尚未出现在左侧明细，可 wait 等待 POS 刷新；已入车则 wait。
+      本步骤不要再扫描、不要点任何按钮。刚通过 ScannerSimulator 发送了条码
+      45127366，商品（主档名可能为 JAN8 或实际商品名，如 ロッテ 雪見ベリー
+      レアチーズ）应已登记到 POS 左侧明细。
+      若商品尚未出现在明细，可 wait 等待 POS 刷新；已入车则 wait 即可。
       禁止点小計/支付/Escape。
     max_retries: 3
     verification_mode: business
     expected:
       operator: all
       conditions:
+        # 内税 徽标只在有商品登记后出现（汉字，OCR 可靠）。
         - type: text_appears
-          value: "点数"
+          value: "内税"
         - type: visual_question
           value: >-
-            POS 左侧商品明细或合计区域是否已因扫描条码 45127366 而登记至少 1 点商品
-            （名称可能为 JAN8 或主档商品名，不一定显示「雑誌」），
-            且合計绿色数量 ≥ 1 個、合计金额大于 0？
+            POS 左侧商品明细或合计区域是否已因扫描条码 45127366 登记了至少
+            1 点商品（名称不限），且合計的绿色数量 ≥ 1 個、合计金额大于 0？
             仅当扫描商品明确在购物车中时回答 passed。
             若合計仍为 0 個、明细为空或无法确认，不要回答 passed。
 
+  # ---------------------------------------------------------------------------
+  # 阶段 D：结账（借鉴已验证通过的 pos-buy-bag-mixed-kinken-cash-001：
+  #         小計 → 小键盘 4 → 金券 → 預/現計自动入金 → 確定 → 済）
+  #         金额差异：本 case 合计为扫描商品实价（主档定价，可能变动），
+  #         因此断言不硬编码合计/找零，只锚定 金券=4 与 預り金=10,000。
+  # ---------------------------------------------------------------------------
   - id: calc-subtotal
-    name: 计算合计金额
+    name: 计算合计金额进入支付画面
     intent: >-
       点击 POS 主画面的「小計」按钮，进入支付状态。
       不要点預/現計、金券、取引中止；禁止 Escape。
@@ -244,36 +367,99 @@ steps:
         - type: visual_question
           value: >-
             POS 是否已进入支付状态：左侧显示不足額（或お預かり金額），
-            右侧可见金券/預/現計等支付按钮，且合计金额大于 0？
+            右侧可见「金券」「預/現計」等支付相关按钮，且合计金额大于 0？
             仅当已进入支付画面时回答 passed。
 
-  - id: start-cash-payment
-    name: 启动现金支付并等待自动入金
+  # Amount entry: on-screen keypad "4" (proven on live). NEVER Escape — it opens
+  # a blocking dialog ("現在の操作を行うには…") that hides 金券 → TARGET_NOT_FOUND.
+  - id: enter-kinken-amount
+    name: 点小键盘输入金券金额4
     intent: >-
-      点击 POS 主画面的「預/現計」按钮启动现金支付。
-      找零机模拟器会自动投入现金，不要点击或操作模拟器窗口；
-      等待 POS 现金入金对话框显示自动入金结果（預り金/お釣り/確定）。
-      禁止 Escape。
+      本步骤唯一动作：click 画面右侧数字小键盘上的「4」键一次，使右上角青色金额框显示 4。
+      【「4」键精确定位】
+      - 小键盘在粉色「クリア」右侧；「4」在数字区中间行最左侧；
+      - 正上方是「7」，正右方是「5」，正下方是「1」，右下方是「2」。
+      - 不要点「クリア」「5」「7」「1」「2」「8」「9」「0」「00」。
+      【严禁】
+      - 禁止 press_key / hotkey / Escape / Enter（Escape 会弹出挡住支付按钮的确认对话框）；
+      - 禁止 click「戻る」「キャンセル」「金券」「ビール券」「預/現計」「小計解除」「取引中止」；
+      - 不要先点「クリア」（金额框当前为空时清空无意义，且易误点到邻键）；
+      - 不要 type_text（本机支付画面焦点不可靠）。
+      成功判据：右上角青色金额显示框（電子マネー/金券按钮下方、小键盘上方的大数字框）显示单独的 4。
+    max_retries: 3
+    verification_mode: business
+    expected:
+      operator: all
+      conditions:
+        - type: visual_question
+          value: >-
+            请只看支付区中间的青色/灰青色大号金额显示框
+            （位于「電子マネー」「金券」等支付按钮下方、数字小键盘上方，框内通常只有一个大数字）：
+            框内是否明确显示单独的数字「4」（不是空白、不是其它数字、
+            不是小键盘上的 4 键本身）？
+            仅当该金额显示框内为 4 时回答 passed。
+            若框内空白、为 0、其它数字、看不清，或你只是看到小键盘按键上印着 4，
+            则不要回答 passed。不要根据合計/不足額判断。
+
+  - id: apply-kinken
+    name: 点击金券登记部分支付
+    intent: >-
+      支付区金额框已显示 4。现在只 click 一次支付方式按钮「金券」，将金券 4 登记到上方支付明细表。
+      【若画面中央出现半透明提示「現在の操作を行うには、一度、操作を確定またはキャンセルしてください」】
+      则本步骤改为只 click 粉色「戻る」一次以关闭提示，不要点金券（下一步重试再点金券）。
+      【金券按钮精确定位 — 无提示框时必须全部满足】
+      1) 颜色：浅蓝色/青蓝色扁平按钮（不是黄色）。
+      2) 文字：按钮上明确写着「金券」两字。
+      3) 位置：画面右侧支付区，黄色「電子マネー」正下方、浅蓝色「ビール券」正左方。
+      4) 禁止：黄色「電子マネー」「ポイント」、右侧「ビール券」「次ページ」、
+         粉色「クリア」「戻る」、数字键、万券、JAN、預/現計、メニュー、取引中止、Escape。
+      不要再输入数字；无提示框时只 click「金券」一次。
     max_retries: 2
     verification_mode: business
     expected:
       operator: all
       conditions:
-        # Do not hardcode お釣り: magazine price may vary by master data.
+        - type: text_appears
+          value: "金券"
+        - type: visual_question
+          value: >-
+            支付明细区域（画面上方表格，含 名称/金額 等列）是否已经登记了一笔「金券」支付，
+            且金券金额为 4，同时不足額已比原合计金额减少 4？
+            仅当金券支付行明确可见、金额为 4 且不足額相应减少时回答 passed；
+            若仍无金券行、金额不对或无法确认，则不要回答 passed。
+
+  - id: start-cash-for-remainder
+    name: 对剩余不足额启动现金支付并等待自动入金
+    intent: >-
+      本步骤唯一动作：click 一次 POS 支付画面的「預/現計」按钮，对剩余不足額启动现金支付。
+      【按钮定位】「預/現計」是紫色按钮，位于数字小键盘区的右下角、
+      「小計解除」按钮的正下方、「00」键右侧、「セルフモード」按钮左侧；
+      按钮文字为 預/現計（中间带斜杠，OCR 可能拆成 預 現計 两段）。
+      target.text 可填 "預/現計"，nearby_texts 建议含 小計解除、00。
+      找零机模拟器会自动投入现金，不要点击或操作模拟器窗口；
+      等待 POS 的现金入金对话框显示自动入金结果（預り金/お釣り/確定）。
+      不要点 金券、万券、取引中止；禁止 Escape。
+    max_retries: 3
+    verification_mode: business
+    expected:
+      operator: all
+      conditions:
+        # 找零机固定自动投入 10,000；お釣り随商品实价变动，不硬编码。
         - type: text_appears
           value: "10,000"
         - type: visual_question
           value: >-
             POS 主画面的现金入金对话框是否已显示自动入金结果：
-            預り金明确为 10,000（或等价 10000），お釣り为非负且等于 預り金减去本次应付，
-            并且对话框中的「確定」按钮可点击？
-            仅当入金对话框三项都明确成立时回答 passed；不要检查找零机模拟器窗口。
+            預り金明确为 10,000（或等价 10000），お釣り为非负数且等于
+            預り金减去本次剩余应付金额，并且对话框中的「確定」按钮可点击？
+            仅当入金对话框三项都明确成立时回答 passed；
+            不要检查或操作找零机模拟器窗口。
 
-  - id: finalize-cash-payment
-    name: 确认完成现金结账
+  - id: finalize-mixed-payment
+    name: 确认完成金券+现金混合结账
     intent: >-
-      点击 POS 现金入金对话框中的「確定」按钮完成结账；
-      不要点閉じる，不要操作找零机模拟器；禁止 Escape。
+      点击 POS 主画面现金入金对话框中的「確定」按钮，完成金券+现金混合结账；
+      不要点「閉じる」，不要操作找零机模拟器；禁止 Escape。
     max_retries: 2
     verification_mode: business
     expected:
@@ -281,6 +467,7 @@ steps:
       conditions:
         - type: visual_question
           value: >-
-            POS 主画面是否已出现醒目的大号红色「済」完成标记，表示本次交易已固定完成？
-            仅当「済」明确可见时回答 passed；
-            若仍显示入金对话框、未完成或无法确认，不要回答 passed。
+            POS 主画面的商品明细或交易区域是否已经出现醒目的大号红色「済」完成标记，
+            表示本次金券与现金混合支付交易已经固定并完成？
+            仅当「済」标记明确可见时回答 passed；
+            如果仍显示现金入金对话框、尚未完成或无法确认，则不要回答 passed。
