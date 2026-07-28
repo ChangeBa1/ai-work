@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>VNC Agent 业务流程图</title>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+
+    const isDark = () =>
+      document.documentElement.dataset.theme === "dark" ||
+      (!document.documentElement.dataset.theme &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+    const themeVars = (dark) => ({
+      background: dark ? "#10171A" : "#F5F7F7",
+      mainBkg: dark ? "#172125" : "#FFFFFF",
+      primaryColor: dark ? "#172125" : "#FFFFFF",
+      primaryTextColor: dark ? "#E4ECEC" : "#1C2427",
+      lineColor: dark ? "#26343A" : "#D8E0E1",
+      primaryBorderColor: dark ? "#4FC1CB" : "#0E7C86",
+      nodeBorder: dark ? "#4FC1CB" : "#0E7C86",
+      clusterBorder: dark ? "#26343A" : "#D8E0E1",
+      edgeLabelBackground: dark ? "#10171A" : "#F5F7F7",
+      clusterBkg: "rgba(127,127,127,0.07)",
+      titleColor: dark ? "#E4ECEC" : "#1C2427",
+      secondaryColor: dark ? "#143034" : "#E3F0F1",
+      tertiaryColor: dark ? "#172125" : "#FFFFFF",
+      darkMode: dark,
+      fontSize: "15px",
+      fontFamily: '"Segoe UI","Yu Gothic UI","Microsoft YaHei","PingFang SC",sans-serif',
+    });
+
+    async function renderAll() {
+      const dark = isDark();
+      mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: "strict",
+        theme: "base",
+        themeVariables: themeVars(dark),
+      });
+      const nodes = document.querySelectorAll(".mermaid");
+      for (const el of nodes) {
+        if (!el.dataset.src) el.dataset.src = el.textContent.trim();
+        el.removeAttribute("data-processed");
+        el.textContent = el.dataset.src;
+      }
+      await mermaid.run({ nodes: [...nodes] });
+    }
+
+    document.getElementById("themeToggle")?.addEventListener("click", () => {
+      const next = isDark() ? "light" : "dark";
+      document.documentElement.dataset.theme = next;
+      renderAll();
+    });
+
+    renderAll();
+  </script>
+  <style>
+    :root {
+      --bg: #F5F7F7;
+      --surface: #FFFFFF;
+      --ink: #1C2427;
+      --muted: #5A6A70;
+      --accent: #0E7C86;
+      --accent-soft: #E3F0F1;
+      --line: #D8E0E1;
+      --pass: #2E7D46;
+      --fail: #B4442E;
+      --warn: #A67C2A;
+      --mono: Consolas, "Cascadia Mono", monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #10171A;
+        --surface: #172125;
+        --ink: #E4ECEC;
+        --muted: #8FA3A6;
+        --accent: #4FC1CB;
+        --accent-soft: #143034;
+        --line: #26343A;
+        --pass: #6FBF8A;
+        --fail: #E08A76;
+        --warn: #D4B06A;
+      }
+    }
+    :root[data-theme="light"] {
+      --bg: #F5F7F7; --surface: #FFFFFF; --ink: #1C2427; --muted: #5A6A70;
+      --accent: #0E7C86; --accent-soft: #E3F0F1; --line: #D8E0E1;
+      --pass: #2E7D46; --fail: #B4442E; --warn: #A67C2A;
+    }
+    :root[data-theme="dark"] {
+      --bg: #10171A; --surface: #172125; --ink: #E4ECEC; --muted: #8FA3A6;
+      --accent: #4FC1CB; --accent-soft: #143034; --line: #26343A;
+      --pass: #6FBF8A; --fail: #E08A76; --warn: #D4B06A;
+    }
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "Segoe UI", "Yu Gothic UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+      line-height: 1.65;
+      margin: 0;
+      padding: 2.5rem 1.25rem 5rem;
+    }
+    main { max-width: 1080px; margin: 0 auto; display: flex; flex-direction: column; gap: 2.75rem; }
+    header.doc { max-width: 72ch; position: relative; }
+    .eyebrow {
+      font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--accent); font-weight: 600; margin: 0 0 0.5rem;
+    }
+    h1 { font-size: 1.9rem; line-height: 1.25; margin: 0 0 0.75rem; text-wrap: balance; font-weight: 650; }
+    h2 { font-size: 1.25rem; margin: 0 0 0.25rem; font-weight: 650; text-wrap: balance; }
+    h2 .no { color: var(--accent); font-family: var(--mono); font-size: 0.9em; margin-right: 0.5em; }
+    section > p.lead { color: var(--muted); max-width: 72ch; margin: 0.25rem 0 1.25rem; }
+    header.doc p { color: var(--muted); margin: 0.25rem 0; max-width: 68ch; }
+    .meta {
+      display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; margin-top: 1rem;
+      font-family: var(--mono); font-size: 0.8rem; color: var(--muted);
+    }
+    .meta b { color: var(--ink); font-weight: 600; }
+    .panel {
+      background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+      padding: 1.5rem; overflow-x: auto;
+    }
+    .panel .mermaid { min-width: 680px; }
+    .legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.25rem; margin-top: 1rem; font-size: 0.8rem; color: var(--muted); }
+    .legend span::before {
+      content: ""; display: inline-block; width: 0.65em; height: 0.65em;
+      border-radius: 2px; margin-right: 0.45em; background: var(--accent);
+    }
+    .legend span.l-gate::before { background: var(--accent); }
+    .legend span.l-act::before { background: var(--muted); opacity: 0.55; }
+    .legend span.l-pass::before { background: var(--pass); }
+    .legend span.l-fail::before { background: var(--fail); }
+    .legend span.l-warn::before { background: var(--warn); }
+    table { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
+    th, td { text-align: left; padding: 0.55rem 0.9rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th {
+      font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--muted); font-weight: 600; border-bottom-width: 2px;
+    }
+    td.fid { font-family: var(--mono); white-space: nowrap; color: var(--accent); font-weight: 600; }
+    td.mod { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+    tr:last-child td { border-bottom: none; }
+    .tbl-wrap { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; overflow-x: auto; }
+    .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; }
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 1.1rem 1.3rem; }
+    .card h3 { margin: 0 0 0.4rem; font-size: 0.95rem; }
+    .card h3 code { font-family: var(--mono); color: var(--accent); font-size: 0.85em; }
+    .card p { margin: 0; font-size: 0.85rem; color: var(--muted); }
+    .card ul { margin: 0.4rem 0 0; padding-left: 1.1rem; font-size: 0.85rem; color: var(--muted); }
+    .card li { margin: 0.2rem 0; }
+    .card li b { color: var(--ink); font-weight: 600; }
+    code.k {
+      font-family: var(--mono); font-size: 0.85em; background: var(--accent-soft);
+      color: var(--accent); padding: 0.08em 0.4em; border-radius: 3px;
+    }
+    .flow-note { font-size: 0.82rem; color: var(--muted); margin-top: 0.9rem; max-width: 78ch; }
+    footer { color: var(--muted); font-size: 0.8rem; border-top: 1px solid var(--line); padding-top: 1.25rem; max-width: 72ch; }
+    .toc {
+      display: flex; flex-wrap: wrap; gap: 0.45rem;
+      margin-top: 1.25rem;
+    }
+    .toc a {
+      font-family: var(--mono); font-size: 0.75rem; text-decoration: none;
+      color: var(--accent); background: var(--accent-soft);
+      border: 1px solid var(--line); border-radius: 4px; padding: 0.28rem 0.55rem;
+    }
+    .toc a:hover { border-color: var(--accent); }
+    #themeToggle {
+      position: absolute; top: 0; right: 0;
+      font-family: var(--mono); font-size: 0.75rem;
+      background: var(--surface); color: var(--muted);
+      border: 1px solid var(--line); border-radius: 4px;
+      padding: 0.35rem 0.65rem; cursor: pointer;
+    }
+    #themeToggle:hover { color: var(--accent); border-color: var(--accent); }
+    @media (max-width: 720px) {
+      #themeToggle { position: static; margin-bottom: 0.75rem; }
+      .panel .mermaid { min-width: 0; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header class="doc">
+    <button id="themeToggle" type="button" aria-label="切换浅色/深色">主题</button>
+    <p class="eyebrow">Business Flows</p>
+    <h1>VNC 黑盒 GUI 测试 Agent — 业务流程图</h1>
+    <p>
+      配套《系统架构(008–023)》的流程视图：从一次 <code class="k">vnc-agent run</code>
+      到单步闭环、双轨验证、定位决策、恢复与回放。模型只参与理解/规划/定位/语义验证，
+      最终通过与失败由代码状态机裁定。
+    </p>
+    <div class="meta">
+      <span><b>基线</b> overall_design.md · specs/001–023</span>
+      <span><b>闭环</b> Observe → Plan → Ground → Act → Wait → Verify</span>
+      <span><b>示例用例</b> pos-buy-bag-checkout</span>
+    </div>
+    <nav class="toc" aria-label="目录">
+      <a href="#s01">01 端到端</a>
+      <a href="#s02">02 状态机</a>
+      <a href="#s03">03 单步闭环</a>
+      <a href="#s04">04 双轨验证</a>
+      <a href="#s05">05 定位决策</a>
+      <a href="#s06">06 恢复</a>
+      <a href="#s07">07 探索/回放</a>
+      <a href="#s08">08 POS 结账</a>
+    </nav>
+  </header>
+
+  <section id="s01">
+    <h2><span class="no">01</span>端到端运行生命周期</h2>
+    <p class="lead">一次 CLI 调用对应一次 Run：装载用例 → 建连 → 前置条件 → 逐步执行 → 产物与报告。</p>
+    <div class="panel">
+      <pre class="mermaid">
+flowchart TB
+  classDef gate fill:#0E7C8622,stroke:#0E7C86,color:#0E7C86
+  classDef act fill:transparent,stroke:#8FA3A6,color:inherit
+  classDef pass fill:#2E7D4622,stroke:#2E7D46,color:#2E7D46
+  classDef fail fill:#B4442E22,stroke:#B4442E,color:#B4442E
+
+  A["CLI: vnc-agent run case.yaml"]:::act
+  B{"--dry-run?"}:::gate
+  C["仅校验 YAML / schema"]:::act
+  D["加载 config + 密钥环境变量"]:::act
+  E["TestCase Loader<br/>mode: explicit / goal_driven / replay"]:::act
+  F["连接 VNC 目标<br/>vncdotool session"]:::act
+  G{"连接成功?"}:::gate
+  H["评估 precondition.facts<br/>VerificationSpec"]:::act
+  I{"前置通过?"}:::gate
+  J["StepController 逐步执行"]:::act
+  K["写 artifacts / trajectory"]:::act
+  L["生成 HTML + JSON 报告"]:::act
+  P["PASSED"]:::pass
+  F1["FAILED"]:::fail
+  X["结束进程 / 断开 VNC"]:::act
+
+  A --> B
+  B -- 是 --> C --> X
+  B -- 否 --> D --> E --> F --> G
+  G -- 否 --> F1 --> K
+  G -- 是 --> H --> I
+  I -- 否 --> F1
+  I -- 是 --> J
+  J -- 全部步骤成功 --> P --> K
+  J -- 不可恢复失败 --> F1
+  K --> L --> X
+      </pre>
+      <div class="legend">
+        <span class="l-act">执行/装载</span>
+        <span class="l-gate">分支门控</span>
+        <span class="l-pass">终态通过</span>
+        <span class="l-fail">终态失败</span>
+      </div>
+      <p class="flow-note">
+        dry-run 不触达 VNC 与模型。正式 run 在连接后先跑声明式前置条件（如购物车件数=0），
+        再进入步骤循环；报告保留全部动作轮次，而非只留最后一次尝试。
+      </p>
+    </div>
+  </section>
+
+  <section id="s02">
+    <h2><span class="no">02</span>Agent 状态机主路径</h2>
+    <p class="lead">运行时由显式状态机驱动；每个状态迁移落库/落轨迹，含原因、重试次数与关联截图。</p>
+    <div class="panel">
+      <pre class="mermaid">
+stateDiagram-v2
+  [*] --> CREATED
+  CREATED --> CONNECTING
+  CONNECTING --> PREPARING: 会话就绪
+  CONNECTING --> FAILED: 建连失败
+  PREPARING --> OBSERVING: 前置完成
+  PREPARING --> RECOVERING: 准备失败
+
+  OBSERVING --> UNDERSTANDING
+  UNDERSTANDING --> RETRIEVING_MEMORY
+  RETRIEVING_MEMORY --> PLANNING
+
+  PLANNING --> OBSERVING: 需要更多观察
+  PLANNING --> VERIFYING: 任务已完成
+  PLANNING --> RESOLVING_ACTION
+
+  RESOLVING_ACTION --> EXECUTING: 快捷键/回放
+  RESOLVING_ACTION --> GROUNDING: 需视觉定位
+  RESOLVING_ACTION --> FAILED: 不安全/拒止
+
+  GROUNDING --> EXECUTING: 有可信候选
+  GROUNDING --> RECOVERING: 无候选
+
+  EXECUTING --> WAITING
+  EXECUTING --> RECOVERING: 发送异常
+  WAITING --> VERIFYING
+  WAITING --> RECOVERING: 等待超时
+
+  VERIFYING --> RECORDING: 步骤通过
+  VERIFYING --> RECOVERING: 可恢复失败
+  VERIFYING --> FAILED: 不可恢复
+
+  RECOVERING --> OBSERVING: 恢复后重试
+  RECOVERING --> FAILED: 额度耗尽
+
+  RECORDING --> STEP_COMPLETED
+  STEP_COMPLETED --> OBSERVING: 有下一步
+  STEP_COMPLETED --> PASSED: 无下一步
+  PASSED --> [*]
+  FAILED --> [*]
+  CANCELLED --> [*]
+      </pre>
+      <p class="flow-note">
+        关键状态 <code class="k">CANCELLED</code> 可由外部取消令牌切入多数活动态。
+        模型不得自行无限重试或宣布测试最终通过——这些权限属于状态机与 Verifier。
+      </p>
+    </div>
+  </section>
+
+  <section id="s03">
+    <h2><span class="no">03</span>单步动作迭代闭环</h2>
+    <p class="lead">每个 TestStep 内可有多轮 ActionIteration：观察 → 计划 → 定位 → 执行 → 等待稳定 → 独立验证。</p>
+    <div class="panel">
+      <pre class="mermaid">
+flowchart TB
+  classDef gate fill:#0E7C8622,stroke:#0E7C86,color:#0E7C86
+  classDef act fill:transparent,stroke:#8FA3A6,color:inherit
+  classDef pass fill:#2E7D4622,stroke:#2E7D46,color:#2E7D46
+  classDef fail fill:#B4442E22,stroke:#B4442E,color:#B4442E
+  classDef warn fill:#A67C2A22,stroke:#A67C2A,color:#A67C2A
+
+  S["进入步骤<br/>intent + expected + max_retries"]:::act
+  O["Observe<br/>截图 · 帧去重 · OCR · 模板"]:::act
+  U["Understand / Memory<br/>页面指纹 · 元素记忆 · 失败经验"]:::act
+  P{"009 重复帧且动作被挡?<br/>跳过空转 Planner"}:::gate
+  PL["Planner<br/>下一步语义动作"]:::act
+  AP["Action Policy<br/>快捷键 → Tab → OCR/模板 → Grounder"]:::act
+  ID{"003 目标一致性门控<br/>dangerous_drift?"}:::gate
+  G["Ground<br/>坐标空间校验 · 安全点击点"]:::act
+  X["Act via VNC<br/>键盘 / 鼠标 / 回放"]:::act
+  W["Wait Engine<br/>多帧稳定 · ROI · 文本出现"]:::act
+  AE["ActionEffect<br/>UI 是否响应"]:::act
+  V["StepVerification<br/>业务断言是否成立"]:::act
+  OK["步骤通过 → RECORDING"]:::pass
+  RT{"还可重试?"}:::gate
+  R["RECOVERING"]:::warn
+  FL["步骤失败"]:::fail
+
+  S --> O --> U --> P
+  P -- 是: 复用上轮动作 --> AP
+  P -- 否 --> PL --> AP
+  AP --> ID
+  ID -- 漂移拒止 --> R
+  ID -- 通过 --> G --> X --> W --> AE --> V
+  V -- passed --> OK
+  V -- failed / uncertain --> RT
+  RT -- 是 --> R --> O
+  RT -- 否 --> FL
+      </pre>
+      <div class="legend">
+        <span class="l-act">主路径</span>
+        <span class="l-gate">策略门控</span>
+        <span class="l-warn">恢复/重试</span>
+        <span class="l-pass">步骤成功</span>
+        <span class="l-fail">步骤失败</span>
+      </div>
+      <p class="flow-note">
+        “点击成功因为模型觉得点对了”是禁止路径。必须重新截图，用 ActionEffect 与
+        VerificationSpec 的独立证据裁决；uncertain 不得直接记为通过。
+      </p>
+    </div>
+  </section>
+
+  <section id="s04">
+    <h2><span class="no">04</span>双轨结果：效果 vs 业务验证</h2>
+    <p class="lead">Feature 002 强制拆开两路结果，报告与判定不得合并成单一 pass/fail。</p>
+    <div class="grid2">
+      <div class="card">
+        <h3>ActionEffect <code>UI 是否响应</code></h3>
+        <ul>
+          <li><b>no_effect</b> — 像素/OCR/模板几乎无变</li>
+          <li><b>expected_effect</b> — 变化符合动作预期区域</li>
+          <li><b>unexpected_effect</b> — 变化远离目标（可触发 022）</li>
+          <li><b>effect_uncertain</b> — 证据不足</li>
+        </ul>
+        <p style="margin-top:0.6rem">由本地感知与 <code class="k">classify_action_effect</code> 产出。</p>
+      </div>
+      <div class="card">
+        <h3>StepVerificationResult <code>业务是否达标</code></h3>
+        <ul>
+          <li><b>passed / failed / uncertain</b></li>
+          <li>条件：<code class="k">text_appears</code>、<code class="k">template_*</code>、<code class="k">visual_question</code>、<code class="k">screen_changed</code>…</li>
+          <li><code class="k">verification_mode: business</code> 要求真实断言</li>
+          <li><code class="k">effect_only</code> 可仅凭效果通过，报告会标注</li>
+        </ul>
+        <p style="margin-top:0.6rem">由 <code class="k">business_resolver</code> 独立裁决；011 防止弱 OCR 否决高置信视觉结论。</p>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:1rem">
+      <pre class="mermaid">
+flowchart LR
+  classDef gate fill:#0E7C8622,stroke:#0E7C86,color:#0E7C86
+  classDef act fill:transparent,stroke:#8FA3A6,color:inherit
+  classDef pass fill:#2E7D4622,stroke:#2E7D46,color:#2E7D46
+  classDef fail fill:#B4442E22,stroke:#B4442E,color:#B4442E
+  classDef warn fill:#A67C2A22,stroke:#A67C2A,color:#A67C2A
+
+  A["执行后观察帧"]:::act
+  B["ActionEffect 分类"]:::act
+  C["VerificationSpec 责任链<br/>规则→OCR→模板→页面→VLM"]:::act
+  D{"verification_mode"}:::gate
+  E["business:<br/>断言通过才算步骤过"]:::act
+  F["effect_only:<br/>效果足够即可过"]:::warn
+  G["legacy 省略:<br/>最高 uncertain + 弱断言警告"]:::warn
+  H["步骤 PASSED"]:::pass
+  I["重试 / 恢复 / FAILED"]:::fail
+
+  A --> B --> C --> D
+  D --> E
+  D --> F
+  D --> G
+  E -- passed --> H
+  E -- failed/uncertain --> I
+  F -- expected_effect 等 --> H
+  F -- no_effect 等 --> I
+  G --> I
+      </pre>
+      <p class="flow-note">
+        发送成功 ≠ 业务成功。ExecutionResult.success 只表示 VNC 事件已派发；
+        业务成功必须等 Verifier。
+      </p>
+    </div>
+  </section>
+
+  <section id="s05">
+    <h2><span class="no">05</span>动作解析与定位决策链</h2>
+    <p class="lead">键盘优先、视觉兜底；每一次点击都穿过记忆、OCR 可信度、Grounder、安全点与陈旧帧校验。</p>
+    <div class="panel">
+      <pre class="mermaid">
+flowchart TB
+  classDef gate fill:#0E7C8622,stroke:#0E7C86,color:#0E7C86
+  classDef act fill:transparent,stroke:#8FA3A6,color:inherit
+  classDef fail fill:#B4442E22,stroke:#B4442E,color:#B4442E
+
+  SA["SemanticAction<br/>Planner / 回放步骤"]:::act
+  R0{"已验证回放动作?"}:::gate
+  R1{"快捷键 / 配方?"}:::gate
+  R2{"Tab 焦点导航?"}:::gate
+  M{"015 页面指纹命中<br/>元素模板可直点?"}:::gate
+  O{"OCR 唯一且可信?<br/>012 截断/低置信→可疑"}:::gate
+  G["MiMo Grounding<br/>Top-K · coordinate_space"]:::act
+  CS{"坐标声明合法?<br/>pixel / normalized_1000"}:::gate
+  SP["013 安全点击点<br/>内缩 · 避让重叠"]:::act
+  ST{"022 目标区相对观察帧<br/>是否已陈旧?"}:::gate
+  GO["派发鼠标/键盘"]:::act
+  RJ["拒止 / 恢复升级<br/>014 zoom · 023 postmortem"]:::fail
+
+  SA --> R0
+  R0 -- 是 --> GO
+  R0 -- 否 --> R1
+  R1 -- 是 --> GO
+  R1 -- 否 --> R2
+  R2 -- 是 --> GO
+  R2 -- 否 --> M
+  M -- 命中 --> SP
+  M -- 未中 --> O
+  O -- 可信 --> SP
+  O -- 可疑/未命中 --> G --> CS
+  CS -- 否 --> RJ
+  CS -- 是 --> SP --> ST
+  ST -- 稳定 --> GO
+  ST -- 已变 --> RJ
+      </pre>
+      <div class="legend">
+        <span class="l-gate">路径选择 / 安全门</span>
+        <span class="l-act">定位与执行</span>
+        <span class="l-fail">拒止与恢复入口</span>
+      </div>
+      <p class="flow-note">
+        CanonicalActionIdentity（step_id + action_id + type + normalized_target）保证重试仍是同一逻辑动作。
+        dangerous_drift（改类型、点到结果行、标签不再匹配意图）在 grounding 前拦截。
+      </p>
+    </div>
+  </section>
+
+  <section id="s06">
+    <h2><span class="no">06</span>失败分类与恢复</h2>
+    <p class="lead">Recovery Engine 按 FailureType 选策略；每策略有次数、冷却、是否耗全局额度与是否需强模型/人工。</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>错误类型</th><th>首选恢复</th><th>备注</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="fid">VNC_*</td><td>有限重连 → 重新观察</td><td class="mod">会话层</td></tr>
+          <tr><td class="fid">PAGE_NOT_STABLE</td><td>延长等待 · 缩小 ROI</td><td class="mod">Wait Engine</td></tr>
+          <tr><td class="fid">TARGET_NOT_FOUND</td><td>重观察 · 014 ROI×2 zoom</td><td class="mod">定位</td></tr>
+          <tr><td class="fid">GROUNDING_LOW_CONFIDENCE</td><td>OCR/模板融合 · 强模型裁决</td><td class="mod">感知</td></tr>
+          <tr><td class="fid">ACTION_NO_EFFECT</td><td>第二候选 · 键盘路径 · 重定位</td><td class="mod">效果轨</td></tr>
+          <tr><td class="fid">WRONG_TARGET</td><td>022 检测 → 023 postmortem 修正</td><td class="mod">带证据修正</td></tr>
+          <tr><td class="fid">UNEXPECTED_DIALOG</td><td>强模型分类 · 仅安全动作</td><td class="mod">风险策略</td></tr>
+          <tr><td class="fid">UAC_OR_SECURE_DESKTOP</td><td>立即停止并报告</td><td class="mod">环境限制</td></tr>
+          <tr><td class="fid">ASSERTION_FAILED</td><td>有限重试后 FAILED</td><td class="mod">业务轨</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="panel" style="margin-top:1rem">
+      <pre class="mermaid">
+flowchart LR
+  classDef gate fill:#0E7C8622,stroke:#0E7C86,color:#0E7C86
+  classDef act fill:transparent,stroke:#8FA3A6,color:inherit
+  classDef pass fill:#2E7D4622,stroke:#2E7D46,color:#2E7D46
+  classDef fail fill:#B4442E22,stroke:#B4442E,color:#B4442E
+  classDef warn fill:#A67C2A22,stroke:#A67C2A,color:#A67C2A
+
+  A["VERIFY / GROUND / WAIT 失败"]:::act
+  B["Classifier → FailureType"]:::act
+  C{"可恢复且额度未尽?"}:::gate
+  D["执行策略<br/>重连/等待/zoom/候选/键盘/…"]:::warn
+  E["可选: 023 VLM postmortem<br/>前后帧+落点→修正 bbox"]:::warn
+  F["写回 015 记忆候选<br/>待下次直点"]:::act
+  G["回到 OBSERVING / EXECUTING"]:::act
+  H["FAILED + 完整证据"]:::fail
+  I["步骤继续 / PASSED"]:::pass
+
+  A --> B --> C
+  C -- 否 --> H
+  C -- 是 --> D --> E --> F --> G
+  G -. 后续验证通过 .-> I
+  G -. 再次失败 .-> B
+      </pre>
+      <p class="flow-note">
+        023 postmortem 是唯一“带证据”的点击修正：同时看点击前帧、标注落点的后帧与目标描述，
+        输出 bbox 经坐标校验与距离上限防幻觉；验证通过后才允许经 015 写回记忆。
+      </p>
+    </div>
+  </section>
+
+  <section id="s07">
+    <h2><span class="no">07</span>探索模式 vs 回放模式</h2>
+    <p class="lead">新用例走探索（模型调用多、沉淀轨迹）；回归走回放（happy path 近零模型调用，失败才升级）。</p>
+    <div class="grid2">
+      <div class="card">
+        <h3>探索 <code>explicit / goal_driven</code></h3>
+        <ul>
+          <li>观察 → 检索经验 → Planner → Policy → Ground → 执行 → 验证</li>
+          <li>保存完整截图与模型响应</li>
+          <li>自动产生候选回放轨迹（016）</li>
+          <li>适合编写与硬化用例</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>回放 <code>--mode replay</code></h3>
+        <ul>
+          <li>页面指纹 → 模板/OCR 锚点 → 执行 → 验证</li>
+          <li>happy path：Planner/Grounder 双零</li>
+          <li>失败：MiMo 重定位 → 验证 → 候选补丁待审</li>
+          <li>补丁不得自动覆盖正式基线</li>
+        </ul>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:1rem">
+      <pre class="mermaid">
+flowchart TB
+  classDef gate fill:#0E7C8622,stroke:#0E7C86,color:#0E7C86
+  classDef act fill:transparent,stroke:#8FA3A6,color:inherit
+  classDef pass fill:#2E7D4622,stroke:#2E7D46,color:#2E7D46
+  classDef warn fill:#A67C2A22,stroke:#A67C2A,color:#A67C2A
+
+  A["Run 启动"]:::act
+  B{"mode?"}:::gate
+  E1["探索路径<br/>Planner + Grounder"]:::act
+  E2["记录 ReplayStep 候选"]:::act
+  R1["加载历史回放步骤"]:::act
+  R2["锚点匹配: 指纹→模板→OCR→相对位"]:::act
+  R3{"匹配成功?"}:::gate
+  R4["执行已验证动作"]:::act
+  R5["失败升级: MiMo 重定位"]:::warn
+  R6["生成 ReplayPatch 待审"]:::warn
+  V["验证"]:::act
+  OK["通过"]:::pass
+
+  A --> B
+  B -- explore --> E1 --> V
+  V -- 探索成功 --> E2 --> OK
+  B -- replay --> R1 --> R2 --> R3
+  R3 -- 是 --> R4 --> V
+  R3 -- 否 --> R5 --> V
+  V -- 回放失败 --> R5 --> R6
+  V -- 通过 --> OK
+      </pre>
+      <p class="flow-note">
+        自进化只允许更新记忆、模板统计、难例导出（021）等；禁止自动训练/替换生产模型或覆盖正式断言与回放基线。
+      </p>
+    </div>
+  </section>
+
+  <section id="s08">
+    <h2><span class="no">08</span>POS 结账业务示例</h2>
+    <p class="lead">
+      用例 <code class="k">pos-buy-bag-checkout</code>：买一个レジ袋并以现金结账。
+      业务语义只存在于 YAML；核心运行时没有“购物车”概念（Constitution Principle VI）。
+    </p>
+    <div class="panel">
+      <pre class="mermaid">
+flowchart LR
+  classDef gate fill:#0E7C8622,stroke:#0E7C86,color:#0E7C86
+  classDef act fill:transparent,stroke:#8FA3A6,color:inherit
+  classDef pass fill:#2E7D4622,stroke:#2E7D46,color:#2E7D46
+
+  P0{"precondition<br/>合計数量 = 0 個?"}:::gate
+  S1["step add-shopping-bag<br/>点击 レジ袋"]:::act
+  V1["断言: 点数/内税 + VLM<br/>数量1 · 金额5"]:::gate
+  S2["step calc-subtotal<br/>点击 小計"]:::act
+  V2["断言: 出现 不足"]:::gate
+  S3["step start-cash-payment<br/>点击 預/現計"]:::act
+  V3["断言: 預り金 10,000<br/>お釣り 9,995"]:::gate
+  S4["step finalize-cash-payment<br/>点击 確定"]:::act
+  V4["断言: 大号红色「済」"]:::gate
+  OK["Run PASSED"]:::pass
+
+  P0 -- 通过 --> S1 --> V1 --> S2 --> V2 --> S3 --> V3 --> S4 --> V4 --> OK
+      </pre>
+      <p class="flow-note">
+        action_tags（add_to_bag / subtotal / cash_start / cash_finalize）仅用于审计与报告标签，
+        由用例声明 matcher，核心不硬编码商品类目。入金对话框由找零机模拟器自动完成——步骤意图明确要求不要去点模拟器。
+      </p>
+    </div>
+    <div class="tbl-wrap" style="margin-top:1rem">
+      <table>
+        <thead>
+          <tr><th>步骤</th><th>意图</th><th>关键断言要点</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="fid">add-shopping-bag</td>
+            <td>点击「レジ袋」加入购物车</td>
+            <td>text: 点数/内税 + visual_question 确认 1 点 / ¥5</td>
+          </tr>
+          <tr>
+            <td class="fid">calc-subtotal</td>
+            <td>点击「小計」</td>
+            <td>text_appears: 不足</td>
+          </tr>
+          <tr>
+            <td class="fid">start-cash-payment</td>
+            <td>点击「預/現計」，等待自动入金</td>
+            <td>預り金 10,000 · お釣り 9,995 · 確定可点</td>
+          </tr>
+          <tr>
+            <td class="fid">finalize-cash-payment</td>
+            <td>点击「確定」完成支付</td>
+            <td>visual_question：明细区醒目红色「済」</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    生成于 2026-07-28 · 风格对齐《VNC Agent 系统架构(008–023)》· 依据 overall_design.md、
+    specs/001–023 与 testcases/pos-buy-bag-checkout.yaml。可在浏览器直接打开；右上角切换浅/深色主题。
+  </footer>
+</main>
+</body>
+</html>
