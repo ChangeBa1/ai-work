@@ -102,11 +102,25 @@ steps:
     name: Win+Tab打开Windows任务视图
     intent: >-
       目标：打开 Windows 任务视图（Task View，深蓝背景多窗口缩略图网格）。
-      【先清理残留弹窗】若当前画面中央有红色标题的错误对话框
+      【例外分支一：残留错误弹窗】若当前画面中央有红色标题的错误对话框
       （如「バーコードが不正です。」），本次迭代唯一动作是 click 该对话框
       右下角的「戻る」按钮把它关闭——错误弹窗存在时 Win+Tab 会被 POS 立即
       抢回前台而无效，必须先关弹窗。
-      【无弹窗时】本次迭代唯一动作：action_type=hotkey，keys 为 ["win", "tab"]。
+      【默认动作 —— 绝大多数情况走这里】本次迭代唯一动作：
+      action_type=hotkey，keys 为 ["win", "tab"]。
+      只有下面两个例外分支的条件**明确成立**时才改做别的；条件不成立
+      或你无法确定时，一律按 Win+Tab，不要 click 任何东西。
+      【例外分支二：模拟器占据前台】仅当画面左上角确实有 ScannerSimulator
+      窗口盖在 POS 之上（必须同时看到「Barcode:」输入框、「Favorite:」表格、
+      底部「Idle, Claimed, Enabled」状态栏）时，本次迭代改为 click 一次
+      模拟器窗口右侧、POS 商品明细表格中部的空白白色行，把焦点交还 POS，
+      下一轮再按 Win+Tab。原因：模拟器持有键盘焦点时 Win 键到不了 shell
+      （实测 run c4aab286：连续 5 次 Win+Tab，15 帧画面哈希完全相同）。
+      判据是「看得见模拟器窗口」，不是「猜它可能在」。
+      若画面是纯 POS 主画面（商品明细表格 + 右侧小键盘，没有任何
+      ScannerSimulator 窗口），本分支**不成立**，必须按 Win+Tab —— 误走
+      本分支会让 click 找不到目标而 TARGET_NOT_FOUND，并连累后续迭代
+      被 repeat guard 拦截（实测 run e261f92c）。
       除上述「戻る」外不要 click 任何窗口或按钮；不要只按 Win；不要 Escape。
       成功后应出现深蓝背景上的多个应用缩略图（ScannerSi...、CashChanger、
       CT5100SimulatorForm、ValueCardSimulatorForm 等标题可见）。
@@ -149,21 +163,39 @@ steps:
     max_retries: 4
     verification_mode: business
     expected:
-      # ScannerSimulator 前台的 ASCII 锚点：TopMost 复选框与 Favorite: 标签。
-      # 任务视图里缩略图内容太小 OCR 读不出，POS 前台时二者也不可见，
-      # 因此两锚点齐备即可确认切换成功；不调用 visual_question。
+      # ScannerSimulator 前台的 ASCII 锚点。任务视图里缩略图内容太小
+      # OCR 读不出，POS 前台时二者也不可见，故两锚点齐备即可确认切换成功。
+      # 【2026-07-28 校正】原本用 "TopMost"，但部署的 japan PP-OCRv4 模型
+      # 把它读成 "Topllost"（M 被切成 ll），该断言在本机永远不可能通过——
+      # run 9f2140ae 里点击已经成功切到前台，却因此判失败。改用状态栏
+      # "Idle, Claimed, Enabled"：同为 ASCII、窗口独有，实测置信 0.93 读得完整。
       operator: all
       conditions:
         - type: text_appears
-          value: "TopMost"
+          value: "Idle, Claimed, Enabled"
+        # 【2026-07-28 再校正】原用 "Favorite"：run c239124f 中 OCR 把它读成
+        # "Favor ite."（词中插入空格），验证器的归一化保留空格故失配。
+        # （档案检测器的归一化会去掉词内空格，因此子窗口检测不受影响。）
+        # 改用窗口标题：实测读作 "ScannerSimulator" 完整无拆分，且模拟器
+        # 退到背面时不可见，任务视图里只读得到截断的 "Scanners.."，
+        # 三种状态可区分。
         - type: text_appears
-          value: "Favorite"
+          value: "ScannerSimulator"
 
   # ---------------------------------------------------------------------------
   # 阶段 B：清空 Barcode 输入框并输入 45127366，点 Scan 登记商品
   # ---------------------------------------------------------------------------
   - id: focus-barcode-field
     name: 双击Barcode输入框（有数据则全选）
+    # Feature 024：本步在 ScannerSimulator 窗口内点击落点，启用子窗口裁剪放大
+    # 增强（档案 profiles/app_perception/scanner-sim.yaml）。仅本步及
+    # click-scan-button 声明；其余步骤（尤其 return-to-pos-click-blank、
+    # start-cash-for-remainder）不声明 = 走原全屏路径，行为与改造前一致。
+    perception_scope: scanner-sim
+    # Feature 024 几何直接点击：指名 source_geometry 里的控件。
+    # Barcode 输入框。该控件没有 Text 属性，OCR 永远读不到它，
+    # 模型只能猜——正是本步骤历史上反复点错的那个控件。
+    perception_target: txbScanData
     intent: >-
       本步骤唯一动作：action_type=double_click，双击 ScannerSimulator 窗口
       顶部「Barcode:」标签正下方的白色长条输入框内部。
@@ -255,6 +287,15 @@ steps:
 
   - id: click-scan-button
     name: 点击Scan发送条码
+    # Feature 024：本步在 ScannerSimulator 窗口内点击落点，启用子窗口裁剪放大
+    # 增强（档案 profiles/app_perception/scanner-sim.yaml）。仅本步及
+    # click-scan-button 声明；其余步骤（尤其 return-to-pos-click-blank、
+    # start-cash-for-remainder）不声明 = 走原全屏路径，行为与改造前一致。
+    perception_scope: scanner-sim
+    # Feature 024 几何直接点击：指名 source_geometry 里的控件。
+    # Scan 按钮。源码 Anchor 为 Bottom|Right，窗口若被拉伸，
+    # 残差闸会拒绝几何解并退回模型路径。
+    perception_target: btnScan
     intent: >-
       本步骤唯一动作：click 一次 ScannerSimulator 窗口右下角的「Scan」按钮
       （白色按钮，文案 Scan，在 TopMost 复选框右侧）。
@@ -316,8 +357,10 @@ steps:
       # 不调用 visual_question。
       operator: all
       conditions:
+        # 【2026-07-28 校正】同上："TopMost" 被 OCR 读成 "Topllost"，
+        # text_disappears 会因「本来就读不到」而永远通过，是假阳性断言。
         - type: text_disappears
-          value: "TopMost"
+          value: "Idle, Claimed, Enabled"
         - type: text_disappears
           value: "Favorite"
         - type: text_appears

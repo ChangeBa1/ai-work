@@ -102,6 +102,11 @@ class ScreenFrame(BaseModel):
         # Feature 022: quick pre-execution re-capture guarding a mouse action
         # against a stale observation frame (stale-frame check).
         "pre_click_guard",
+        # Feature 024: ROI capture for the pre-grounding sub-window
+        # crop+upscale enhancement. Distinct from "recovery" (which is
+        # feature 014's post-failure zoom) so the two are separable in the
+        # capture audit trail.
+        "app_perception",
     ]
     timestamp: datetime
     scope: CaptureScope

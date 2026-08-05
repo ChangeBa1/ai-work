@@ -143,6 +143,9 @@ class AgentRuntime:
         self.policy = ActionPolicy(
             overall_confidence_threshold=config.agent.grounding.overall_confidence_threshold,
             top1_top2_min_gap=config.agent.grounding.top1_top2_min_gap,
+            top1_top2_distinct_max_iou=(
+                config.agent.grounding.top1_top2_distinct_max_iou
+            ),
             ocr_sanity_check_ratio=config.agent.planning.ocr_sanity_check_ratio,
             ocr_direct_click_min_confidence=(
                 config.agent.planning.ocr_direct_click_min_confidence
@@ -204,6 +207,30 @@ class AgentRuntime:
         # Feature 015 (FR-008): element ids banned for the rest of the current
         # step after a memory direct click failed independent verification.
         self._memory_blocked_element_ids: set[str] = set()
+        # Feature 024: steps whose geometric prediction already produced a
+        # click that failed verification. Re-predicting would yield the same
+        # point, so the step falls through to the model path instead of
+        # looping on a deterministic wrong answer.
+        self._geometric_blocked_steps: set[str] = set()
+        # Feature 024 (app-perception-plugins): pre-grounding sub-window
+        # enhancement. None when disabled — that keeps `enabled: false`
+        # byte-identical to the pre-024 runtime (no registry load, no audit,
+        # no work of any kind on the hot path).
+        self.app_perception = None
+        # Feature 024: the running test case's target id, needed by the
+        # observation-stage hook to apply the per-target allow-list.
+        self._current_target_id: str | None = None
+        ap_cfg = config.agent.app_perception
+        if ap_cfg.enabled:
+            from pathlib import Path
+
+            from vnc_agent.perception.app_plugins import (
+                AppPerceptionCoordinator,
+                PluginRegistry,
+            )
+
+            registry = PluginRegistry.from_profiles_dir(Path(ap_cfg.profiles_dir))
+            self.app_perception = AppPerceptionCoordinator(ap_cfg, registry)
         # Feature 023 (click-postmortem-correction): optional injected
         # diagnosis client (offline tests); None => a lightweight HTTP client
         # over the grounder endpoint/model config is built lazily on the
@@ -325,6 +352,12 @@ class AgentRuntime:
             self.recovery.reset_iteration()
             # Feature 015 (FR-008): the memory ban list is per-step.
             self._memory_blocked_element_ids.clear()
+            # Feature 024 (FR-022): the enhancement budget and the refined-OCR
+            # memo are both per-step.
+            if self.app_perception is not None:
+                self._current_target_id = ctx.test_case.target_id
+                self.app_perception.reset_step(step.id)
+                self._geometric_blocked_steps.discard(step.id)
 
             while True:
                 if ctx.cancelled:
@@ -762,7 +795,7 @@ class AgentRuntime:
         iteration.action_effect = prev_ae
 
         async def _reobserve() -> StructuredScreen:
-            return await self.pipeline.observe(step_id=step.id, capture_source="retry")
+            return await self._observe_enhanced(step=step, capture_source="retry")
 
         vr = await resolve_step_result(
             step.expected,
@@ -809,6 +842,73 @@ class AgentRuntime:
             operation=op,
             coordinates=(pt.x, pt.y),
             target_region=Region(x1=bbox[0], y1=bbox[1], x2=bbox[2], y2=bbox[3]),
+        )
+
+    async def _observe_enhanced(
+        self,
+        *,
+        step,
+        capture_source: str,
+        target: dict | None = None,
+    ) -> StructuredScreen:
+        """Feature 024: observe, then refine the OCR inside a declared
+        sub-window before anything downstream reads it.
+
+        This sits at the OBSERVATION stage rather than in the grounding
+        branch because a declared step is frequently resolved earlier — the
+        OCR-direct-click path (feature 012), element memory or replay — in
+        which case a grounding-stage hook could never fire. Refining the OCR
+        feeds assertions, OCR-direct clicks and grounding in one place.
+        Coordinates stay in original-frame pixels throughout.
+        """
+        screen = await self.pipeline.observe(
+            step_id=step.id, capture_source=capture_source
+        )
+        if self.app_perception is None:
+            return screen
+        scope = getattr(step, "perception_scope", None)
+        if scope is None:
+            return screen
+        enhanced, _audit = await self.app_perception.enhance_screen(
+            screen,
+            step_id=step.id,
+            declared_scope=scope,
+            target_id=self._current_target_id,
+            pipeline=self.pipeline,
+            target=target,
+        )
+        return enhanced
+
+    def _apply_anchor_constraints(self, grounding, audit, scope):
+        """Feature 024 (FR-018): apply the profile's anchor constraints to the
+        restored grounding candidates.
+
+        Runs only when enhancement actually activated. Weak constraints just
+        record; strong (`enforce: true`) ones reject the candidate. The audit
+        keeps every violation either way so a misfiring constraint is visible.
+        """
+        plugin = self.app_perception.registry.get(scope or "") if self.app_perception else None
+        profile = getattr(plugin, "profile", None)
+        constraints = getattr(profile, "anchor_constraints", None)
+        if not constraints or not grounding.candidates:
+            return grounding
+
+        from vnc_agent.perception.app_plugins.geometry import evaluate_constraints
+
+        boxes = [c.bbox for c in grounding.candidates]
+        kept, violations = evaluate_constraints(
+            list(constraints),
+            boxes,
+            list(audit.matched_anchors),
+            mode=self.config.agent.app_perception.anchor_constraint_mode,
+        )
+        audit.constraint_violations = violations
+        if len(kept) == len(boxes):
+            return grounding
+        kept_set = set(kept)
+        survivors = [c for c in grounding.candidates if c.bbox in kept_set]
+        return grounding.model_copy(
+            update={"candidates": survivors, "found": bool(survivors) and grounding.found}
         )
 
     def _record_memory_hit(
@@ -1026,9 +1126,7 @@ class AgentRuntime:
             )
 
         async def _reobserve() -> StructuredScreen:
-            return await self.pipeline.observe(
-                step_id=step.id, capture_source="recovery"
-            )
+            return await self._observe_enhanced(step=step, capture_source="recovery")
 
         with measure_stage(
             ctx.test_run, stage="postmortem", run_id=ctx.run_id, step_id=step.id,
@@ -1183,7 +1281,15 @@ class AgentRuntime:
 
         # OBSERVING
         t0 = time.monotonic()
-        screen = await self.pipeline.observe(step_id=step.id, capture_source="observation")
+        screen = await self._observe_enhanced(step=step, capture_source="observation")
+        # Feature 024 (FR-024): the enhancement audit is attached HERE, at the
+        # observation stage, so a step that declared a scope always carries a
+        # record — whatever the action-resolution path turns out to be. It
+        # used to be written inside the grounding branch, which left it null
+        # whenever the action was resolved earlier (OCR-direct click, memory,
+        # replay) and made "not triggered" indistinguishable from "broken".
+        if self.app_perception is not None:
+            iteration.perception_enhancement = self.app_perception.last_audit
         iteration.before_frame_id = screen.image_path
         # Feature 009 (FR-009): record this round's observation content
         # identity so the duplicate-frame comparison is auditable from the
@@ -1439,6 +1545,9 @@ class AgentRuntime:
         # from an accepted post-mortem correction plan (memory + grounder
         # both skipped for this round; verification unchanged).
         postmortem_executable: ExecutableAction | None = None
+        # Feature 024 (FR-005e revised): non-null iff this round's click came
+        # from a source-geometry prediction instead of a model answer.
+        geometric_executable: ExecutableAction | None = None
 
         if policy_result.needs_grounding:
             ctx.state_machine.force(AgentState.GROUNDING, "ground")
@@ -1511,10 +1620,52 @@ class AgentRuntime:
                     target_hint,
                     exclude_element_ids=self._memory_blocked_element_ids,
                 )
+            # Feature 024: a named control can be located by solving
+            # design->screen from the anchors OCR measured on this very
+            # frame. Deterministic, so it is preferred over asking the model
+            # (Constitution III), and it is the ONLY way to reach a control
+            # that carries no text for OCR or a model to latch onto.
+            enh_audit = iteration.perception_enhancement
+            if (
+                self.app_perception is not None
+                and self.config.agent.app_perception.geometric_click_enabled
+                and getattr(step, "perception_target", None)
+                and step.id not in self._geometric_blocked_steps
+                and enh_audit is not None
+                and enh_audit.activated
+                and postmortem_executable is None
+                and zoom_obs is None
+                and sa.action_type in ("click", "double_click", "right_click")
+            ):
+                prediction = self.app_perception.predict_target(
+                    step.id, screen, step.perception_target
+                )
+                enh_audit.geometric_prediction = prediction
+                if prediction.predicted_rect is not None:
+                    gx1, gy1, gx2, gy2 = prediction.predicted_rect
+                    g_region = Region(x1=gx1, y1=gy1, x2=gx2, y2=gy2)
+                    g_point = safe_click_point(
+                        g_region,
+                        edge_inset_ratio=self.config.agent.click.edge_inset_ratio,
+                    )
+                    prediction.applied = True
+                    prediction.click_point = g_point
+                    geometric_executable = ExecutableAction(
+                        method="mouse",
+                        operation=sa.action_type,
+                        coordinates=g_point,
+                        target_region=g_region,
+                    )
+
             if postmortem_executable is not None:
                 # Feature 023 (FR-005): corrected click this round — memory
                 # and grounder both skipped (audited above); execution and
                 # verification below run completely unchanged.
+                pass
+            elif geometric_executable is not None:
+                # Deterministic geometry answered: no grounder call this
+                # round. Execution and independent verification below are
+                # completely unchanged (Constitution IV).
                 pass
             elif (
                 memory_lookup is not None
@@ -1560,6 +1711,56 @@ class AgentRuntime:
                         screen,
                         self.config.agent.ui_index,
                     )
+                    # Feature 024 (FR-020): pre-grounding enhancement sits at
+                    # the END of the existing priority chain — it only runs on
+                    # the branch that actually calls the grounder. A pending
+                    # 014 zoom plan, a 023 correction or a 015 direct memory
+                    # click all short-circuit before here, so at most one
+                    # crop+upscale transform can ever apply (FR-021).
+                    # Feature 024: the OCR refinement already happened at
+                    # observation time, so `screen.ocr_items` (and therefore
+                    # this request's ocr_candidates) are already the refined
+                    # read. Nothing crops the image here: the grounder keeps
+                    # the full frame, which leaves feature 014's
+                    # zoom_reground the only crop+upscale image path and makes
+                    # double magnification structurally impossible.
+                    enhancement_audit = iteration.perception_enhancement
+                    if enhancement_audit is not None:
+                        enhancement_audit.grounding_reached = True
+                    source_hints = (
+                        self.app_perception.cached_hints(step.id, screen)
+                        if self.app_perception is not None
+                        else []
+                    )
+                    # Feature 024: the magnified crop of the declared
+                    # sub-window, ready to be sent INSTEAD of the full frame.
+                    # Refining the OCR alone proved insufficient on the real
+                    # machine: the model that actually picks the click point
+                    # is the grounder, and it was still being shown the full
+                    # frame, so a small control stayed just as illegible.
+                    app_zoom = (
+                        self.app_perception.cached_zoom(step.id, screen)
+                        if self.app_perception is not None
+                        else None
+                    )
+                    # PRIORITY (spec FR-021): feature 014's zoom_reground wins
+                    # whenever it is pending. Both now replace the grounder's
+                    # image, so the choice is explicit rather than structural.
+                    # 014 only fires AFTER a real failure and derives its ROI
+                    # from that failure's own evidence, so it carries new
+                    # information; re-sending 024's identical sub-window crop
+                    # would hand the model a byte-identical image and burn an
+                    # iteration for nothing. Never both: exactly one
+                    # crop+upscale transform per request.
+                    if zoom_obs is not None:
+                        app_zoom = None
+                    if enhancement_audit is not None:
+                        enhancement_audit.grounder_image = (
+                            "zoom_reground"
+                            if zoom_obs is not None
+                            else ("app_perception_zoom" if app_zoom else "full_frame")
+                        )
+
                     if zoom_obs is not None:
                         grounding_request = GroundingRequest(
                             image_ref=zoom_obs.image_path,
@@ -1572,6 +1773,26 @@ class AgentRuntime:
                             template_candidates=[],
                             ui_index_candidates=[],
                         )
+                    elif app_zoom is not None:
+                        # Same strict restoration chain as feature 014:
+                        # resolve in the ZOOM image's resolution, then
+                        # round(v / scale) + crop_offset, rejecting anything
+                        # that lands out of the original frame (never clamp).
+                        grounding_request = GroundingRequest(
+                            image_ref=app_zoom.image_path,
+                            crop_offset=app_zoom.crop_offset,
+                            scale_factor=app_zoom.scale_factor,
+                            resolution=app_zoom.resolution,
+                            original_resolution=screen.resolution,
+                            target=target,
+                            # Hints in the CROP's coordinate space, matching
+                            # the image. Sending the restored (original-frame)
+                            # boxes here would repeat exactly the defect this
+                            # feature was told not to inherit.
+                            ocr_candidates=app_zoom.ocr_candidates,
+                            template_candidates=app_zoom.source_hints,
+                            ui_index_candidates=[],
+                        )
                     else:
                         grounding_request = GroundingRequest(
                             image_ref=screen.path_for_model(),
@@ -1579,7 +1800,10 @@ class AgentRuntime:
                             resolution=screen.resolution,
                             target=target,
                             ocr_candidates=[i.model_dump() for i in screen.ocr_items],
-                            template_candidates=[m.model_dump() for m in screen.template_matches],
+                            template_candidates=(
+                                [m.model_dump() for m in screen.template_matches]
+                                + source_hints
+                            ),
                             ui_index_candidates=ui_index_candidates,
                         )
                         # Feature 015 (FR-007): medium-tier memory evidence
@@ -1598,6 +1822,16 @@ class AgentRuntime:
                                 }
                             )
                     grounding = await self.grounder.ground(grounding_request)
+                # Feature 024 (FR-018): profile anchor constraints, evaluated
+                # on candidates ALREADY restored to original-frame pixels.
+                # `enforce: true` constraints drop violating candidates (strong
+                # prior); the rest only record. Dropping every candidate is a
+                # legitimate outcome — the existing target_not_found path takes
+                # over; no new FailureType is introduced.
+                if enhancement_audit is not None and enhancement_audit.activated:
+                    grounding = self._apply_anchor_constraints(
+                        grounding, enhancement_audit, step.perception_scope
+                    )
                 iteration.grounding_result = grounding
                 try:
                     grounder_req_id = grounder_identity(
@@ -1689,6 +1923,8 @@ class AgentRuntime:
 
         if postmortem_executable is not None:
             executable = postmortem_executable
+        elif geometric_executable is not None:
+            executable = geometric_executable
         elif memory_executable is not None:
             executable = memory_executable
         else:
@@ -1787,8 +2023,8 @@ class AgentRuntime:
         # VERIFYING — independent post-action observation + ActionEffect
         ctx.state_machine.force(AgentState.VERIFYING, "verify")
         t0 = time.monotonic()
-        after = await self.pipeline.observe(
-            step_id=step.id, capture_source="post_action_verification"
+        after = await self._observe_enhanced(
+            step=step, capture_source="post_action_verification"
         )
         iteration.after_frame_id = after.image_path
 
@@ -1835,8 +2071,8 @@ class AgentRuntime:
                 )
 
         async def _reobserve_after() -> StructuredScreen:
-            return await self.pipeline.observe(
-                step_id=step.id, capture_source="post_action_verification"
+            return await self._observe_enhanced(
+                step=step, capture_source="post_action_verification"
             )
 
         with measure_stage(
@@ -1856,6 +2092,9 @@ class AgentRuntime:
                 visual_override_confidence_threshold=(
                     self.config.agent.verification.visual_override_confidence_threshold
                 ),
+                # `finish` dispatches nothing (execution/router.py), so its
+                # no_effect is by design and must not veto matched assertions.
+                action_is_noop=executable.operation == "finish",
             )
         mark("verifying", t0)
 
@@ -1913,6 +2152,18 @@ class AgentRuntime:
         # failure counter; every verified-passed mouse action with a resolved
         # target_region is written back (pre-action frame + region). Both
         # calls are fail-open inside the service.
+        # Feature 024: a geometric click that failed verification must not be
+        # repeated — the prediction is deterministic, so retrying would
+        # produce the identical point. The step falls through to the model
+        # path for its remaining iterations.
+        enh = iteration.perception_enhancement
+        if (
+            enh is not None
+            and enh.geometric_prediction is not None
+            and enh.geometric_prediction.applied
+            and vr.status != "passed"
+        ):
+            self._geometric_blocked_steps.add(step.id)
         if self.memory is not None:
             if iteration.memory_hit is not None and vr.status != "passed":
                 self._memory_blocked_element_ids.add(

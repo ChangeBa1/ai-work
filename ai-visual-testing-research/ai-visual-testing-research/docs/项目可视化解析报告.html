@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>VNC Agent 可视化解析报告 · 架构 / 流程 / POS 成功案例</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #0b1220;
+    --bg2: #111a2e;
+    --card: #152238;
+    --card2: #1a2b45;
+    --line: #2a3f63;
+    --text: #e8eef9;
+    --muted: #9bb0d0;
+    --accent: #3b82f6;
+    --accent2: #22d3ee;
+    --planner: #f59e0b;
+    --grounder: #a78bfa;
+    --executor: #34d399;
+    --verifier: #f472b6;
+    --ok: #4ade80;
+    --warn: #fbbf24;
+    --bad: #f87171;
+    --shadow: 0 12px 40px rgba(0,0,0,.35);
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    background: radial-gradient(1200px 600px at 10% -10%, #1e3a5f 0%, transparent 50%),
+                radial-gradient(900px 500px at 100% 0%, #312e81 0%, transparent 45%),
+                var(--bg);
+    color: var(--text);
+    line-height: 1.65;
+  }
+  a { color: var(--accent2); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* layout */
+  .layout { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+  nav.side {
+    position: sticky; top: 0; height: 100vh; overflow: auto;
+    background: rgba(10,16,30,.92); border-right: 1px solid var(--line);
+    padding: 24px 16px; backdrop-filter: blur(8px);
+  }
+  nav.side .brand {
+    font-weight: 700; font-size: 15px; letter-spacing: .02em;
+    margin-bottom: 6px; color: #fff;
+  }
+  nav.side .sub { font-size: 12px; color: var(--muted); margin-bottom: 22px; }
+  nav.side a {
+    display: block; padding: 8px 12px; border-radius: 8px;
+    color: var(--muted); font-size: 13px; margin-bottom: 2px;
+  }
+  nav.side a:hover, nav.side a.active {
+    background: rgba(59,130,246,.15); color: #fff; text-decoration: none;
+  }
+  main { padding: 36px 40px 80px; max-width: 1180px; }
+
+  /* hero */
+  .hero {
+    background: linear-gradient(135deg, rgba(59,130,246,.18), rgba(34,211,238,.08));
+    border: 1px solid var(--line); border-radius: 20px; padding: 32px 36px;
+    box-shadow: var(--shadow); margin-bottom: 36px;
+  }
+  .hero h1 { margin: 0 0 10px; font-size: 28px; line-height: 1.25; }
+  .hero p { margin: 0; color: var(--muted); max-width: 820px; }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .badge {
+    font-size: 12px; padding: 4px 10px; border-radius: 999px;
+    border: 1px solid var(--line); background: rgba(255,255,255,.04); color: var(--muted);
+  }
+  .badge.ok { border-color: rgba(74,222,128,.4); color: var(--ok); }
+  .badge.blue { border-color: rgba(59,130,246,.45); color: #93c5fd; }
+  .badge.purple { border-color: rgba(167,139,250,.45); color: #c4b5fd; }
+
+  section { margin-bottom: 48px; }
+  h2 {
+    font-size: 22px; margin: 0 0 8px; padding-bottom: 10px;
+    border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 10px;
+  }
+  h2 .num {
+    width: 28px; height: 28px; border-radius: 8px; display: inline-flex;
+    align-items: center; justify-content: center; font-size: 13px; font-weight: 700;
+    background: var(--accent); color: #fff;
+  }
+  h3 { font-size: 16px; margin: 22px 0 10px; color: #dbeafe; }
+  p.lead { color: var(--muted); margin: 0 0 18px; }
+
+  .card {
+    background: linear-gradient(180deg, var(--card), var(--card2));
+    border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 20px 22px; margin: 16px 0; box-shadow: var(--shadow);
+  }
+  .card.tight { padding: 14px 16px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  @media (max-width: 1100px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.side { position: relative; height: auto; }
+    .grid-2, .grid-4 { grid-template-columns: 1fr; }
+    main { padding: 20px 16px 60px; }
+  }
+
+  .role {
+    border-radius: 14px; padding: 16px; border: 1px solid var(--line);
+    background: rgba(0,0,0,.18); min-height: 160px;
+  }
+  .role h4 { margin: 0 0 8px; font-size: 15px; }
+  .role p { margin: 0; font-size: 13px; color: var(--muted); }
+  .role.planner { border-top: 3px solid var(--planner); }
+  .role.grounder { border-top: 3px solid var(--grounder); }
+  .role.executor { border-top: 3px solid var(--executor); }
+  .role.verifier { border-top: 3px solid var(--verifier); }
+  .role .tag {
+    display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 6px;
+    margin-bottom: 8px; font-weight: 600;
+  }
+  .role.planner .tag { background: rgba(245,158,11,.2); color: var(--planner); }
+  .role.grounder .tag { background: rgba(167,139,250,.2); color: var(--grounder); }
+  .role.executor .tag { background: rgba(52,211,153,.2); color: var(--executor); }
+  .role.verifier .tag { background: rgba(244,114,182,.2); color: var(--verifier); }
+
+  .mermaid {
+    background: #0a1020; border-radius: 12px; padding: 12px 8px;
+    border: 1px solid var(--line); overflow-x: auto;
+  }
+  .callout {
+    border-left: 4px solid var(--accent2); background: rgba(34,211,238,.08);
+    padding: 12px 16px; border-radius: 0 12px 12px 0; margin: 14px 0;
+    color: var(--muted); font-size: 14px;
+  }
+  .callout.warn { border-left-color: var(--warn); background: rgba(251,191,36,.08); }
+  .callout.ok { border-left-color: var(--ok); background: rgba(74,222,128,.08); }
+  .callout.bad { border-left-color: var(--bad); background: rgba(248,113,113,.08); }
+
+  /* timeline */
+  .timeline { position: relative; margin: 18px 0 8px; padding-left: 28px; }
+  .timeline::before {
+    content: ""; position: absolute; left: 9px; top: 4px; bottom: 4px;
+    width: 2px; background: linear-gradient(var(--accent), var(--accent2));
+  }
+  .tl-item { position: relative; margin-bottom: 18px; }
+  .tl-item::before {
+    content: ""; position: absolute; left: -23px; top: 8px;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 0 0 4px rgba(59,130,246,.2);
+  }
+  .tl-item.ok::before { background: var(--ok); box-shadow: 0 0 0 4px rgba(74,222,128,.2); }
+  .tl-item.fail::before { background: var(--bad); box-shadow: 0 0 0 4px rgba(248,113,113,.2); }
+  .tl-item h4 { margin: 0 0 4px; font-size: 15px; }
+  .tl-item p { margin: 0; font-size: 13px; color: var(--muted); }
+  .tl-meta {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;
+  }
+  .chip {
+    font-size: 11px; padding: 2px 8px; border-radius: 999px;
+    background: rgba(255,255,255,.06); border: 1px solid var(--line); color: var(--muted);
+  }
+  .chip.ok { color: var(--ok); border-color: rgba(74,222,128,.35); }
+  .chip.planner { color: var(--planner); }
+  .chip.grounder { color: var(--grounder); }
+  .chip.executor { color: var(--executor); }
+  .chip.verifier { color: var(--verifier); }
+
+  table.cmp {
+    width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px;
+  }
+  table.cmp th, table.cmp td {
+    border: 1px solid var(--line); padding: 10px 12px; text-align: left; vertical-align: top;
+  }
+  table.cmp th { background: rgba(59,130,246,.15); color: #dbeafe; font-weight: 600; }
+  table.cmp td { color: var(--muted); }
+  table.cmp tr:nth-child(even) td { background: rgba(255,255,255,.02); }
+
+  .flow-steps {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0;
+  }
+  .flow-steps .s {
+    padding: 8px 12px; border-radius: 10px; background: rgba(59,130,246,.12);
+    border: 1px solid rgba(59,130,246,.35); font-size: 13px; font-weight: 600;
+  }
+  .flow-steps .arrow { color: var(--muted); }
+
+  footer {
+    margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--line);
+    color: var(--muted); font-size: 12px;
+  }
+  .kpi {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 16px 0;
+  }
+  .kpi .k {
+    background: rgba(0,0,0,.22); border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px; text-align: center;
+  }
+  .kpi .k .v { font-size: 22px; font-weight: 700; color: #fff; }
+  .kpi .k .l { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  @media (max-width: 900px) { .kpi { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="side">
+    <div class="brand">VNC Agent 可视化报告</div>
+    <div class="sub">架构 · 四角色 · 业务流程 · POS 案例</div>
+    <a href="#hero">概览</a>
+    <a href="#arch">总体架构图</a>
+    <a href="#roles">四角色架构</a>
+    <a href="#loop">核心执行闭环</a>
+    <a href="#verify">效果 vs 业务验证</a>
+    <a href="#state">状态机流程</a>
+    <a href="#priority">执行路径优先级</a>
+    <a href="#pos-biz">POS 业务流程图</a>
+    <a href="#case-bag">案例A · 购物袋现金结账</a>
+    <a href="#case-mixed">案例B · 金券+现金混合</a>
+    <a href="#case-scan">案例C · 扫码结账</a>
+    <a href="#success-pattern">成功模式总结</a>
+    <a href="#lessons">失败教训与自愈</a>
+  </nav>
+
+  <main>
+    <div class="hero" id="hero">
+      <h1>VNC 黑盒 GUI 自动化测试 Agent<br/>可视化架构与 POS 成功案例解析</h1>
+      <p>
+        本报告用<strong>架构图 / 业务流程图 / 四角色协作图</strong>说明 vnc-agent 如何在
+        「只能看屏幕、只能发键鼠」的纯 VNC 黑盒条件下，完成日文 POS 收银场景的自动化验证。
+        核心不是“让模型自己瞎点”，而是<strong>确定性状态机编排 + 四角色职责分离 + 独立证据验证</strong>。
+      </p>
+      <div class="badges">
+        <span class="badge blue">MVP v0.1 · Feature 001–024</span>
+        <span class="badge purple">Planner / Grounder / Executor / Verifier</span>
+        <span class="badge ok">Observe → Plan → Ground → Act → Wait → Verify</span>
+        <span class="badge">MiMo-V2.5 · vncdotool · 日语 OCR</span>
+        <span class="badge">业务无关核心 · 场景写在 YAML</span>
+      </div>
+      <div class="kpi">
+        <div class="k"><div class="v">4</div><div class="l">决策角色分离</div></div>
+        <div class="k"><div class="v">24</div><div class="l">规格化 Feature</div></div>
+        <div class="k"><div class="v">7+</div><div class="l">POS 声明式用例</div></div>
+        <div class="k"><div class="v">0</div><div class="l">UIA/DOM 依赖</div></div>
+      </div>
+    </div>
+
+    <!-- ========== 1. 总体架构 ========== -->
+    <section id="arch">
+      <h2><span class="num">1</span>总体架构图</h2>
+      <p class="lead">
+        系统是<strong>模块化单体</strong>：单进程、单 VNC 会话、单测试任务。控制流由 Agent Runtime 状态机掌握；
+        模型只作为“理解 / 规划 / 定位 / 语义验证”的能力插件接入。
+      </p>
+      <div class="card">
+        <div class="mermaid">
+flowchart TB
+  subgraph MGMT["测试管理层 Test Management"]
+    CLI["CLI · vnc-agent run/report"]
+    LOADER["TestCase Loader<br/>YAML → Pydantic"]
+    REPORT["Report Builder<br/>JSON + 中文 HTML"]
+  end
+
+  subgraph RT["Agent Runtime · 确定性状态机"]
+    SM["StateMachine"]
+    STEP["StepController<br/>超时 / 重试预算"]
+    TEL["Telemetry<br/>性能摘要"]
+    CTX["RunContext / 审计身份"]
+  end
+
+  subgraph DEC["决策层 Decision"]
+    PL["Planner<br/>下一步做什么"]
+    AP["ActionPolicy<br/>键盘优先 / 身份门禁"]
+    GR["Grounder · MiMo<br/>目标在哪里"]
+    RC["Recovery Engine<br/>失败策略链"]
+  end
+
+  subgraph EXP["经验层 Experience"]
+    MEM["Page / Element Memory"]
+    REP["Record / Replay"]
+    EVO["Hard-case Export"]
+  end
+
+  subgraph PER["感知层 Perception"]
+    CAP["FrameCapture<br/>逻辑帧 + 物理去重"]
+    OCR["OCR · 日语 ONNX"]
+    DIFF["Screen Diff / Stability"]
+    PLG["App Perception Plugins<br/>子窗口放大"]
+    IDX["UI Analysis Index<br/>可选提示"]
+  end
+
+  subgraph EXE["执行层 Execution"]
+    ROUT["ExecutionRouter"]
+    KB["Keyboard"]
+    MS["Mouse"]
+    WT["Wait Engine"]
+    VF["Verifier<br/>业务断言 + visual_question"]
+  end
+
+  subgraph DRV["驱动层"]
+    VNC["vncdotool VNC Driver"]
+  end
+
+  WIN["Windows 10 被测桌面<br/>POS / ScannerSimulator"]
+
+  CLI --> LOADER --> RT
+  RT --> DEC
+  RT --> EXP
+  DEC --> PER
+  DEC --> EXE
+  PER --> DRV
+  EXE --> DRV
+  DRV --> WIN
+  RT --> REPORT
+  EXP -.->|记忆/回放提示| DEC
+  IDX -.->|定位提示| DEC
+        </div>
+      </div>
+      <div class="callout">
+        <strong>读图要点：</strong>箭头主路径是“用例 → 运行时 → 决策/感知/执行 → VNC → 屏幕”。
+        虚线是经验与外部 UI 索引的<strong>提示通道</strong>，不能替代当前截图上的定位与动作后验证。
+      </div>
+    </section>
+
+    <!-- ========== 2. 四角色 ========== -->
+    <section id="roles">
+      <h2><span class="num">2</span>四角色架构：Planner · Grounder · Executor · Verifier</h2>
+      <p class="lead">
+        这是整个项目最重要的架构契约。把“想做什么 / 点哪里 / 怎么发事件 / 是否真的成功”拆开，
+        才能在黑盒场景下做归因、控风险、可替换模型。
+      </p>
+
+      <div class="grid-4">
+        <div class="role planner">
+          <span class="tag">Planner</span>
+          <h4>下一步做什么</h4>
+          <p>读 StructuredScreen + 步骤 intent，输出 <strong>SemanticAction</strong>（点谁、按什么键、是否微动作）。
+          <br/><strong>禁止</strong>输出裸坐标、禁止最终判通过。</p>
+        </div>
+        <div class="role grounder">
+          <span class="tag">Grounder</span>
+          <h4>目标在哪里</h4>
+          <p>MiMo 视觉定位，返回 bbox 候选 + 置信度 + <strong>coordinate_space</strong>。
+          <br/><strong>禁止</strong>决定测试流程；坐标未知/越界必须 fail-safe。</p>
+        </div>
+        <div class="role executor">
+          <span class="tag">Executor</span>
+          <h4>如何通过 VNC 执行</h4>
+          <p>把语义动作变成键鼠事件；含 batch 按键、type_text、stale_frame 守卫、safe click point。
+          <br/>只负责“发出去”，不负责“算不算业务成功”。</p>
+        </div>
+        <div class="role verifier">
+          <span class="tag">Verifier</span>
+          <h4>是否真的成功</h4>
+          <p>动作后<strong>重新截图</strong>；独立判断 ActionEffect + 业务断言。
+          <br/><strong>禁止</strong>相信 Planner/Grounder 的自我感觉；uncertain ≠ 通过。</p>
+        </div>
+      </div>
+
+      <h3>四角色协作时序（单次 ActionIteration）</h3>
+      <div class="card">
+        <div class="mermaid">
+sequenceDiagram
+  autonumber
+  participant RT as Runtime 状态机
+  participant P as Planner
+  participant G as Grounder
+  participant E as Executor
+  participant V as Verifier
+  participant VNC as VNC 屏幕
+
+  RT->>VNC: Observe 截图
+  RT->>RT: Understand OCR/模板/结构化屏
+  RT->>P: 请求语义计划 (无裸坐标)
+  P-->>RT: SemanticAction (click レジ袋 / hotkey ...)
+  RT->>RT: ActionPolicy / Identity / 危险漂移门禁
+  alt 需要视觉定位
+    RT->>G: GroundingRequest + 截图
+    G-->>RT: candidates + coordinate_space
+    RT->>RT: safe_click_point / 置信度门控
+  end
+  RT->>VNC: 可选 stale_frame 守卫再截一帧
+  RT->>E: ExecutableAction
+  E->>VNC: 鼠标/键盘事件
+  RT->>VNC: Wait 稳定后再截图
+  RT->>V: 前后帧 + expected 断言
+  V-->>RT: ActionEffect + StepVerificationResult
+  alt 失败可恢复
+    RT->>RT: Recovery (postmortem / zoom / re-ground)
+  else 通过或预算耗尽
+    RT->>RT: RECORDING → 下一步或终态
+  end
+        </div>
+      </div>
+
+      <h3>数据契约关系（角色之间传什么）</h3>
+      <div class="card">
+        <div class="mermaid">
+flowchart LR
+  SS["StructuredScreen<br/>OCR · 页面摘要"] --> P["Planner"]
+  INTENT["TestStep.intent<br/>+ memory 提示"] --> P
+  P --> SA["SemanticAction<br/>action_type / target / intent"]
+  SA --> POL["ActionPolicy<br/>+ CanonicalActionIdentity"]
+  POL -->|需定位| G["Grounder"]
+  SS --> G
+  G --> GR["GroundingResult<br/>bbox + confidence + space"]
+  POL -->|键盘/回放直达| EA["ExecutableAction"]
+  GR --> EA
+  EA --> E["Executor → VNC"]
+  E --> AF["After Frame"]
+  AF --> V1["ActionEffect 分类器"]
+  AF --> V2["Business Verifier"]
+  V1 --> OUT["两份独立结果写入 ActionIteration"]
+  V2 --> OUT
+        </div>
+      </div>
+      <div class="callout ok">
+        <strong>成功案例里为什么“看起来像 AI 在操作”：</strong>其实是 Runtime 在循环调用四角色；
+        POS 用例只声明 intent 与 expected，坐标与键鼠细节由 Grounder/Executor 动态产生，
+        但“什么叫过”永远由 Verifier 对照 YAML 断言决定。
+      </div>
+    </section>
+
+    <!-- ========== 3. 核心闭环 ========== -->
+    <section id="loop">
+      <h2><span class="num">3</span>核心执行闭环（业务级流程图）</h2>
+      <p class="lead">每一个 TestStep 内部允许多轮微动作迭代，直到 expected 通过或 max_retries 耗尽。</p>
+      <div class="flow-steps">
+        <span class="s">Observe</span><span class="arrow">→</span>
+        <span class="s">Understand</span><span class="arrow">→</span>
+        <span class="s">Plan</span><span class="arrow">→</span>
+        <span class="s">Ground</span><span class="arrow">→</span>
+        <span class="s">Act</span><span class="arrow">→</span>
+        <span class="s">Wait</span><span class="arrow">→</span>
+        <span class="s">Observe Again</span><span class="arrow">→</span>
+        <span class="s">Verify</span>
+      </div>
+      <div class="card">
+        <div class="mermaid">
+flowchart TD
+  A([开始 Run]) --> B[加载 YAML 用例并校验]
+  B --> C[连接 VNC]
+  C --> D{前置条件 facts?}
+  D -->|失败| X([FAILED])
+  D -->|通过| E[取下一步 TestStep]
+  E --> F[截图 Observe]
+  F --> G[OCR / 模板 / 视觉描述]
+  G --> H[Planner 生成语义动作]
+  H --> I{目标一致性 / RepeatGuard}
+  I -->|拦截| R[恢复或下一步迭代]
+  I -->|放行| J{需要视觉定位?}
+  J -->|否 键盘/快捷键| L[Executor 发送事件]
+  J -->|是| K[Grounder 定位 + 安全点击点]
+  K --> L
+  L --> M[Wait 页面稳定]
+  M --> N[再截图]
+  N --> O[ActionEffect 判定]
+  O --> P[业务断言 Verifier]
+  P --> Q{结果}
+  Q -->|passed| S[记录 · 下一步]
+  Q -->|可恢复失败| R
+  Q -->|预算耗尽| X
+  R --> F
+  S --> T{还有步骤?}
+  T -->|是| E
+  T -->|否| Y([PASSED + 报告])
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 4. 双轨验证 ========== -->
+    <section id="verify">
+      <h2><span class="num">4</span>双轨验证：动作效果 ≠ 业务成功</h2>
+      <p class="lead">
+        POS 真实事故推动了 Feature 002：全屏像素变化仅 0.4% 时，旧逻辑用“2% screen_changed”会误判无效果并重复点“加入购物袋”。
+        现在必须同时看两份结果。
+      </p>
+      <div class="card">
+        <div class="mermaid">
+flowchart LR
+  ACT[Executor 执行完成] --> W[Wait + 新截图]
+  W --> AE["ActionEffect<br/>no_effect / expected_effect<br/>unexpected_effect / effect_uncertain"]
+  W --> SV["StepVerificationResult<br/>passed / failed / uncertain"]
+  AE --> RG[RepeatGuard / 重试策略]
+  SV --> STEP[步骤最终状态]
+  AE -.独立.-> LOG[(ActionIteration 审计)]
+  SV -.独立.-> LOG
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card tight">
+          <h3 style="margin-top:0">ActionEffect 回答什么？</h3>
+          <p style="color:var(--muted);font-size:13px;margin:0">
+            “这次键鼠动作有没有在 UI 上激起可观察响应？”——用局部 blob、OCR/模板差分，
+            <strong>不证明</strong>业务目标达成。
+          </p>
+        </div>
+        <div class="card tight">
+          <h3 style="margin-top:0">StepVerification 回答什么？</h3>
+          <p style="color:var(--muted);font-size:13px;margin:0">
+            “YAML 里 expected 是否满足？”——text_appears / visual_question 等。
+            正式业务步必须有业务断言；仅 screen_changed 不够（除非 effect_only）。
+          </p>
+        </div>
+      </div>
+      <div class="callout warn">
+        <strong>非幂等保护：</strong>像“加入购物袋 / 金券登记 / 現金確定”这类动作，
+        若效果已 expected_effect 但业务仍 uncertain，系统<strong>禁止盲目再点一次</strong>，
+        必须先加强验证——这是 POS 防双记账的关键。
+      </div>
+    </section>
+
+    <!-- ========== 5. 状态机 ========== -->
+    <section id="state">
+      <h2><span class="num">5</span>运行时状态机（控制面）</h2>
+      <p class="lead">模型不能改这张表。非法迁移直接报错，保证轨迹可审计。</p>
+      <div class="card">
+        <div class="mermaid">
+stateDiagram-v2
+  [*] --> CREATED
+  CREATED --> CONNECTING
+  CONNECTING --> PREPARING
+  CONNECTING --> FAILED
+  PREPARING --> OBSERVING
+  OBSERVING --> UNDERSTANDING
+  UNDERSTANDING --> PLANNING
+  PLANNING --> RESOLVING_ACTION
+  RESOLVING_ACTION --> GROUNDING
+  RESOLVING_ACTION --> EXECUTING
+  GROUNDING --> EXECUTING
+  EXECUTING --> WAITING
+  WAITING --> VERIFYING
+  VERIFYING --> RECORDING
+  RECORDING --> OBSERVING: 下一步迭代/下一步骤
+  RECORDING --> STEP_COMPLETED_PASSED
+  RECORDING --> STEP_COMPLETED_FAILED
+  STEP_COMPLETED_PASSED --> OBSERVING: 下一 TestStep
+  STEP_COMPLETED_PASSED --> PASSED
+  STEP_COMPLETED_FAILED --> FAILED
+  OBSERVING --> RECOVERING
+  PLANNING --> RECOVERING
+  GROUNDING --> RECOVERING
+  EXECUTING --> RECOVERING
+  VERIFYING --> RECOVERING
+  RECOVERING --> OBSERVING
+  RECOVERING --> FAILED
+  PASSED --> [*]
+  FAILED --> [*]
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 6. 优先级 ========== -->
+    <section id="priority">
+      <h2><span class="num">6</span>执行路径优先级（键盘优先，视觉兜底）</h2>
+      <div class="card">
+        <div class="mermaid">
+flowchart TB
+  A[解析 SemanticAction] --> B{已验证回放可用?}
+  B -->|是| Z[按回放脚本执行]
+  B -->|否| C{快捷键 / hotkey?}
+  C -->|是| Z2[键盘路径]
+  C -->|否| D{Tab 焦点路径可验证?}
+  D -->|是| Z2
+  D -->|否| E{OCR 高置信唯一命中?}
+  E -->|是| Z3[OCR 直点 · safe_click_point]
+  E -->|否| F{模板 / 锚点?}
+  F -->|是| Z3
+  F -->|否| G[MiMo Grounding]
+  G --> H{置信度 / Top1-Top2 gap}
+  H -->|过关| Z3
+  H -->|失败| R[Recovery: recapture / zoom / postmortem]
+  Z --> V[独立 Verify]
+  Z2 --> V
+  Z3 --> V
+  R --> A
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 7. POS 业务总图 ========== -->
+    <section id="pos-biz">
+      <h2><span class="num">7</span>POS 自动化业务全景</h2>
+      <p class="lead">
+        核心代码不知道“购物袋 / 金券”这些词；它们只出现在 YAML 用例中。
+        下图是仓库内 POS 场景的业务拼图：从空车到交易完成（済）。
+      </p>
+      <div class="card">
+        <div class="mermaid">
+flowchart TB
+  subgraph PRE["运行前"]
+    P0[VNC 连上 Windows 测试机]
+    P1[precondition: 合计 0 個 或环境可用]
+  end
+
+  subgraph REG["商品登录"]
+    R1[购物袋一键登录<br/>pos-buy-bag-*]
+    R2[任务视图 → ScannerSimulator<br/>扫条码 45127366]
+    R3[回到 POS 前台]
+  end
+
+  subgraph PAY["支付"]
+    S1[点击 小計]
+    S2a[纯现金: 預/現計]
+    S2b[混合: 小键盘金额 → 金券 → 預/現計]
+    S3[找零机自动入金]
+    S4[確定]
+    S5[画面出现 済]
+  end
+
+  P0 --> P1 --> REG
+  R1 --> S1
+  R2 --> R3 --> S1
+  S1 --> S2a
+  S1 --> S2b
+  S2a --> S3 --> S4 --> S5
+  S2b --> S3
+        </div>
+      </div>
+      <table class="cmp">
+        <tr>
+          <th>用例文件</th>
+          <th>业务目标</th>
+          <th>关键步骤</th>
+          <th>验证风格</th>
+        </tr>
+        <tr>
+          <td><code>pos-buy-bag-checkout.yaml</code></td>
+          <td>购物袋 ¥5 → 现金结账完成</td>
+          <td>レジ袋 → 小計 → 預/現計 → 確定</td>
+          <td>OCR 锚点 + visual_question 确认 済</td>
+        </tr>
+        <tr>
+          <td><code>pos-buy-bag-mixed-kinken-cash.yaml</code></td>
+          <td>购物袋 → 金券4 + 现金补差</td>
+          <td>小計 → 点小键盘4 → 金券 → 預/現計 → 確定</td>
+          <td>金额框 visual_question；禁 Escape</td>
+        </tr>
+        <tr>
+          <td><code>pos-scan-magazine-checkout.yaml</code></td>
+          <td>模拟器扫码登录商品后混合支付</td>
+          <td>Win+Tab → 选模拟器 → 清/输条码 → Scan → 回 POS → 结账</td>
+          <td>能 OCR 就不用 VLM；ROI 收紧防假通过</td>
+        </tr>
+      </table>
+    </section>
+
+    <!-- ========== 8. 案例 A ========== -->
+    <section id="case-bag">
+      <h2><span class="num">8</span>成功案例 A：购物袋 + 现金结账</h2>
+      <p class="lead">
+        用例 ID：<code>pos-buy-bag-checkout-001</code>。这是最早打通的“纵向成功切片”场景之一，
+        也是 002/003 事故回归的主 fixture。下面按<strong>设计成功路径</strong>解读，并穿插真实 run 中逐步通过的证据模式。
+      </p>
+
+      <div class="card">
+        <div class="mermaid">
+flowchart LR
+  A["① 前置<br/>合計 = 0 個"] --> B["② 点 レジ袋<br/>登录 1 点 / ¥5"]
+  B --> C["③ 点 小計<br/>出现 不足"]
+  C --> D["④ 点 預/現計<br/>自动入金 10,000"]
+  D --> E["⑤ 点 確定<br/>出现红色 済"]
+  E --> F([业务 PASSED])
+        </div>
+      </div>
+
+      <div class="timeline">
+        <div class="tl-item ok">
+          <h4>① 前置条件：空购物车</h4>
+          <p>
+            YAML 声明 <code>precondition.facts.cart_item_count</code>，用 visual_question 问：
+            左侧「合計」绿色数量是否明确为 0。核心代码没有 “cart” 字段——这是 Constitution VI 的落地。
+            人工也可用 <code>--confirm-precondition cart_item_count=0</code> 跳过自动判定。
+          </p>
+          <div class="tl-meta">
+            <span class="chip verifier">Verifier · visual_question</span>
+            <span class="chip">Feature 003 facts</span>
+          </div>
+        </div>
+        <div class="tl-item ok">
+          <h4>② 加入购物袋（非幂等 · 最容易双点）</h4>
+          <p>
+            Planner 输出 click 目标「レジ袋」。OCR 常把字读成「ジ袋」——身份匹配用 normalized_target，
+            不要求字符串完全相等。点击后 ActionEffect 可能只有 <strong>~0.7% 全屏变化</strong>，
+            但局部 blob + 业务断言共同证明成功：
+          </p>
+          <ul style="color:var(--muted);font-size:13px;margin:8px 0 0 18px">
+            <li><code>text_appears: 点数</code> + <code>text_appears: 内税</code>（稳定 chrome，避开「1」「袋」误匹配）</li>
+            <li><code>visual_question</code>：数量 1 個、金额 5 明确可见才 passed</li>
+          </ul>
+          <div class="tl-meta">
+            <span class="chip planner">Planner</span>
+            <span class="chip executor">Executor click</span>
+            <span class="chip ok">ActionEffect = expected_effect</span>
+            <span class="chip verifier">trusted_pass</span>
+            <span class="chip">真实 run 例：坐标约 (337,679)</span>
+          </div>
+        </div>
+        <div class="tl-item ok">
+          <h4>③ 小計：进入支付语义画面</h4>
+          <p>
+            点击右下「小計」。画面大幅变化（global_diff 可到 40%+）。业务门闩极简但有效：
+            OCR 出现「不足」即认为进入待支付态。一步内通常 1 次迭代即可 trusted_pass。
+          </p>
+          <div class="tl-meta">
+            <span class="chip ok">1 iteration 常见</span>
+            <span class="chip">真实 run 例：点击约 (866,627)</span>
+          </div>
+        </div>
+        <div class="tl-item">
+          <h4>④ 預/現計：启动现金 + 等待找零机自动入金</h4>
+          <p>
+            这是案例中最“黑盒”的一步：Agent 只点 POS 按钮，<strong>不操作</strong>找零机模拟器窗口。
+            成功判据是对话框出现 預り金 10,000、お釣り 9,995（购物袋 5 元时），且「確定」可点。
+            OCR 需容忍 <code>10,000</code> / <code>10.000</code> 千分位差异（引擎会归一化数字）。
+          </p>
+          <div class="callout warn" style="margin-top:10px">
+            历史失败模式：visual_question 已认为金额对，但 OCR 没读到 “10,000”，
+            因“确定性断言优先于 VLM”，整体仍 failed（Feature 011 仲裁方向与此相关）。
+            成功路径要求 OCR 与视觉结论对齐，或断言写法避开脆弱 OCR。
+          </div>
+        </div>
+        <div class="tl-item ok">
+          <h4>⑤ 確定 → 済</h4>
+          <p>
+            点击现金对话框「確定」。最终用 visual_question 确认商品明细区醒目红色「済」。
+            只有看到 済，交易才算固定完成——这是业务成功的“硬终点”。
+          </p>
+          <div class="tl-meta">
+            <span class="chip verifier">visual_question · 済</span>
+            <span class="chip ok">业务闭环完成</span>
+          </div>
+        </div>
+      </div>
+
+      <h3>四角色在本案例中的分工快照</h3>
+      <table class="cmp">
+        <tr><th>步骤</th><th>Planner</th><th>Grounder</th><th>Executor</th><th>Verifier</th></tr>
+        <tr>
+          <td>レジ袋</td>
+          <td>click 购物袋按钮</td>
+          <td>必要时定位按钮 bbox；OCR 半字也可 hint</td>
+          <td>mouse click 安全点</td>
+          <td>点数+内税+数量金额 VQ</td>
+        </tr>
+        <tr>
+          <td>小計</td>
+          <td>click 小計</td>
+          <td>右下按钮定位</td>
+          <td>click</td>
+          <td>text_appears「不足」</td>
+        </tr>
+        <tr>
+          <td>預/現計</td>
+          <td>click 支付启动</td>
+          <td>右下支付按钮候选（置信度可 0.9）</td>
+          <td>click 后长 wait</td>
+          <td>10,000 / 9,995 + 確定 可点</td>
+        </tr>
+        <tr>
+          <td>確定</td>
+          <td>click 对话框确定</td>
+          <td>对话框内按钮</td>
+          <td>click</td>
+          <td>红色「済」可见</td>
+        </tr>
+      </table>
+    </section>
+
+    <!-- ========== 9. 案例 B ========== -->
+    <section id="case-mixed">
+      <h2><span class="num">9</span>成功案例 B：金券 + 现金混合支付</h2>
+      <p class="lead">
+        用例 ID：<code>pos-buy-bag-mixed-kinken-cash-001</code>。在购物袋登录之后，先用金券支付 4，再现金补 1。
+        成功的关键是<strong>金额输入必须点小键盘「4」</strong>，而不是 type_text 或 Escape。
+      </p>
+      <div class="card">
+        <div class="mermaid">
+flowchart TB
+  A[レジ袋 登录] --> B[小計]
+  B --> C["点小键盘 4<br/>金额框显示 4"]
+  C --> D["点 金券<br/>登记部分支付"]
+  D --> E{中央阻塞提示?}
+  E -->|是| E1[点 戻る 关闭] --> D
+  E -->|否| F[預/現計 现金补差]
+  F --> G[自动入金后 確定]
+  G --> H[済]
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card tight">
+          <h3 style="margin-top:0">为什么这是“成功案例设计”？</h3>
+          <p style="color:var(--muted);font-size:13px;margin:0">
+            实机证明支付画面键盘焦点不可靠，<code>type_text</code> 很少真正写入金额框；
+            成功路径改为 Grounder 定位数字键「4」并 click。intent 里写清邻域关系
+            （上 7 / 右 5 / 下 1），显著提高定位稳定性。
+          </p>
+        </div>
+        <div class="card tight">
+          <h3 style="margin-top:0">红线操作（失败即偏离成功路径）</h3>
+          <p style="color:var(--muted);font-size:13px;margin:0">
+            <strong>禁止 Escape</strong>：会弹出「現在の操作を行うには…」挡住金券按钮，
+            后续 TARGET_NOT_FOUND。禁止乱点 クリア/戻る/キャンセル（除非用于清阻塞提示）。
+          </p>
+        </div>
+      </div>
+      <div class="callout ok">
+        真实 brief 片段曾显示：
+        <code>add-shopping-bag / calc-subtotal / enter-kinken-amount / apply-kinken</code> 均可 passed，
+        说明混合支付前半链路已在实机跑通；现金补差步对找零金额文案更敏感，需要断言与 OCR 协同调优。
+      </div>
+    </section>
+
+    <!-- ========== 10. 案例 C ========== -->
+    <section id="case-scan">
+      <h2><span class="num">10</span>成功案例 C：ScannerSimulator 扫码 → 混合结账</h2>
+      <p class="lead">
+        用例 ID：<code>pos-scan-magazine-checkout-001</code>。覆盖跨应用窗口切换 + 文本输入 + 回到 POS 结账，
+        是对 Agent 黑盒能力要求最高的“成功剧本”。
+      </p>
+      <div class="card">
+        <div class="mermaid">
+flowchart TB
+  subgraph Aphase["阶段 A · 切到扫码模拟器"]
+    A1["hotkey Win+Tab<br/>打开任务视图"]
+    A2["click 缩略图<br/>ScannerSimulator 前台"]
+  end
+  subgraph Bphase["阶段 B · 输入条码并扫描"]
+    B1["double_click 输入框取焦"]
+    B2["Backspace ×N 清空残留"]
+    B3["type_text 45127366"]
+    B4["click Scan"]
+  end
+  subgraph Cphase["阶段 C · 回 POS 结账"]
+    C1["click POS 空白处<br/>模拟器退到背面"]
+    C2["小計 → 金券/现金路径"]
+    C3["確定 → 済"]
+  end
+  A1 --> A2 --> B1 --> B2 --> B3 --> B4 --> C1 --> C2 --> C3
+        </div>
+      </div>
+
+      <h3>成功路径上的“工程化细节”（不是偶然点对）</h3>
+      <div class="timeline">
+        <div class="tl-item ok">
+          <h4>任务视图：先清 POS 错误弹窗</h4>
+          <p>若存在红色「バーコードが不正です」，Win+Tab 会被 POS 抢回前台。成功策略：先点「戻る」再 Win+Tab。</p>
+        </div>
+        <div class="tl-item ok">
+          <h4>缩略图点击：标题只作锚点</h4>
+          <p>
+            Grounder 曾误锁标题栏 y≈50。成功写法强制 <code>target.text = null</code>，
+            标题放 nearby_texts，点击缩略图本体。
+          </p>
+        </div>
+        <div class="tl-item ok">
+          <h4>清空条码：batch_repeat Backspace（Feature 005）</h4>
+          <p>一次 ActionIteration 连按多次退格，只做一轮观察/验证，避免 20 步截图+规划。</p>
+        </div>
+        <div class="tl-item ok">
+          <h4>type_text 必须真正可用（Feature 006）</h4>
+          <p>修复 vncdotool 客户端无 <code>type</code> 属性后，数字条码才能稳定写入。</p>
+        </div>
+        <div class="tl-item ok">
+          <h4>验证 ROI 收紧，防止“表里已有条码”假通过</h4>
+          <p>
+            Favorite 表可能已显示 45127366，若 OCR 区域过大，pre-check 会以为输入完成而跳过 type_text。
+            成功做法：断言区域仅覆盖输入框行。
+          </p>
+        </div>
+        <div class="tl-item ok">
+          <h4>性能：能 OCR 就不用 visual_question</h4>
+          <p>日文假名 OCR 不稳，故锚点用 ASCII/汉字/数字；VQ 只留给全选反白、金额框、済 等真视觉问题。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 11. 成功模式 ========== -->
+    <section id="success-pattern">
+      <h2><span class="num">11</span>POS 成功模式总结（可复用）</h2>
+      <div class="card">
+        <div class="mermaid">
+mindmap
+  root((POS 自动化成功))
+    用例写法
+      空车前置 facts
+      非幂等步骤 max_retries 小
+      intent 写清邻域与禁操作
+      OCR 锚点避开歧义字
+      visual_question 只问硬业务
+    运行时机制
+      四角色分离
+      ActionEffect 双轨
+      RepeatGuard 防双点
+      stale_frame 防旧坐标
+      坐标空间 fail-safe
+    感知增强
+      日语 OCR 模型
+      子窗口插件放大
+      帧去重与答案缓存
+    恢复自愈
+      zoom_reground
+      wrong_target 归因
+      postmortem 纠正点击
+      记忆写回下次直点
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card tight">
+          <h3 style="margin-top:0">“成功”在系统里的精确定义</h3>
+          <p style="color:var(--muted);font-size:13px;margin:0">
+            不是模型说成功，而是：每个步骤的 <strong>StepVerificationResult = passed</strong>
+            （business 模式且 basis 可信），全部步骤完成 → Run status = PASSED，
+            并留下可回放的帧证据与 action_tags 审计计数。
+          </p>
+        </div>
+        <div class="card tight">
+          <h3 style="margin-top:0">成功案例的共同剧本</h3>
+          <p style="color:var(--muted);font-size:13px;margin:0">
+            ① 状态已知（空车/环境可用）→ ② 单一意图步骤 → ③ 优先确定性断言 →
+            ④ 视觉只解歧义 → ⑤ 支付等待外部模拟器副作用 → ⑥ 硬终点（済）收口。
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 12. 教训 ========== -->
+    <section id="lessons">
+      <h2><span class="num">12</span>从失败到成功：教训如何变成架构能力</h2>
+      <table class="cmp">
+        <tr><th>现象</th><th>业务影响</th><th>沉淀为能力</th></tr>
+        <tr>
+          <td>全屏变化 0.4% 被当成无效果，重复点购物袋</td>
+          <td>购物车双记账</td>
+          <td>Feature 002 ActionEffect + 非幂等 Guard</td>
+        </tr>
+        <tr>
+          <td>重试时 intent 改写，点到结果行</td>
+          <td>危险误点</td>
+          <td>Feature 003 动作身份 + dangerous_drift</td>
+        </tr>
+        <tr>
+          <td>pixel / 归一化坐标混用</td>
+          <td>飞点</td>
+          <td>coordinate_space 强制声明</td>
+        </tr>
+        <tr>
+          <td>type 属性缺失</td>
+          <td>条码输不进去</td>
+          <td>Feature 006 键盘输入修复</td>
+        </tr>
+        <tr>
+          <td>点到邻居控件但画面有变化</td>
+          <td>难归因</td>
+          <td>Feature 022/023 wrong_target + postmortem</td>
+        </tr>
+        <tr>
+          <td>小子窗口控件看不清</td>
+          <td>扫码器/工具窗误点</td>
+          <td>Feature 014/024 放大恢复与插件</td>
+        </tr>
+      </table>
+      <div class="callout">
+        因此，POS“成功案例”的价值不只是 YAML 能跑通，更是把现场事故抽象成
+        <strong>业务无关的框架不变量</strong>——下一套非 POS 的 GUI 也能复用同一套图中的机制。
+      </div>
+    </section>
+
+    <footer>
+      生成自仓库 <code>ai-visual-testing-research</code> 静态解析 · 图表为 Mermaid 渲染 ·
+      数据来源：overall_design.md、specs/001–024、vnc_agent 用例与 artifacts 运行摘要。
+      若离线打不开图，请联网加载 jsDelivr 上的 mermaid，或本地放置 mermaid.min.js。
+    </footer>
+  </main>
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    securityLevel: 'loose',
+    flowchart: { curve: 'basis', htmlLabels: true },
+    themeVariables: {
+      primaryColor: '#1e3a5f',
+      primaryTextColor: '#e8eef9',
+      primaryBorderColor: '#3b82f6',
+      lineColor: '#6b8cce',
+      secondaryColor: '#152238',
+      tertiaryColor: '#0b1220',
+      fontFamily: 'Segoe UI, Microsoft YaHei, sans-serif'
+    }
+  });
+
+  // active nav highlight
+  const links = [...document.querySelectorAll('nav.side a')];
+  const secs = links.map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(en => {
+      if (en.isIntersecting) {
+        const id = '#' + en.target.id;
+        links.forEach(l => l.classList.toggle('active', l.getAttribute('href') === id));
+      }
+    });
+  }, { rootMargin: '-40% 0px -50% 0px', threshold: 0 });
+  secs.forEach(s => io.observe(s));
+</script>
+</body>
+</html>

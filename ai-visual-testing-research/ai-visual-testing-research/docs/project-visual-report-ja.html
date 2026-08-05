@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>VNC Agent 可視化解析レポート · アーキテクチャ / フロー / POS 成功事例</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #0b1220;
+    --bg2: #111a2e;
+    --card: #152238;
+    --card2: #1a2b45;
+    --line: #2a3f63;
+    --text: #e8eef9;
+    --muted: #9bb0d0;
+    --accent: #3b82f6;
+    --accent2: #22d3ee;
+    --planner: #f59e0b;
+    --grounder: #a78bfa;
+    --executor: #34d399;
+    --verifier: #f472b6;
+    --ok: #4ade80;
+    --warn: #fbbf24;
+    --bad: #f87171;
+    --shadow: 0 12px 40px rgba(0,0,0,.35);
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
+    background: radial-gradient(1200px 600px at 10% -10%, #1e3a5f 0%, transparent 50%),
+                radial-gradient(900px 500px at 100% 0%, #312e81 0%, transparent 45%),
+                var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+  }
+  a { color: var(--accent2); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+  nav.side {
+    position: sticky; top: 0; height: 100vh; overflow: auto;
+    background: rgba(10,16,30,.92); border-right: 1px solid var(--line);
+    padding: 24px 16px; backdrop-filter: blur(8px);
+  }
+  nav.side .brand {
+    font-weight: 700; font-size: 15px; letter-spacing: .02em;
+    margin-bottom: 6px; color: #fff;
+  }
+  nav.side .sub { font-size: 12px; color: var(--muted); margin-bottom: 22px; }
+  nav.side a {
+    display: block; padding: 8px 12px; border-radius: 8px;
+    color: var(--muted); font-size: 13px; margin-bottom: 2px;
+  }
+  nav.side a:hover, nav.side a.active {
+    background: rgba(59,130,246,.15); color: #fff; text-decoration: none;
+  }
+  main { padding: 36px 40px 80px; max-width: 1180px; }
+
+  .hero {
+    background: linear-gradient(135deg, rgba(59,130,246,.18), rgba(34,211,238,.08));
+    border: 1px solid var(--line); border-radius: 20px; padding: 32px 36px;
+    box-shadow: var(--shadow); margin-bottom: 36px;
+  }
+  .hero h1 { margin: 0 0 10px; font-size: 26px; line-height: 1.35; }
+  .hero p { margin: 0; color: var(--muted); max-width: 860px; }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .badge {
+    font-size: 12px; padding: 4px 10px; border-radius: 999px;
+    border: 1px solid var(--line); background: rgba(255,255,255,.04); color: var(--muted);
+  }
+  .badge.ok { border-color: rgba(74,222,128,.4); color: var(--ok); }
+  .badge.blue { border-color: rgba(59,130,246,.45); color: #93c5fd; }
+  .badge.purple { border-color: rgba(167,139,250,.45); color: #c4b5fd; }
+
+  section { margin-bottom: 48px; }
+  h2 {
+    font-size: 21px; margin: 0 0 8px; padding-bottom: 10px;
+    border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 10px;
+  }
+  h2 .num {
+    width: 28px; height: 28px; border-radius: 8px; display: inline-flex;
+    align-items: center; justify-content: center; font-size: 13px; font-weight: 700;
+    background: var(--accent); color: #fff; flex-shrink: 0;
+  }
+  h3 { font-size: 16px; margin: 22px 0 10px; color: #dbeafe; }
+  p.lead { color: var(--muted); margin: 0 0 18px; }
+
+  .card {
+    background: linear-gradient(180deg, var(--card), var(--card2));
+    border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 20px 22px; margin: 16px 0; box-shadow: var(--shadow);
+  }
+  .card.tight { padding: 14px 16px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  @media (max-width: 1100px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.side { position: relative; height: auto; }
+    .grid-2, .grid-4 { grid-template-columns: 1fr; }
+    main { padding: 20px 16px 60px; }
+  }
+
+  .role {
+    border-radius: 14px; padding: 16px; border: 1px solid var(--line);
+    background: rgba(0,0,0,.18); min-height: 170px;
+  }
+  .role h4 { margin: 0 0 8px; font-size: 15px; }
+  .role p { margin: 0; font-size: 13px; color: var(--muted); }
+  .role.planner { border-top: 3px solid var(--planner); }
+  .role.grounder { border-top: 3px solid var(--grounder); }
+  .role.executor { border-top: 3px solid var(--executor); }
+  .role.verifier { border-top: 3px solid var(--verifier); }
+  .role .tag {
+    display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 6px;
+    margin-bottom: 8px; font-weight: 600;
+  }
+  .role.planner .tag { background: rgba(245,158,11,.2); color: var(--planner); }
+  .role.grounder .tag { background: rgba(167,139,250,.2); color: var(--grounder); }
+  .role.executor .tag { background: rgba(52,211,153,.2); color: var(--executor); }
+  .role.verifier .tag { background: rgba(244,114,182,.2); color: var(--verifier); }
+
+  .mermaid {
+    background: #0a1020; border-radius: 12px; padding: 12px 8px;
+    border: 1px solid var(--line); overflow-x: auto;
+  }
+  .callout {
+    border-left: 4px solid var(--accent2); background: rgba(34,211,238,.08);
+    padding: 12px 16px; border-radius: 0 12px 12px 0; margin: 14px 0;
+    color: var(--muted); font-size: 14px;
+  }
+  .callout.warn { border-left-color: var(--warn); background: rgba(251,191,36,.08); }
+  .callout.ok { border-left-color: var(--ok); background: rgba(74,222,128,.08); }
+  .callout.bad { border-left-color: var(--bad); background: rgba(248,113,113,.08); }
+
+  .timeline { position: relative; margin: 18px 0 8px; padding-left: 28px; }
+  .timeline::before {
+    content: ""; position: absolute; left: 9px; top: 4px; bottom: 4px;
+    width: 2px; background: linear-gradient(var(--accent), var(--accent2));
+  }
+  .tl-item { position: relative; margin-bottom: 18px; }
+  .tl-item::before {
+    content: ""; position: absolute; left: -23px; top: 8px;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 0 0 4px rgba(59,130,246,.2);
+  }
+  .tl-item.ok::before { background: var(--ok); box-shadow: 0 0 0 4px rgba(74,222,128,.2); }
+  .tl-item.fail::before { background: var(--bad); box-shadow: 0 0 0 4px rgba(248,113,113,.2); }
+  .tl-item h4 { margin: 0 0 4px; font-size: 15px; }
+  .tl-item p { margin: 0; font-size: 13px; color: var(--muted); }
+  .tl-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip {
+    font-size: 11px; padding: 2px 8px; border-radius: 999px;
+    background: rgba(255,255,255,.06); border: 1px solid var(--line); color: var(--muted);
+  }
+  .chip.ok { color: var(--ok); border-color: rgba(74,222,128,.35); }
+  .chip.planner { color: var(--planner); }
+  .chip.grounder { color: var(--grounder); }
+  .chip.executor { color: var(--executor); }
+  .chip.verifier { color: var(--verifier); }
+
+  table.cmp {
+    width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px;
+  }
+  table.cmp th, table.cmp td {
+    border: 1px solid var(--line); padding: 10px 12px; text-align: left; vertical-align: top;
+  }
+  table.cmp th { background: rgba(59,130,246,.15); color: #dbeafe; font-weight: 600; }
+  table.cmp td { color: var(--muted); }
+  table.cmp tr:nth-child(even) td { background: rgba(255,255,255,.02); }
+
+  .flow-steps {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0;
+  }
+  .flow-steps .s {
+    padding: 8px 12px; border-radius: 10px; background: rgba(59,130,246,.12);
+    border: 1px solid rgba(59,130,246,.35); font-size: 13px; font-weight: 600;
+  }
+  .flow-steps .arrow { color: var(--muted); }
+
+  footer {
+    margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--line);
+    color: var(--muted); font-size: 12px;
+  }
+  .kpi {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 16px 0;
+  }
+  .kpi .k {
+    background: rgba(0,0,0,.22); border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px; text-align: center;
+  }
+  .kpi .k .v { font-size: 22px; font-weight: 700; color: #fff; }
+  .kpi .k .l { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  @media (max-width: 900px) { .kpi { grid-template-columns: 1fr 1fr; } }
+  .lang-note {
+    font-size: 12px; color: var(--muted); margin-top: 12px;
+    padding: 8px 12px; border-radius: 8px; background: rgba(255,255,255,.04);
+    border: 1px dashed var(--line);
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="side">
+    <div class="brand">VNC Agent 可視化レポート</div>
+    <div class="sub">アーキテクチャ · 4役割 · 業務フロー · POS事例</div>
+    <a href="#hero">概要</a>
+    <a href="#arch">全体アーキテクチャ</a>
+    <a href="#roles">4役割アーキテクチャ</a>
+    <a href="#loop">コア実行ループ</a>
+    <a href="#verify">効果 vs 業務検証</a>
+    <a href="#state">ステートマシン</a>
+    <a href="#priority">実行パス優先度</a>
+    <a href="#pos-biz">POS業務フロー</a>
+    <a href="#case-bag">事例A · レジ袋+現金</a>
+    <a href="#case-mixed">事例B · 金券+現金</a>
+    <a href="#case-scan">事例C · スキャン会計</a>
+    <a href="#success-pattern">成功パターンまとめ</a>
+    <a href="#lessons">失敗教訓と自己修復</a>
+  </nav>
+
+  <main>
+    <div class="hero" id="hero">
+      <h1>VNC ブラックボックス GUI 自動テスト Agent<br/>可視化アーキテクチャと POS 成功事例の解説</h1>
+      <p>
+        本レポートは、<strong>アーキテクチャ図 / 業務フロー図 / 4役割の協調図</strong>を用いて、
+        vnc-agent が「画面の画素を見る・キーボード/マウスを送る」ことしかできない
+        <strong>純 VNC ブラックボックス</strong>条件下で、日本語 POS レジ業務の自動検証をどう成立させるかを説明します。
+        核心は「モデルに好き勝手クリックさせる」ことではなく、
+        <strong>決定的ステートマシンによる制御 + 4役割の責務分離 + 独立エビデンス検証</strong>です。
+      </p>
+      <div class="badges">
+        <span class="badge blue">MVP v0.1 · Feature 001–024</span>
+        <span class="badge purple">Planner / Grounder / Executor / Verifier</span>
+        <span class="badge ok">Observe → Plan → Ground → Act → Wait → Verify</span>
+        <span class="badge">MiMo-V2.5 · vncdotool · 日本語 OCR</span>
+        <span class="badge">業務非依存コア · シナリオは YAML に隔離</span>
+      </div>
+      <div class="kpi">
+        <div class="k"><div class="v">4</div><div class="l">意思決定役割の分離</div></div>
+        <div class="k"><div class="v">24</div><div class="l">仕様化された Feature</div></div>
+        <div class="k"><div class="v">7+</div><div class="l">POS 宣言的テストケース</div></div>
+        <div class="k"><div class="v">0</div><div class="l">UIA / DOM 依存</div></div>
+      </div>
+      <div class="lang-note">日本語版 · 中国語版: <code>docs/项目可视化解析报告.html</code> と同内容の対訳です。</div>
+    </div>
+
+    <!-- ========== 1. 全体アーキテクチャ ========== -->
+    <section id="arch">
+      <h2><span class="num">1</span>全体アーキテクチャ図</h2>
+      <p class="lead">
+        システムは<strong>モジュール化モノリス</strong>です。単一プロセス・単一 VNC セッション・単一テストタスク。
+        制御フローは Agent Runtime のステートマシンが握り、モデルは
+        「理解 / 計画 / 位置特定 / 意味的検証」の<strong>能力プラグイン</strong>として接続されます。
+      </p>
+      <div class="card">
+        <div class="mermaid">
+flowchart TB
+  subgraph MGMT["テスト管理層 Test Management"]
+    CLI["CLI · vnc-agent run/report"]
+    LOADER["TestCase Loader<br/>YAML → Pydantic"]
+    REPORT["Report Builder<br/>JSON + 日本語/中国語 HTML"]
+  end
+
+  subgraph RT["Agent Runtime · 決定的ステートマシン"]
+    SM["StateMachine"]
+    STEP["StepController<br/>タイムアウト / リトライ予算"]
+    TEL["Telemetry<br/>性能サマリ"]
+    CTX["RunContext / 監査 ID"]
+  end
+
+  subgraph DEC["意思決定層 Decision"]
+    PL["Planner<br/>次に何をするか"]
+    AP["ActionPolicy<br/>キーボード優先 / 同一性ゲート"]
+    GR["Grounder · MiMo<br/>ターゲットはどこか"]
+    RC["Recovery Engine<br/>失敗時の戦略チェーン"]
+  end
+
+  subgraph EXP["経験層 Experience"]
+    MEM["Page / Element Memory"]
+    REP["Record / Replay"]
+    EVO["Hard-case Export"]
+  end
+
+  subgraph PER["知覚層 Perception"]
+    CAP["FrameCapture<br/>論理フレーム + 物理重複排除"]
+    OCR["OCR · 日本語 ONNX"]
+    DIFF["Screen Diff / Stability"]
+    PLG["App Perception Plugins<br/>子ウィンドウ拡大"]
+    IDX["UI Analysis Index<br/>任意のヒント"]
+  end
+
+  subgraph EXE["実行層 Execution"]
+    ROUT["ExecutionRouter"]
+    KB["Keyboard"]
+    MS["Mouse"]
+    WT["Wait Engine"]
+    VF["Verifier<br/>業務アサーション + visual_question"]
+  end
+
+  subgraph DRV["ドライバ層"]
+    VNC["vncdotool VNC Driver"]
+  end
+
+  WIN["Windows 10 被試験デスクトップ<br/>POS / ScannerSimulator"]
+
+  CLI --> LOADER --> RT
+  RT --> DEC
+  RT --> EXP
+  DEC --> PER
+  DEC --> EXE
+  PER --> DRV
+  EXE --> DRV
+  DRV --> WIN
+  RT --> REPORT
+  EXP -.->|記憶/再生ヒント| DEC
+  IDX -.->|位置特定ヒント| DEC
+        </div>
+      </div>
+      <div class="callout">
+        <strong>読み方のポイント：</strong>主経路の矢印は「ケース → Runtime → 意思決定/知覚/実行 → VNC → 画面」です。
+        点線は経験データや外部 UI インデックスの<strong>ヒント経路</strong>であり、
+        現在のスクリーンショットに基づく位置特定と操作後検証を置き換えてはなりません。
+      </div>
+    </section>
+
+    <!-- ========== 2. 4役割 ========== -->
+    <section id="roles">
+      <h2><span class="num">2</span>4役割アーキテクチャ：Planner · Grounder · Executor · Verifier</h2>
+      <p class="lead">
+        本プロジェクトで最も重要なアーキテクチャ契約です。
+        「何をしたいか / どこをクリックするか / どうイベントを送るか / 本当に成功したか」を分離することで、
+        ブラックボックス環境でも原因分析・リスク制御・モデル差し替えが可能になります。
+      </p>
+
+      <div class="grid-4">
+        <div class="role planner">
+          <span class="tag">Planner</span>
+          <h4>次に何をするか</h4>
+          <p>StructuredScreen とステップ intent を読み、<strong>SemanticAction</strong>
+          （誰をクリック、どのキー、マイクロアクションか）を出力。
+          <br/><strong>禁止：</strong>生座標の出力、最終合否の判定。</p>
+        </div>
+        <div class="role grounder">
+          <span class="tag">Grounder</span>
+          <h4>ターゲットはどこか</h4>
+          <p>MiMo による視覚的位置特定。bbox 候補 + 信頼度 + <strong>coordinate_space</strong> を返す。
+          <br/><strong>禁止：</strong>テストフロー決定。未知/矛盾/範囲外座標は fail-safe。</p>
+        </div>
+        <div class="role executor">
+          <span class="tag">Executor</span>
+          <h4>VNC でどう実行するか</h4>
+          <p>意味アクションをキー/マウスイベントへ。batch キー、type_text、stale_frame ガード、safe click point を含む。
+          <br/>「送信」のみ担当し、「業務成功か」は判断しない。</p>
+        </div>
+        <div class="role verifier">
+          <span class="tag">Verifier</span>
+          <h4>本当に成功したか</h4>
+          <p>操作後に<strong>再キャプチャ</strong>。ActionEffect と業務アサーションを独立判定。
+          <br/><strong>禁止：</strong>Planner/Grounder の自己申告を信じること。uncertain ≠ 合格。</p>
+        </div>
+      </div>
+
+      <h3>4役割の協調シーケンス（1回の ActionIteration）</h3>
+      <div class="card">
+        <div class="mermaid">
+sequenceDiagram
+  autonumber
+  participant RT as Runtime ステートマシン
+  participant P as Planner
+  participant G as Grounder
+  participant E as Executor
+  participant V as Verifier
+  participant VNC as VNC 画面
+
+  RT->>VNC: Observe スクリーンショット
+  RT->>RT: Understand OCR/テンプレ/構造化画面
+  RT->>P: 意味計画を要求 (生座標なし)
+  P-->>RT: SemanticAction (click レジ袋 / hotkey ...)
+  RT->>RT: ActionPolicy / Identity / 危険ドリフトゲート
+  alt 視覚位置特定が必要
+    RT->>G: GroundingRequest + 画像
+    G-->>RT: candidates + coordinate_space
+    RT->>RT: safe_click_point / 信頼度ゲート
+  end
+  RT->>VNC: 任意 stale_frame ガード再キャプチャ
+  RT->>E: ExecutableAction
+  E->>VNC: マウス/キーボードイベント
+  RT->>VNC: Wait 安定後に再キャプチャ
+  RT->>V: 前後フレーム + expected アサーション
+  V-->>RT: ActionEffect + StepVerificationResult
+  alt 回復可能な失敗
+    RT->>RT: Recovery (postmortem / zoom / re-ground)
+  else 合格または予算切れ
+    RT->>RT: RECORDING → 次ステップ or 終端
+  end
+        </div>
+      </div>
+
+      <h3>データ契約（役割間で何を渡すか）</h3>
+      <div class="card">
+        <div class="mermaid">
+flowchart LR
+  SS["StructuredScreen<br/>OCR · 画面要約"] --> P["Planner"]
+  INTENT["TestStep.intent<br/>+ memory ヒント"] --> P
+  P --> SA["SemanticAction<br/>action_type / target / intent"]
+  SA --> POL["ActionPolicy<br/>+ CanonicalActionIdentity"]
+  POL -->|位置特定が必要| G["Grounder"]
+  SS --> G
+  G --> GR["GroundingResult<br/>bbox + confidence + space"]
+  POL -->|キーボード/再生直達| EA["ExecutableAction"]
+  GR --> EA
+  EA --> E["Executor → VNC"]
+  E --> AF["After Frame"]
+  AF --> V1["ActionEffect 分類"]
+  AF --> V2["Business Verifier"]
+  V1 --> OUT["2つの独立結果を<br/>ActionIteration に記録"]
+  V2 --> OUT
+        </div>
+      </div>
+      <div class="callout ok">
+        <strong>成功事例で「AI が操作している」ように見える理由：</strong>
+        実際は Runtime が 4役割をループ呼び出ししています。
+        POS ケースは intent と expected だけを宣言し、座標やキー入力の詳細は Grounder/Executor が動的に生成します。
+        しかし「何をもって合格か」は常に Verifier が YAML アサーションに照らして決めます。
+      </div>
+    </section>
+
+    <!-- ========== 3. コアループ ========== -->
+    <section id="loop">
+      <h2><span class="num">3</span>コア実行ループ（業務レベルフロー）</h2>
+      <p class="lead">各 TestStep 内では、expected が通るか max_retries を使い切るまで、複数回のマイクロアクション反復を許可します。</p>
+      <div class="flow-steps">
+        <span class="s">Observe</span><span class="arrow">→</span>
+        <span class="s">Understand</span><span class="arrow">→</span>
+        <span class="s">Plan</span><span class="arrow">→</span>
+        <span class="s">Ground</span><span class="arrow">→</span>
+        <span class="s">Act</span><span class="arrow">→</span>
+        <span class="s">Wait</span><span class="arrow">→</span>
+        <span class="s">Observe Again</span><span class="arrow">→</span>
+        <span class="s">Verify</span>
+      </div>
+      <div class="card">
+        <div class="mermaid">
+flowchart TD
+  A([Run 開始]) --> B[YAML ケース読込・検証]
+  B --> C[VNC 接続]
+  C --> D{前提条件 facts?}
+  D -->|失敗| X([FAILED])
+  D -->|成功| E[次の TestStep 取得]
+  E --> F[スクリーンショット Observe]
+  F --> G[OCR / テンプレ / 視覚記述]
+  G --> H[Planner が意味アクション生成]
+  H --> I{ターゲット一貫性 / RepeatGuard}
+  I -->|ブロック| R[回復 or 次反復]
+  I -->|許可| J{視覚位置特定が必要?}
+  J -->|いいえ キーボード/ショートカット| L[Executor がイベント送信]
+  J -->|はい| K[Grounder 位置特定 + 安全クリック点]
+  K --> L
+  L --> M[Wait 画面安定]
+  M --> N[再キャプチャ]
+  N --> O[ActionEffect 判定]
+  O --> P[業務アサーション Verifier]
+  P --> Q{結果}
+  Q -->|passed| S[記録 · 次へ]
+  Q -->|回復可能失敗| R
+  Q -->|予算切れ| X
+  R --> F
+  S --> T{残ステップあり?}
+  T -->|はい| E
+  T -->|いいえ| Y([PASSED + レポート])
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 4. 二重検証 ========== -->
+    <section id="verify">
+      <h2><span class="num">4</span>二重検証：操作効果 ≠ 業務成功</h2>
+      <p class="lead">
+        POS 実機事故が Feature 002 を後押ししました。全画面画素変化が約 0.4% しかないのに、
+        旧ロジックは「2% screen_changed」で効果なしと誤判定し、「レジ袋追加」を再クリックしていました。
+        現在は必ず2系統の結果を見ます。
+      </p>
+      <div class="card">
+        <div class="mermaid">
+flowchart LR
+  ACT[Executor 実行完了] --> W[Wait + 新キャプチャ]
+  W --> AE["ActionEffect<br/>no_effect / expected_effect<br/>unexpected_effect / effect_uncertain"]
+  W --> SV["StepVerificationResult<br/>passed / failed / uncertain"]
+  AE --> RG[RepeatGuard / リトライ戦略]
+  SV --> STEP[ステップ最終状態]
+  AE -.独立.-> LOG[(ActionIteration 監査)]
+  SV -.独立.-> LOG
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card tight">
+          <h3 style="margin-top:0">ActionEffect が答えること</h3>
+          <p style="color:var(--muted);font-size:13px;margin:0">
+            「今回のキー/マウス操作は UI 上で観測可能な反応を起こしたか？」
+            — 局所 blob・OCR/テンプレ差分を使い、<strong>業務目標達成は証明しない</strong>。
+          </p>
+        </div>
+        <div class="card tight">
+          <h3 style="margin-top:0">StepVerification が答えること</h3>
+          <p style="color:var(--muted);font-size:13px;margin:0">
+            「YAML の expected を満たしたか？」— text_appears / visual_question 等。
+            正式業務ステップには業務アサーション必須。screen_changed だけでは不十分（effect_only を除く）。
+          </p>
+        </div>
+      </div>
+      <div class="callout warn">
+        <strong>非冪等保護：</strong>「レジ袋追加 / 金券登録 / 現金確定」などでは、
+        効果が expected_effect でも業務が uncertain のとき、<strong>盲目的な再クリックを禁止</strong>し、
+        まず検証を強化します — POS の二重計上を防ぐ要です。
+      </div>
+    </section>
+
+    <!-- ========== 5. ステートマシン ========== -->
+    <section id="state">
+      <h2><span class="num">5</span>ランタイム・ステートマシン（制御面）</h2>
+      <p class="lead">モデルはこの遷移表を変更できません。不正遷移は即エラーとなり、軌跡は監査可能です。</p>
+      <div class="card">
+        <div class="mermaid">
+stateDiagram-v2
+  [*] --> CREATED
+  CREATED --> CONNECTING
+  CONNECTING --> PREPARING
+  CONNECTING --> FAILED
+  PREPARING --> OBSERVING
+  OBSERVING --> UNDERSTANDING
+  UNDERSTANDING --> PLANNING
+  PLANNING --> RESOLVING_ACTION
+  RESOLVING_ACTION --> GROUNDING
+  RESOLVING_ACTION --> EXECUTING
+  GROUNDING --> EXECUTING
+  EXECUTING --> WAITING
+  WAITING --> VERIFYING
+  VERIFYING --> RECORDING
+  RECORDING --> OBSERVING: 次反復/次ステップ
+  RECORDING --> STEP_COMPLETED_PASSED
+  RECORDING --> STEP_COMPLETED_FAILED
+  STEP_COMPLETED_PASSED --> OBSERVING: 次の TestStep
+  STEP_COMPLETED_PASSED --> PASSED
+  STEP_COMPLETED_FAILED --> FAILED
+  OBSERVING --> RECOVERING
+  PLANNING --> RECOVERING
+  GROUNDING --> RECOVERING
+  EXECUTING --> RECOVERING
+  VERIFYING --> RECOVERING
+  RECOVERING --> OBSERVING
+  RECOVERING --> FAILED
+  PASSED --> [*]
+  FAILED --> [*]
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 6. 優先度 ========== -->
+    <section id="priority">
+      <h2><span class="num">6</span>実行パス優先度（キーボード優先、視覚は最後の手段）</h2>
+      <div class="card">
+        <div class="mermaid">
+flowchart TB
+  A[SemanticAction を解析] --> B{検証済み再生が使える?}
+  B -->|はい| Z[再生スクリプトで実行]
+  B -->|いいえ| C{ショートカット / hotkey?}
+  C -->|はい| Z2[キーボード経路]
+  C -->|いいえ| D{検証可能な Tab フォーカス経路?}
+  D -->|はい| Z2
+  D -->|いいえ| E{OCR 高信頼・一意ヒット?}
+  E -->|はい| Z3[OCR 直接クリック · safe_click_point]
+  E -->|いいえ| F{テンプレ / アンカー?}
+  F -->|はい| Z3
+  F -->|いいえ| G[MiMo Grounding]
+  G --> H{信頼度 / Top1-Top2 gap}
+  H -->|合格| Z3
+  H -->|失敗| R[Recovery: recapture / zoom / postmortem]
+  Z --> V[独立 Verify]
+  Z2 --> V
+  Z3 --> V
+  R --> A
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 7. POS 業務 ========== -->
+    <section id="pos-biz">
+      <h2><span class="num">7</span>POS 自動テスト業務の全体像</h2>
+      <p class="lead">
+        コアコードは「レジ袋 / 金券」といった語を知りません。それらは YAML ケースにのみ現れます。
+        下図はリポジトリ内 POS シナリオの業務マップ：空カートから取引完了（済）まで。
+      </p>
+      <div class="card">
+        <div class="mermaid">
+flowchart TB
+  subgraph PRE["実行前"]
+    P0[VNC で Windows 試験機へ接続]
+    P1[precondition: 合計 0 個 または環境利用可]
+  end
+
+  subgraph REG["商品登録"]
+    R1[レジ袋ワンタップ登録<br/>pos-buy-bag-*]
+    R2[タスクビュー → ScannerSimulator<br/>バーコード 45127366]
+    R3[POS 前面へ復帰]
+  end
+
+  subgraph PAY["支払"]
+    S1[小計 クリック]
+    S2a[現金のみ: 預/現計]
+    S2b[混合: テンキー金額 → 金券 → 預/現計]
+    S3[釣銭機の自動入金]
+    S4[確定]
+    S5[画面に 済 表示]
+  end
+
+  P0 --> P1 --> REG
+  R1 --> S1
+  R2 --> R3 --> S1
+  S1 --> S2a
+  S1 --> S2b
+  S2a --> S3 --> S4 --> S5
+  S2b --> S3
+        </div>
+      </div>
+      <table class="cmp">
+        <tr>
+          <th>ケースファイル</th>
+          <th>業務目標</th>
+          <th>主要ステップ</th>
+          <th>検証スタイル</th>
+        </tr>
+        <tr>
+          <td><code>pos-buy-bag-checkout.yaml</code></td>
+          <td>レジ袋 ¥5 → 現金会計完了</td>
+          <td>レジ袋 → 小計 → 預/現計 → 確定</td>
+          <td>OCR アンカー + visual_question で 済 確認</td>
+        </tr>
+        <tr>
+          <td><code>pos-buy-bag-mixed-kinken-cash.yaml</code></td>
+          <td>レジ袋 → 金券4 + 現金差額</td>
+          <td>小計 → テンキー4 → 金券 → 預/現計 → 確定</td>
+          <td>金額枠 visual_question；Escape 禁止</td>
+        </tr>
+        <tr>
+          <td><code>pos-scan-magazine-checkout.yaml</code></td>
+          <td>シミュレータ掃码登録後に混合支払</td>
+          <td>Win+Tab → シミュ選択 → 清/入力 → Scan → POS 復帰 → 会計</td>
+          <td>OCR 可能なら VLM 不使用；ROI 絞り込みで偽合格防止</td>
+        </tr>
+      </table>
+    </section>
+
+    <!-- ========== 8. 事例 A ========== -->
+    <section id="case-bag">
+      <h2><span class="num">8</span>成功事例 A：レジ袋 + 現金会計</h2>
+      <p class="lead">
+        ケース ID：<code>pos-buy-bag-checkout-001</code>。
+        最初に通した「縦断成功スライス」の一つであり、002/003 事故回帰の主 fixture でもあります。
+        以下は<strong>設計上の成功パス</strong>を解説し、実 run で段階的に合格した証拠パターンを交えます。
+      </p>
+
+      <div class="card">
+        <div class="mermaid">
+flowchart LR
+  A["① 前提<br/>合計 = 0 個"] --> B["② レジ袋クリック<br/>1点 / ¥5 登録"]
+  B --> C["③ 小計クリック<br/>不足 が表示"]
+  C --> D["④ 預/現計クリック<br/>自動入金 10,000"]
+  D --> E["⑤ 確定クリック<br/>赤い 済 が出現"]
+  E --> F([業務 PASSED])
+        </div>
+      </div>
+
+      <div class="timeline">
+        <div class="tl-item ok">
+          <h4>① 前提条件：空カート</h4>
+          <p>
+            YAML で <code>precondition.facts.cart_item_count</code> を宣言し、visual_question で
+            左側「合計」の緑数字が明確に 0 かを問います。コアに “cart” フィールドはありません — Constitution VI の実装です。
+            人手では <code>--confirm-precondition cart_item_count=0</code> でも確認できます。
+          </p>
+          <div class="tl-meta">
+            <span class="chip verifier">Verifier · visual_question</span>
+            <span class="chip">Feature 003 facts</span>
+          </div>
+        </div>
+        <div class="tl-item ok">
+          <h4>② レジ袋追加（非冪等 · 二重クリックが最も危険）</h4>
+          <p>
+            Planner は click ターゲット「レジ袋」を出力。OCR はしばしば「ジ袋」と読みますが、
+            同一性は normalized_target で判定し、文字列完全一致を要求しません。
+            クリック後の ActionEffect は全画面変化 <strong>約 0.7%</strong> でもよく、
+            局所 blob + 業務アサーションで成功を証明します：
+          </p>
+          <ul style="color:var(--muted);font-size:13px;margin:8px 0 0 18px">
+            <li><code>text_appears: 点数</code> + <code>text_appears: 内税</code>（安定 chrome。「1」「袋」誤一致を回避）</li>
+            <li><code>visual_question</code>：数量 1 個・金額 5 が明確なときのみ passed</li>
+          </ul>
+          <div class="tl-meta">
+            <span class="chip planner">Planner</span>
+            <span class="chip executor">Executor click</span>
+            <span class="chip ok">ActionEffect = expected_effect</span>
+            <span class="chip verifier">trusted_pass</span>
+            <span class="chip">実 run 例：座標 約 (337,679)</span>
+          </div>
+        </div>
+        <div class="tl-item ok">
+          <h4>③ 小計：支払画面への遷移</h4>
+          <p>
+            右下「小計」をクリック。画面は大きく変化（global_diff が 40%+ になることも）。
+            業務ゲートはシンプルかつ有効：OCR で「不足」が出れば待支払状態とみなします。
+            多くの場合 1 反復で trusted_pass。
+          </p>
+          <div class="tl-meta">
+            <span class="chip ok">1 iteration が典型</span>
+            <span class="chip">実 run 例：クリック 約 (866,627)</span>
+          </div>
+        </div>
+        <div class="tl-item">
+          <h4>④ 預/現計：現金開始 + 釣銭機の自動入金待ち</h4>
+          <p>
+            本ケースで最も「ブラックボックス」なステップです。Agent は POS ボタンだけを押し、
+            釣銭機シミュレータウィンドウは<strong>操作しません</strong>。
+            成功条件はダイアログに 預り金 10,000・お釣り 9,995（レジ袋 5 円時）、かつ「確定」が押せる状態。
+            OCR は <code>10,000</code> / <code>10.000</code> の千分位差を正規化して許容します。
+          </p>
+          <div class="callout warn" style="margin-top:10px">
+            過去の失敗パターン：visual_question は金額一致と見ても OCR が “10,000” を拾えず、
+            「決定的アサーションが VLM より優先」のため全体 failed（Feature 011 仲裁と関連）。
+            成功パスでは OCR と視覚結論の整合、または脆弱な OCR を避けるアサーション設計が必要です。
+          </div>
+        </div>
+        <div class="tl-item ok">
+          <h4>⑤ 確定 → 済</h4>
+          <p>
+            現金ダイアログの「確定」をクリック。最終的に visual_question で商品明細の目立つ赤「済」を確認。
+            済 が見えて初めて取引が固定完了 — これが業務成功の<strong>ハード終点</strong>です。
+          </p>
+          <div class="tl-meta">
+            <span class="chip verifier">visual_question · 済</span>
+            <span class="chip ok">業務クローズ完了</span>
+          </div>
+        </div>
+      </div>
+
+      <h3>本事例における 4役割の分担</h3>
+      <table class="cmp">
+        <tr><th>ステップ</th><th>Planner</th><th>Grounder</th><th>Executor</th><th>Verifier</th></tr>
+        <tr>
+          <td>レジ袋</td>
+          <td>買い物袋ボタン click</td>
+          <td>必要時にボタン bbox；OCR 部分文字も hint</td>
+          <td>mouse click 安全点</td>
+          <td>点数+内税+数量金額 VQ</td>
+        </tr>
+        <tr>
+          <td>小計</td>
+          <td>小計 click</td>
+          <td>右下ボタン位置特定</td>
+          <td>click</td>
+          <td>text_appears「不足」</td>
+        </tr>
+        <tr>
+          <td>預/現計</td>
+          <td>支払開始 click</td>
+          <td>右下支払ボタン候補（信頼度 0.9 も）</td>
+          <td>click 後に長めの wait</td>
+          <td>10,000 / 9,995 + 確定が押せる</td>
+        </tr>
+        <tr>
+          <td>確定</td>
+          <td>ダイアログ確定 click</td>
+          <td>ダイアログ内ボタン</td>
+          <td>click</td>
+          <td>赤い「済」が可視</td>
+        </tr>
+      </table>
+    </section>
+
+    <!-- ========== 9. 事例 B ========== -->
+    <section id="case-mixed">
+      <h2><span class="num">9</span>成功事例 B：金券 + 現金の混合支払</h2>
+      <p class="lead">
+        ケース ID：<code>pos-buy-bag-mixed-kinken-cash-001</code>。
+        レジ袋登録後、まず金券で 4、残りを現金で補います。
+        成功の鍵は<strong>金額入力がテンキー「4」のクリック</strong>であり、type_text や Escape ではないことです。
+      </p>
+      <div class="card">
+        <div class="mermaid">
+flowchart TB
+  A[レジ袋 登録] --> B[小計]
+  B --> C["テンキー 4 をクリック<br/>金額枠に 4 表示"]
+  C --> D["金券 をクリック<br/>一部支払を登録"]
+  D --> E{中央にブロック通知?}
+  E -->|はい| E1[戻る で閉じる] --> D
+  E -->|いいえ| F[預/現計 で現金差額]
+  F --> G[自動入金後 確定]
+  G --> H[済]
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card tight">
+          <h3 style="margin-top:0">なぜこれが「成功設計」か</h3>
+          <p style="color:var(--muted);font-size:13px;margin:0">
+            実機では支払画面のキーボードフォーカスが不安定で、<code>type_text</code> が金額枠に入らないことが多い。
+            成功パスは Grounder が数字キー「4」を位置特定して click。
+            intent に近傍関係（上 7 / 右 5 / 下 1）を書き、位置特定の安定性を上げます。
+          </p>
+        </div>
+        <div class="card tight">
+          <h3 style="margin-top:0">レッドライン操作（逸脱＝失敗）</h3>
+          <p style="color:var(--muted);font-size:13px;margin:0">
+            <strong>Escape 禁止</strong>：「現在の操作を行うには…」が金券ボタンを覆い、
+            後続が TARGET_NOT_FOUND。クリア/戻る/キャンセルの乱打も禁止（ブロック解除目的を除く）。
+          </p>
+        </div>
+      </div>
+      <div class="callout ok">
+        実 brief 断片では
+        <code>add-shopping-bag / calc-subtotal / enter-kinken-amount / apply-kinken</code> が passed になり、
+        混合支払の前半は実機で通っていることが確認できます。現金差額ステップは釣銭文言に敏感で、
+        アサーションと OCR の協調チューニングが要ります。
+      </div>
+    </section>
+
+    <!-- ========== 10. 事例 C ========== -->
+    <section id="case-scan">
+      <h2><span class="num">10</span>成功事例 C：ScannerSimulator スキャン → 混合会計</h2>
+      <p class="lead">
+        ケース ID：<code>pos-scan-magazine-checkout-001</code>。
+        アプリ横断のウィンドウ切替 + テキスト入力 + POS 復帰会計を含み、
+        Agent のブラックボックス能力を最も要求する「成功シナリオ」です。
+      </p>
+      <div class="card">
+        <div class="mermaid">
+flowchart TB
+  subgraph Aphase["フェーズ A · スキャンシミュレータへ"]
+    A1["hotkey Win+Tab<br/>タスクビューを開く"]
+    A2["サムネイル click<br/>ScannerSimulator 前面"]
+  end
+  subgraph Bphase["フェーズ B · バーコード入力とスキャン"]
+    B1["double_click で入力枠にフォーカス"]
+    B2["Backspace ×N で残留をクリア"]
+    B3["type_text 45127366"]
+    B4["Scan をクリック"]
+  end
+  subgraph Cphase["フェーズ C · POS に戻り会計"]
+    C1["POS 空白をクリック<br/>シミュを背面へ"]
+    C2["小計 → 金券/現金パス"]
+    C3["確定 → 済"]
+  end
+  A1 --> A2 --> B1 --> B2 --> B3 --> B4 --> C1 --> C2 --> C3
+        </div>
+      </div>
+
+      <h3>成功パス上の「工学的細部」（偶然の当たりではない）</h3>
+      <div class="timeline">
+        <div class="tl-item ok">
+          <h4>タスクビュー：先に POS エラーダイアログを閉じる</h4>
+          <p>赤い「バーコードが不正です」があると Win+Tab は POS に即座に奪われます。成功策：先に「戻る」→ その後 Win+Tab。</p>
+        </div>
+        <div class="tl-item ok">
+          <h4>サムネイル click：タイトルはアンカーのみ</h4>
+          <p>
+            Grounder がタイトルバー y≈50 を誤ロックしたことがありました。
+            成功記述は <code>target.text = null</code> を強制し、タイトルは nearby_texts、クリックはサムネ本体。
+          </p>
+        </div>
+        <div class="tl-item ok">
+          <h4>バーコード消去：batch_repeat Backspace（Feature 005）</h4>
+          <p>1 回の ActionIteration で連続退格。観察/検証は 1 ラウンドだけにし、20 回分のキャプチャ+計画を避けます。</p>
+        </div>
+        <div class="tl-item ok">
+          <h4>type_text が本当に動くこと（Feature 006）</h4>
+          <p>vncdotool クライアントに <code>type</code> が無かった欠陥を修正後、数字バーコードが安定入力できます。</p>
+        </div>
+        <div class="tl-item ok">
+          <h4>検証 ROI を絞り「表に既にあるコード」偽合格を防ぐ</h4>
+          <p>
+            Favorite 表に 45127366 が既に見えると、OCR 領域が広いと pre-check が入力完了と誤認し type_text をスキップします。
+            成功策：アサーション領域を入力枠の行だけに限定。
+          </p>
+        </div>
+        <div class="tl-item ok">
+          <h4>性能：OCR で足りるなら visual_question を使わない</h4>
+          <p>日本語かなの OCR は不安定なため、アンカーは ASCII/漢字/数字。VQ は全選択反転、金額枠、済 など真に視覚的な判定に限定。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 11. 成功パターン ========== -->
+    <section id="success-pattern">
+      <h2><span class="num">11</span>POS 成功パターンのまとめ（再利用可能）</h2>
+      <div class="card">
+        <div class="mermaid">
+mindmap
+  root((POS 自動化成功))
+    ケース記述
+      空カート前提 facts
+      非冪等は max_retries を小さく
+      intent に近傍と禁止操作を書く
+      OCR アンカーは曖昧文字を避ける
+      visual_question は硬い業務のみ
+    ランタイム機構
+      4役割分離
+      ActionEffect 二重軌道
+      RepeatGuard で二重クリック防止
+      stale_frame で古い座標防止
+      座標空間 fail-safe
+    知覚強化
+      日本語 OCR モデル
+      子ウィンドウプラグイン拡大
+      フレーム重複排除と回答キャッシュ
+    回復と自己修復
+      zoom_reground
+      wrong_target 帰属
+      postmortem でクリック修正
+      記憶書込みで次回直クリック
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card tight">
+          <h3 style="margin-top:0">システムにおける「成功」の厳密な定義</h3>
+          <p style="color:var(--muted);font-size:13px;margin:0">
+            モデルが成功と言ったからではありません。各ステップの
+            <strong>StepVerificationResult = passed</strong>
+            （business モードかつ basis が信頼できる）がすべて完了し、
+            Run status = PASSED、再生可能なフレーム証拠と action_tags 監査カウントが残ることです。
+          </p>
+        </div>
+        <div class="card tight">
+          <h3 style="margin-top:0">成功事例に共通する脚本</h3>
+          <p style="color:var(--muted);font-size:13px;margin:0">
+            ① 状態が既知（空カート/環境可）→ ② 単一意図のステップ → ③ 決定的アサーション優先 →
+            ④ 視覚は曖昧さ解消のみ → ⑤ 支払は外部シミュ副作用を待つ → ⑥ 硬終点（済）でクローズ。
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 12. 教訓 ========== -->
+    <section id="lessons">
+      <h2><span class="num">12</span>失敗から成功へ：教訓がどうアーキテクチャ能力になったか</h2>
+      <table class="cmp">
+        <tr><th>現象</th><th>業務影響</th><th>能力として定着</th></tr>
+        <tr>
+          <td>全画面変化 0.4% を効果なしとみなしレジ袋を再クリック</td>
+          <td>カート二重計上</td>
+          <td>Feature 002 ActionEffect + 非冪等 Guard</td>
+        </tr>
+        <tr>
+          <td>リトライ時に intent を書き換え結果行をクリック</td>
+          <td>危険な誤クリック</td>
+          <td>Feature 003 アクション同一性 + dangerous_drift</td>
+        </tr>
+        <tr>
+          <td>pixel / 正規化座標の混用</td>
+          <td>座標が飛ぶ</td>
+          <td>coordinate_space の強制宣言</td>
+        </tr>
+        <tr>
+          <td>type 属性欠落</td>
+          <td>バーコード入力不可</td>
+          <td>Feature 006 キーボード入力修正</td>
+        </tr>
+        <tr>
+          <td>隣のコントロールをクリックしたが画面は変化</td>
+          <td>原因特定が困難</td>
+          <td>Feature 022/023 wrong_target + postmortem</td>
+        </tr>
+        <tr>
+          <td>小さな子ウィンドウのコントロールが読めない</td>
+          <td>スキャナ/ツール窓の誤操作</td>
+          <td>Feature 014/024 拡大回復とプラグイン</td>
+        </tr>
+      </table>
+      <div class="callout">
+        したがって POS「成功事例」の価値は YAML が通ることだけではありません。
+        現場事故を<strong>業務非依存のフレームワーク不変条件</strong>へ抽象化し、
+        次の非 POS GUI でも同じ図の機構を再利用できることにあります。
+      </div>
+    </section>
+
+    <footer>
+      リポジトリ <code>ai-visual-testing-research</code> の静的解析に基づき生成 · 図は Mermaid 描画 ·
+      出典：overall_design.md、specs/001–024、vnc_agent ケースと artifacts 実行サマリ。
+      オフラインで図が出ない場合は jsDelivr の mermaid へ到達できるか確認するか、mermaid.min.js をローカル配置してください。
+      · 中国語版：<code>docs/项目可视化解析报告.html</code>
+    </footer>
+  </main>
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    securityLevel: 'loose',
+    flowchart: { curve: 'basis', htmlLabels: true },
+    themeVariables: {
+      primaryColor: '#1e3a5f',
+      primaryTextColor: '#e8eef9',
+      primaryBorderColor: '#3b82f6',
+      lineColor: '#6b8cce',
+      secondaryColor: '#152238',
+      tertiaryColor: '#0b1220',
+      fontFamily: 'Hiragino Sans, Noto Sans JP, Yu Gothic UI, Meiryo, sans-serif'
+    }
+  });
+
+  const links = [...document.querySelectorAll('nav.side a')];
+  const secs = links.map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(en => {
+      if (en.isIntersecting) {
+        const id = '#' + en.target.id;
+        links.forEach(l => l.classList.toggle('active', l.getAttribute('href') === id));
+      }
+    });
+  }, { rootMargin: '-40% 0px -50% 0px', threshold: 0 });
+  secs.forEach(s => io.observe(s));
+</script>
+</body>
+</html>

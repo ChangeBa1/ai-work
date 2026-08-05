@@ -21,7 +21,7 @@ import json
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from pathlib import Path, PurePath
+from pathlib import Path, PureWindowsPath
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -120,7 +120,7 @@ def relativize_screenshot_path(path: str | None, artifacts_root: str | None) -> 
             return rel.as_posix()
         except ValueError:
             pass
-    return PurePath(path).as_posix()
+    return PureWindowsPath(path).as_posix()
 
 
 def _region_to_bbox(region: dict[str, Any] | None) -> list[int] | None:

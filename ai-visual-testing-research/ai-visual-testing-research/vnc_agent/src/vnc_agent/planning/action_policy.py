@@ -68,6 +68,21 @@ def _comparable_text(s: str) -> str:
     return s.strip().lower().strip(_DECOR_CHARS)
 
 
+def _bbox_iou(a: tuple[int, int, int, int], b: tuple[int, int, int, int]) -> float:
+    """Intersection-over-union of two pixel bboxes; 0.0 when disjoint or
+    degenerate. Used to tell "two candidates for one target" (high IoU) apart
+    from "two competing targets" (low IoU)."""
+    ix1, iy1 = max(a[0], b[0]), max(a[1], b[1])
+    ix2, iy2 = min(a[2], b[2]), min(a[3], b[3])
+    if ix2 <= ix1 or iy2 <= iy1:
+        return 0.0
+    inter = (ix2 - ix1) * (iy2 - iy1)
+    area_a = max(0, a[2] - a[0]) * max(0, a[3] - a[1])
+    area_b = max(0, b[2] - b[0]) * max(0, b[3] - b[1])
+    union = area_a + area_b - inter
+    return inter / union if union > 0 else 0.0
+
+
 @dataclass
 class OcrSuspicion:
     """Feature 012: why a unique OCR hit was not clicked directly.
@@ -117,9 +132,17 @@ class ActionPolicy:
         # config.PlanningConfig.ocr_direct_click_min_confidence (0.85).
         ocr_direct_click_min_confidence: float = 0.85,
         click_edge_inset_ratio: float = 0.15,
+        top1_top2_distinct_max_iou: float = 0.5,
     ) -> None:
         self.overall_confidence_threshold = overall_confidence_threshold
         self.top1_top2_min_gap = top1_top2_min_gap
+        # A close top1/top2 confidence pair only means *ambiguity* when the two
+        # boxes point at different places. Grounders routinely emit several
+        # near-identical boxes for one target (observed live: IoU 0.86, centres
+        # 1px apart, confidences 0.90/0.85) — that is agreement, and blocking on
+        # it threw away a correct first-attempt hit. Candidates overlapping by
+        # more than this IoU are treated as one target.
+        self.top1_top2_distinct_max_iou = top1_top2_distinct_max_iou
         self.ocr_sanity_check_ratio = ocr_sanity_check_ratio
         self.known_hotkeys = known_hotkeys or {}
         self.ocr_direct_click_min_confidence = ocr_direct_click_min_confidence
@@ -488,7 +511,11 @@ class ActionPolicy:
             )
         if len(in_bounds) >= 2:
             gap = in_bounds[0].confidence - in_bounds[1].confidence
-            if gap < self.top1_top2_min_gap:
+            spatially_distinct = (
+                _bbox_iou(in_bounds[0].bbox, in_bounds[1].bbox)
+                <= self.top1_top2_distinct_max_iou
+            )
+            if gap < self.top1_top2_min_gap and spatially_distinct:
                 return PolicyResult(
                     outcome="stop_recover",
                     failure_type=FailureType.GROUNDING_LOW_CONFIDENCE,

@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 
 from vnc_agent.config import (
+    AppPerceptionConfig,
     AgentConfig,
     AppConfig,
     ExecutionConfig,
@@ -171,10 +172,16 @@ def app_config() -> AppConfig:
         # pinned off here (spec FR-007: disabled == 022 chain byte-identical).
         # Scenario 22 builds its own config with the tier enabled and a
         # StubPostmortemClient injected.
+        # Feature 024: app-perception enhancement is off by default in
+        # production too, but it is pinned explicitly here so that flipping
+        # the shipped default later cannot silently change what the legacy
+        # scenarios observe (spec FR-026: disabled == pre-024 byte-identical).
+        # Scenario 23 builds its own config with the feature enabled.
         agent=AgentConfig(
             recovery=recovery,
             execution=ExecutionConfig(stale_frame_check_enabled=False),
             wrong_target_postmortem=WrongTargetPostmortemConfig(enabled=False),
+            app_perception=AppPerceptionConfig(enabled=False),
         ),
         models=ModelsConfig(),
         vnc_targets=VNCTargetsConfig(

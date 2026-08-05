@@ -202,3 +202,121 @@ def test_sc012_pos_fixture_is_not_the_sole_evidence_for_any_capability() -> None
         if has_target_evidence_conflict(previous, conflicting) is True:
             generic_only_conflict_passes.append(name)
     assert len(generic_only_conflict_passes) >= 2
+
+
+# --- Feature 024: app-perception plugins across unrelated window shapes ----
+#
+# Constitution VI again: the sub-window enhancement claims to be generic, so
+# it must be exercised on two windows that share nothing — different
+# vocabulary, different layout, and deliberately opposite aspect ratios.
+
+
+def _media_player_profile():
+    """A synthetic scenario with no relationship to the shipped ones."""
+    from vnc_agent.perception.app_plugins.profile import PluginProfile
+
+    return PluginProfile.model_validate(
+        {
+            "name": "media-settings",
+            "required_anchors": ["Playback", "Equalizer", "Apply"],
+            "source_geometry": {
+                "client_size": [720, 300],  # wide
+                "controls": [
+                    {"name": "lblPlayback", "text": "Playback", "rect": [8, 6, 90, 22]},
+                    {
+                        "name": "btnApply",
+                        "text": "Apply",
+                        "rect": [620, 260, 700, 288],
+                        "anchors": ["bottom", "right"],
+                    },
+                ],
+            },
+        }
+    )
+
+
+def _spreadsheet_profile():
+    from vnc_agent.perception.app_plugins.profile import PluginProfile
+
+    return PluginProfile.model_validate(
+        {
+            "name": "cell-format",
+            "required_anchors": ["Number", "Alignment", "Border"],
+            "source_geometry": {
+                "client_size": [280, 620],  # tall — the opposite shape
+                "controls": [
+                    {"name": "tabNumber", "text": "Number", "rect": [6, 8, 70, 24]},
+                    {"name": "tabBorder", "text": "Border", "rect": [6, 560, 70, 580]},
+                ],
+            },
+        }
+    )
+
+
+def _frame_with(texts_and_boxes, resolution=(1024, 768)):
+    from datetime import UTC, datetime
+
+    from vnc_agent.domain.observation import OCRItem, StructuredScreen
+
+    return StructuredScreen(
+        frame_id="cross",
+        resolution=resolution,
+        captured_at=datetime.now(UTC),
+        ocr_items=[
+            OCRItem(text=text, bbox=bbox, confidence=0.93) for text, bbox in texts_and_boxes
+        ],
+    )
+
+
+def test_same_core_detects_two_unrelated_window_shapes():
+    from vnc_agent.perception.app_plugins.detector import DeclarativeSubWindowPlugin
+
+    wide = DeclarativeSubWindowPlugin(_media_player_profile())
+    tall = DeclarativeSubWindowPlugin(_spreadsheet_profile())
+
+    wide_frame = _frame_with(
+        [
+            ("Playback", (40, 40, 120, 56)),
+            ("Equalizer", (40, 120, 130, 136)),
+            ("Apply", (660, 300, 720, 320)),
+        ]
+    )
+    tall_frame = _frame_with(
+        [
+            ("Number", (500, 60, 570, 76)),
+            ("Alignment", (500, 300, 590, 316)),
+            ("Border", (500, 640, 570, 656)),
+        ]
+    )
+
+    wide_hit = wide.detect(wide_frame)
+    tall_hit = tall.detect(tall_frame)
+    assert wide_hit is not None and tall_hit is not None
+
+    def aspect(detection):
+        x1, y1, x2, y2 = detection.region
+        return (x2 - x1) / (y2 - y1)
+
+    assert aspect(wide_hit) > 1.0 > aspect(tall_hit), (
+        "the two scenarios must genuinely differ in shape for this to prove anything"
+    )
+
+    # Each plugin only recognises its own window.
+    assert wide.detect(tall_frame) is None
+    assert tall.detect(wide_frame) is None
+
+
+def test_anchor_mapping_is_shape_independent_across_scenarios():
+    from vnc_agent.perception.app_plugins.source_geometry import map_control_rect
+
+    for profile, region in (
+        (_media_player_profile(), (100, 100, 820, 400)),
+        (_spreadsheet_profile(), (400, 40, 680, 660)),
+    ):
+        geometry = profile.source_geometry
+        for control in geometry.controls:
+            mapped = map_control_rect(control, geometry.client_size, region)
+            assert mapped is not None, f"{profile.name}/{control.name} failed to map"
+            x1, y1, x2, y2 = mapped
+            assert region[0] <= x1 < x2 <= region[2]
+            assert region[1] <= y1 < y2 <= region[3]

@@ -143,6 +143,26 @@ details{margin-top:6px} code{font-size:0.85em}
         {% else %}{{ t('report.none') }}{% endif %}
       </p>
       <p>{{ t('report.recovery_attempts') }}: <code>{{ it.recovery_attempts }}</code></p>
+      {%- if it.perception_enhancement %}
+      {% set pe = it.perception_enhancement %}
+      <p>{{ t('report.perception_enhancement') }}:
+        <code data-status="{{ pe.reason_code }}">{{ pe.reason_code }}</code>
+        {% if pe.activated %}
+          {{ t('report.perception_plugin') }}=<code>{{ pe.plugin_name }}</code>
+          ROI=<code>{{ pe.roi }}</code>
+          x{{ pe.scale_factor }}
+          {% if pe.detection_confidence is not none %}
+            ({{ '%.2f'|format(pe.detection_confidence) }})
+          {% endif %}
+          {% if pe.zoom_image_ref %}<code>{{ pe.zoom_image_ref }}</code>{% endif %}
+        {% elif pe.declared_but_undetected %}
+          <em>{{ t('report.perception_declared_undetected') }}: {{ pe.declared_scope }}</em>
+        {% endif %}
+        {% if pe.constraint_violations %}
+          <code>{{ pe.constraint_violations }}</code>
+        {% endif %}
+      </p>
+      {%- endif %}
     </details>
   </div>
   {% endfor %}

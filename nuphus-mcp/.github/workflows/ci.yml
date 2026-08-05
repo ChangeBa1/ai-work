@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  check:
+    name: cargo check (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          # Same cross-arch cache guard as release.yml (macos-latest can be
+          # x86_64 or arm64; never restore one arch's artifacts on the other).
+          key: ${{ runner.arch }}
+      - name: Install Linux build deps
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          set -e
+          for i in 1 2 3; do
+            sudo apt-get update && break || { echo "apt-get update failed (attempt $i), retrying..."; sleep 10; }
+          done
+          sudo apt-get install -y pkg-config libssl-dev libwayland-dev \
+            libxkbcommon-dev libx11-dev libxcb1-dev libxcb-render0-dev \
+            libxcb-shape0-dev libxcb-xfixes0-dev libxcb-randr0-dev \
+            libxcb-xkb-dev libxrandr-dev libxi-dev libpipewire-0.3-dev \
+            libgl1-mesa-dev libegl1-mesa-dev libgbm-dev
+        env:
+          DEBIAN_FRONTEND: noninteractive
+      - name: Check workspace
+        run: cargo check --workspace
+
+  test:
+    name: cargo test -p nuphus-mcp (${{ matrix.os }})
+    # nuphus-mcp 的协议/安全测试包含真实剪贴板写入（desktop_clipboard_write），
+    # 需要桌面会话：windows / macOS runner 具备；Linux headless runner 不跑测试。
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ runner.arch }}
+      - name: Run nuphus-mcp tests
+        run: cargo test -p nuphus-mcp
+
+  fmt:
+    name: cargo fmt --check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Check formatting
+        run: cargo fmt --check

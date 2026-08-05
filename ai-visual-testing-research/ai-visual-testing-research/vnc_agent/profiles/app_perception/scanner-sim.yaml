@@ -1,0 +1,101 @@
+# App-perception profile: barcode-scanner simulator tool window.
+#
+# Drafted with scripts/gen_app_profile_from_designer.py from the application's
+# WinForms designer file, then hand-reviewed against a real 1024x768 capture
+# (artifacts/runs/cfa922e8-.../bundles/9874e7a4-.../safe_evidence.png).
+#
+# This file is DATA. It is the only place the application's vocabulary is
+# allowed to live — core code stays business-agnostic (Constitution VI).
+
+name: scanner-sim
+description: >-
+  Barcode-scanner simulator tool window overlaid on the main POS screen.
+  Design-time title: ScannerSimulator. Tall/narrow (423x581, aspect 0.73).
+
+# CALIBRATED against the deployed OCR model, not against the designer file.
+# The first draft used "Barcode:", "Favorite:", "TopMost", "Scan"; measured on a
+# real capture (run 9f2140ae, frame e6110451) with the configured japan
+# PP-OCRv4 model, three of those four never match and the fourth is a false
+# positive:
+#   "TopMost"   -> OCR reads "Topllost"  (M mis-segmented as ll)  = MISS
+#   "Barcode:"  -> OCR reads "Barcode."  (colon read as period)   = MISS
+#   "Favorite:" -> OCR reads "Favorite." (same)                   = MISS
+#   "Scan"      -> matched only as a substring of the *title bar*
+#                  "ScannerSimulator", not the button              = FALSE HIT
+# Result: detect() returned None and the enhancement could never activate.
+# Anchors must be what the deployed model actually reads. Every entry below was
+# verified HIT on that frame. Drop the colons (punctuation is unreliable) and
+# prefer the status-bar strings, which the model reads cleanly at this size.
+required_anchors:
+  - "ScannerSimulator"        # title bar, x 13..111  y 6..25
+  - "Barcode"                 # label,     x 19..66   y 36..50
+  - "Favorite"                # label,     x 18..69   y 84..103
+  - "Idle, Claimed, Enabled"  # status bar, x 18..139 y 593..610 (conf 0.93)
+  - "DataCount"               # status bar, x 180..249 y 593..610
+# All must hit: a partial read fails open to the unchanged full-frame path,
+# which is the safe direction.
+min_required_anchor_hits: 5
+title_anchor: "ScannerSimulator"
+
+# Measured, not derived: the anchor union above spans x 13..249 (w 236) and
+# y 6..610 (h 604), while the window occupies roughly x 0..424, y 0..620.
+# Padding is expressed as a fraction of the UNION's own size, so the right
+# margin is necessarily large — every readable anchor sits left of centre.
+padding_ratio:
+  left: 0.06
+  right: 0.75
+  top: 0.02
+  bottom: 0.02
+
+# Per-window plausibility (shape priors belong here, never in core).
+aspect_ratio_range: [0.45, 1.20]
+area_ratio_range: [0.08, 0.75]
+min_size_px: 120
+
+anchor_constraints:
+  # NOTE ON enforce: `subject` is an audit label only — evaluate_constraints()
+  # applies every constraint to EVERY candidate, it does not select candidates
+  # by subject. This profile is shared by two steps that click *different*
+  # controls (the barcode input, and the Scan button), so a control-specific
+  # constraint can never be enforced here: "between Barcode and Favorite"
+  # would reject the Scan button, and "same row as the status bar" would
+  # reject the input box. The original draft enforced two mutually exclusive
+  # constraints; had its anchors ever resolved, every candidate would have been
+  # rejected. Both stay record_only until a per-control scope exists.
+  - subject: "barcode-input"
+    relation: between
+    anchors: ["Barcode", "Favorite"]
+    tolerance_ratio: 0.25
+    enforce: false
+  # The Scan button row sits above the status bar.
+  - subject: "Scan"
+    relation: above
+    anchors: ["Idle, Claimed, Enabled"]
+    tolerance_ratio: 0.3
+    enforce: false
+
+source_geometry:
+  client_size: [423, 581]
+  controls:
+    - name: label1
+      text: "Barcode:"
+      rect: [10, 6, 59, 18]
+      anchors: [top, left]
+    # The barcode input box. It has NO Text property, so OCR can never find
+    # it and a model can only guess — and it is precisely the control this
+    # test case kept mis-clicking. Geometry is the only way to locate it.
+    - name: txbScanData
+      rect: [11, 25, 367, 44]
+      anchors: [top, left]
+    - name: label2
+      text: "Favorite:"
+      rect: [12, 56, 61, 68]
+      anchors: [top, left]
+    - name: btnScan
+      text: "Scan"
+      rect: [331, 526, 406, 549]
+      anchors: [bottom, right]
+    - name: topMostCheckBox
+      text: "TopMost"
+      rect: [245, 530, 313, 546]
+      anchors: [top, left]

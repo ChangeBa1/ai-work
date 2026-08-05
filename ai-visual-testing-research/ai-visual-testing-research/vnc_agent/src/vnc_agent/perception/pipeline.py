@@ -59,6 +59,12 @@ class ZoomObservation:
     resolution: tuple[int, int]
     frame_id: str
     ocr_items: list[OCRItem] = field(default_factory=list)
+    # Feature 024 (FR-017): the same OCR items in the UPSCALED image's own
+    # coordinate space (i.e. before the restore above). Feature 014's caller
+    # does not read this field, so its behavior is unchanged; feature 024 uses
+    # it so the image handed to the grounder and the hint boxes that accompany
+    # it always live in one coordinate space.
+    ocr_items_zoom_space: list[OCRItem] = field(default_factory=list)
 
 
 class ObservationPipeline:
@@ -223,12 +229,16 @@ class ObservationPipeline:
         zoom_h, zoom_w = zoomed.shape[0], zoomed.shape[1]
 
         ocr_items: list[OCRItem] = []
+        ocr_items_zoom_space: list[OCRItem] = []
         if self.ocr_enabled:
             try:
                 from vnc_agent.perception.ocr.engine import run_ocr_array
 
                 for item in run_ocr_array(zoomed):
                     bx1, by1, bx2, by2 = item.bbox
+                    # Feature 024: keep the raw zoom-space item alongside the
+                    # restored one (additive; feature 014 reads only the latter).
+                    ocr_items_zoom_space.append(item)
                     ocr_items.append(
                         item.model_copy(
                             update={
@@ -243,6 +253,7 @@ class ObservationPipeline:
                     )
             except Exception:
                 ocr_items = []
+                ocr_items_zoom_space = []
 
         # Masking: translate global mask rects into ROI-local space and scale
         # them up. The safe evidence copy is always masked; the model copy is
@@ -292,6 +303,7 @@ class ObservationPipeline:
             resolution=(zoom_w, zoom_h),
             frame_id=frame.id,
             ocr_items=ocr_items,
+            ocr_items_zoom_space=ocr_items_zoom_space,
         )
 
     async def _vision_describe_or_cache(

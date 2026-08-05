@@ -324,3 +324,41 @@ recovery:
     scale_factor: 2.0
     roi_expand_factor: 2.0
     min_roi_size_px: 64
+app_perception:
+  enabled: true
+  profiles_dir: profiles/app_perception
+  # target_id -> allowed plugin names. Target absent => every registered
+  # plugin allowed; explicit empty list => feature off for that target.
+  allowed_plugins: 
+    win10-test-01: ["scanner-sim"]
+  # Refinements per step that actually cost a capture + OCR pass;
+  # re-observing an unchanged screen is served from a content-hash memo
+  # and does not count against this.
+  max_activations_per_step: 6
+  min_detection_confidence: 0.7
+  # Shape-INVARIANT core guards only. The target sub-windows differ wildly
+  # (surveyed WinForms simulator forms span aspect ratio 0.73..5.34 and
+  # 3.3%..77.1% of a 1024x768 screen), so NO window-shape prior may live in
+  # the core. roi_area_ratio_max only rejects "detection degenerated into the
+  # whole screen"; min_roi_size_px is a degeneracy floor. Per-window
+  # plausibility (area/aspect/size ranges) belongs in the profile YAML.
+  roi_area_ratio_max: 0.95
+  min_roi_size_px: 24
+  # Fixed default zoom, deliberately NOT derived from window size: legibility
+  # depends on glyph height (~constant across these WinForms windows), not on
+  # how large the window is. A size-derived scale would encode a shape prior.
+  # Profiles may override. max_upscaled_megapixels then clamps the result; if
+  # that clamp would drop below min_scale, enhancement is abandoned.
+  default_scale: 2.5
+  min_scale: 1.2
+  max_scale: 4.0
+  max_upscaled_megapixels: 4.0
+  roi_edge_band_ratio: 0.02
+  # A step declared a scope but the window is not on screen: "fallback"
+  # (default) re-runs the normal full-frame path and records
+  # declared_but_undetected; "fail" makes the iteration fail diagnosably.
+  on_declared_window_missing: fallback
+  # "respect_profile" (default) honours each constraint's own `enforce` flag
+  # (true => violating candidates are rejected); "record_only" downgrades
+  # every constraint to audit-only (emergency switch).
+  anchor_constraint_mode: respect_profile

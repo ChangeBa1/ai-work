@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from vnc_agent.domain.action import ExecutableAction, ExecutionResult, SemanticAction
 from vnc_agent.domain.action_effect import ActionEffect
 from vnc_agent.domain.action_identity import CanonicalActionIdentity
+from vnc_agent.domain.app_perception import PerceptionEnhancementAudit
 from vnc_agent.domain.grounding import GroundingResult
 from vnc_agent.domain.memory import MemoryHitAudit
 from vnc_agent.domain.observation import ScreenFrame
@@ -76,6 +77,11 @@ class ActionIteration(BaseModel):
     # this iteration — outcome, corrected bbox/click point, gate evidence,
     # undo flags and diagnosis artifact refs. Null everywhere else.
     postmortem: PostmortemAudit | None = None
+    # Feature 024 (FR-024): one record for every iteration that reached the
+    # grounding branch — including the ones that were NOT enhanced, whose
+    # reason code is what makes "why wasn't this step enhanced?" answerable.
+    # Null on iterations that never called the grounder.
+    perception_enhancement: PerceptionEnhancementAudit | None = None
 
 
 class DeclaredFact(BaseModel):

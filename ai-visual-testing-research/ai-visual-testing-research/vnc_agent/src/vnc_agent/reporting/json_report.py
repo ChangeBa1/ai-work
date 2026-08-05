@@ -183,6 +183,14 @@ def build_report_dict(
                         if it.postmortem
                         else None
                     ),
+                    # Feature 024 (FR-024): one record per iteration that
+                    # reached the grounding branch — including non-activated
+                    # ones, whose reason code explains why. Null elsewhere.
+                    "perception_enhancement": (
+                        it.perception_enhancement.model_dump(mode="json")
+                        if it.perception_enhancement
+                        else None
+                    ),
                 }
             )
             if it.execution_result is not None and it.execution_result.success is True:

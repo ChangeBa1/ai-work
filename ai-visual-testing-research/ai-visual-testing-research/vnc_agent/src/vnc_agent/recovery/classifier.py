@@ -8,6 +8,7 @@ from vnc_agent.domain.action_effect import ActionEffect
 from vnc_agent.domain.grounding import GroundingResult
 from vnc_agent.domain.recovery import FailureType, GroundingLowConfidenceReason
 from vnc_agent.domain.verification import VerificationResult, WaitResult
+from vnc_agent.planning.action_policy import _bbox_iou
 from vnc_agent.runtime.exceptions import (
     ActionTimeoutError,
     VNCConnectionError,
@@ -39,6 +40,7 @@ def classify_grounding(
     *,
     overall_threshold: float = 0.55,
     top1_top2_min_gap: float = 0.08,
+    top1_top2_distinct_max_iou: float = 0.5,
     width: int = 0,
     height: int = 0,
 ) -> Classification | None:
@@ -60,7 +62,10 @@ def classify_grounding(
         )
     if len(cands) >= 2:
         gap = cands[0].confidence - cands[1].confidence
-        if gap < top1_top2_min_gap:
+        # Near-identical boxes are one target described twice, not a genuine
+        # ambiguity — see ActionPolicy.top1_top2_distinct_max_iou.
+        distinct = _bbox_iou(cands[0].bbox, cands[1].bbox) <= top1_top2_distinct_max_iou
+        if gap < top1_top2_min_gap and distinct:
             return Classification(
                 FailureType.GROUNDING_LOW_CONFIDENCE,
                 sub_reason="top1_top2_close",

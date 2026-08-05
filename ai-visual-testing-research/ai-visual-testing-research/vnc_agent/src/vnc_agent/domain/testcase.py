@@ -68,6 +68,18 @@ class TestStep(BaseModel):
     # the runtime bypasses the Planner for this step and constructs the
     # action deterministically from this declaration (FR-001/FR-014).
     batch_repeat_key: BatchRepeatKeyDeclaration | None = None
+    # Feature 024 (FR-013): the ONLY switch that activates pre-grounding
+    # sub-window enhancement for this step. Value = an app-perception plugin
+    # (profile) name meaning "this step operates inside that sub-window", or
+    # "none". Omitted is equivalent to "none": a frame containing a known
+    # sub-window never enhances a step that does not ask for it.
+    # Generic field — the value space is plugin names, not business terms.
+    perception_scope: str | None = None
+    # Feature 024: name of the control (from the profile's source_geometry)
+    # this step targets. Naming it rather than describing it is what makes
+    # text-less controls reachable at all — a bare input box has nothing for
+    # OCR or a model to match on. Requires perception_scope; ignored without.
+    perception_target: str | None = None
 
 
 class TestCase(BaseModel):
@@ -88,6 +100,11 @@ class TestCase(BaseModel):
     # with AgentConfig.reporting.action_tags at report time (testcase
     # declarations take priority on a matching tag name).
     action_tags: list[ActionTagRule] = Field(default_factory=list)
+    # Feature 024 (FR-013): optional allow-list of app-perception plugin
+    # names usable by this test case. When non-empty, every step's
+    # `perception_scope` must be a member — which turns a typo into a
+    # load-time error instead of a silent no-enhancement run.
+    perception_plugins: list[str] = Field(default_factory=list)
 
     @field_validator("mode")
     @classmethod
@@ -125,8 +142,68 @@ def _collect_pydantic_errors(exc: Exception) -> list[dict[str, str]]:
     return errors
 
 
-def load_test_case(path: str | Path) -> TestCase:
-    """Load and validate a YAML test case. Raises FieldValidationError with field paths."""
+PERCEPTION_SCOPE_OFF = "none"
+
+
+def _validate_perception_scopes(
+    tc: TestCase, known_plugins: set[str] | None
+) -> list[dict[str, str]]:
+    """Feature 024 (FR-013): a declared scope must name a real plugin.
+
+    Checked against the test case's own allow-list when it declares one, and
+    against the registry when the caller supplies it. Catching this at load
+    time is the point: a typo would otherwise degrade silently into "no
+    enhancement", which looks identical to a correct undeclared step.
+    """
+    errors: list[dict[str, str]] = []
+    allowed = set(tc.perception_plugins)
+    for i, step in enumerate(tc.steps):
+        scope = step.perception_scope
+        if scope is None or scope == PERCEPTION_SCOPE_OFF:
+            continue
+        if allowed and scope not in allowed:
+            errors.append(
+                {
+                    "path": f"steps[{i}].perception_scope",
+                    "reason": (
+                        f"{scope!r} is not in this test case's perception_plugins "
+                        f"allow-list {sorted(allowed)} (FR-013)"
+                    ),
+                }
+            )
+            continue
+        if known_plugins is not None and scope not in known_plugins:
+            errors.append(
+                {
+                    "path": f"steps[{i}].perception_scope",
+                    "reason": (
+                        f"unknown app-perception plugin {scope!r}; "
+                        f"registered: {sorted(known_plugins) or '<none>'} (FR-013)"
+                    ),
+                }
+            )
+    for i, name in enumerate(tc.perception_plugins):
+        if known_plugins is not None and name not in known_plugins:
+            errors.append(
+                {
+                    "path": f"perception_plugins[{i}]",
+                    "reason": (
+                        f"unknown app-perception plugin {name!r}; "
+                        f"registered: {sorted(known_plugins) or '<none>'} (FR-013)"
+                    ),
+                }
+            )
+    return errors
+
+
+def load_test_case(
+    path: str | Path, *, known_plugins: set[str] | None = None
+) -> TestCase:
+    """Load and validate a YAML test case. Raises FieldValidationError with field paths.
+
+    ``known_plugins`` (feature 024) enables registry-backed validation of
+    ``perception_scope``; omitted keeps the pre-024 behavior.
+    """
     path = Path(path)
     if not path.exists():
         raise FieldValidationError(
@@ -189,6 +266,9 @@ def load_test_case(path: str | Path) -> TestCase:
                     ),
                 }
             )
+    # Feature 024 (FR-013): declared perception scopes must resolve.
+    load_errors.extend(_validate_perception_scopes(tc, known_plugins))
+
     if load_errors:
         raise FieldValidationError(load_errors)
 

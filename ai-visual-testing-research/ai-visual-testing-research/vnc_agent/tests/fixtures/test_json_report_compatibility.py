@@ -51,6 +51,8 @@ _LEGACY_ITERATION_KEYS = {
     "failure_attribution",
     # Feature 023 (FR-010): additive post-mortem audit.
     "postmortem",
+    # Feature 024 (FR-024): additive app-perception enhancement audit.
+    "perception_enhancement",
 }
 _LEGACY_STEP_KEYS = {
     "step_id", "status", "iterations", "model_names", "raw_model_response_refs",

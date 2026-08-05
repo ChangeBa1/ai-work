@@ -610,3 +610,53 @@ async def test_recheck_disagreement_fail_safe_keeps_failed():
         escalate=False,
     )
     assert result.status == "failed"
+
+
+@pytest.mark.asyncio
+async def test_finish_action_is_exempt_from_no_effect_veto():
+    """A declared no-op must not have its matched assertions vetoed.
+
+    Live regression (run d99f1219, step `open-task-view`): the Windows task
+    view was genuinely on screen and both business anchors matched, but the
+    planner had emitted `finish` ("goal already met"), which dispatches
+    nothing. The resulting no_effect vetoed the passing assertions and the
+    step failed — making "the goal is already achieved" unconfirmable.
+    """
+    spec = VerificationSpec(
+        operator="any",
+        conditions=[
+            VerificationCondition(type="text_appears", value="CashChanger"),
+            VerificationCondition(type="text_appears", value="SimulatorForm"),
+        ],
+    )
+    screen = _screen(texts=["CashChanger", "ValueCardSimulatorForm"], changed=False)
+
+    vetoed = await resolve_step_result(
+        spec, "business", _ae("no_effect"), screen, escalate=False
+    )
+    assert vetoed.status == "failed"
+    assert "no_effect" in vetoed.failed_conditions
+
+    exempt = await resolve_step_result(
+        spec, "business", _ae("no_effect"), screen, escalate=False, action_is_noop=True
+    )
+    assert exempt.status == "passed"
+    assert "no_effect" not in exempt.failed_conditions
+
+
+@pytest.mark.asyncio
+async def test_noop_exemption_does_not_rescue_failing_assertions():
+    """The exemption only stops the veto; it never invents a pass."""
+    spec = VerificationSpec(
+        operator="all",
+        conditions=[VerificationCondition(type="text_appears", value="CashChanger")],
+    )
+    result = await resolve_step_result(
+        spec,
+        "business",
+        _ae("no_effect"),
+        _screen(texts=["something else"], changed=False),
+        escalate=False,
+        action_is_noop=True,
+    )
+    assert result.status == "failed"

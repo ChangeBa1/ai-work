@@ -48,6 +48,10 @@ _ZH_CN: dict[str, str] = {
     "report.frames": "逻辑帧轨迹",
     "report.recovery": "恢复",
     "report.recovery_attempts": "恢复尝试",
+    # Feature 024 (app-perception-plugins)
+    "report.perception_enhancement": "感知增强",
+    "report.perception_plugin": "插件",
+    "report.perception_declared_undetected": "已声明但画面上未检测到",
     "report.failure_reason": "失败原因",
     "report.action_effect": "动作效果",
     "report.verification_result": "验证结果",

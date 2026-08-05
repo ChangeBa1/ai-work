@@ -154,6 +154,10 @@ class SecurityConfig(BaseModel):
 class GroundingConfig(BaseModel):
     overall_confidence_threshold: float = 0.55
     top1_top2_min_gap: float = 0.08
+    # The top1/top2 confidence-gap check only signals ambiguity when the two
+    # boxes are spatially distinct. Candidates overlapping above this IoU are
+    # the same target restated by the grounder, and the gap check is skipped.
+    top1_top2_distinct_max_iou: float = 0.5
 
 
 class VerificationConfig(BaseModel):
@@ -345,6 +349,94 @@ class UiIndexConfig(BaseModel):
     max_bundle_total_bytes: int = 200_000_000
 
 
+class AppPerceptionConfig(BaseModel):
+    """Feature 024 (app-perception-plugins, FR-023): pluggable pre-grounding
+    sub-window crop+upscale enhancement.
+
+    Activation comes from ONE source only: a test step's explicit
+    ``perception_scope`` declaration (FR-011/FR-012). Detecting a sub-window is
+    a precondition, never a reason to activate. ``enabled: false`` restores the
+    pre-024 behavior byte-for-byte (no audit records, no extra work at all).
+    """
+
+    enabled: bool = False
+    # Declarative plugin profiles (data, not code) — relative to the repo root.
+    profiles_dir: str = "profiles/app_perception"
+    # Deployment gate: target_id -> allowed plugin names. A target absent from
+    # the mapping allows every registered plugin; an explicit empty list
+    # disables the feature for that target.
+    allowed_plugins: dict[str, list[str]] = Field(default_factory=dict)
+    # Refinements per TestStep that actually cost a capture + OCR pass.
+    # Re-observing an UNCHANGED screen is served from a content-hash memo and
+    # does not count, so this only bounds how many distinct frames within one
+    # step get refined. A step normally needs a handful (pre-action,
+    # post-action, one retry round); 6 covers that without letting a
+    # pathological step run unbounded extra OCR on weak hardware.
+    max_activations_per_step: int = Field(default=6, ge=0)
+    min_detection_confidence: float = Field(default=0.7, ge=0.0, le=1.0)
+    # --- Shape-INVARIANT core guards only -----------------------------------
+    # Target sub-windows differ wildly (surveyed WinForms simulators span
+    # aspect ratio 0.73..5.34 and 3.3%..77.1% of a 1024x768 screen), so the
+    # core MUST NOT carry any window-shape prior. Only two guards live here:
+    #   * roi_area_ratio_max rejects a detection that degenerated into
+    #     "basically the whole screen" (no crop benefit, hides everything
+    #     outside). Deliberately loose — a legitimate 77% window still passes.
+    #   * min_roi_size_px is a degeneracy floor, not a shape prior.
+    # Per-window plausibility (area/aspect/size ranges) belongs in the
+    # PROFILE, where it describes exactly one known window.
+    roi_area_ratio_max: float = Field(default=0.95, gt=0.0, le=1.0)
+    min_roi_size_px: int = Field(default=24, ge=8)
+    # --- Zoom ---------------------------------------------------------------
+    # Fixed default scale, NOT derived from the window's size: legibility is
+    # governed by glyph height, which is ~constant across these windows
+    # (default WinForms fonts), not by how big the window is. A size-derived
+    # scale would silently encode a shape assumption.
+    default_scale: float = Field(default=2.5, gt=1.0, le=8.0)
+    min_scale: float = Field(default=1.2, gt=1.0)
+    max_scale: float = Field(default=4.0, gt=1.0, le=8.0)
+    # Weak-hardware guard: cap the upscaled image so a large window at a large
+    # scale can never turn one OCR pass into a dozen full-screen ones. If this
+    # cap would push the scale below min_scale, enhancement is abandoned.
+    max_upscaled_megapixels: float = Field(default=4.0, gt=0.0)
+    roi_edge_band_ratio: float = Field(default=0.02, ge=0.0, lt=0.5)
+    # --- geometric click (source-geometry prediction) ----------------------
+    # Locate a named control by solving design->screen from the anchors OCR
+    # actually measured, then click it directly. Every gate below refuses
+    # rather than guesses; a refusal falls back to the model path.
+    geometric_click_enabled: bool = True
+    # Two points fit exactly and leave a zero residual that proves nothing;
+    # three is the minimum that can disagree.
+    min_anchors_for_transform: int = Field(default=3, ge=3)
+    # Max back-substitution residual, as a fraction of the window's short
+    # edge. A resized window breaks the single-transform assumption and shows
+    # up here (a 100px resize moves an edge-anchored control far past this).
+    max_transform_residual_ratio: float = Field(default=0.02, gt=0.0, le=0.5)
+    transform_min_scale: float = Field(default=0.5, gt=0.0)
+    transform_max_scale: float = Field(default=3.0, gt=0.0)
+    # Anchors must straddle the window: a fit validated only in one corner
+    # says nothing about the opposite corner.
+    min_anchor_span_ratio: float = Field(default=0.25, ge=0.0, le=1.0)
+    # FR-013a: a step declared a scope but the window is not on screen.
+    on_declared_window_missing: Literal["fallback", "fail"] = "fallback"
+    # FR-018: respect each profile constraint's own `enforce` flag;
+    # "record_only" is the emergency downgrade (every constraint logs only).
+    anchor_constraint_mode: Literal["respect_profile", "record_only"] = "respect_profile"
+
+    @model_validator(mode="after")
+    def validate_ranges(self) -> AppPerceptionConfig:
+        if self.min_scale >= self.max_scale:
+            raise ValueError("app_perception.min_scale must be < max_scale")
+        if self.transform_min_scale >= self.transform_max_scale:
+            raise ValueError(
+                "app_perception.transform_min_scale must be < transform_max_scale"
+            )
+        if not (self.min_scale <= self.default_scale <= self.max_scale):
+            raise ValueError(
+                "app_perception.default_scale must lie within [min_scale, max_scale]"
+            )
+        return self
+
+
 class AgentConfig(BaseModel):
     step: StepConfig = Field(default_factory=StepConfig)
     # Feature 022 (FR-A03): pre-execution stale-frame guard knobs.
@@ -388,6 +480,9 @@ class AgentConfig(BaseModel):
     replay: ReplayConfig = Field(default_factory=ReplayConfig)
     # Feature 021 (evolution-hardcase-export, FR-008) — offline CLI only
     evolution: EvolutionConfig = Field(default_factory=EvolutionConfig)
+    # Feature 024 (app-perception-plugins, FR-023) — pre-grounding sub-window
+    # enhancement. Disabled by default; enabling is a deployment decision.
+    app_perception: AppPerceptionConfig = Field(default_factory=AppPerceptionConfig)
 
     @model_validator(mode="before")
     @classmethod

@@ -232,6 +232,7 @@ async def resolve_step_result(
     engine: VerificationEngine | None = None,
     escalate: bool = True,
     visual_override_confidence_threshold: float | None = None,
+    action_is_noop: bool = False,
 ) -> VerificationResult:
     """
     Combine VerificationEngine condition eval with ActionEffect + verification_mode
@@ -387,7 +388,17 @@ async def resolve_step_result(
         # labels like "袋"). Reject so Tier-1 retry / action_no_effect recovery
         # can run. unexpected_effect still follows FR-021 (feature 002) and is
         # not blanket-rejected here.
-        if ae_status == "no_effect" and engine_result.status == "passed":
+        # ...unless the action was a declared no-op. `finish` means the planner
+        # concluded the goal was ALREADY met, so producing no pixel change is
+        # its correct behavior, not evidence of a failed action. Vetoing there
+        # made "the goal is already achieved" unconfirmable: observed live (run
+        # d99f1219, open-task-view) with the task view genuinely on screen and
+        # both business anchors matched, yet the step failed on `no_effect`.
+        if (
+            ae_status == "no_effect"
+            and engine_result.status == "passed"
+            and not action_is_noop
+        ):
             failed = list(engine_result.failed_conditions)
             if "no_effect" not in failed:
                 failed.append("no_effect")
