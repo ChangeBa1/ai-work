@@ -300,6 +300,7 @@ class MemoryRepository:
             return [ElementMemory.model_validate(r.payload) for r in rows]
 
     async def find_element(self, page_id: str, target_label: str) -> ElementMemory | None:
+        """Legacy 015 label lookup (identity_enabled=false path)."""
         async with self.session_factory() as session:
             rows = (
                 (
@@ -319,16 +320,42 @@ class MemoryRepository:
             row = sorted(rows, key=lambda r: r.element_id)[0]
             return ElementMemory.model_validate(row.payload)
 
+    async def find_elements_by_identity(
+        self, page_id: str, identity_key: str
+    ) -> list[ElementMemory]:
+        """Feature 025: all rows for (page_id, identity_key)."""
+        if not identity_key:
+            return []
+        async with self.session_factory() as session:
+            rows = (
+                (
+                    await session.execute(
+                        select(ElementMemoryRow).where(
+                            ElementMemoryRow.page_id == page_id,
+                            ElementMemoryRow.identity_key == identity_key,
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            return [
+                ElementMemory.model_validate(r.payload)
+                for r in sorted(rows, key=lambda r: r.element_id)
+            ]
+
     async def save_element(self, element: ElementMemory) -> None:
         async with self.session_factory() as session:
             row = await session.get(ElementMemoryRow, element.element_id)
             payload = element.model_dump(mode="json")
+            identity_key = element.identity_key or ""
             if row is None:
                 session.add(
                     ElementMemoryRow(
                         element_id=element.element_id,
                         page_id=element.page_id,
                         target_label=element.target_label,
+                        identity_key=identity_key,
                         success_count=element.success_count,
                         failure_count=element.failure_count,
                         last_success_at=element.last_success_at,
@@ -338,6 +365,7 @@ class MemoryRepository:
             else:
                 row.page_id = element.page_id
                 row.target_label = element.target_label
+                row.identity_key = identity_key
                 row.success_count = element.success_count
                 row.failure_count = element.failure_count
                 row.last_success_at = element.last_success_at
@@ -359,6 +387,22 @@ class MemoryRepository:
                 .where(ElementMemoryRow.page_id == page_id)
             )
             return int(result.scalar_one())
+
+    async def purge_legacy_element_memories(
+        self, *, current_prefix: str
+    ) -> int:
+        """Delete rows with empty identity_key or prefix != current schema:gG."""
+        deleted = 0
+        needle = current_prefix + "|"
+        async with self.session_factory() as session:
+            rows = (await session.execute(select(ElementMemoryRow))).scalars().all()
+            for row in rows:
+                key = (row.identity_key or "").strip()
+                if not key.startswith(needle):
+                    await session.delete(row)
+                    deleted += 1
+            await session.commit()
+        return deleted
 
 
 class ReplayRepository:

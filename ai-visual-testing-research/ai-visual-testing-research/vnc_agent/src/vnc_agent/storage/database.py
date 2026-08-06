@@ -87,13 +87,15 @@ class PageMemoryRow(Base):
 
 
 class ElementMemoryRow(Base):
-    """Feature 015 (FR-003): one remembered element (payload = ElementMemory JSON)."""
+    """Feature 015/025: one remembered element (payload = ElementMemory JSON)."""
 
     __tablename__ = "element_memories"
 
     element_id: Mapped[str] = mapped_column(String(64), primary_key=True)
     page_id: Mapped[str] = mapped_column(String(64), index=True)
     target_label: Mapped[str] = mapped_column(String(512), index=True)
+    # Feature 025: eid-v1:g16|text|cell — empty for legacy rows.
+    identity_key: Mapped[str] = mapped_column(String(640), default="", index=True)
     success_count: Mapped[int] = mapped_column(Integer, default=0)
     failure_count: Mapped[int] = mapped_column(Integer, default=0)
     last_success_at: Mapped[datetime | None] = mapped_column(

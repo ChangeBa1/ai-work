@@ -183,6 +183,45 @@ def test_counter_event_rejects_unknown_kind():
         CounterEvent(kind="not_a_kind", occurred_at=_now(), payload={})
 
 
+def test_counter_event_feature_025_identity_kinds():
+    """T043/T046: FR-013 kinds are registered and require their payload keys."""
+    with pytest.raises(ValidationError):
+        CounterEvent(kind="identity_ambiguous", occurred_at=_now(), payload={})
+    assert (
+        CounterEvent(
+            kind="identity_ambiguous",
+            occurred_at=_now(),
+            payload={"candidate_count": 2},
+        ).kind
+        == "identity_ambiguous"
+    )
+
+    with pytest.raises(ValidationError):
+        CounterEvent(kind="identity_lookup_error", occurred_at=_now(), payload={})
+    assert (
+        CounterEvent(
+            kind="identity_lookup_error",
+            occurred_at=_now(),
+            payload={"error_type": "RuntimeError"},
+        ).kind
+        == "identity_lookup_error"
+    )
+
+    with pytest.raises(ValidationError):
+        CounterEvent(kind="element_memory_false_hit", occurred_at=_now(), payload={})
+    assert (
+        CounterEvent(
+            kind="element_memory_false_hit",
+            occurred_at=_now(),
+            payload={
+                "element_memory_id": "e1",
+                "verification_status": "failed",
+            },
+        ).kind
+        == "element_memory_false_hit"
+    )
+
+
 # --- ModelCallAudit -------------------------------------------------
 
 

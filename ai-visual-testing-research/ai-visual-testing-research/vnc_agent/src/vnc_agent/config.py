@@ -272,6 +272,10 @@ class MemoryConfig(BaseModel):
     template_refresh_min_consecutive_successes: int = Field(default=3, ge=1)
     # None => "<artifacts.root_dir>/memory/templates" derived at wiring time.
     storage_dir: str | None = None
+    # Feature 025: structured element identity primary key.
+    identity_enabled: bool = True
+    identity_grid_size: int = Field(default=16, ge=1, le=256)
+    identity_schema_version: str = "eid-v1"
 
     @model_validator(mode="after")
     def _thresholds_ordered(self) -> MemoryConfig:

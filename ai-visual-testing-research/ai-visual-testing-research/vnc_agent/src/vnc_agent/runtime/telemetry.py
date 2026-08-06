@@ -83,6 +83,10 @@ CounterKind = Literal[
     "frame_dedup_decision",
     "capture_attempt_failed",
     "element_memory_hit",
+    # Feature 025 (FR-013 / contracts §6)
+    "identity_ambiguous",
+    "identity_lookup_error",
+    "element_memory_false_hit",
     "replay_step_replayed",
     "replay_patch_generated",
 ]
@@ -105,6 +109,10 @@ _REQUIRED_PAYLOAD_KEYS: dict[str, tuple[str, ...]] = {
     ),
     # Feature 015 (FR-010): one event per element-memory direct click.
     "element_memory_hit": ("element_memory_id", "page_similarity", "template_score"),
+    # Feature 025 (FR-013): identity path observability (additive).
+    "identity_ambiguous": ("candidate_count",),
+    "identity_lookup_error": ("error_type",),
+    "element_memory_false_hit": ("element_memory_id", "verification_status"),
     # Feature 016 (FR-012): one event per replayed step (method = template/
     # anchor/bbox/fallback_grounding/keyboard) and one per generated patch.
     "replay_step_replayed": ("replay_step_id", "method", "script_version"),

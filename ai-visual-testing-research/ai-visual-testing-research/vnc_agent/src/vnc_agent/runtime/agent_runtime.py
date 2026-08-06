@@ -1620,6 +1620,28 @@ class AgentRuntime:
                     target_hint,
                     exclude_element_ids=self._memory_blocked_element_ids,
                 )
+                # Feature 025 FR-013: countable identity path signals on TestRun
+                # (service only log_event; CounterEvent lives on the run).
+                if memory_lookup is not None:
+                    from vnc_agent.runtime.telemetry import CounterEvent
+
+                    status = memory_lookup.resolution_status
+                    if status == "identity_ambiguous":
+                        ctx.test_run.counter_events.append(
+                            CounterEvent(
+                                kind="identity_ambiguous",
+                                occurred_at=datetime.now(UTC),
+                                payload={"candidate_count": 0},
+                            )
+                        )
+                    elif status == "error":
+                        ctx.test_run.counter_events.append(
+                            CounterEvent(
+                                kind="identity_lookup_error",
+                                occurred_at=datetime.now(UTC),
+                                payload={"error_type": "lookup_exception"},
+                            )
+                        )
             # Feature 024: a named control can be located by solving
             # design->screen from the anchors OCR measured on this very
             # frame. Deterministic, so it is preferred over asking the model
@@ -1681,13 +1703,22 @@ class AgentRuntime:
                 memory_executable = self._memory_direct_executable(
                     sa, memory_lookup, screen
                 )
+                el = memory_lookup.element
                 iteration.memory_hit = MemoryHitAudit(
-                    element_memory_id=memory_lookup.element.element_id,
+                    element_memory_id=el.element_id,
                     page_memory_id=memory_lookup.page.page_id,
-                    target_label=memory_lookup.element.target_label,
+                    target_label=el.target_label,
                     page_similarity=memory_lookup.page_similarity,
                     template_score=memory_lookup.template_score or 0.0,
                     matched_bbox=memory_lookup.matched_bbox,
+                    # Feature 025 FR-013: success-hit audit carries element identity
+                    identity_key=(
+                        memory_lookup.identity_key
+                        or el.identity_key
+                        or None
+                    ),
+                    geom_cell=el.geom_cell or None,
+                    normalized_visible_text=el.normalized_visible_text or None,
                 )
                 self._record_memory_hit(
                     ctx,
@@ -2169,6 +2200,23 @@ class AgentRuntime:
                 self._memory_blocked_element_ids.add(
                     iteration.memory_hit.element_memory_id
                 )
+                # FR-008a / FR-013: false hit = memory direct click then
+                # independent verify failed|uncertain (not template miss).
+                if vr.status in ("failed", "uncertain"):
+                    from vnc_agent.runtime.telemetry import CounterEvent
+
+                    ctx.test_run.counter_events.append(
+                        CounterEvent(
+                            kind="element_memory_false_hit",
+                            occurred_at=datetime.now(UTC),
+                            payload={
+                                "element_memory_id": (
+                                    iteration.memory_hit.element_memory_id
+                                ),
+                                "verification_status": vr.status,
+                            },
+                        )
+                    )
                 await self.memory.record_element_failure(
                     iteration.memory_hit.element_memory_id
                 )

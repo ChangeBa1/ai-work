@@ -1,37 +1,41 @@
 <!--
 Sync Impact Report
-- Version change: 1.1.0 → 1.2.0
-- Rationale: MINOR bump — engineering and privacy constraints now define
-  content-addressed screenshot persistence, logical-capture audit records, and
-  explicit no-private-persistence behavior for sensitive-input steps. No Core
-  Principle was removed or weakened.
-- Modified principles: none.
+- Version change: 1.2.0 → 1.3.0
+- Rationale: MINOR bump — Principle III gains a new execution-priority tier
+  (approved screen-version coordinate-index direct hit) with mandatory
+  admission criteria; Principle V gains concrete pending/approved rules for
+  auto-generated element-coordinate indexes; Engineering & Safety Constraints
+  gain audit fields for index-direct positioning. No Core Principle was
+  removed, renamed, or weakened. Principles I, II, IV, VI were not modified.
+- Modified principles:
+  - III. 键盘优先，视觉点击兜底 — inserted tier「已审批的画面版本坐标索引直连定位」
+    between Win+R + PowerShell 配方 and OCR 文本定位; added admission
+    criteria (a)–(d) and rationale for runtime template falsification.
+  - V. 受控自进化 — after「MUST NOT 无条件自动接受所有 UI 变化」, added
+    pending-store / no-direct-hit-before-approved / fallback-to-visual /
+    explicit-human-approval-only constraints for auto-generated screen-version
+    coordinate indexes.
 - Modified constraints:
-  - 资源约束（弱配置电脑）— a successfully captured image MUST be durably
-    represented immediately, but an exact duplicate MAY reuse an already
-    persisted physical image when a new immutable logical record is written.
-  - 凭据与隐私 — steps that prohibit post-input screenshot persistence MUST
-    also prohibit private/unmasked physical artifacts; in-memory use remains
-    subject to the declared policy and must be released promptly.
-  - 制品与可观测性 — complete trace explicitly separates logical capture
-    records from content-addressed physical image files.
+  - 工程与安全约束 — added「索引直连定位可观测性」: every index-direct
+    positioning attempt MUST audit screen ID, version ID, element ID,
+    template-check score, and skipped model-call types.
 - Added sections: none.
 - Removed sections: none.
-- Governance changes:
-  - 合规性审查 now requires screenshot-storage changes to verify logical trace
-    completeness, physical deduplication references, and sensitive-step
-    persistence policy.
+- Governance changes: none (version/date metadata only).
 - Templates requiring updates:
-  - ✅ .specify/templates/plan-template.md — generic Constitution Check already
-    derives project-specific gates from this file; no edit required.
-  - ✅ .specify/templates/spec-template.md — no hardcoded persistence rule; no
-    edit required.
-  - ✅ .specify/templates/tasks-template.md — existing security, observability,
-    and cross-cutting task categories remain compatible; no edit required.
-  - ✅ .specify/templates/checklist-template.md — no hardcoded persistence rule;
-    no edit required.
-  - ✅ `.agents/skills/speckit-*/SKILL.md` — commands read the Constitution
-    generically; no project-specific wording required synchronization.
+  - ✅ .specify/templates/plan-template.md — Constitution Check remains
+    generic ("Gates determined based on constitution file") plus Principle VI
+    gates; no hardcoded priority ladder or index-version rules; no edit required.
+  - ✅ .specify/templates/spec-template.md — placeholder FR/entity structure
+    only; no hardcoded execution priority or approval workflow; no edit required.
+  - ✅ .specify/templates/tasks-template.md — sample tasks and domain-agnostic
+    polish items remain compatible; no index-direct task type mandated in the
+    template itself; no edit required.
+  - ✅ .specify/templates/checklist-template.md — sample checklist only; no
+    hardcoded rules; no edit required.
+  - ✅ `.agents/skills/speckit-*/SKILL.md` / `.grok/skills/speckit-*/SKILL.md`
+    — commands read the Constitution generically; no project-specific wording
+    required synchronization.
 - Follow-up TODOs: none.
 -->
 
@@ -57,11 +61,20 @@ MUST NOT 仅凭 Planner 或 Grounder 的自我判断而放行。
 
 ### III. 键盘优先，视觉点击兜底 (Keyboard-First Execution Priority)
 动作解析 MUST 按以下优先级顺序尝试候选执行方案：已验证回放动作 → 快捷键 → Tab/Shift+Tab
-焦点导航 → Win+R + PowerShell 配方 → OCR 文本定位 → 模板或视觉锚点 → MiMo Grounding →
-强模型异常分析。系统 MUST NOT 在存在更高优先级、更确定性的可用路径时，直接跳转到视觉
-Grounding 或模型调用。
+焦点导航 → Win+R + PowerShell 配方 → 已审批的画面版本坐标索引直连定位 → OCR 文本定位 →
+模板或视觉锚点 → MiMo Grounding → 强模型异常分析。系统 MUST NOT 在存在更高优先级、更确定
+性的可用路径时，直接跳转到视觉 Grounding 或模型调用。
+
+使用「已审批的画面版本坐标索引直连定位」MUST 同时满足以下准入条件，缺一不可：
+(a) 当前帧已匹配到某个已知画面的某个 approved 版本；
+(b) 目标元素在该版本索引中存在唯一确定的坐标记录；
+(c) 点击前必须通过元素级模板校验（在记录坐标的邻域内重新确认该元素仍然存在）；
+(d) 任一条件不满足时 MUST 直接降级到下一层，MUST NOT 猜测坐标、MUST NOT 放宽阈值重试。
+
 理由：键盘和已验证路径的确定性、速度和成本均优于视觉定位；将视觉手段保留为兜底可以降低
-误点击风险、降低模型调用成本，并提升低配置环境下的执行效率。
+误点击风险、降低模型调用成本，并提升低配置环境下的执行效率。索引直连的确定性和成本优于
+OCR 与视觉定位，但它建立在「画面未变更」这一外部假设上，因此必须由 (c) 提供运行时的独立
+证伪手段，否则不得进入阶梯。
 
 ### IV. 观察-执行-验证独立闭环 (Independent Observe-Act-Verify Loop)
 每个动作 MUST 遵循 Observe → Understand → Plan → Ground → Act → Wait → Observe Again →
@@ -74,8 +87,11 @@ Verify 的闭环，验证 MUST 基于操作后重新采集的截图与独立证�
 ### V. 受控自进化 (Controlled Self-Evolution)
 系统 MAY 在运行时实时更新经验类数据：页面记忆、元素记忆、失败记忆、模板、策略成功率、
 置信度校准数据、相似页面索引。系统 MUST NOT 在运行时：自动训练或替换生产模型、自动修改
-正式测试断言、自动覆盖正式回放脚本、无条件自动接受所有 UI 变化。回放自愈 MUST 仅生成
-待审核的候选补丁（`pending` 状态），补丁转为 `approved` 前 MUST NOT 影响正式基线。
+正式测试断言、自动覆盖正式回放脚本、无条件自动接受所有 UI 变化。当系统检测到画面变更并
+自动生成新版本的元素坐标索引时，该新版本 MUST 以 `pending` 状态落库，MUST NOT 在 approved
+之前被用于直连定位；`pending` 期间系统 MUST 回退到视觉定位路径。版本的审批入口 MUST 是
+显式的人工动作，MUST NOT 由运行时的连续成功次数自动转正。回放自愈 MUST 仅生成待审核的
+候选补丁（`pending` 状态），补丁转为 `approved` 前 MUST NOT 影响正式基线。
 理由：测试基线和生产模型的变更具有高影响面，必须保留人工审核关卡，防止经验数据的噪声
 或模型漂移悄然侵蚀测试的可信度。
 
@@ -137,6 +153,9 @@ MUST NOT 尝试绕过。
 若策略允许模型使用该画面，只能在内存中短暂使用并及时释放，报告和公开制品仍只能引用安全
 遮罩证据。
 
+**索引直连定位可观测性**：任何一次索引直连定位 MUST 在审计记录中留下画面 ID、版本 ID、
+元素 ID、模板校验得分、以及被跳过的模型调用类型，使「省了哪几次模型调用」可被离线核对。
+
 ## 质量门禁与开发工作流 (Quality Gates & Development Workflow)
 
 **验证独立性门禁**：任何声明测试步骤“通过”的实现变更，代码评审 MUST 确认 Verifier 的
@@ -187,4 +206,4 @@ testcase/fixture/profile 而非核心模型固定字段；声称通用的框架�
 独立逻辑记录；重复物理图片是否有可追溯来源；禁止 private 持久化的敏感步骤是否未产生未遮罩
 物理制品。
 
-**Version**: 1.2.0 | **Ratified**: 2026-07-20 | **Last Amended**: 2026-07-22
+**Version**: 1.3.0 | **Ratified**: 2026-07-20 | **Last Amended**: 2026-08-06

@@ -15,6 +15,7 @@ never affected (spec US1-4).
 
 from __future__ import annotations
 
+import time
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -26,6 +27,11 @@ import numpy as np
 from vnc_agent.domain.memory import ElementMemory, MemoryLookupResult, PageMemory
 from vnc_agent.domain.observation import OCRItem, Region, StructuredScreen
 from vnc_agent.memory.fingerprint import build_page_fingerprint, page_similarity
+from vnc_agent.memory.identity import (
+    current_identity_prefix,
+    resolve_identity_candidates_for_lookup,
+    resolve_identity_for_write,
+)
 from vnc_agent.memory.retrieval import (
     find_best_page,
     match_element_template,
@@ -97,11 +103,42 @@ class PageElementMemory:
         without template confirmation) is grounder-hint-only evidence
         (spec FR-006/FR-007). Read-only (spec Clarification 7).
         """
+        t0 = time.perf_counter()
+        result: MemoryLookupResult | None
         try:
-            return await self._lookup(screen, target_label, exclude_element_ids)
-        except Exception as exc:  # fail-open red line (spec US2-3)
-            log_event("memory_lookup_failed", error=str(exc))
+            result = await self._lookup(screen, target_label, exclude_element_ids)
+        except Exception as exc:  # fail-open but MUST account (FR-013)
+            log_event(
+                "identity_lookup_error",
+                error=str(exc),
+                error_type=type(exc).__name__,
+                resolution_status="error",
+            )
+            # Distinguish from normal miss: runtime can emit identity_lookup_error
+            # CounterEvent from resolution_status without treating this as a hit.
+            result = MemoryLookupResult(
+                level="medium",
+                page=None,
+                page_similarity=0.0,
+                element=None,
+                resolution_status="error",
+            )
+        ms = (time.perf_counter() - t0) * 1000.0
+        log_event(
+            "memory_identity_lookup",
+            memory_identity_lookup_ms=ms,
+            hit=bool(
+                result is not None
+                and result.level == "high"
+                and result.matched_bbox is not None
+            ),
+            resolution_status=(
+                result.resolution_status if result is not None else "miss"
+            ),
+        )
+        if result is None:
             return None
+        return result.model_copy(update={"memory_identity_lookup_ms": ms})
 
     async def _lookup(
         self,
@@ -124,9 +161,71 @@ class PageElementMemory:
         )
         if page is None or level in ("low", "none"):
             return None
-        element = await self.repo.find_element(page.page_id, label)
-        if element is None or element.element_id in exclude_element_ids:
-            return None
+
+        identity_key: str | None = None
+        resolution_status: str | None = None
+        element: ElementMemory | None = None
+
+        if getattr(self.config, "identity_enabled", True):
+            prefix = current_identity_prefix(
+                self.config.identity_schema_version, self.config.identity_grid_size
+            )
+            resolved = resolve_identity_candidates_for_lookup(
+                target_label=target_label,
+                ocr_items=screen.ocr_items,
+                resolution=screen.resolution,
+                grid_size=self.config.identity_grid_size,
+                schema_version=self.config.identity_schema_version,
+            )
+            if resolved.status == "ambiguous":
+                log_event(
+                    "identity_ambiguous",
+                    candidate_count=len(resolved.candidates),
+                    resolution_status="identity_ambiguous",
+                )
+                return MemoryLookupResult(
+                    level="medium",
+                    page=page,
+                    page_similarity=score,
+                    element=None,
+                    identity_key=None,
+                    resolution_status="identity_ambiguous",
+                )
+            if resolved.status != "unique" or resolved.identity is None:
+                return None
+            identity_key = resolved.identity.identity_key
+            if not identity_key.startswith(prefix + "|"):
+                return None
+            found = await self.repo.find_elements_by_identity(page.page_id, identity_key)
+            found = [
+                e
+                for e in found
+                if e.element_id not in exclude_element_ids
+                and (e.identity_key or "").startswith(prefix + "|")
+            ]
+            if not found:
+                return None
+            if len(found) >= 2:
+                log_event(
+                    "identity_ambiguous",
+                    candidate_count=len(found),
+                    resolution_status="identity_ambiguous",
+                    identity_key=identity_key,
+                )
+                return MemoryLookupResult(
+                    level="medium",
+                    page=page,
+                    page_similarity=score,
+                    element=None,
+                    identity_key=identity_key,
+                    resolution_status="identity_ambiguous",
+                )
+            element = found[0]
+            resolution_status = "unique"
+        else:
+            element = await self.repo.find_element(page.page_id, label)
+            if element is None or element.element_id in exclude_element_ids:
+                return None
 
         result = MemoryLookupResult(
             level="medium",
@@ -135,13 +234,14 @@ class PageElementMemory:
             element=element,
             template_score=None,
             matched_bbox=None,
+            identity_key=identity_key or element.identity_key or None,
+            resolution_status=resolution_status,
         )
         if level != "high" or frame is None:
             return result
 
         template = self._read_template(element.template_path)
         if template is None:
-            # Missing/lost template: degrade to hint-only evidence.
             return result
         matched = match_element_template(
             frame,
@@ -161,6 +261,8 @@ class PageElementMemory:
             element=element,
             template_score=template_score,
             matched_bbox=bbox,
+            identity_key=identity_key or element.identity_key or None,
+            resolution_status=resolution_status,
         )
 
     # ------------------------------------------------------------------
@@ -208,13 +310,54 @@ class PageElementMemory:
             return
 
         anchor_texts = _nearest_anchor_texts(screen.ocr_items, target_region)
-        element = await self.repo.find_element(page.page_id, label)
+
+        identity_key = ""
+        normalized_visible_text = ""
+        geom_cell = ""
+        identity_schema_version = ""
+        element: ElementMemory | None = None
+
+        if getattr(self.config, "identity_enabled", True):
+            ident = resolve_identity_for_write(
+                region=target_region,
+                ocr_items=screen.ocr_items,
+                resolution=screen.resolution,
+                grid_size=self.config.identity_grid_size,
+                schema_version=self.config.identity_schema_version,
+            )
+            if ident is None:
+                log_event(
+                    "memory_element_write_skipped_no_identity",
+                    target_label=label,
+                    region=target_region.as_tuple(),
+                )
+                return
+            identity_key = ident.identity_key
+            normalized_visible_text = ident.normalized_visible_text
+            geom_cell = ident.geom_cell
+            identity_schema_version = ident.schema_version
+            found = await self.repo.find_elements_by_identity(page.page_id, identity_key)
+            if len(found) >= 2:
+                log_event(
+                    "memory_element_write_skipped_identity_ambiguous",
+                    identity_key=identity_key,
+                    count=len(found),
+                )
+                return
+            element = found[0] if found else None
+        else:
+            element = await self.repo.find_element(page.page_id, label)
+
         if element is None:
             await self._evict_if_full(page.page_id)
             element = ElementMemory(
                 element_id=str(uuid.uuid4()),
                 page_id=page.page_id,
                 target_label=label,
+                identity_key=identity_key,
+                normalized_visible_text=normalized_visible_text,
+                geom_cell=geom_cell,
+                identity_schema_version=identity_schema_version,
                 template_path=None,
                 bbox=target_region.as_tuple(),
                 anchor_texts=anchor_texts,
@@ -231,6 +374,11 @@ class PageElementMemory:
             element.bbox = target_region.as_tuple()
             element.anchor_texts = anchor_texts
             element.last_success_at = now
+            if identity_key:
+                element.identity_key = identity_key
+                element.normalized_visible_text = normalized_visible_text
+                element.geom_cell = geom_cell
+                element.identity_schema_version = identity_schema_version
             refresh_after = self.config.template_refresh_min_consecutive_successes
             if element.template_path is None or (
                 element.consecutive_success_count >= refresh_after

@@ -49,13 +49,21 @@ class PageMemory(BaseModel):
 
 
 class ElementMemory(BaseModel):
-    """One remembered clickable element (design §12.1 元素记忆, MVP subset)."""
+    """One remembered clickable element (design §12.1 元素记忆, MVP subset).
+
+    Feature 025: retrieval key is ``identity_key`` (``eid-v1:gG|text|cell``);
+    ``target_label`` remains an audit/clue field only.
+    """
 
     element_id: str
     page_id: str
-    # Normalized semantic label of the target (same normalization as the
-    # runtime's target hint: stripped text/description/intent).
+    # Clue/audit string (legacy 015 field; not the unique hit key when identity_enabled).
     target_label: str
+    # Feature 025 structured identity key; empty = legacy / not searchable.
+    identity_key: str = ""
+    normalized_visible_text: str = ""
+    geom_cell: str = ""
+    identity_schema_version: str = ""
     # Masked-safe template crop persisted on disk; None when the template was
     # refused (mask intersection) or lost.
     template_path: str | None = None
@@ -87,6 +95,11 @@ class MemoryLookupResult(BaseModel):
     # Template-match-confirmed bbox in current-frame pixels (direct-click
     # evidence); None when the neighborhood match did not reach threshold.
     matched_bbox: tuple[int, int, int, int] | None = None
+    # Feature 025 additive audit.
+    identity_key: str | None = None
+    resolution_status: str | None = None
+    # Elapsed ms for this lookup attempt (identity resolve + store + template).
+    memory_identity_lookup_ms: float | None = None
 
 
 class MemoryHitAudit(BaseModel):
@@ -99,3 +112,6 @@ class MemoryHitAudit(BaseModel):
     page_similarity: float
     template_score: float
     matched_bbox: tuple[int, int, int, int]
+    identity_key: str | None = None
+    geom_cell: str | None = None
+    normalized_visible_text: str | None = None

@@ -33,12 +33,14 @@ from vnc_agent.runtime.telemetry import derive_performance_summary
 from vnc_agent.storage.database import init_db, make_engine, make_session_factory
 from vnc_agent.storage.repositories import MemoryRepository
 
-# Anchor text on the 300x200 fake screen (always OCR-readable)
-_ANCHOR_BOX = [[100, 80], [160, 80], [160, 96], [100, 96]]
+# Visible label OCR on the target button (feature 025: write/lookup identity
+# shares this non-empty text component with planner target.text "OK").
+_OK_BOX = [[150, 85], [170, 85], [170, 95], [150, 95]]
+# Nearby distractor OCR (farther from target center than OK).
+_NEARBY_BOX = [[20, 20], [70, 20], [70, 36], [20, 36]]
 # Confirmation text visible only on the post-click frame
 _DONE_BOX = [[10, 150], [60, 150], [60, 166], [10, 166]]
-# Target button bbox — deliberately NOT OCR-readable so resolution always
-# needs grounding (same setup shape as scenario 18).
+# Target button bbox — grounder still returns this region; identity uses OCR "OK".
 _TARGET_BBOX = (150, 85, 170, 95)
 _EXPECTED_CLICK = (160, 90)  # safe point == center (no siblings)
 
@@ -63,11 +65,20 @@ def _frame_after() -> np.ndarray:
 
 
 class _StubOcrContent:
-    """RapidOCR-shaped stub: reads 'TOTAL' always, plus 'DONE' only when the
-    post-click white confirmation box is present on the frame."""
+    """RapidOCR-shaped stub: target label 'OK' + nearby 'TOTAL', plus 'DONE'
+    only when the post-click white confirmation box is present.
+
+    Identity write/lookup (025) both use OCR text 'OK' so the second run can
+    hit memory; planner target.text is also 'OK'.
+    """
 
     def __call__(self, img):
-        items = [[_ANCHOR_BOX, "TOTAL", 0.9]]
+        # Confidence below ocr_direct_click_min_confidence (0.85) so ActionPolicy
+        # falls through to grounder on run 1; identity still uses the text "OK".
+        items = [
+            [_OK_BOX, "OK", 0.5],
+            [_NEARBY_BOX, "TOTAL", 0.9],
+        ]
         if img[155, 30].min() > 200:
             items.append([_DONE_BOX, "DONE", 0.9])
         return items, None
@@ -128,7 +139,7 @@ def _planner() -> StubPlanner:
                 role="button",
                 text="OK",
                 description="small ok button",
-                nearby_texts=["TOTAL"],
+                nearby_texts=["TOTAL"],  # distractor; not the identity text
             ),
         )
     )
@@ -263,6 +274,8 @@ async def test_memory_hit_failing_verification_bans_element(tmp_path: Path, app_
     assert len(hits) == 1
     hit_kinds = [e.kind for e in ctx2.test_run.counter_events]
     assert hit_kinds.count("element_memory_hit") == 1
+    # FR-013 / T046: false_hit counted only after memory direct click + verify fail
+    assert hit_kinds.count("element_memory_false_hit") >= 1
 
     repo = await _memory_repo(tmp_path)
     pages = await repo.list_pages()
